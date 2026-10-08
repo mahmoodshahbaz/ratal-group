@@ -1,0 +1,18 @@
+{
+  "name": "ACCSYS Field",
+  "short_name": "ACCSYS",
+  "description": "Ratal Group Field Operations",
+  "start_url": "/forms",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f0ebe2",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

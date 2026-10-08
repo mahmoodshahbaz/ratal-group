@@ -1,0 +1,4 @@
+full_name_en,full_name,employee_id,iqama_no,nationality,job_title,department,basic_salary,housing_allowance,transport_allowance,join_date,email,mobile,bank_iban,bank_name
+Ahmed Al-Mansouri,أحمد المنصوري,ACC-0001,2345678901,SAUDI,Network Engineer,IT,8000,3000,600,2023-01-15,ahmed@example.com,0501234567,SA0380000000608010167519,Al Rajhi Bank
+Mohammed Al-Rashid,محمد الراشد,ACC-0002,1234567890,SAUDI,Project Manager,Operations,12000,4000,800,2022-06-01,mohammed@example.com,0509876543,SA2880000000608010167520,Saudi National Bank (SNB)
+Raj Kumar,,ACC-0003,2456789012,EXPAT,Technician,Field,5000,1500,400,2024-03-10,,0556789012,,Alinma Bank
