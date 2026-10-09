@@ -600,7 +600,7 @@ export default function InvoicePrint({ invoice, entityName, entityNameAr, vatNum
           </div>
 
           {/* Signature bar */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', borderTop:'2px solid #1a2e3d', border:'1px solid #c8d0da', borderTop:'2px solid #1a2e3d' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', border:'1px solid #c8d0da', borderTop:'2px solid #1a2e3d' }}>
             {['Approved By','Received By','Date','Signature'].map((s,i) => (
               <div key={s} style={{ padding:'22px 10px 6px', borderRight: i<3?'1px solid #c8d0da':'none', textAlign:'center', fontSize:10, fontWeight:700, color:'#555' }}>{s}</div>
             ))}

@@ -25,7 +25,7 @@ const S = {
   btnO:  (c='#1a2e3d') => ({ background:'transparent', color:c, border:`1.5px solid ${c}`, borderRadius:8, padding:'7px 17px', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }),
   inp:   { padding:'8px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:12, outline:'none', background:'#fff' },
   lbl:   { display:'block', fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4 },
-  row:   (highlight) => ({ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 0', borderBottom:'1px solid #f0f4f8', background: highlight ? '#f0f4f8' : 'transparent', padding: highlight ? '8px 10px' : '8px 0', borderRadius: highlight ? 6 : 0, marginBottom: highlight ? 2 : 0 }),
+  row:   (highlight) => ({ display:'flex', justifyContent:'space-between', alignItems:'center', padding: highlight ? '8px 10px' : '8px 0', borderBottom:'1px solid #f0f4f8', background: highlight ? '#f0f4f8' : 'transparent', borderRadius: highlight ? 6 : 0, marginBottom: highlight ? 2 : 0 }),
 }
 
 // ─── Period helpers ────────────────────────────────────────────────────────────

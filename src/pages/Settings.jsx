@@ -215,7 +215,7 @@ export default function Settings({ entityId, entityCode, isSuperAdmin }) {
               </select></div>
           </div>
 
-          <div style={S.section} style={{ ...S.section, marginTop:10 }}><span>🏛</span> GOSI Rates</div>
+          <div style={{ ...S.section, marginTop:10 }}><span>🏛</span> GOSI Rates</div>
           <div style={{ background:'#e3f2fd', borderRadius:10, padding:'12px 16px', marginBottom:16, fontSize:11, color:'#1565C0' }}>
             GOSI is a <strong>company-borne liability</strong> — not deducted from employee salary. Base = Bank Portion.
           </div>
@@ -228,7 +228,7 @@ export default function Settings({ entityId, entityCode, isSuperAdmin }) {
               <div style={S.hint}>Default: 3% company contribution</div></div>
           </div>
 
-          <div style={S.section} style={{ ...S.section, marginTop:10 }}><span>🏖</span> Leave Defaults</div>
+          <div style={{ ...S.section, marginTop:10 }}><span>🏖</span> Leave Defaults</div>
           <div style={S.row}>
             <div style={S.col}><label style={S.label}>Annual Leave (days/year)</label>
               <input type="number" style={S.inp} value={settings.annual_leave_days} onChange={e=>s('annual_leave_days',+e.target.value)} />
@@ -267,7 +267,7 @@ export default function Settings({ entityId, entityCode, isSuperAdmin }) {
               </select></div>
           </div>
 
-          <div style={S.section} style={{ ...S.section, marginTop:10 }}><span>🔢</span> Number Prefixes</div>
+          <div style={{ ...S.section, marginTop:10 }}><span>🔢</span> Number Prefixes</div>
           <div style={S.row}>
             <div style={S.col}><label style={S.label}>Invoice Prefix</label>
               <input style={S.inp} value={settings.invoice_prefix} onChange={e=>s('invoice_prefix',e.target.value)} placeholder="INV" />

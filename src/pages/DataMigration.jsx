@@ -1009,7 +1009,7 @@ export default function DataMigration({ entityId, role }) {
       </div>
 
       {/* Tabs */}
-      <div style={{ display:'flex', gap:4, marginBottom:16, overflowX:'auto', flexWrap:'nowrap', paddingBottom:2, borderBottom:'2px solid #f0f4f8', paddingBottom:0 }}>
+      <div style={{ display:'flex', gap:4, marginBottom:16, overflowX:'auto', flexWrap:'nowrap', paddingBottom:0, borderBottom:'2px solid #f0f4f8' }}>
         {TABS.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)} style={{
             padding:'9px 16px', border:'none', borderRadius:'8px 8px 0 0',

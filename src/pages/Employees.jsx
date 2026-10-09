@@ -447,7 +447,6 @@ export default function Employees({ entityId, entityCode }) {
       gosi_start_date: gosiStart||null,
       gosi_end_date: gosiEnd||null,
       outsource_agency: empCategory==='03' ? outsourceAgency||null : null,
-      contract_end_date: contractEnd||null,
     }
     // employee_code: only set on create — never overwrite on update to avoid length constraint issues
     const payload = editing
