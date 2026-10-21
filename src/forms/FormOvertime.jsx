@@ -18,6 +18,42 @@ const T = THEMES.overtime
 // shorthand — TH.headerBg is #000000
 const BLACK = '#000000'
 
+// ─── Time picker helpers ────────────────────────────────────────────────────
+const HOURS   = Array.from({length:24}, (_,i) => String(i).padStart(2,'0'))
+const MINUTES = ['00','15','30','45']
+
+function TimePicker({ value, onChange, label, dark }) {
+  const [h, m] = value ? value.split(':') : ['','']
+  const selStyle = {
+    flex:1, padding:'10px 6px', fontSize:15, fontWeight:700,
+    background:'#ffffff', border:'1.5px solid #e0dbd0', borderRadius:10,
+    color: dark ? '#111' : '#111', textAlign:'center',
+    appearance:'none', WebkitAppearance:'none', MozAppearance:'none',
+    cursor:'pointer', fontFamily:'inherit',
+  }
+  function setH(newH) { onChange(newH && m ? `${newH}:${m||'00'}` : '') }
+  function setM(newM) { onChange(h && newM ? `${h}:${newM}` : '') }
+  return (
+    <div>
+      <div style={{ fontSize:10, color: dark?'#7c3a00':'#7c3a00', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:6 }}>{label}</div>
+      <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+        <select value={h} onChange={e=>setH(e.target.value)} style={selStyle}>
+          <option value="">HH</option>
+          {HOURS.map(hh=><option key={hh} value={hh}>{hh}</option>)}
+        </select>
+        <span style={{ fontSize:18, fontWeight:700, color:'#7c3a00' }}>:</span>
+        <select value={m} onChange={e=>setM(e.target.value)} style={selStyle}>
+          <option value="">MM</option>
+          {MINUTES.map(mm=><option key={mm} value={mm}>{mm}</option>)}
+        </select>
+      </div>
+      {value && (
+        <div style={{ fontSize:11, color:'#7c3a00', marginTop:4, textAlign:'center', fontWeight:600 }}>{value}</div>
+      )}
+    </div>
+  )
+}
+
 // ── Slide background images (swap these to change the design) ──────────────
 const BG = {
   1: '/design/overtime/screen-01-identity.jpg',
@@ -310,6 +346,12 @@ export default function FormOvertime() {
         style={{ background:'rgba(255,255,255,0.15)', color:'#fff', border:'1px solid rgba(255,255,255,0.3)', borderRadius:6, padding:'3px 9px', fontSize:11, fontWeight:600, cursor:'pointer' }}>
         {isAr ? 'English' : 'العربية'}
       </button>
+      <button
+        onClick={async () => { await supabase.auth.signOut(); window.location.reload() }}
+        title="Sign out"
+        style={{ background:'rgba(255,255,255,0.12)', color:'rgba(255,255,255,0.75)', border:'1px solid rgba(255,255,255,0.2)', borderRadius:6, padding:'3px 8px', fontSize:13, cursor:'pointer', lineHeight:1 }}>
+        ⎋
+      </button>
     </div>
   )
 
@@ -517,12 +559,10 @@ export default function FormOvertime() {
       <div style={{ background: TH.amber, borderRadius:14, margin:'0 12px', padding:14, boxShadow:'0 2px 8px rgba(245,158,11,0.3)' }}>
         <div style={{ display:'flex', gap:10, marginBottom:12 }}>
           <div style={{ flex:1 }}>
-            <div style={{ fontSize:10, color:'#7c3a00', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:5 }}>{isAr?'وقت البداية':'Start time'}</div>
-            <input type="time" value={fromTime} onChange={e=>setFromTime(e.target.value)} style={{ ...S.inp, fontSize:18, fontWeight:700, border:'none' }} />
+            <TimePicker value={fromTime} onChange={setFromTime} label={isAr?'وقت البداية':'Start time'} dark />
           </div>
           <div style={{ flex:1 }}>
-            <div style={{ fontSize:10, color:'#7c3a00', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:5 }}>{isAr?'وقت النهاية':'End time'}</div>
-            <input type="time" value={toTime} onChange={e=>setToTime(e.target.value)} style={{ ...S.inp, fontSize:18, fontWeight:700, border:'none' }} />
+            <TimePicker value={toTime} onChange={setToTime} label={isAr?'وقت النهاية':'End time'} dark />
           </div>
         </div>
         {/* Black calc display */}
