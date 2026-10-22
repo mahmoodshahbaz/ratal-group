@@ -5,6 +5,7 @@ const MC = GROUP_COLORS.Masters
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { QRButton } from '../components/QRCard'
+import EntityDocs from '../components/EntityDocs'
 
 const S = {
   overlay:      { position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 },
@@ -471,6 +472,17 @@ export default function Contractors({ entityId }) {
                         type="subcon"
                       />
                     )}
+                  </div>
+
+                  {/* Documents mini-panel */}
+                  <div style={{ marginTop:18, borderTop:'1px solid #e8edf2', paddingTop:14 }}>
+                    <EntityDocs
+                      entityId={entityId}
+                      linkedType="CONTRACTOR"
+                      linkedId={c.id}
+                      linkedName={c.contractor_name}
+                      accentColor="#5A32D4"
+                    />
                   </div>
                 </div>
               )}

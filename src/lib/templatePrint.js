@@ -1273,7 +1273,8 @@ function buildOutgoingPO(d) {
   const [pYr, pMo, pDy] = (d.po_date || '').split('-')
   const dateDisplay = pDy && pMo && pYr ? `${pDy}/${pMo}/${pYr}` : (d.po_date || '')
   const lines   = Array.isArray(d.lines) ? d.lines : []
-  const subtotal = lines.reduce((s,l) => s + (parseFloat(l.total)||0), 0)
+  const lineTotal = l => parseFloat(l.line_total) || parseFloat(l.total) || (parseFloat(l.qty)||0)*(parseFloat(l.unit_price)||0)
+  const subtotal = lines.reduce((s,l) => s + lineTotal(l), 0)
   // No VAT on PO — VAT is over & above, applied at invoice time if applicable
   const fmt = n => (parseFloat(n)||0).toLocaleString('en-SA', { minimumFractionDigits:2, maximumFractionDigits:2 })
 
@@ -1285,7 +1286,7 @@ function buildOutgoingPO(d) {
     d.site_number    ? `Site: ${d.site_number}`       : '',
     d.project_number ? `Project: ${d.project_number}` : '',
     `---`,
-    ...lines.map((l, i) => `${i+1}. ${l.job_type ? l.job_type+' | ' : ''}${l.description}: SAR ${fmt(l.total)}`),
+    ...lines.map((l, i) => `${i+1}. ${l.job_type ? l.job_type+' | ' : ''}${l.description}: SAR ${fmt(lineTotal(l))}`),
     `---`,
     `Total (excl. VAT): SAR ${fmt(subtotal)}`,
   ].filter(Boolean).join('\n')
@@ -1298,7 +1299,7 @@ function buildOutgoingPO(d) {
       <td class="desc">${l.job_type ? `<span class="jt">${l.job_type}</span> ` : ''}${l.description || ''}</td>
       <td class="num">${(parseFloat(l.qty)||0).toLocaleString('en-SA', { minimumFractionDigits:0, maximumFractionDigits:2 })}</td>
       <td class="num">${fmt(l.unit_price)}</td>
-      <td class="num total-col">SAR ${fmt(l.total)}</td>
+      <td class="num total-col">SAR ${fmt(lineTotal(l))}</td>
     </tr>`).join('')
 
   return `<!DOCTYPE html>
@@ -2700,6 +2701,1037 @@ function buildOvertimeReport(d) {
   </body></html>`
 }
 
+// ─── Cash Payment Voucher — Iqama + QR + informal party support ──────────────
+function buildCashPaymentVoucher(d) {
+  const fmtSAR = n => parseFloat(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
+  const fmtD   = s => { if (!s) return '—'; const p=(s.split('T')[0]||'').split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:s }
+
+  // ── Build QR data string — scannable on any phone ────────────────────────
+  const qrData = [
+    `VOUCHER:${d.voucher_number||'CPV'}`,
+    `DATE:${fmtD(d.payment_date)}`,
+    `PAYEE:${d.payee_name||''}`,
+    d.iqama_number  ? `IQAMA:${d.iqama_number}`    : null,
+    d.vat_number    ? `VAT:${d.vat_number}`         : null,
+    d.cr_number     ? `CR:${d.cr_number}`           : null,
+    `AMOUNT:SAR ${fmtSAR(d.amount||0)}`,
+    `METHOD:${d.payment_method||'CASH'}`,
+    `PURPOSE:${(d.purpose||'').substring(0,80)}`,
+    `ENTITY:${d.entity_name||'Ratal Advanced Technologies'}`,
+    `APPROVED:${d.approved_by||''}`,
+    `REF:${d.reference_number||d.voucher_number||''}`,
+  ].filter(Boolean).join('\n')
+
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(qrData)}`
+
+  // ── Party type config ────────────────────────────────────────────────────
+  const partyType = d.party_type || 'INDIVIDUAL'  // COMPANY | INDIVIDUAL | INFORMAL
+  const partyConfig = {
+    COMPANY:    { label:'Registered Company', color:'#1565c0', bg:'#e3f2fd', idLabel:'VAT Reg. No', idValue: d.vat_number||'—', id2Label:'CR Number', id2Value: d.cr_number||'—' },
+    INDIVIDUAL: { label:'Individual',         color:'#2e7d32', bg:'#e8f5e9', idLabel:'Iqama No',    idValue: d.iqama_number||'—', id2Label:'Mobile',    id2Value: d.payee_mobile||'—' },
+    INFORMAL:   { label:'Informal Party',     color:'#e65100', bg:'#fff3e0', idLabel:'Iqama / ID',  idValue: d.iqama_number||d.vat_number||'Not Available', id2Label:'Mobile', id2Value: d.payee_mobile||'—' },
+  }
+  const pc = partyConfig[partyType] || partyConfig.INDIVIDUAL
+
+  // ── Receipt type config ──────────────────────────────────────────────────
+  const rcptType = d.receipt_type || 'INFORMAL'
+  const rcptConfig = {
+    VAT_INVOICE:      { label:'VAT Invoice',       color:'#2e7d32', bg:'#e8f5e9' },
+    SIMPLIFIED:       { label:'Simplified Invoice',color:'#1565c0', bg:'#e3f2fd' },
+    INFORMAL_RECEIPT: { label:'Informal Receipt',  color:'#e65100', bg:'#fff3e0' },
+    NO_RECEIPT:       { label:'No Receipt',        color:'#b71c1c', bg:'#ffebee' },
+  }
+  const rc = rcptConfig[rcptType] || rcptConfig.INFORMAL_RECEIPT
+  const needsJustification = rcptType === 'INFORMAL_RECEIPT' || rcptType === 'NO_RECEIPT' || partyType === 'INFORMAL'
+
+  // ── Payment method labels ────────────────────────────────────────────────
+  const methodLabels = { CASH:'Cash', BANK_TRANSFER:'Bank Transfer', CHEQUE:'Cheque', SADAD:'SADAD' }
+  const methodLabel  = methodLabels[d.payment_method] || d.payment_method || 'Cash'
+
+  // ── Iqama photo block (optional) ─────────────────────────────────────────
+  const iqamaPhotoBlock = d.iqama_photo_url ? `
+    <div style="margin-bottom:12px;">
+      <div style="font-size:10px;font-weight:700;color:#1a2e3d;margin-bottom:5px;border-bottom:1px solid #e0e6ef;padding-bottom:4px;">🪪 IQAMA / ID COPY</div>
+      <div style="text-align:center;background:#f5f7fa;border:1.5px dashed #c0cad8;border-radius:6px;padding:6px;">
+        <img src="${d.iqama_photo_url}" style="max-width:100%;max-height:160px;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.1);" alt="Iqama Copy" onerror="this.style.display='none'"/>
+      </div>
+    </div>` : ''
+
+  // ── Supporting document photo ─────────────────────────────────────────────
+  const docPhotoBlock = d.document_url || d.photo_url ? `
+    <div style="margin-bottom:12px;">
+      <div style="font-size:10px;font-weight:700;color:#1a2e3d;margin-bottom:5px;border-bottom:1px solid #e0e6ef;padding-bottom:4px;">📄 SUPPORTING DOCUMENT / RECEIPT</div>
+      <div style="text-align:center;background:#f5f7fa;border:1.5px dashed #c0cad8;border-radius:6px;padding:6px;">
+        <img src="${d.document_url||d.photo_url}" style="max-width:100%;max-height:200px;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.1);" alt="Receipt/Document" onerror="this.style.display='none';this.nextSibling.style.display='block'"/>
+        <div style="display:none;font-size:10px;color:#aaa;padding:16px;">Document on file — Drive URL: ${d.document_url||d.photo_url}</div>
+      </div>
+    </div>` : `
+    <div style="background:#fafafa;border:1.5px dashed #ddd;border-radius:6px;padding:14px;text-align:center;color:#bbb;font-size:10px;margin-bottom:12px;">
+      📄 No supporting document attached
+    </div>`
+
+  // ── Justification box (red — for informal/no-receipt) ────────────────────
+  const justificationBlock = needsJustification ? `
+    <div style="background:#ffebee;border:2px solid #ef9a9a;border-radius:6px;padding:10px 14px;margin-bottom:12px;">
+      <div style="font-weight:800;color:#b71c1c;font-size:11px;margin-bottom:4px;">
+        ⚠️ NON-STANDARD PAYMENT — DH AUTHORISATION REQUIRED
+      </div>
+      <div style="font-size:10px;color:#c62828;margin-bottom:6px;">
+        ${partyType==='INFORMAL'?'Payee has no formal VAT/CR registration. ':''}${rcptType==='NO_RECEIPT'?'No receipt provided. ':''}${rcptType==='INFORMAL_RECEIPT'?'Informal receipt only — not a tax invoice. ':''}
+      </div>
+      ${d.justification ? `
+      <div style="background:#fff;border:1px solid #ef9a9a;border-radius:4px;padding:8px;font-size:10px;color:#1a2e3d;">
+        <strong>DH Justification:</strong> ${d.justification}
+      </div>` : `
+      <div style="background:#fff;border:1px dashed #ef9a9a;border-radius:4px;padding:8px;font-size:10px;color:#9e9e9e;font-style:italic;">
+        DH justification to be written here: _______________________________________________
+        ___________________________________________________________________________________
+      </div>`}
+    </div>` : ''
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>Cash Payment Voucher — ${d.voucher_number||''}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Poppins',Arial,sans-serif;background:#fff;font-size:11px;color:#1a2e3d;}
+    .page{width:794px;min-height:1123px;margin:0 auto;padding:36px 48px 65px;position:relative;background:#fff;}
+    .cpv-header{background:linear-gradient(135deg,#212121 0%,#37474f 100%);color:#fff;padding:14px 20px;border-radius:8px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-start;}
+    .cpv-number{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:5px;padding:4px 12px;font-size:13px;font-weight:800;letter-spacing:.5px;margin-top:6px;display:inline-block;}
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px 20px;margin-bottom:10px;}
+    .info-row{display:flex;gap:6px;font-size:10px;}
+    .info-label{color:#7a8a9a;font-weight:600;min-width:100px;}
+    .info-val{color:#1a2e3d;font-weight:700;}
+    .party-box{border:2px solid ${pc.color};border-radius:8px;padding:10px 14px;margin-bottom:12px;background:${pc.bg};}
+    .party-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+    .party-type-badge{background:${pc.color};color:#fff;font-size:9px;font-weight:800;padding:2px 10px;border-radius:20px;text-transform:uppercase;}
+    .party-name{font-size:14px;font-weight:800;color:#1a2e3d;}
+    .iqama-highlight{background:#1a2e3d;color:#fff;padding:4px 12px;border-radius:5px;font-size:12px;font-weight:800;letter-spacing:1px;display:inline-block;margin-top:4px;}
+    .amount-box{background:#f0f4ff;border:2px solid #c5d0e6;border-radius:8px;padding:12px 16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;}
+    .amount-main{font-size:22px;font-weight:800;color:#1a2e3d;}
+    .amount-words{font-size:9.5px;color:#555;font-style:italic;margin-top:3px;}
+    .method-badge{background:#37474f;color:#fff;padding:5px 14px;border-radius:6px;font-size:11px;font-weight:700;}
+    .purpose-box{background:#f7f9fc;border-left:3px solid #37474f;padding:8px 12px;margin-bottom:12px;font-size:10px;color:#1a2e3d;}
+    .receipt-badge{display:inline-flex;align-items:center;gap:5px;background:${rc.bg};color:${rc.color};border:1.5px solid ${rc.color};border-radius:5px;padding:3px 10px;font-size:10px;font-weight:700;margin-bottom:10px;}
+    .sig-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:18px;}
+    .sig-box{border-top:1.5px solid #555;padding-top:6px;text-align:center;font-size:9.5px;color:#555;}
+    .sig-iqama{font-size:9px;color:#1565c0;font-weight:700;margin-top:3px;letter-spacing:.3px;}
+    .page-footer{position:absolute;bottom:0;left:0;right:0;border-top:1px solid #ddd;padding:6px 48px;font-size:9px;color:#888;display:flex;justify-content:space-between;}
+    .qr-scan-note{font-size:8px;color:#fff;opacity:.7;text-align:center;margin-top:3px;}
+    @media print{body{background:#fff;}.page{width:100%;min-height:297mm;padding:15mm 18mm 20mm;}@page{size:A4;margin:0;}}
+  </style></head><body>
+  <div class="page">
+
+    <!-- ── HEADER ───────────────────────────────────────────────────────── -->
+    <div class="cpv-header">
+      <div style="flex:1;">
+        <div style="font-size:10px;opacity:.7;text-transform:uppercase;letter-spacing:1px;">${d.entity_name||'Ratal Advanced Technologies'}</div>
+        <div style="font-size:20px;font-weight:800;margin:4px 0 2px;">CASH PAYMENT VOUCHER</div>
+        <div style="font-size:9px;opacity:.7;">Advanced Communication &amp; Computer Systems</div>
+        <div class="cpv-number">${d.voucher_number||'CPV-—'}</div>
+      </div>
+      <div style="text-align:right;margin-left:16px;">
+        <img src="${qrSrc}" width="110" height="110"
+          style="border:2px solid rgba(255,255,255,.35);border-radius:6px;padding:3px;background:#fff;"
+          alt="Scan to verify"/>
+        <div class="qr-scan-note">📱 Scan to verify payment</div>
+      </div>
+    </div>
+
+    <!-- ── VOUCHER META ──────────────────────────────────────────────────── -->
+    <div class="info-grid" style="background:#f7f9fc;border:1px solid #e0e6ef;border-radius:6px;padding:8px 14px;margin-bottom:12px;">
+      <div class="info-row"><span class="info-label">Voucher Date:</span><span class="info-val">${fmtD(d.payment_date)}</span></div>
+      <div class="info-row"><span class="info-label">Voucher No:</span><span class="info-val">${d.voucher_number||'—'}</span></div>
+      <div class="info-row"><span class="info-label">Project / Job:</span><span class="info-val">${d.project_no||d.job_no||'—'} ${d.project_name?'— '+d.project_name:''}</span></div>
+      <div class="info-row"><span class="info-label">Department:</span><span class="info-val">${d.department||'—'}</span></div>
+      <div class="info-row"><span class="info-label">Paid By:</span><span class="info-val">${d.paid_by||d.prepared_by||'—'}</span></div>
+      <div class="info-row"><span class="info-label">Approved By:</span><span class="info-val">${d.approved_by||'—'}</span></div>
+    </div>
+
+    <!-- ── PAYEE / PARTY ─────────────────────────────────────────────────── -->
+    <div class="party-box">
+      <div class="party-header">
+        <div style="font-size:9.5px;font-weight:700;color:${pc.color};text-transform:uppercase;">Payment To / المستفيد</div>
+        <span class="party-type-badge">${pc.label}</span>
+      </div>
+      <div class="party-name">${d.payee_name||'—'}</div>
+      <div style="display:flex;gap:20px;margin-top:6px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:9px;color:#7a8a9a;font-weight:600;">${pc.idLabel}</div>
+          <div class="iqama-highlight">${pc.idValue}</div>
+        </div>
+        <div>
+          <div style="font-size:9px;color:#7a8a9a;font-weight:600;margin-top:0;">${pc.id2Label}</div>
+          <div style="font-size:11px;font-weight:700;color:#1a2e3d;margin-top:4px;">${pc.id2Value}</div>
+        </div>
+        ${d.payee_bank_name || d.iban ? `
+        <div>
+          <div style="font-size:9px;color:#7a8a9a;font-weight:600;">IBAN / Bank</div>
+          <div style="font-size:10px;font-weight:700;color:#1a2e3d;margin-top:4px;">${d.iban||'—'} ${d.payee_bank_name?'('+d.payee_bank_name+')':''}</div>
+        </div>` : ''}
+      </div>
+    </div>
+
+    <!-- ── AMOUNT + METHOD ───────────────────────────────────────────────── -->
+    <div class="amount-box">
+      <div>
+        <div style="font-size:9px;color:#7a8a9a;font-weight:600;text-transform:uppercase;margin-bottom:2px;">Amount Paid</div>
+        <div class="amount-main">SAR ${fmtSAR(d.amount||0)}</div>
+        <div class="amount-words">${numToWordsEn(parseFloat(d.amount||0))}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:9px;color:#7a8a9a;font-weight:600;margin-bottom:4px;">Payment Method</div>
+        <div class="method-badge">${methodLabel}</div>
+        ${d.reference_number?`<div style="font-size:9px;color:#7a8a9a;margin-top:4px;">Ref: ${d.reference_number}</div>`:''}
+        ${d.account_code?`<div style="font-size:9px;color:#7a8a9a;">A/C: ${d.account_code}</div>`:''}
+      </div>
+    </div>
+
+    <!-- ── PURPOSE / DESCRIPTION ─────────────────────────────────────────── -->
+    <div class="purpose-box">
+      <div style="font-weight:700;margin-bottom:3px;font-size:10px;">Purpose / سبب الدفع</div>
+      <div style="line-height:1.5;">${d.purpose||d.work_description||'—'}</div>
+      ${d.notes?`<div style="margin-top:4px;color:#555;font-style:italic;">${d.notes}</div>`:''}
+    </div>
+
+    <!-- ── RECEIPT TYPE BADGE ─────────────────────────────────────────────── -->
+    <div style="margin-bottom:10px;">
+      <span style="font-size:9.5px;color:#7a8a9a;font-weight:600;margin-right:8px;">Receipt Type:</span>
+      <span class="receipt-badge">${rc.label}</span>
+    </div>
+
+    <!-- ── JUSTIFICATION (if informal / no receipt) ──────────────────────── -->
+    ${justificationBlock}
+
+    <!-- ── IQAMA COPY (if uploaded) ──────────────────────────────────────── -->
+    ${iqamaPhotoBlock}
+
+    <!-- ── SUPPORTING DOCUMENT ──────────────────────────────────────────── -->
+    ${docPhotoBlock}
+
+    <!-- ── SIGNATURES ────────────────────────────────────────────────────── -->
+    <div class="sig-grid">
+      <div class="sig-box">
+        <div style="height:38px;"></div>
+        <div style="font-weight:700;">${d.paid_by||d.prepared_by||'Cashier / Finance'}</div>
+        <div>Paid By</div>
+        <div style="color:#888;font-size:9px;margin-top:2px;">${fmtD(d.payment_date)}</div>
+      </div>
+      <div class="sig-box">
+        <div style="height:38px;"></div>
+        <div style="font-weight:700;">${d.approved_by||'Department Head'}</div>
+        <div>Approved By</div>
+        <div style="color:#888;font-size:9px;margin-top:2px;">${fmtD(d.payment_date)}</div>
+      </div>
+      <div class="sig-box">
+        <div style="height:38px;"></div>
+        <div style="font-weight:700;">${d.payee_name||'Payee / المستلم'}</div>
+        <div>Received By (Signature)</div>
+        ${d.iqama_number?`<div class="sig-iqama">Iqama: ${d.iqama_number}</div>`:''}
+        ${d.vat_number&&partyType==='COMPANY'?`<div class="sig-iqama">VAT: ${d.vat_number}</div>`:''}
+      </div>
+    </div>
+
+    <div class="page-footer">
+      <span>${d.entity_name||'Ratal Advanced Technologies'} — Cash Payment Voucher</span>
+      <span>${d.voucher_number||''}</span>
+      <span>${fmtD(d.payment_date)}</span>
+    </div>
+  </div></body></html>`
+}
+
+// ─── SubCon Payment Certificate ──────────────────────────────────────────────
+function buildSubConCert(d) {
+  const fmtSAR  = n => parseFloat(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
+  const fmtD    = s => { if (!s) return '—'; const p=s.split('T')[0].split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:s }
+  const milestones = Array.isArray(d.milestones_done) ? d.milestones_done : []
+  const materials  = Array.isArray(d.materials_used)  ? d.materials_used  : []
+  const claimAmt  = parseFloat(d.claim_amount||0)
+  const vatPct    = parseFloat(d.vat_pct||15)
+  const vatAmt    = parseFloat(d.vat_amount || claimAmt*(vatPct/100))
+  const totalAmt  = parseFloat(d.total_amount || claimAmt + vatAmt)
+  const claimTypeLabel = d.claim_type==='HOURLY'?'Hourly Rate':d.claim_type==='MILESTONE'?'Milestone-Based':'Lump Sum'
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(d.claim_number||'CERT')}`
+
+  const milestoneRows = milestones.length
+    ? milestones.map((m,i) => `<tr style="background:${i%2?'#f9f9f9':'#fff'}"><td style="padding:5px 8px;border:1px solid #ddd;">${i+1}</td><td style="padding:5px 8px;border:1px solid #ddd;">${m}</td><td style="padding:5px 8px;text-align:center;border:1px solid #ddd;color:#2e7d32;font-weight:700;">✓ Done</td></tr>`).join('')
+    : '<tr><td colspan="3" style="padding:8px;text-align:center;color:#aaa;border:1px solid #ddd;">No milestones specified</td></tr>'
+
+  const materialRows = materials.length
+    ? materials.map((m,i) => `<tr style="background:${i%2?'#f9f9f9':'#fff'}"><td style="padding:5px 8px;border:1px solid #ddd;">${m.item||'—'}</td><td style="text-align:center;padding:5px 8px;border:1px solid #ddd;">${m.qty||0}</td><td style="text-align:center;padding:5px 8px;border:1px solid #ddd;">${m.unit_cost?fmtSAR(m.unit_cost):'—'}</td><td style="text-align:right;padding:5px 8px;border:1px solid #ddd;">${fmtSAR(m.total||0)}</td></tr>`).join('')
+    : ''
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>SubCon Payment Certificate — ${d.claim_number||''}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Poppins',Arial,sans-serif;background:#fff;font-size:11px;color:#1a2e3d;}
+    .page{width:794px;min-height:1123px;margin:0 auto;padding:36px 48px 65px;position:relative;background:#fff;}
+    .cert-banner{background:linear-gradient(135deg,#1a2e5a 0%,#0e7c61 100%);color:#fff;padding:14px 20px;border-radius:8px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;}
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin-bottom:12px;}
+    .info-row{display:flex;gap:6px;font-size:10px;}
+    .info-label{color:#7a8a9a;font-weight:600;min-width:110px;}
+    .info-val{color:#1a2e3d;font-weight:700;}
+    .section-title{font-size:11px;font-weight:800;color:#fff;background:#1a2e5a;padding:5px 10px;margin:10px 0 4px;border-radius:4px;}
+    .amount-box{background:#f0f4ff;border:1.5px solid #c5d0e6;border-radius:6px;padding:10px 14px;margin:10px 0;}
+    .amount-row{display:flex;justify-content:space-between;padding:3px 0;font-size:11px;}
+    .amount-total{font-size:14px;font-weight:800;color:#1a2e5a;border-top:2px solid #1a2e5a;padding-top:6px;margin-top:4px;display:flex;justify-content:space-between;}
+    .sig-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:20px;}
+    .sig-box{border-top:1.5px solid #555;padding-top:6px;text-align:center;font-size:9.5px;color:#555;}
+    .page-footer{position:absolute;bottom:0;left:0;right:0;border-top:1px solid #ddd;padding:6px 48px;font-size:9px;color:#888;display:flex;justify-content:space-between;}
+    @media print{body{background:#fff;}.page{width:100%;min-height:297mm;padding:15mm 18mm 20mm;}@page{size:A4;margin:0;}}
+  </style></head><body>
+  <div class="page">
+
+    <div class="cert-banner">
+      <div>
+        <div style="font-size:16px;font-weight:800;letter-spacing:.5px;">SUB-CONTRACTOR PAYMENT CERTIFICATE</div>
+        <div style="font-size:10px;opacity:.85;margin-top:3px;">${d.entity_name||'Ratal Advanced Technologies'} — Advanced Communication &amp; Computer Systems</div>
+      </div>
+      <div style="text-align:right;">
+        <img src="${qrSrc}" width="80" height="80" style="border:2px solid rgba(255,255,255,.4);border-radius:4px;padding:2px;" alt="QR"/>
+        <div style="font-size:9px;margin-top:3px;opacity:.85;">${d.claim_number||''}</div>
+      </div>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-row"><span class="info-label">Certificate No:</span><span class="info-val">${d.claim_number||'—'}</span></div>
+      <div class="info-row"><span class="info-label">Certificate Date:</span><span class="info-val">${fmtD(d.claim_date||d.submitted_at)}</span></div>
+      <div class="info-row"><span class="info-label">Contractor:</span><span class="info-val">${d.contractor_name||'—'}</span></div>
+      <div class="info-row"><span class="info-label">VAT Reg. No:</span><span class="info-val">${d.contractor_vat||'—'}</span></div>
+      <div class="info-row"><span class="info-label">Site Name:</span><span class="info-val">${d.site_name||'—'}</span></div>
+      <div class="info-row"><span class="info-label">Site No:</span><span class="info-val">${d.site_number||'—'}</span></div>
+      <div class="info-row"><span class="info-label">Scope Type:</span><span class="info-val">${(d.scope_type||'—').replace(/_/g,' ')}</span></div>
+      <div class="info-row"><span class="info-label">Claim Type:</span><span class="info-val">${claimTypeLabel}</span></div>
+      <div class="info-row"><span class="info-label">Claim Period:</span><span class="info-val">${d.claim_month||'—'} / ${d.claim_year||'—'}</span></div>
+      <div class="info-row"><span class="info-label">Submitted By:</span><span class="info-val">${d.employee_name||'—'}</span></div>
+    </div>
+
+    ${d.work_description ? `<div style="background:#f7f9fc;border-left:3px solid #0e7c61;padding:8px 12px;margin-bottom:10px;font-size:10px;color:#1a2e3d;"><strong>Work Description:</strong> ${d.work_description}</div>` : ''}
+
+    ${milestones.length ? `
+    <div class="section-title">Completed Milestones</div>
+    <table style="width:100%;border-collapse:collapse;font-size:10px;margin-bottom:8px;">
+      <thead><tr style="background:#0e7c61;color:#fff;"><th style="padding:6px 8px;border:1px solid #0a6050;width:36px;">S/N</th><th style="padding:6px 8px;border:1px solid #0a6050;text-align:left;">Milestone Description</th><th style="padding:6px 8px;border:1px solid #0a6050;width:80px;">Status</th></tr></thead>
+      <tbody>${milestoneRows}</tbody>
+    </table>` : ''}
+
+    ${d.claim_type==='HOURLY' ? `
+    <div class="section-title">Hourly Breakdown</div>
+    <div class="info-grid" style="margin-bottom:10px;">
+      <div class="info-row"><span class="info-label">Hours Worked:</span><span class="info-val">${d.hours_worked||0} hrs</span></div>
+      <div class="info-row"><span class="info-label">Hourly Rate:</span><span class="info-val">SAR ${fmtSAR(d.hourly_rate||0)} / hr</span></div>
+    </div>` : ''}
+
+    ${materials.length ? `
+    <div class="section-title">Materials Used</div>
+    <table style="width:100%;border-collapse:collapse;font-size:10px;margin-bottom:8px;">
+      <thead><tr style="background:#1a2e5a;color:#fff;"><th style="padding:5px 8px;border:1px solid #0f1f40;text-align:left;">Item</th><th style="padding:5px 8px;border:1px solid #0f1f40;width:55px;text-align:center;">Qty</th><th style="padding:5px 8px;border:1px solid #0f1f40;width:80px;text-align:center;">Unit Cost</th><th style="padding:5px 8px;border:1px solid #0f1f40;width:85px;text-align:right;">Total SAR</th></tr></thead>
+      <tbody>${materialRows}</tbody>
+    </table>` : ''}
+
+    <div class="amount-box">
+      <div class="amount-row"><span>Claim Amount (Excl. VAT)</span><span>SAR ${fmtSAR(claimAmt)}</span></div>
+      <div class="amount-row"><span>VAT (${vatPct}%)</span><span>SAR ${fmtSAR(vatAmt)}</span></div>
+      <div class="amount-total"><span>Total Payable</span><span>SAR ${fmtSAR(totalAmt)}</span></div>
+    </div>
+
+    ${d.notes ? `<div style="background:#fffde7;border:1px solid #f9c74f;border-radius:5px;padding:8px 12px;font-size:10px;margin-bottom:10px;"><strong>Notes:</strong> ${d.notes}</div>` : ''}
+
+    <div class="sig-grid">
+      <div class="sig-box"><div style="height:36px;"></div><div style="font-weight:700;">${d.employee_name||'Sub-Contractor'}</div><div>Submitted By</div></div>
+      <div class="sig-box"><div style="height:36px;"></div><div style="font-weight:700;">${d.approved_by||'Department Head'}</div><div>Approved By</div></div>
+      <div class="sig-box"><div style="height:36px;"></div><div style="font-weight:700;">Finance / Accounts</div><div>Processed By</div></div>
+    </div>
+
+    <div class="page-footer">
+      <span>${d.entity_name||'Ratal Advanced Technologies'} — SubCon Payment Certificate</span>
+      <span>${d.claim_number||''}</span>
+      <span>Date: ${fmtD(d.claim_date||d.submitted_at)}</span>
+    </div>
+  </div></body></html>`
+}
+
+// ─── Expense Record Voucher — with photo + late-submission callout ────────────
+function buildExpenseVoucher(d) {
+  const fmtSAR = n => parseFloat(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
+  const fmtD   = s => { if (!s) return '—'; const p=s.split('T')[0].split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:s }
+
+  const expDate  = d.date || d.expense_date || ''
+  const invDate  = d.invoice_date || ''
+  const subDate  = d.submitted_at ? (d.submitted_at).split('T')[0] : expDate
+  const qrData   = `REF:${d.record_number||d.expense_id||'EXP'} EMP:${d.employee_name||''} PRJ:${d.project_no||''} AMT:${d.total||d.total_amount||''} DATE:${expDate}`
+  const qrSrc    = `https://api.qrserver.com/v1/create-qr-code/?size=85x85&data=${encodeURIComponent(qrData)}`
+
+  const photoBlock = d.photo_url ? `
+    <div style="margin-bottom:0;">
+      <div style="font-size:9.5px;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #e8edf2;">Receipt / Invoice Photo — Cross-Verification</div>
+      <div style="text-align:center;background:#f5f7fa;border:1px solid #d0d8e4;border-radius:6px;padding:10px;min-height:220px;display:flex;align-items:center;justify-content:center;">
+        <img src="${d.photo_url}" style="max-width:100%;max-height:380px;border-radius:4px;box-shadow:0 2px 12px rgba(0,0,0,.15);display:block;" alt="Receipt Photo"
+          onerror="this.style.display='none';this.nextSibling.style.display='flex'"/>
+        <div style="display:none;flex-direction:column;align-items:center;gap:6px;color:#aab;font-size:10px;padding:20px;">
+          <div style="font-size:28px;">📷</div>
+          <div>Photo stored on Drive — open via link to view</div>
+          <div style="font-size:9px;word-break:break-all;color:#bbc;">${d.photo_url}</div>
+        </div>
+      </div>
+      <div style="font-size:9px;color:#8a9ab0;text-align:center;margin-top:5px;">Photo submitted via mobile field form on ${fmtD(subDate)}</div>
+    </div>` : `
+    <div style="background:#f8f9fa;border:1.5px dashed #d0d8e4;border-radius:6px;padding:32px 20px;text-align:center;color:#b0bec5;">
+      <div style="font-size:28px;margin-bottom:6px;">📷</div>
+      <div style="font-size:10px;font-weight:600;">No receipt photo attached to this record</div>
+      <div style="font-size:9px;margin-top:3px;">Employee should attach photo when submitting via mobile form</div>
+    </div>`
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>Expense Record — ${d.record_number||d.expense_id||''}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Poppins',Arial,sans-serif;background:#fff;font-size:11px;color:#1a2e3d;}
+    .page{width:794px;min-height:1123px;margin:0 auto;padding:28px 40px 60px;position:relative;background:#fff;}
+    .hdr{background:#1a2e3d;color:#fff;padding:14px 18px 14px 20px;border-radius:8px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;}
+    .hdr-title{font-size:15px;font-weight:800;letter-spacing:.5px;}
+    .hdr-sub{font-size:9.5px;opacity:.7;margin-top:3px;}
+    .top-strip{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0;background:#f0f4f8;border:1px solid #d8e2ee;border-radius:7px;margin-bottom:14px;overflow:hidden;}
+    .ts-cell{padding:9px 14px;border-right:1px solid #d8e2ee;}
+    .ts-cell:last-child{border-right:none;}
+    .ts-label{font-size:8.5px;font-weight:700;color:#7a8a9a;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;}
+    .ts-val{font-size:12px;font-weight:700;color:#1a2e3d;}
+    .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #d8e2ee;border-radius:7px;overflow:hidden;margin-bottom:14px;}
+    .dg-row{display:contents;}
+    .dg-label{padding:7px 14px;font-size:9.5px;font-weight:600;color:#7a8a9a;background:#f7f9fc;border-bottom:1px solid #edf0f5;}
+    .dg-val{padding:7px 14px;font-size:10px;font-weight:600;color:#1a2e3d;background:#fff;border-bottom:1px solid #edf0f5;}
+    .dg-label:nth-last-child(2),.dg-val:nth-last-child(1){border-bottom:none;}
+    .dates-bar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;}
+    .date-chip{background:#f7f9fc;border:1px solid #d8e2ee;border-radius:6px;padding:8px 12px;text-align:center;}
+    .date-chip-label{font-size:8.5px;color:#7a8a9a;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;}
+    .date-chip-val{font-size:11px;font-weight:700;color:#1a2e3d;}
+    .amount-box{background:#e8f5e9;border:1px solid #a5d6a7;border-radius:7px;padding:10px 14px;margin-bottom:14px;}
+    .amt-row{display:flex;justify-content:space-between;padding:3px 0;font-size:10.5px;}
+    .amt-total{display:flex;justify-content:space-between;border-top:1.5px solid #388e3c;padding-top:7px;margin-top:5px;font-size:14px;font-weight:800;color:#2e7d32;}
+    .sig-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:18px;}
+    .sig-box{border-top:1.5px solid #555;padding-top:6px;text-align:center;font-size:9.5px;color:#555;}
+    .page-footer{position:absolute;bottom:0;left:0;right:0;border-top:1px solid #e0e6ef;padding:6px 40px;font-size:8.5px;color:#8a9ab0;display:flex;justify-content:space-between;}
+    @media print{body{background:#fff;}.page{width:100%;min-height:297mm;padding:12mm 15mm 18mm;}@page{size:A4;margin:0;}}
+  </style></head><body>
+  <div class="page">
+
+    <!-- Header -->
+    <div class="hdr">
+      <div>
+        <div class="hdr-title">EXPENSE RECORD VOUCHER</div>
+        <div class="hdr-sub">${d.entity_name||'Ratal Advanced Technologies'} &nbsp;·&nbsp; ${d.record_number||d.expense_id||''}</div>
+      </div>
+      <img src="${qrSrc}" width="70" height="70" style="border:2px solid rgba(255,255,255,.25);border-radius:5px;padding:2px;" alt="QR"/>
+    </div>
+
+    <!-- Top 4 key fields -->
+    <div class="top-strip">
+      <div class="ts-cell">
+        <div class="ts-label">Employee Name</div>
+        <div class="ts-val">${d.employee_name||'—'}</div>
+      </div>
+      <div class="ts-cell">
+        <div class="ts-label">Project No.</div>
+        <div class="ts-val">${d.project_no||d.job_no||'—'}</div>
+      </div>
+      <div class="ts-cell">
+        <div class="ts-label">Date of Submission</div>
+        <div class="ts-val">${fmtD(subDate)}</div>
+      </div>
+      <div class="ts-cell">
+        <div class="ts-label">Site No / Job #</div>
+        <div class="ts-val">${d.site_no||d.job_no||d.project_no||'—'}</div>
+      </div>
+    </div>
+
+    <!-- Expense details -->
+    <div class="detail-grid">
+      <div class="dg-label">Project Name</div><div class="dg-val">${d.project_name||'—'}</div>
+      <div class="dg-label">Department</div><div class="dg-val">${d.department||'—'}</div>
+      <div class="dg-label">Vendor / Supplier</div><div class="dg-val">${d.vendor||d.vendor_name||'—'}</div>
+      <div class="dg-label">Invoice Number</div><div class="dg-val">${d.invoice_number||'—'}</div>
+      <div class="dg-label">Vendor VAT Number</div><div class="dg-val">${d.vat_number||'—'}</div>
+      <div class="dg-label">Expense Category</div><div class="dg-val">${d.category||'—'}</div>
+    </div>
+
+    <!-- Dates — side by side for cross-check, no alarm styling -->
+    <div class="dates-bar">
+      <div class="date-chip">
+        <div class="date-chip-label">Invoice Date</div>
+        <div class="date-chip-val">${fmtD(invDate)||'—'}</div>
+      </div>
+      <div class="date-chip">
+        <div class="date-chip-label">Expense Recorded</div>
+        <div class="date-chip-val">${fmtD(expDate)||'—'}</div>
+      </div>
+      <div class="date-chip">
+        <div class="date-chip-label">Submitted On</div>
+        <div class="date-chip-val">${fmtD(subDate)||'—'}</div>
+      </div>
+    </div>
+
+    <!-- Receipt Photo — centrepiece -->
+    ${photoBlock}
+
+    <!-- Amounts -->
+    <div class="amount-box" style="margin-top:14px;">
+      <div class="amt-row"><span>Net Amount (Excl. VAT)</span><span>SAR ${fmtSAR(d.net_amount||d.amount||0)}</span></div>
+      <div class="amt-row"><span>VAT Amount (15%)</span><span>SAR ${fmtSAR(d.vat_amount||0)}</span></div>
+      <div class="amt-total"><span>Total (Incl. VAT)</span><span>SAR ${fmtSAR(d.total||d.total_amount||(parseFloat(d.net_amount||0)+parseFloat(d.vat_amount||0)))}</span></div>
+    </div>
+
+    ${d.notes ? `<div style="background:#f7f9fc;border:1px solid #d8e2ee;border-radius:5px;padding:7px 12px;font-size:10px;margin-bottom:10px;"><strong style="color:#5a6a7a;">Notes:</strong> ${d.notes}</div>` : ''}
+
+    <!-- Signatures -->
+    <div class="sig-grid">
+      <div class="sig-box"><div style="height:36px;"></div><div style="font-weight:700;">${d.employee_name||'Employee'}</div><div>Submitted By</div></div>
+      <div class="sig-box"><div style="height:36px;"></div><div style="font-weight:700;">${d.dh_name||'Department Head'}</div><div>Approved By (DH)</div></div>
+      <div class="sig-box"><div style="height:36px;"></div><div style="font-weight:700;">Finance / Accounts</div><div>Verified By</div></div>
+    </div>
+
+    <div class="page-footer">
+      <span>${d.entity_name||'Ratal Advanced Technologies'} — Expense Record Voucher</span>
+      <span>${d.record_number||d.expense_id||''}</span>
+      <span>${fmtD(subDate)}</span>
+    </div>
+  </div></body></html>`
+}
+
+// ─── ACCSYS Tax Invoice — Bilingual ──────────────────────────────────────────
+function buildInvoiceACCSYS(d) {
+  const fmtSAR = n => parseFloat(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
+  const lines  = Array.isArray(d.lines) ? d.lines : []
+  const qrSrc  = `https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(d.invoice_number||'INV')}`
+  const isAR   = !!(d.language === 'BILINGUAL' || d.show_arabic)
+
+  const lineRows = lines.map((l,i) => `
+    <tr style="background:${i%2?'#f7f9fc':'#fff'}">
+      <td style="padding:6px 8px;border:1px solid #d0d8e8;">${l.description||l.item_description||'—'}</td>
+      <td style="text-align:center;padding:6px 8px;border:1px solid #d0d8e8;">${l.qty||l.quantity||1}</td>
+      <td style="text-align:center;padding:6px 8px;border:1px solid #d0d8e8;">${l.unit||'LS'}</td>
+      <td style="text-align:right;padding:6px 8px;border:1px solid #d0d8e8;">SAR ${fmtSAR(l.unit_price||l.rate||0)}</td>
+      <td style="text-align:right;padding:6px 8px;border:1px solid #d0d8e8;">SAR ${fmtSAR(l.total||l.amount||(parseFloat(l.qty||1)*parseFloat(l.unit_price||0)))}</td>
+    </tr>`).join('')
+
+  const netAmt  = parseFloat(d.total_net||d.net_amount||0)
+  const vatAmt  = parseFloat(d.vat_amount||netAmt*0.15)
+  const totAmt  = parseFloat(d.total_incl_vat||d.total||netAmt+vatAmt)
+  const words   = numToWordsEn(totAmt)
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>Tax Invoice — ${d.invoice_number||''}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Poppins',Arial,sans-serif;background:#fff;font-size:11px;color:#1a2e3d;}
+    .page{width:794px;min-height:1123px;margin:0 auto;padding:36px 48px 65px;position:relative;background:#fff;}
+    .inv-header{background:linear-gradient(135deg,#0a1a3a 0%,#1a3a6b 100%);color:#fff;padding:16px 22px;border-radius:8px 8px 0 0;display:flex;justify-content:space-between;align-items:center;margin-bottom:0;}
+    .party-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1.5px solid #d0d8e8;border-top:none;border-radius:0 0 8px 8px;overflow:hidden;margin-bottom:14px;}
+    .party-box{padding:10px 14px;border-right:1px solid #d0d8e8;}
+    .party-box:last-child{border-right:none;}
+    .party-label{font-size:9px;font-weight:700;color:#7a8a9a;text-transform:uppercase;margin-bottom:4px;}
+    .party-name{font-size:12px;font-weight:800;color:#1a2e3d;}
+    .party-detail{font-size:9.5px;color:#555;margin-top:2px;line-height:1.5;}
+    .meta-strip{display:flex;gap:0;background:#f0f4ff;border:1.5px solid #d0d8e8;border-radius:6px;overflow:hidden;margin-bottom:12px;}
+    .meta-cell{flex:1;padding:6px 12px;border-right:1px solid #d0d8e8;text-align:center;}
+    .meta-cell:last-child{border-right:none;}
+    .meta-key{font-size:8.5px;color:#7a8a9a;font-weight:600;text-transform:uppercase;}
+    .meta-val{font-size:11px;font-weight:800;color:#1a2e3d;margin-top:2px;}
+    .vatice-badge{background:#e8f5e9;color:#2e7d32;font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;border:1px solid #a5d6a7;display:inline-block;}
+    .amount-section{margin-top:10px;}
+    .amount-row{display:flex;justify-content:space-between;padding:4px 14px;font-size:11px;}
+    .amount-total{display:flex;justify-content:space-between;padding:7px 14px;font-size:14px;font-weight:800;color:#fff;background:#0a1a3a;border-radius:0 0 6px 6px;}
+    .words-line{font-size:9.5px;color:#555;padding:6px 14px;background:#f7f9fc;border:1px solid #d0d8e8;border-top:none;font-style:italic;}
+    .page-footer{position:absolute;bottom:0;left:0;right:0;border-top:1px solid #ddd;padding:6px 48px;font-size:9px;color:#888;display:flex;justify-content:space-between;}
+    @media print{body{background:#fff;}.page{width:100%;min-height:297mm;padding:15mm 18mm 20mm;}@page{size:A4;margin:0;}}
+  </style></head><body>
+  <div class="page">
+
+    <div class="inv-header">
+      <div>
+        <div style="font-size:10px;opacity:.7;text-transform:uppercase;letter-spacing:1px;">Ratal Advanced Technologies</div>
+        <div style="font-size:20px;font-weight:800;letter-spacing:.5px;margin:4px 0;">TAX INVOICE${isAR?`<span dir="rtl" style="margin-right:16px;font-size:15px;opacity:.9;"> / فاتورة ضريبية</span>`:'  '}</div>
+        <div style="font-size:9px;opacity:.7;">VAT Registration: ${d.entity_vat||'310680651700003'}</div>
+      </div>
+      <div style="text-align:right;">
+        <img src="${qrSrc}" width="90" height="90" style="border:2px solid rgba(255,255,255,.3);border-radius:4px;padding:2px;" alt="ZATCA QR"/>
+        <div style="font-size:8px;margin-top:3px;opacity:.75;">ZATCA e-Invoice QR</div>
+      </div>
+    </div>
+
+    <div class="party-grid">
+      <div class="party-box" style="background:#fafbff;">
+        <div class="party-label">Issuer / المورد</div>
+        <div class="party-name">${d.entity_name||'Ratal Advanced Technologies'}</div>
+        <div class="party-detail">${d.entity_address||'Building 4812, Aghadeer Street, Malaz, Riyadh'}<br/>VAT: ${d.entity_vat||'310680651700003'}</div>
+      </div>
+      <div class="party-box">
+        <div class="party-label">Customer / العميل</div>
+        <div class="party-name">${d.client_name||'—'}</div>
+        <div class="party-detail">${d.client_address||''} ${d.client_address&&d.client_vat?'<br/>':''} ${d.client_vat?`VAT: ${d.client_vat}`:''}</div>
+      </div>
+    </div>
+
+    <div class="meta-strip">
+      <div class="meta-cell"><div class="meta-key">Invoice No</div><div class="meta-val">${d.invoice_number||'—'}</div></div>
+      <div class="meta-cell"><div class="meta-key">Invoice Date</div><div class="meta-val">${d.invoice_date||'—'}</div></div>
+      <div class="meta-cell"><div class="meta-key">Due Date</div><div class="meta-val">${d.due_date||'—'}</div></div>
+      <div class="meta-cell"><div class="meta-key">PO Reference</div><div class="meta-val">${d.po_number||d.po_ref||'—'}</div></div>
+      <div class="meta-cell"><div class="meta-key">Currency</div><div class="meta-val">${d.currency||'SAR'}</div></div>
+    </div>
+
+    ${lines.length ? `
+    <table style="width:100%;border-collapse:collapse;font-size:10px;margin-bottom:0;border:1.5px solid #d0d8e8;border-radius:6px;overflow:hidden;">
+      <thead><tr style="background:#1a3a6b;color:#fff;">
+        <th style="padding:7px 8px;text-align:left;border:1px solid #0f2550;">Description</th>
+        <th style="padding:7px 8px;width:55px;text-align:center;border:1px solid #0f2550;">Qty</th>
+        <th style="padding:7px 8px;width:45px;text-align:center;border:1px solid #0f2550;">Unit</th>
+        <th style="padding:7px 8px;width:100px;text-align:right;border:1px solid #0f2550;">Unit Price</th>
+        <th style="padding:7px 8px;width:110px;text-align:right;border:1px solid #0f2550;">Amount SAR</th>
+      </tr></thead>
+      <tbody>${lineRows}</tbody>
+    </table>` : ''}
+
+    <div class="amount-section">
+      <div style="background:#f7f9fc;border:1.5px solid #d0d8e8;border-top:none;border-radius:0 0 0 0;">
+        <div class="amount-row"><span>Net Amount (Excl. VAT)</span><span>SAR ${fmtSAR(netAmt)}</span></div>
+        <div class="amount-row"><span>VAT (15%)</span><span>SAR ${fmtSAR(vatAmt)}</span></div>
+      </div>
+      <div class="amount-total"><span>TOTAL AMOUNT (Incl. VAT)</span><span>SAR ${fmtSAR(totAmt)}</span></div>
+      <div class="words-line">Amount in words: ${words}</div>
+    </div>
+
+    ${d.terms ? `<div style="margin-top:10px;font-size:9.5px;color:#555;background:#f9f9f9;border:1px solid #e0e0e0;padding:8px 12px;border-radius:4px;"><strong>Terms &amp; Conditions:</strong> ${d.terms}</div>` : ''}
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:28px;">
+      <div style="border-top:1.5px solid #555;padding-top:6px;text-align:center;font-size:9.5px;color:#555;"><div style="height:36px;"></div><div style="font-weight:700;">${d.prepared_by||'Accounts Team'}</div><div>Prepared By</div></div>
+      <div style="border-top:1.5px solid #555;padding-top:6px;text-align:center;font-size:9.5px;color:#555;"><div style="height:36px;"></div><div style="font-weight:700;">${d.approved_by||d.entity_name||'Authorized Signatory'}</div><div>Authorised Signatory &amp; Stamp</div></div>
+    </div>
+
+    <div class="page-footer">
+      <span>${d.entity_name||'Ratal Advanced Technologies'} | VAT: ${d.entity_vat||'310680651700003'}</span>
+      <span>${d.invoice_number||''}</span>
+      <span>${d.invoice_date||''}</span>
+    </div>
+  </div></body></html>`
+}
+
+// ─── SubCon Statement of Account ─────────────────────────────────────────────
+function buildSubConStatement(d) {
+  const FIN = '#8C354B'
+  const FIN_L = '#FAF0F2'
+  const FIN_D = '#C1A1A9'
+  const rows = (d.lines||[]).map((r,i)=>`
+    <tr style="background:${i%2===0?'#fff':FIN_L};">
+      <td style="padding:6px 8px;font-size:9.5px;">${r.date||''}</td>
+      <td style="padding:6px 8px;font-size:9.5px;">${r.cert_number||r.ref||''}</td>
+      <td style="padding:6px 8px;font-size:9.5px;">${r.description||''}</td>
+      <td style="padding:6px 8px;font-size:9.5px;text-align:right;">${r.claimed?.toLocaleString('en-US',{minimumFractionDigits:2})||''}</td>
+      <td style="padding:6px 8px;font-size:9.5px;text-align:right;color:${r.payment_amount?'#2e7d32':'#888'};">${r.payment_amount?r.payment_amount.toLocaleString('en-US',{minimumFractionDigits:2}):'-'}</td>
+      <td style="padding:6px 8px;font-size:9.5px;text-align:right;font-weight:600;">${r.balance!=null?r.balance.toLocaleString('en-US',{minimumFractionDigits:2}):''}</td>
+    </tr>`).join('')
+  const totalClaimed  = (d.total_claimed  || (d.lines||[]).reduce((s,r)=>s+(r.claimed||0),0))
+  const totalPaid     = (d.total_paid     || (d.lines||[]).reduce((s,r)=>s+(r.payment_amount||0),0))
+  const outstanding   = (d.outstanding    || totalClaimed - totalPaid)
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <style>
+    body { margin:0; font-family:'Arial',sans-serif; color:#1a2e3d; background:#fff; }
+    .page { width:794px; min-height:1123px; margin:0 auto; padding:32px 36px; box-sizing:border-box; }
+    .page-footer { position:fixed; bottom:0; left:0; right:0; padding:8px 36px; font-size:8.5px; color:#888; display:flex; justify-content:space-between; border-top:1px solid #e0e0e0; }
+    @media print { .page-footer { position:fixed; bottom:0; } body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+    table { width:100%; border-collapse:collapse; }
+    th { background:${FIN}; color:#fff; padding:7px 8px; font-size:10px; font-weight:700; text-align:left; }
+  </style></head><body><div class="page">
+
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">
+      <div>
+        <div style="font-size:20px;font-weight:900;color:${FIN};">${d.entity_name||'Ratal Advanced Technologies'}</div>
+        <div style="font-size:9px;color:#777;margin-top:2px;">${d.entity_vat?'VAT: '+d.entity_vat:''}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:16px;font-weight:900;color:#1a2e3d;">SUB-CONTRACTOR STATEMENT</div>
+        <div style="font-size:9px;color:#888;margin-top:4px;">Statement Ref: ${d.statement_number||'SC-STMT-001'}</div>
+        <div style="font-size:9px;color:#888;">Date: ${d.statement_date||new Date().toLocaleDateString('en-GB')}</div>
+      </div>
+    </div>
+
+    <!-- Party Info -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+      <div style="background:${FIN_L};border:1px solid ${FIN_D};border-radius:6px;padding:12px;">
+        <div style="font-size:9px;font-weight:700;color:${FIN};margin-bottom:6px;text-transform:uppercase;">Sub-Contractor</div>
+        <div style="font-size:11px;font-weight:700;">${d.subcon_name||'Sub-Contractor Name'}</div>
+        <div style="font-size:9.5px;color:#555;margin-top:2px;">${d.subcon_cr?'CR: '+d.subcon_cr:d.subcon_iqama?'Iqama: '+d.subcon_iqama:''}</div>
+        <div style="font-size:9.5px;color:#555;">${d.subcon_vat?'VAT: '+d.subcon_vat:''}</div>
+      </div>
+      <div style="background:${FIN_L};border:1px solid ${FIN_D};border-radius:6px;padding:12px;">
+        <div style="font-size:9px;font-weight:700;color:${FIN};margin-bottom:6px;text-transform:uppercase;">Period</div>
+        <div style="font-size:10px;"><strong>From:</strong> ${d.from_date||''}</div>
+        <div style="font-size:10px;margin-top:2px;"><strong>To:</strong> ${d.to_date||''}</div>
+        ${d.project_name?`<div style="font-size:10px;margin-top:4px;"><strong>Project:</strong> ${d.project_name}</div>`:''}
+      </div>
+    </div>
+
+    <!-- Table -->
+    <table style="margin-bottom:16px;">
+      <thead><tr>
+        <th style="width:85px;">Date</th>
+        <th style="width:100px;">Cert. / Ref</th>
+        <th>Description</th>
+        <th style="width:100px;text-align:right;">Claimed (SAR)</th>
+        <th style="width:100px;text-align:right;">Paid (SAR)</th>
+        <th style="width:100px;text-align:right;">Balance (SAR)</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+
+    <!-- Totals -->
+    <div style="display:flex;justify-content:flex-end;margin-bottom:24px;">
+      <table style="width:340px;border-collapse:collapse;">
+        <tr style="background:${FIN_L};">
+          <td style="padding:7px 12px;font-size:10px;font-weight:600;">Total Claimed</td>
+          <td style="padding:7px 12px;font-size:10px;text-align:right;">${totalClaimed.toLocaleString('en-US',{minimumFractionDigits:2})} SAR</td>
+        </tr>
+        <tr>
+          <td style="padding:7px 12px;font-size:10px;font-weight:600;color:#2e7d32;">Total Paid</td>
+          <td style="padding:7px 12px;font-size:10px;text-align:right;color:#2e7d32;">(${totalPaid.toLocaleString('en-US',{minimumFractionDigits:2})}) SAR</td>
+        </tr>
+        <tr style="background:${FIN};color:#fff;">
+          <td style="padding:9px 12px;font-size:11px;font-weight:700;">Outstanding Balance</td>
+          <td style="padding:9px 12px;font-size:11px;font-weight:700;text-align:right;">${outstanding.toLocaleString('en-US',{minimumFractionDigits:2})} SAR</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Signature -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:24px;">
+      <div style="border-top:1.5px solid ${FIN};padding-top:6px;text-align:center;font-size:9.5px;color:#555;">
+        <div style="height:36px;"></div>
+        <div style="font-weight:700;">Accounts Team — ${d.entity_name||'Ratal Advanced Technologies'}</div>
+        <div>Prepared By</div>
+      </div>
+      <div style="border-top:1.5px solid ${FIN};padding-top:6px;text-align:center;font-size:9.5px;color:#555;">
+        <div style="height:36px;"></div>
+        <div style="font-weight:700;">${d.subcon_name||'Sub-Contractor'}</div>
+        <div>Acknowledged By (Stamp &amp; Signature)</div>
+      </div>
+    </div>
+
+    <div class="page-footer">
+      <span>${d.entity_name||'Ratal Advanced Technologies'} | VAT: ${d.entity_vat||''}</span>
+      <span>${d.statement_number||''}</span>
+      <span>Period: ${d.from_date||''} – ${d.to_date||''}</span>
+    </div>
+  </div></body></html>`
+}
+
+// ─── Supplier Statement of Account ───────────────────────────────────────────
+function buildSupplierStatement(d) {
+  const FIN = '#8C354B'
+  const FIN_L = '#FAF0F2'
+  const FIN_D = '#C1A1A9'
+  const rows = (d.lines||[]).map((r,i)=>`
+    <tr style="background:${i%2===0?'#fff':FIN_L};">
+      <td style="padding:6px 8px;font-size:9.5px;">${r.date||''}</td>
+      <td style="padding:6px 8px;font-size:9.5px;">${r.ref||r.po_number||''}</td>
+      <td style="padding:6px 8px;font-size:9.5px;">${r.description||''}</td>
+      <td style="padding:6px 8px;font-size:9.5px;text-align:right;">${r.invoice_amount?.toLocaleString('en-US',{minimumFractionDigits:2})||''}</td>
+      <td style="padding:6px 8px;font-size:9.5px;text-align:right;color:${r.payment_amount?'#2e7d32':'#888'};">${r.payment_amount?r.payment_amount.toLocaleString('en-US',{minimumFractionDigits:2}):'-'}</td>
+      <td style="padding:6px 8px;font-size:9.5px;text-align:right;font-weight:600;">${r.balance!=null?r.balance.toLocaleString('en-US',{minimumFractionDigits:2}):''}</td>
+    </tr>`).join('')
+  const totalInvoiced = (d.total_invoiced  || (d.lines||[]).reduce((s,r)=>s+(r.invoice_amount||0),0))
+  const totalPaid     = (d.total_paid      || (d.lines||[]).reduce((s,r)=>s+(r.payment_amount||0),0))
+  const outstanding   = (d.outstanding     || totalInvoiced - totalPaid)
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <style>
+    body { margin:0; font-family:'Arial',sans-serif; color:#1a2e3d; background:#fff; }
+    .page { width:794px; min-height:1123px; margin:0 auto; padding:32px 36px; box-sizing:border-box; }
+    .page-footer { position:fixed; bottom:0; left:0; right:0; padding:8px 36px; font-size:8.5px; color:#888; display:flex; justify-content:space-between; border-top:1px solid #e0e0e0; }
+    @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+    table { width:100%; border-collapse:collapse; }
+    th { background:${FIN}; color:#fff; padding:7px 8px; font-size:10px; font-weight:700; text-align:left; }
+  </style></head><body><div class="page">
+
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">
+      <div>
+        <div style="font-size:20px;font-weight:900;color:${FIN};">${d.entity_name||'Ratal Advanced Technologies'}</div>
+        <div style="font-size:9px;color:#777;margin-top:2px;">${d.entity_vat?'VAT: '+d.entity_vat:''}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:16px;font-weight:900;color:#1a2e3d;">SUPPLIER STATEMENT</div>
+        <div style="font-size:9px;color:#888;margin-top:4px;">Ref: ${d.statement_number||'SUP-STMT-001'}</div>
+        <div style="font-size:9px;color:#888;">Date: ${d.statement_date||new Date().toLocaleDateString('en-GB')}</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+      <div style="background:${FIN_L};border:1px solid ${FIN_D};border-radius:6px;padding:12px;">
+        <div style="font-size:9px;font-weight:700;color:${FIN};margin-bottom:6px;text-transform:uppercase;">Supplier</div>
+        <div style="font-size:11px;font-weight:700;">${d.supplier_name||'Supplier Name'}</div>
+        <div style="font-size:9.5px;color:#555;margin-top:2px;">${d.supplier_vat?'VAT: '+d.supplier_vat:''}</div>
+        <div style="font-size:9.5px;color:#555;">${d.supplier_cr?'CR: '+d.supplier_cr:''}</div>
+      </div>
+      <div style="background:${FIN_L};border:1px solid ${FIN_D};border-radius:6px;padding:12px;">
+        <div style="font-size:9px;font-weight:700;color:${FIN};margin-bottom:6px;text-transform:uppercase;">Statement Period</div>
+        <div style="font-size:10px;"><strong>From:</strong> ${d.from_date||''}</div>
+        <div style="font-size:10px;margin-top:2px;"><strong>To:</strong> ${d.to_date||''}</div>
+      </div>
+    </div>
+
+    <table style="margin-bottom:16px;">
+      <thead><tr>
+        <th style="width:85px;">Date</th>
+        <th style="width:110px;">PO / Ref</th>
+        <th>Description</th>
+        <th style="width:100px;text-align:right;">Invoiced (SAR)</th>
+        <th style="width:100px;text-align:right;">Paid (SAR)</th>
+        <th style="width:100px;text-align:right;">Balance (SAR)</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+
+    <div style="display:flex;justify-content:flex-end;margin-bottom:24px;">
+      <table style="width:340px;border-collapse:collapse;">
+        <tr style="background:${FIN_L};">
+          <td style="padding:7px 12px;font-size:10px;font-weight:600;">Total Invoiced</td>
+          <td style="padding:7px 12px;font-size:10px;text-align:right;">${totalInvoiced.toLocaleString('en-US',{minimumFractionDigits:2})} SAR</td>
+        </tr>
+        <tr>
+          <td style="padding:7px 12px;font-size:10px;font-weight:600;color:#2e7d32;">Total Paid</td>
+          <td style="padding:7px 12px;font-size:10px;text-align:right;color:#2e7d32;">(${totalPaid.toLocaleString('en-US',{minimumFractionDigits:2})}) SAR</td>
+        </tr>
+        <tr style="background:${FIN};color:#fff;">
+          <td style="padding:9px 12px;font-size:11px;font-weight:700;">Outstanding Balance</td>
+          <td style="padding:9px 12px;font-size:11px;font-weight:700;text-align:right;">${outstanding.toLocaleString('en-US',{minimumFractionDigits:2})} SAR</td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:24px;">
+      <div style="border-top:1.5px solid ${FIN};padding-top:6px;text-align:center;font-size:9.5px;color:#555;">
+        <div style="height:36px;"></div>
+        <div style="font-weight:700;">Accounts — ${d.entity_name||'Ratal Advanced Technologies'}</div>
+        <div>Prepared By</div>
+      </div>
+      <div style="border-top:1.5px solid ${FIN};padding-top:6px;text-align:center;font-size:9.5px;color:#555;">
+        <div style="height:36px;"></div>
+        <div style="font-weight:700;">${d.supplier_name||'Supplier'}</div>
+        <div>Acknowledged By (Stamp &amp; Signature)</div>
+      </div>
+    </div>
+
+    <div class="page-footer">
+      <span>${d.entity_name||'Ratal Advanced Technologies'}</span>
+      <span>${d.statement_number||''}</span>
+      <span>Period: ${d.from_date||''} – ${d.to_date||''}</span>
+    </div>
+  </div></body></html>`
+}
+
+// ─── Project Financial Statement ─────────────────────────────────────────────
+function buildProjectStatement(d) {
+  const OPS = '#0079BC'
+  const OPS_L = '#EAF3F2'
+  const OPS_D = '#70A5A6'
+  const inv_rows = (d.invoices||[]).map((r,i)=>`
+    <tr style="background:${i%2===0?'#fff':OPS_L};">
+      <td style="padding:6px 8px;font-size:9.5px;">${r.date||''}</td>
+      <td style="padding:6px 8px;font-size:9.5px;">${r.invoice_number||''}</td>
+      <td style="padding:6px 8px;font-size:9.5px;">${r.description||''}</td>
+      <td style="padding:6px 8px;font-size:9.5px;text-align:right;">${r.amount?.toLocaleString('en-US',{minimumFractionDigits:2})||''}</td>
+      <td style="padding:6px 8px;font-size:9.5px;text-align:right;color:${r.paid_amount?'#2e7d32':'#e65100'};">${r.paid_amount?r.paid_amount.toLocaleString('en-US',{minimumFractionDigits:2}):'Pending'}</td>
+    </tr>`).join('')
+  const exp_rows = (d.expenses||[]).map((r,i)=>`
+    <tr style="background:${i%2===0?'#fff':OPS_L};">
+      <td style="padding:6px 8px;font-size:9.5px;">${r.date||''}</td>
+      <td style="padding:6px 8px;font-size:9.5px;">${r.category||''}</td>
+      <td style="padding:6px 8px;font-size:9.5px;">${r.description||''}</td>
+      <td style="padding:6px 8px;font-size:9.5px;text-align:right;color:#c62828;">${r.amount?.toLocaleString('en-US',{minimumFractionDigits:2})||''}</td>
+    </tr>`).join('')
+  const totalBilled   = d.total_billed   || (d.invoices||[]).reduce((s,r)=>s+(r.amount||0),0)
+  const totalReceived = d.total_received || (d.invoices||[]).reduce((s,r)=>s+(r.paid_amount||0),0)
+  const totalExpenses = d.total_expenses || (d.expenses||[]).reduce((s,r)=>s+(r.amount||0),0)
+  const poValue       = d.po_value || 0
+  const billingUtil   = poValue ? ((totalBilled/poValue)*100).toFixed(1)+'%' : 'N/A'
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <style>
+    body { margin:0; font-family:'Arial',sans-serif; color:#1a2e3d; background:#fff; }
+    .page { width:794px; min-height:1123px; margin:0 auto; padding:32px 36px; box-sizing:border-box; }
+    .page-footer { position:fixed; bottom:0; left:0; right:0; padding:8px 36px; font-size:8.5px; color:#888; display:flex; justify-content:space-between; border-top:1px solid #e0e0e0; }
+    @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+    table { width:100%; border-collapse:collapse; }
+    th { background:${OPS}; color:#fff; padding:7px 8px; font-size:10px; font-weight:700; text-align:left; }
+    .section-title { font-size:11px; font-weight:700; color:${OPS}; margin:18px 0 8px; text-transform:uppercase; letter-spacing:0.5px; }
+    .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:20px; }
+    .kpi { background:${OPS_L}; border:1px solid ${OPS_D}; border-radius:6px; padding:10px 12px; text-align:center; }
+    .kpi-val { font-size:14px; font-weight:700; color:${OPS}; }
+    .kpi-lbl { font-size:8.5px; color:#777; margin-top:2px; }
+  </style></head><body><div class="page">
+
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">
+      <div>
+        <div style="font-size:20px;font-weight:900;color:${OPS};">${d.entity_name||'Ratal Advanced Technologies'}</div>
+        <div style="font-size:9px;color:#777;margin-top:2px;">${d.entity_vat?'VAT: '+d.entity_vat:''}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:15px;font-weight:900;color:#1a2e3d;">PROJECT FINANCIAL STATEMENT</div>
+        <div style="font-size:9px;color:#888;margin-top:4px;">Report Date: ${d.statement_date||new Date().toLocaleDateString('en-GB')}</div>
+      </div>
+    </div>
+
+    <!-- Project Info -->
+    <div style="background:${OPS};color:#fff;border-radius:6px;padding:12px 16px;margin-bottom:16px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+        <div><div style="font-size:8.5px;opacity:.7;text-transform:uppercase;">Project</div><div style="font-size:11px;font-weight:700;">${d.project_name||'Project Name'}</div></div>
+        <div><div style="font-size:8.5px;opacity:.7;text-transform:uppercase;">Project No.</div><div style="font-size:11px;font-weight:700;">${d.project_number||''}</div></div>
+        <div><div style="font-size:8.5px;opacity:.7;text-transform:uppercase;">Client</div><div style="font-size:11px;font-weight:700;">${d.client_name||''}</div></div>
+        <div><div style="font-size:8.5px;opacity:.7;text-transform:uppercase;">Period</div><div style="font-size:11px;font-weight:700;">${d.from_date||''} – ${d.to_date||''}</div></div>
+        <div><div style="font-size:8.5px;opacity:.7;text-transform:uppercase;">PO Value (SAR)</div><div style="font-size:11px;font-weight:700;">${poValue.toLocaleString('en-US',{minimumFractionDigits:2})}</div></div>
+        <div><div style="font-size:8.5px;opacity:.7;text-transform:uppercase;">Billing Utilisation</div><div style="font-size:11px;font-weight:700;">${billingUtil}</div></div>
+      </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-val">${totalBilled.toLocaleString('en-US',{minimumFractionDigits:0})}</div><div class="kpi-lbl">Total Billed (SAR)</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:#2e7d32;">${totalReceived.toLocaleString('en-US',{minimumFractionDigits:0})}</div><div class="kpi-lbl">Received (SAR)</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:#c62828;">${totalExpenses.toLocaleString('en-US',{minimumFractionDigits:0})}</div><div class="kpi-lbl">Field Expenses (SAR)</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:${(totalReceived-totalExpenses)>=0?'#2e7d32':'#c62828'};">${(totalReceived-totalExpenses).toLocaleString('en-US',{minimumFractionDigits:0})}</div><div class="kpi-lbl">Net (SAR)</div></div>
+    </div>
+
+    <!-- Invoices Table -->
+    <div class="section-title">Invoices Raised</div>
+    <table style="margin-bottom:16px;">
+      <thead><tr>
+        <th style="width:85px;">Date</th>
+        <th style="width:130px;">Invoice No.</th>
+        <th>Description</th>
+        <th style="width:110px;text-align:right;">Amount (SAR)</th>
+        <th style="width:110px;text-align:right;">Received (SAR)</th>
+      </tr></thead>
+      <tbody>${inv_rows||'<tr><td colspan="5" style="padding:12px;text-align:center;font-size:9.5px;color:#888;">No invoices recorded</td></tr>'}</tbody>
+    </table>
+
+    <!-- Expenses Table -->
+    ${exp_rows?`<div class="section-title">Field Expenses</div>
+    <table style="margin-bottom:16px;">
+      <thead><tr>
+        <th style="width:85px;">Date</th>
+        <th style="width:130px;">Category</th>
+        <th>Description</th>
+        <th style="width:110px;text-align:right;">Amount (SAR)</th>
+      </tr></thead>
+      <tbody>${exp_rows}</tbody>
+    </table>`:''}
+
+    <div class="page-footer">
+      <span>${d.entity_name||'Ratal Advanced Technologies'}</span>
+      <span>${d.project_number||''} — ${d.project_name||''}</span>
+      <span>${d.statement_date||''}</span>
+    </div>
+  </div></body></html>`
+}
+
+// ─── Employee Profile Letter ──────────────────────────────────────────────────
+function buildEmployeeProfileLetter(d) {
+  const HR = '#795338'
+  const HR_L = '#F7F2ED'
+  const HR_D = '#BCA99A'
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <style>
+    body { margin:0; font-family:'Arial',sans-serif; color:#1a2e3d; background:#fff; }
+    .page { width:794px; min-height:1123px; margin:0 auto; padding:48px 56px; box-sizing:border-box; position:relative; }
+    .page-footer { position:fixed; bottom:0; left:0; right:0; padding:8px 56px; font-size:8.5px; color:#888; display:flex; justify-content:space-between; border-top:1px solid #e0e0e0; }
+    @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+  </style></head><body><div class="page">
+
+    <!-- Letterhead -->
+    <div style="border-bottom:3px solid ${HR};padding-bottom:14px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:flex-end;">
+      <div>
+        <div style="font-size:20px;font-weight:900;color:${HR};">${d.entity_name||'Ratal Advanced Technologies'}</div>
+        <div style="font-size:9px;color:#777;">VAT: ${d.entity_vat||'310680651700003'} | ${d.entity_address||'Riyadh, Kingdom of Saudi Arabia'}</div>
+      </div>
+      <div style="text-align:right;font-size:9px;color:#777;">
+        <div>Ref: ${d.letter_ref||'HR-PROFILE-001'}</div>
+        <div>Date: ${d.letter_date||new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'})}</div>
+      </div>
+    </div>
+
+    <!-- Title -->
+    <div style="text-align:center;margin-bottom:28px;">
+      <div style="font-size:15px;font-weight:900;color:#1a2e3d;text-transform:uppercase;letter-spacing:1px;">Employee Profile</div>
+      <div style="width:80px;height:3px;background:${HR};margin:8px auto 0;"></div>
+    </div>
+
+    <!-- To Whom -->
+    <div style="margin-bottom:20px;font-size:10.5px;line-height:1.7;">
+      <strong>To Whom It May Concern,</strong>
+    </div>
+
+    <!-- Body Text -->
+    <div style="font-size:10.5px;line-height:1.85;color:#333;margin-bottom:20px;">
+      This is to confirm that <strong>${d.employee_name||'Employee Name'}</strong> ${d.gender&&d.gender.toLowerCase()==='female'?'has':'has'} been employed with <strong>${d.entity_name||'Ratal Advanced Technologies'}</strong>
+      ${d.join_date?`since <strong>${d.join_date}</strong>`:'as a member of our team'} and continues to be in the employment of the company as of the date of this letter.
+    </div>
+
+    <!-- Details Table -->
+    <div style="background:${HR_L};border:1px solid ${HR_D};border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+      <div style="font-size:9px;font-weight:700;color:${HR};text-transform:uppercase;margin-bottom:12px;letter-spacing:0.5px;">Employee Details</div>
+      <table style="width:100%;border-collapse:collapse;">
+        ${[
+          ['Full Name',          d.employee_name||''],
+          ['Nationality',        d.nationality||''],
+          ['Iqama / ID Number',  d.iqama_number||d.national_id||''],
+          ['Designation / Title',d.designation||d.job_title||''],
+          ['Department',         d.department||''],
+          ['Employment Type',    d.employment_type||'Full-Time'],
+          ['Contract Type',      d.contract_type||'Fixed Term'],
+          ['Date of Joining',    d.join_date||''],
+          d.end_date?['Contract End Date', d.end_date]:null,
+          d.basic_salary?['Basic Salary',    'SAR '+Number(d.basic_salary).toLocaleString('en-US',{minimumFractionDigits:2})+' per month']:null,
+          d.gosi_number?['GOSI Registration',d.gosi_number]:null,
+          d.iban?['Bank IBAN',            d.iban]:null,
+          d.bank_name?['Bank Name',           d.bank_name]:null,
+        ].filter(Boolean).map((row,i)=>`
+          <tr style="background:${i%2===0?'#fff':HR_L};">
+            <td style="padding:7px 10px;font-size:9.5px;font-weight:600;color:#555;width:180px;border-radius:4px 0 0 4px;">${row[0]}</td>
+            <td style="padding:7px 10px;font-size:10px;font-weight:600;color:#1a2e3d;border-radius:0 4px 4px 0;">${row[1]}</td>
+          </tr>`).join('')}
+      </table>
+    </div>
+
+    <!-- Closing -->
+    <div style="font-size:10.5px;line-height:1.85;color:#333;margin-bottom:32px;">
+      This letter is issued upon the request of the employee and is valid for official purposes only. Should you require any further information or verification, please do not hesitate to contact our HR department.
+    </div>
+
+    <!-- Signature -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:20px;">
+      <div style="border-top:1.5px solid ${HR};padding-top:8px;">
+        <div style="height:50px;"></div>
+        <div style="font-size:10px;font-weight:700;">${d.hr_manager||'HR Manager'}</div>
+        <div style="font-size:9.5px;color:#555;">Human Resources Department</div>
+        <div style="font-size:9.5px;color:#555;">${d.entity_name||'Ratal Advanced Technologies'}</div>
+      </div>
+      <div style="border-top:1.5px solid ${HR};padding-top:8px;">
+        <div style="height:50px;"></div>
+        <div style="font-size:10px;font-weight:700;">${d.gm_name||'General Manager'}</div>
+        <div style="font-size:9.5px;color:#555;">General Manager</div>
+        <div style="font-size:9.5px;color:#555;">${d.entity_name||'Ratal Advanced Technologies'} — Official Stamp</div>
+      </div>
+    </div>
+
+    <div class="page-footer">
+      <span>${d.entity_name||'Ratal Advanced Technologies'}</span>
+      <span>${d.letter_ref||''}</span>
+      <span>${d.letter_date||''}</span>
+    </div>
+  </div></body></html>`
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 const BUILTIN_BUILDERS = {
   money_request:          buildMoneyRequest,
@@ -2716,6 +3748,22 @@ const BUILTIN_BUILDERS = {
   monthly_expense_claim:  buildExpenseClaim,         // Finance → Expense Claims
   monthly_food_allowance: buildFoodAllowanceClaim,   // Finance → Expense Claims (food)
   overtime_report:        buildOvertimeReport,       // Finance → Expense Claims (overtime)
-  // invoice_accsys_bilingual: buildInvoiceACCSYS,   ← add later
-  // subcon_payment_cert:      buildSubConCert,        ← add later
+  // Field Ops aliases — same content, different template_key
+  expense_claim:          buildExpenseClaim,         // FIELD_OPS 'expense_claim' key
+  food_allowance_claim:   buildFoodAllowanceClaim,   // FIELD_OPS 'food_allowance_claim' key
+  ot_summary:             buildOvertimeReport,       // FIELD_OPS 'ot_summary' key
+  // New builders
+  cash_payment_voucher:     buildCashPaymentVoucher,
+  subcon_payment_cert:      buildSubConCert,
+  expense_record_voucher:   buildExpenseVoucher,
+  invoice_accsys_bilingual: buildInvoiceACCSYS,
+  invoice_accsys_en:        buildInvoiceACCSYS,
+  invoice_rat_standard:     buildInvoiceACCSYS,
+  invoice_gwt_standard:     buildInvoiceACCSYS,
+  // Statement builders
+  subcon_statement:         buildSubConStatement,
+  supplier_statement:       buildSupplierStatement,
+  project_statement:        buildProjectStatement,
+  // HR letter
+  employee_profile_letter:  buildEmployeeProfileLetter,
 }

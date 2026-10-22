@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Money Request Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Poppins', Arial, sans-serif; background: #e0e0e0; padding: 30px; font-size: 12px; color: #222; }
+
+  .page {
+    width: 794px; min-height: 1123px; background: #fff;
+    margin: 0 auto; padding: 44px 50px 65px;
+    position: relative; box-shadow: 0 4px 24px rgba(0,0,0,0.22);
+  }
+
+  /* Decorative corner */
+  .deco { position: absolute; top: 0; right: 0; width: 90px; height: 90px; overflow: hidden; }
+  .deco-a { position: absolute; top: -20px; right: 45px; width: 60px; height: 60px; background: #d0d0d0; opacity: .45; }
+  .deco-b { position: absolute; top: -10px; right: 0; width: 50px; height: 80px; background: #e0e0e0; opacity: .35; }
+
+  /* QR — pinned top right */
+  .qr-wrap {
+    position: absolute; top: 44px; right: 50px;
+    width: 88px; height: 88px;
+    border: 1px solid #ccc; padding: 4px;
+  }
+
+  /* Header: company name then doc type, stacked left */
+  .hdr { margin-bottom: 10px; padding-right: 110px; }
+  .co-name  { font-size: 20px; font-weight: 800; color: #1a3a6b; line-height: 1.2; }
+  .doc-type { font-size: 18px; font-weight: 700; color: #d81b87; margin-top: 2px; }
+
+  /* Divider */
+  .divider { border: none; border-top: 1.5px solid #ddd; margin: 14px 0; }
+
+  /* Meta */
+  .meta { display: flex; justify-content: space-between; margin-bottom: 14px; align-items: flex-start; padding-right: 110px; }
+  .to-sec .to-lbl  { font-size: 10px; color: #888; font-weight: 600; margin-bottom: 3px; text-transform: uppercase; letter-spacing: .5px; }
+  .to-sec .to-name { font-size: 14px; font-weight: 800; color: #1a2540; }
+  .to-sec .to-sub  { font-size: 12px; font-weight: 600; color: #333; }
+  .meta-tbl { border-collapse: collapse; font-size: 12px; }
+  .meta-tbl td { padding: 2px 10px 2px 0; }
+  .meta-tbl .ml { font-weight: 700; color: #555; white-space: nowrap; }
+  .meta-tbl .mv { font-weight: 700; color: #1a3a6b; }
+
+  /* Subject */
+  .subj { font-size: 12px; margin-bottom: 12px; font-weight: 500; }
+  .subj .sv  { color: #d81b87; font-weight: 700; }
+  .subj .spv { color: #c62828; font-weight: 800; }
+
+  /* Details label */
+  .det-lbl { font-size: 11px; color: #666; margin-bottom: 8px; font-weight: 500; }
+
+  /* Items table */
+  .items-tbl { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 16px; border: 1.5px solid #222; }
+  .items-tbl thead tr { background: #1a1a1a; }
+  .items-tbl thead th {
+    padding: 8px; text-align: left; font-size: 10px;
+    font-weight: 700; color: #fff; border: 1px solid #444;
+    font-family: 'Poppins', Arial, sans-serif;
+  }
+  .items-tbl thead th.r { text-align: right; }
+  .items-tbl tbody td { border: 1px solid #ccc; padding: 6px 8px; vertical-align: top; }
+  .items-tbl tbody tr:nth-child(odd) { background: #fff; }
+  .items-tbl tbody tr:nth-child(even) { background: #f7f9fc; }
+
+  /* Total row */
+  .tot td { background: #1a1a1a !important; color: #fff !important; font-weight: 800 !important; font-size: 12px; border: 1px solid #444 !important; padding: 8px !important; }
+  .tot .r  { text-align: right; font-size: 13px; }
+
+  /* Amount in words row */
+  .words td { background: #f0f4f8 !important; font-size: 11px; font-weight: 600; color: #1a2540; border: 1px solid #ccc !important; padding: 8px 10px !important; }
+
+  /* Closing */
+  .closing { font-size: 11px; color: #555; line-height: 1.9; margin-bottom: 20px; }
+
+  /* Signature */
+  .sig-name { font-size: 13px; font-weight: 800; color: #1a3a6b; }
+  .sig-role { font-size: 11px; font-weight: 600; color: #1a3a6b; }
+
+  /* Footer */
+  .page-footer {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    border-top: 1px solid #ddd; padding: 7px 50px;
+    font-size: 9px; color: #888;
+    display: flex; justify-content: space-between; align-items: center; background: #fff;
+  }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .page { box-shadow: none; margin: 0; width: 100%; min-height: 297mm; padding: 15mm 18mm 20mm; }
+    @page { size: A4; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Decorative corner -->
+  <div class="deco"><div class="deco-a"></div><div class="deco-b"></div></div>
+
+  <!-- QR: top-right, absolutely positioned -->
+  <div class="qr-wrap" id="qr-box"></div>
+
+  <!-- Header: company name, then Money Request below it -->
+  <div class="hdr">
+    <div class="co-name">RATAL Advanced Technologies</div>
+    <div class="doc-type">Money Request</div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- Meta: To (left) | Date/Req/Dept (right) — no Bank Account -->
+  <div class="meta">
+    <div class="to-sec">
+      <div class="to-lbl">To</div>
+      <div class="to-name">Mahmood Shahbaz</div>
+      <div class="to-sub">The General Manager</div>
+      <div class="to-sub">Ratal Advanced Technologies</div>
+    </div>
+    <table class="meta-tbl">
+      <tr><td class="ml">Date:</td>        <td class="mv">22/09/2026</td></tr>
+      <tr><td class="ml">Request#:</td>    <td class="mv">MR-2026-09-001</td></tr>
+      <tr><td class="ml">Department:</td>  <td class="mv">IT Infrastructure</td></tr>
+    </table>
+  </div>
+
+  <!-- Subject -->
+  <div class="subj">
+    Subject: Money <span class="sv">Request</span>
+    against Project# <span class="spv">PRJ-2022-SBM-001</span>
+  </div>
+
+  <div class="det-lbl">Details are as follow</div>
+
+  <!-- Table: black header | bordered | total + words inside table -->
+  <table class="items-tbl">
+    <thead>
+      <tr>
+        <th style="width:28px;">#</th>
+        <th style="width:88px;">Party Type</th>
+        <th style="width:140px;">Party Name</th>
+        <th>Expense Type</th>
+        <th style="width:120px;">IBAN</th>
+        <th class="r" style="width:88px;">Amount (SAR)</th>
+        <th style="width:88px;">Remarks</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="text-align:center;">1</td>
+        <td>Employee</td>
+        <td style="font-weight:600;">Khalid Al-Zahrani</td>
+        <td>Team Travelling Expenses</td>
+        <td style="font-size:9px;">SA03 1000 0000 0000 1234 56</td>
+        <td style="text-align:right; font-weight:700;">2,500.00</td>
+        <td style="font-size:10px; color:#666;">Riyadh trip</td>
+      </tr>
+      <tr>
+        <td style="text-align:center;">2</td>
+        <td>Supplier</td>
+        <td style="font-weight:600;">HITECH Steel Co.</td>
+        <td>Material Purchases</td>
+        <td style="font-size:9px;">SA03 1000 0000 0000 9876 54</td>
+        <td style="text-align:right; font-weight:700;">8,750.00</td>
+        <td style="font-size:10px; color:#666;">Site materials</td>
+      </tr>
+      <tr>
+        <td style="text-align:center;">3</td>
+        <td>Employee</td>
+        <td style="font-weight:600;">Faisal Al-Otaibi</td>
+        <td>Per Diem / Daily Allowance</td>
+        <td style="font-size:9px;">SA03 1000 0000 0000 5555 55</td>
+        <td style="text-align:right; font-weight:700;">1,200.00</td>
+        <td style="font-size:10px; color:#666;">Daily allowance</td>
+      </tr>
+
+      <!-- TOTAL ROW — black bg, white text -->
+      <tr class="tot">
+        <td colspan="5" style="text-align:right; letter-spacing:.3px;">TOTAL AMOUNT (SAR)</td>
+        <td class="r">12,450.00</td>
+        <td></td>
+      </tr>
+
+      <!-- AMOUNT IN WORDS — inside the table -->
+      <tr class="words">
+        <td colspan="7">
+          <strong>Amount in Words:&nbsp;</strong>
+          Twelve Thousand Four Hundred and Fifty Saudi Riyals Only
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="closing">
+    If you need any further details please do let me know, I will be pleased to furnish details.<br><br>
+    Thanks and Regards
+  </div>
+
+  <div class="sig-name">Ahmed Al-Rashidi</div>
+  <div class="sig-role">Department Head</div>
+
+  <div class="page-footer">
+    <span>Ratal Advanced Technologies — 4182 Aghadir Street, Malaz, Riyadh-12233, PO Box: 59215</span>
+    <span>Request No: MR-2026-09-001 &nbsp;|&nbsp; Page 1 of 1</span>
+  </div>
+
+</div>
+
+<script>
+  new QRCode(document.getElementById('qr-box'), {
+    text: 'Request#: MR-2026-09-001\nDate: 22/09/2026\nDepartment: IT Infrastructure\nRequested by: Ahmed Al-Rashidi\nAmount: SAR 12,450.00',
+    width: 80, height: 80,
+    colorDark: '#000', colorLight: '#fff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+</script>
+</body>
+</html>

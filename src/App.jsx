@@ -87,6 +87,8 @@ import FieldPayments         from './pages/FieldPayments'
 // IncomingPOImport merged into PurchaseOrders tab (Import from PDF button)
 import TemplateLibrary       from './pages/TemplateLibrary'
 import BulkUpload            from './pages/BulkUpload'
+import SiteCompletion        from './pages/SiteCompletion'
+import SubConClaims          from './pages/SubConClaims'
 
 // Standalone mobile forms (shareable via Telegram / QR)
 import FormLanding       from './forms/FormLanding'
@@ -101,8 +103,10 @@ import FormExpenseClaim    from './forms/FormExpenseClaim'
 import FormSiteCompletion  from './forms/FormSiteCompletion'
 import FormDHDashboard        from './forms/FormDHDashboard'
 import FormPaymentValidation  from './forms/FormPaymentValidation'
+import FormPaymentConfirm    from './forms/FormPaymentConfirm'
 import FormCarMaintenance    from './forms/FormCarMaintenance'
 import FormSubConClaim       from './forms/FormSubConClaim'
+import FormCashPayment      from './forms/FormCashPayment'
 
 // ─── Entities ────────────────────────────────────────────────────
 const ENTITIES = [
@@ -133,6 +137,7 @@ const NAV = [
   { key:'bulk_upload',     label:'Bulk Data Upload', labelAr:'رفع البيانات',     icon:'📊', group:'Administration', entities:['ACCSYS','RAT','GWT'], roles:['SUPERADMIN','ADMIN'] },
   { key:'money_requests',  label:'Money Requests',    labelAr:'طلبات المال',     icon:'💰', group:'Operations', entities:['ACCSYS'],             roles:['SUPERADMIN','ADMIN','DEPT_HEAD','PROJECT_MANAGER'] },
   { key:'field_payments',  label:'Field Payment Notifications', labelAr:'إشعارات الدفع الميداني', icon:'💳', group:'Operations', entities:['ACCSYS'], roles:['SUPERADMIN','ADMIN','DEPT_HEAD'] },
+  { key:'site_completion', label:'Site Completion',             labelAr:'إتمام الموقع',            icon:'📍', group:'Operations', entities:['ACCSYS'], roles:['SUPERADMIN','ADMIN','DEPT_HEAD','PROJECT_MANAGER'] },
   // ── ACCOUNTING
   { key:'invoices',         label:'Invoices',           labelAr:'الفواتير',        icon:'🧾', group:'Finance',entities:['RAT','GWT','ACCSYS'], roles:['SUPERADMIN','ADMIN'] },
   { key:'payment_receipts', label:'Payment Receipts',  labelAr:'إيصالات الدفع',   icon:'💵', group:'Finance',entities:['RAT','GWT','ACCSYS'], roles:['SUPERADMIN','ADMIN'] },
@@ -189,6 +194,7 @@ const NAV = [
   // ── EXPENSES
   { key:'expenses',        label:'Expenses',          labelAr:'المصروفات',       icon:'🧮', group:'Finance',entities:['RAT','GWT','ACCSYS'], roles:['SUPERADMIN','ADMIN','DEPT_HEAD'] },
   { key:'expense_claims',  label:'Expense Claims',    labelAr:'مطالبات المصاريف',icon:'📋', group:'Finance',entities:['RAT','GWT','ACCSYS'], roles:['SUPERADMIN','ADMIN','DEPT_HEAD'] },
+  { key:'subcon_claims',   label:'Subcon Claims',     labelAr:'مطالبات المقاولين',icon:'🔧', group:'Finance',entities:['ACCSYS'],             roles:['SUPERADMIN','ADMIN','DEPT_HEAD','PROJECT_MANAGER'] },
   // ── HR (additional)
   { key:'vacations',       label:'Vacations & Leave', labelAr:'الإجازات',        icon:'🏖', group:'Human Resources',        entities:['RAT','GWT','ACCSYS'], roles:['SUPERADMIN','ADMIN','DEPT_HEAD'] },
   { key:'leave_balance',   label:'Leave Balance',     labelAr:'رصيد الإجازات',   icon:'🏝', group:'Human Resources',        entities:['RAT','GWT','ACCSYS'], roles:['SUPERADMIN','ADMIN','DEPT_HEAD'] },
@@ -216,7 +222,7 @@ const GROUP_ICONS = {
 }
 const GROUP_COLORS = {
   Main:'#546e7a', Travel:'#1565C0', Operations:'#0D5C4E',
-  Masters:'#00695c',
+  Masters:'#8C601B',
   Finance:'#0277bd', Accounting:'#00838f', Reports:'#558b2f',
   Planning:'#6a1b9a', 'Human Resources':'#e65100',
   Administration:'#454D9B', Forms:'#795548', 'Self Service':'#1a6b4e',
@@ -614,6 +620,7 @@ function AppShell() {
             {page==='bulk_upload'     && <BulkUpload       entityId={activeEntityId} />}
             {page==='money_requests'  && <MoneyRequests  entityId={activeEntityId} isAr={isAr} />}
             {page==='field_payments'  && <FieldPayments  entityId={activeEntityId} role={role} userDept={profile?.department_name || ''} />}
+            {page==='site_completion' && <SiteCompletion entityId={activeEntityId} role={role} />}
             {page==='invoices'         && <Invoices        entityId={activeEntityId} entityCode={activeCode} entityVatNumber={entity.vatNumber} entityName={entity.name} entityNameEn={entity.name} entityNameAr={entity.nameAr} isAr={isAr} />}
             {page==='payment_receipts' && <PaymentReceipts entityId={activeEntityId} entityCode={activeCode} entityVatNumber={entity.vatNumber} entityName={entity.name} entityNameEn={entity.name} isAr={isAr} />}
             {page==='payments'        && <Payments       entityId={activeEntityId} entityName={entity.name} entityNameEn={entity.name} isAr={isAr} />}
@@ -646,7 +653,7 @@ function AppShell() {
             {page==='employees'           && <Employees           entityId={activeEntityId} entityCode={activeCode} isAr={isAr} />}
             {page==='payroll'         && <Payroll        entityId={activeEntityId} isAr={isAr} />}
             {page==='payslip'         && <Payslip        entityId={activeEntityId} entityCode={activeCode} isAr={isAr} />}
-            {page==='overtime'        && <Overtime        entityId={activeEntityId} isAr={isAr} />}
+            {page==='overtime'        && <Overtime        entityId={activeEntityId} role={role} isAr={isAr} />}
             {page==='food_allowance'  && <FoodAllowance   entityId={activeEntityId} isAr={isAr} />}
             {page==='site_master'     && <SiteMaster      entityId={activeEntityId} isAr={isAr} />}
             {page==='site_assignment' && <SiteAssignment  entityId={activeEntityId} />}
@@ -660,7 +667,8 @@ function AppShell() {
             {page==='receipts'        && <Receipts        entityId={activeEntityId} isAr={isAr} />}
             {page==='expenses'        && <ExpensesPage    entityId={activeEntityId} entityName={entity?.name} isAr={isAr} />}
             {page==='expense_claims'  && <ExpenseClaims   entityId={activeEntityId} entityName={entity?.name} role={role} profile={profile} />}
-            {page==='vacations'       && <Vacations       entityId={activeEntityId} isAr={isAr} />}
+            {page==='subcon_claims'   && <SubConClaims    entityId={activeEntityId} role={role} />}
+            {page==='vacations'       && <Vacations       entityId={activeEntityId} role={role} isAr={isAr} />}
             {page==='leave_balance'   && <LeaveBalance    entityId={activeEntityId} />}
             {page==='loans'           && <Loans           entityId={activeEntityId} isAr={isAr} />}
             {page==='compliance'      && <Compliance      entityId={activeEntityId} isAr={isAr} />}
@@ -697,6 +705,7 @@ export default function App() {
       <Route path="/forms/site-completion" element={<FormSiteCompletion />} />
       <Route path="/forms/dh-dashboard"        element={<FormDHDashboard />} />
       <Route path="/forms/payment-validation"  element={<FormPaymentValidation />} />
+      <Route path="/forms/payment-confirm"    element={<FormPaymentConfirm />} />
       <Route path="/forms/car-maintenance"    element={<FormCarMaintenance />} />
       <Route path="/forms/subcon-claim"      element={<FormSubConClaim />} />
       <Route path="/forms/food-allowance" element={<FormFoodAllowance />} />
@@ -704,6 +713,7 @@ export default function App() {
       <Route path="/forms/money-request"  element={<FormMoneyRequest />} />
       <Route path="/forms/po-request"     element={<FormPORequest />} />
       <Route path="/forms/payment"        element={<FormPayment />} />
+      <Route path="/forms/cash-payment"  element={<FormCashPayment />} />
       <Route path="/field"                element={<FieldPortal />} />
       <Route path="*"                     element={<AppShell />} />
     </Routes>

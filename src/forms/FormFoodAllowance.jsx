@@ -37,12 +37,15 @@ const TH = {
   btnR:       12,
 }
 
-const SELF_RATES = [
-  { value:30, label:'SAR 30 / day', desc:'Standard remote site' },
-  { value:20, label:'SAR 20 / day', desc:'Nearby site'          },
-  { value:50, label:'SAR 50 / day', desc:'Overnight stay'       },
-]
 const OUTSOURCE_RATE = 20
+
+const DEV_WORKERS = [
+  { id:'dev-1', full_name_en:'Ahmed Al-Rashidi',  employee_number:'EXT-001' },
+  { id:'dev-2', full_name_en:'Mohammed Al-Ghamdi', employee_number:'EXT-002' },
+  { id:'dev-3', full_name_en:'Khalid Al-Otaibi',  employee_number:'EXT-003' },
+  { id:'dev-4', full_name_en:'Faisal Al-Shehri',  employee_number:'EXT-004' },
+  { id:'dev-5', full_name_en:'Omar Al-Zahrani',   employee_number:'EXT-005' },
+]
 
 const devMode     = new URLSearchParams(window.location.search).get('dev') === '1' ||
                     localStorage.getItem('accsys_dev_mode') === '1'
@@ -87,13 +90,14 @@ export default function FormFoodAllowance() {
   const isDark = step === 3
 
   // Screen 1 — Who is submitting
-  const [empId,       setEmpId]       = useState('')
-  const [empName,     setEmpName]     = useState('')
-  const [empNum,      setEmpNum]      = useState('')
-  const [empEntityId, setEmpEntityId] = useState('')
-  const [dept,        setDept]        = useState('')
-  const [empDeptCode, setEmpDeptCode] = useState('')
-  const [contact,     setContact]     = useState('')
+  const [empId,        setEmpId]        = useState('')
+  const [empName,      setEmpName]      = useState('')
+  const [empNum,       setEmpNum]       = useState('')
+  const [empEntityId,  setEmpEntityId]  = useState('')
+  const [dept,         setDept]         = useState('')
+  const [empDeptCode,  setEmpDeptCode]  = useState('')
+  const [contact,      setContact]      = useState('')
+  const [empFoodRate,  setEmpFoodRate]  = useState(null) // from employee record
 
   // Screen 2 — Project + date + location
   const [allowDate,  setAllowDate]  = useState(new Date().toISOString().split('T')[0])
@@ -103,23 +107,25 @@ export default function FormFoodAllowance() {
   const [location,   setLocation]   = useState('')
   const [jobNo,      setJobNo]      = useState('')
 
-  // Screen 3 — Mode + rates
-  const [mode,       setMode]       = useState('SINGLE') // SINGLE | TEAM
-  const [selfRate,   setSelfRate]   = useState(30)
-  // outsourced team — from site_assignments for selected project
-  const [siteWorkers,    setSiteWorkers]    = useState([])  // {id, full_name_en, employee_number}
-  const [selectedWorkers, setSelectedWorkers] = useState([]) // array of ids
-  const [remarks,    setRemarks]    = useState('')
+  // Screen 3 — optional team toggle
+  const [hasTeam,         setHasTeam]         = useState(false)
+  const [siteWorkers,     setSiteWorkers]      = useState([])
+  const [selectedWorkers, setSelectedWorkers]  = useState([])
+  const [remarks,         setRemarks]          = useState('')
 
   // Submit
   const [loading,   setLoading]   = useState(false)
   const [reqNumber, setReqNumber] = useState('')
   const [error,     setError]     = useState('')
 
-  // Calculations
-  const selfAmount = mode === 'SINGLE' ? selfRate : selfRate   // always 1 day
+  // Derived — must come AFTER all useState declarations
+  const mode       = hasTeam && selectedWorkers.length > 0 ? 'TEAM' : 'SINGLE'
+  const selfRate   = empFoodRate ?? 30          // from employee record, fallback 30
+  const selfAmount = selfRate                   // 1 day always
   const teamAmount = selectedWorkers.length * OUTSOURCE_RATE
-  const totalAmount = selfAmount + (mode === 'TEAM' ? teamAmount : 0)
+  const totalAmount = selfAmount + (hasTeam ? teamAmount : 0)
+  // Workers shown: real site assignments, or DEV_WORKERS as fallback for testing
+  const visibleWorkers = siteWorkers.length > 0 ? siteWorkers : DEV_WORKERS
 
   // Dept-filtered projects
   const deptProjects = empDeptCode
@@ -133,7 +139,16 @@ export default function FormFoodAllowance() {
 
   // Load on mount
   useEffect(() => {
-    if (previewMode) return
+    if (previewMode) {
+      setSession({ user: { id: 'preview' } })
+      setEmployees([
+        { id:'prev-1', full_name_en:'Abdul Hakim Ibrahim',  employee_number:'RAT-001', department_id:'d1', phone:'+966501234567', entity_id:'e1', employment_type:'RATAL', is_active:true, fa_eligible:true, fa_amount:30 },
+        { id:'prev-2', full_name_en:'Mohammed Al-Zahrani',  employee_number:'RAT-002', department_id:'d1', phone:'+966502345678', entity_id:'e1', employment_type:'RATAL', is_active:true, fa_eligible:true, fa_amount:30 },
+        { id:'prev-3', full_name_en:'Khalid Al-Ghamdi',     employee_number:'RAT-003', department_id:'d1', phone:'+966503456789', entity_id:'e1', employment_type:'RATAL', is_active:true, fa_eligible:true, fa_amount:50 },
+      ])
+      setDeptMap({ d1: { dept_name:'Field Operations', dept_code:'FO' } })
+      return
+    }
     if (devMode) { loadData(null); return }
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session); if (session) loadData(session)
@@ -150,17 +165,18 @@ export default function FormFoodAllowance() {
     const empQ = devMode
       ? supabase.rpc('get_dev_employees')
       : supabase.from('employees')
-          .select('id,full_name_en,employee_number,department_id,phone,entity_id,employment_type,is_active')
+          .select('id,full_name_en,employee_number,department_id,phone,entity_id,employment_type,is_active,fa_eligible,fa_amount')
           .eq('is_active', true).order('full_name_en')
     const projQ = supabase.from('projects')
       .select('id,project_number,project_name,department_id,dept:department_id(dept_code,dept_name)')
       .in('status', ['OPEN','ACTIVE']).order('project_number')
     if (entityId && !devMode) projQ.eq('entity_id', entityId)
     const deptQ = supabase.from('departments').select('id,dept_name,dept_code').eq('is_active', true)
-    const [{ data: emps }, { data: projs }, { data: depts }] = await Promise.all([empQ, projQ, deptQ])
-    setEmployees(emps || [])
-    setProjects(projs || [])
-    setDeptMap(Object.fromEntries((depts || []).map(d => [d.id, d])))
+    const [empRes, projRes, deptRes] = await Promise.all([empQ, projQ, deptQ])
+    if (empRes.error) console.error('[FoodAllowance] employees error:', empRes.error)
+    setEmployees(empRes.data || [])
+    setProjects(projRes.data || [])
+    setDeptMap(Object.fromEntries((deptRes.data || []).map(d => [d.id, d])))
   }
 
   function onEmp(id) {
@@ -169,19 +185,21 @@ export default function FormFoodAllowance() {
     if (!e) return
     const d = deptMap[e.department_id] || {}
     const code = d.dept_code || d.dept_name || ''
-    setEmpName(e.full_name_en || ''); setEmpNum(e.employee_number || '')
-    setDept(d.dept_name || code);    setEmpDeptCode(code)
-    setContact(e.phone || '');       setEmpEntityId(e.entity_id || '')
+    setEmpName(e.full_name_en || '');  setEmpNum(e.employee_number || '')
+    setDept(d.dept_code || d.dept_name || '');   setEmpDeptCode(code)
+    setContact(e.phone || '');         setEmpEntityId(e.entity_id || '')
+    // Rate from employee record — fa_amount column (set in Employees wizard → Compliance step)
+    setEmpFoodRate(e.fa_amount && e.fa_amount > 0 ? Number(e.fa_amount) : 30)
     setProjectId(''); setProjNum(''); setProjName('')
     setSiteWorkers([]); setSelectedWorkers([])
   }
 
-  // When project changes in TEAM mode — load outsourced workers from site_assignments
+  // When project changes — if team toggle is on, refresh workers
   async function onProject(id, num, name) {
     setProjectId(id); setProjNum(num); setProjName(name)
     setSelectedWorkers([])
-    if (!id || mode !== 'TEAM') { setSiteWorkers([]); return }
-    await loadSiteWorkers(id)
+    if (!id || !hasTeam) { setSiteWorkers([]); return }
+    try { await loadSiteWorkers(id) } catch {}
   }
 
   async function loadSiteWorkers(pid) {
@@ -197,15 +215,15 @@ export default function FormFoodAllowance() {
     setSiteWorkers(outsourced)
   }
 
-  // When mode switches to TEAM and project is already selected — load workers
-  async function onModeChange(m) {
-    setMode(m)
+  // When team toggle switches on — load site workers if project already selected
+  async function onTeamToggle(on) {
+    setHasTeam(on)
     setSelectedWorkers([])
-    if (m === 'TEAM' && projectId) {
-      await loadSiteWorkers(projectId)
-    } else {
-      setSiteWorkers([])
+    if (!on) { setSiteWorkers([]); return }
+    if (projectId) {
+      try { await loadSiteWorkers(projectId) } catch {}
     }
+    // In dev mode, DEV_WORKERS are always shown via visibleWorkers (no fetch needed)
   }
 
   function toggleWorker(id) {
@@ -224,8 +242,8 @@ export default function FormFoodAllowance() {
       if (!location) { setError(isAr ? 'يرجى إدخال اسم الموقع' : 'Please enter the site location'); return }
       setStep(3)
     } else if (step === 3) {
-      if (mode === 'TEAM' && selectedWorkers.length === 0) {
-        setError(isAr ? 'يرجى اختيار موظف واحد على الأقل من الفريق' : 'Please select at least one outsourced worker'); return
+      if (hasTeam && selectedWorkers.length === 0) {
+        setError(isAr ? 'يرجى اختيار موظف واحد على الأقل من الفريق' : 'You toggled team mode — please select at least one outsourced worker, or turn it off'); return
       }
       setStep(4)
     } else if (step === 4) {
@@ -322,8 +340,8 @@ export default function FormFoodAllowance() {
     setStep(1); setEmpId(''); setEmpName(''); setEmpNum('')
     setDept(''); setEmpDeptCode(''); setContact(''); setEmpEntityId('')
     setProjectId(''); setProjNum(''); setProjName('')
-    setLocation(''); setJobNo(''); setMode('SINGLE')
-    setSelfRate(30); setSiteWorkers([]); setSelectedWorkers([])
+    setLocation(''); setJobNo(''); setHasTeam(false)
+    setEmpFoodRate(null); setSiteWorkers([]); setSelectedWorkers([])
     setRemarks(''); setError('')
     setAllowDate(new Date().toISOString().split('T')[0])
   }
@@ -408,10 +426,15 @@ export default function FormFoodAllowance() {
       <div style={{ margin:'0 12px' }}>
         <select value={empId} onChange={e => onEmp(e.target.value)} style={{ ...S.inp, fontSize:13 }}>
           <option value="">-- {isAr?'اختر':'Choose'} --</option>
-          {employees.filter(e => e.employment_type === 'STAFF' || !e.employment_type).map(e =>
+          {employees.filter(e => e.employment_type !== 'OUTSOURCED').map(e =>
             <option key={e.id} value={e.id}>{e.full_name_en} ({e.employee_number})</option>
           )}
         </select>
+        <div style={{ fontSize:10, color: employees.length===0 ? '#c62828' : TH.muted, marginTop:5, paddingLeft:4 }}>
+          {employees.length === 0
+            ? '⚠ No employees loaded — check Supabase RLS or is_active flag'
+            : `${employees.filter(e=>e.employment_type!=='OUTSOURCED').length} employees available`}
+        </div>
       </div>
       {empId && (
         <>
@@ -504,99 +527,81 @@ export default function FormFoodAllowance() {
   )
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // SCREEN 3 — Mode + Rates (dark)
+  // SCREEN 3 — Rate selection (primary) + optional team toggle
   // ═══════════════════════════════════════════════════════════════════════════
   const screen3 = (
     <div style={{ paddingBottom:16 }}>
       {error && <div style={{ background:'#1a0010', border:'1px solid #c62828', borderRadius:10, padding:'9px 12px', color:'#ef9a9a', fontSize:12, margin:'8px 12px 0' }}>⚠️ {error}</div>}
 
-      {/* Mode toggle */}
-      <div style={S.secTitle(true)}>🍽️ {isAr?'نوع الطلب':'Claim type'}</div>
-      <div style={{ margin:'0 12px', display:'flex', gap:8 }}>
-        {[
-          { v:'SINGLE', icon:'👤', label:isAr?'لنفسي فقط':'Just Me', desc:isAr?'بدل شخصي':'Personal allowance' },
-          { v:'TEAM',   icon:'👥', label:isAr?'أنا + فريق خارجي':'Me + Outsourced Team', desc:isAr?'أنا + موظفون خارجيون':'Include outsourced workers' },
-        ].map(m => {
-          const sel = mode === m.v
-          return (
-            <div key={m.v} onClick={() => onModeChange(m.v)}
-              style={{ flex:1, background: sel?'#fff':'rgba(255,255,255,0.07)', border:`2px solid ${sel?TH.headerBg:'rgba(255,255,255,0.15)'}`, borderRadius:14, padding:'14px 12px', cursor:'pointer', textAlign:'center' }}>
-              <div style={{ fontSize:24, marginBottom:6 }}>{m.icon}</div>
-              <div style={{ fontSize:12, fontWeight:800, color: sel?TH.headerBg:'#fff' }}>{m.label}</div>
-              <div style={{ fontSize:10, color: sel?TH.muted:'rgba(255,255,255,0.45)', marginTop:3 }}>{m.desc}</div>
+      {/* ── PRIMARY: Rate pill — small centered ─────────────────────────── */}
+      <div style={{ display:'flex', justifyContent:'center', margin:'8px 12px 0' }}>
+        <div style={{ background:TH.pink, borderRadius:12, padding:6, boxShadow:'0 2px 6px rgba(136,14,79,0.2)' }}>
+          <div style={{ background:'#1a0010', borderRadius:8, padding:'8px 24px', textAlign:'center' }}>
+            <div style={{ fontSize:9, color:'rgba(255,255,255,0.45)', fontWeight:700, letterSpacing:'0.8px', marginBottom:4 }}>
+              {isAr?'بدلك اليومي':'YOUR DAILY RATE'}
             </div>
-          )
-        })}
-      </div>
-
-      {/* Self rate */}
-      <div style={S.secTitle(true)}>💵 {isAr?'معدلك اليومي':'Your daily rate'}</div>
-      <div style={{ margin:'0 12px', display:'flex', gap:8 }}>
-        {SELF_RATES.map(r => {
-          const sel = selfRate === r.value
-          return (
-            <div key={r.value} onClick={() => setSelfRate(r.value)}
-              style={{ flex:1, background: sel?'#fff':'rgba(255,255,255,0.07)', border:`2px solid ${sel?TH.headerBg:'rgba(255,255,255,0.12)'}`, borderRadius:12, padding:'10px 8px', cursor:'pointer', textAlign:'center' }}>
-              <div style={{ fontSize:13, fontWeight:800, color: sel?TH.headerBg:'#fff' }}>SAR {r.value}</div>
-              <div style={{ fontSize:9, color: sel?TH.muted:'rgba(255,255,255,0.4)', marginTop:2 }}>{r.desc}</div>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* TEAM mode — outsourced worker picker */}
-      {mode === 'TEAM' && (
-        <>
-          <div style={S.secTitle(true)}>
-            👷 {isAr?'اختر الموظفين الخارجيين':'Select outsourced workers'}
-            {' '}<span style={{ fontSize:9, fontWeight:400, color:'rgba(255,255,255,0.4)' }}>
-              ({isAr?'من نفس موقع المشروع فقط':'from this project\'s site assignment only'})
-            </span>
+            <div style={{ fontSize:22, fontWeight:900, color:'#ff80ab' }}>SAR {selfRate}</div>
           </div>
+        </div>
+      </div>
 
-          {siteWorkers.length === 0 ? (
-            <div style={{ margin:'0 12px', background:'rgba(255,255,255,0.05)', borderRadius:12, padding:16, textAlign:'center' }}>
-              <div style={{ fontSize:13, color:'rgba(255,255,255,0.4)' }}>
-                {!projectId
-                  ? (isAr?'يرجى اختيار مشروع أولاً لعرض الموظفين المخصصين':'Select a project on Screen 2 to see assigned outsourced workers')
-                  : (isAr?'لا يوجد موظفون خارجيون مخصصون لهذا الموقع':'No outsourced workers assigned to this project site')}
-              </div>
+      {/* ── SECONDARY: Team toggle ────────────────────────────────────────── */}
+      <div style={{ margin:'14px 12px 0' }}>
+        <div onClick={() => onTeamToggle(!hasTeam)}
+          style={{ display:'flex', alignItems:'center', gap:14, background: hasTeam?'rgba(255,255,255,0.1)':'rgba(255,255,255,0.04)', border:`1.5px solid ${hasTeam?'rgba(255,255,255,0.3)':'rgba(255,255,255,0.1)'}`, borderRadius:14, padding:'13px 16px', cursor:'pointer' }}>
+          {/* Toggle pill */}
+          <div style={{ width:44, height:24, borderRadius:12, background: hasTeam?TH.headerBg:'rgba(255,255,255,0.15)', position:'relative', flexShrink:0, transition:'background 0.2s' }}>
+            <div style={{ width:18, height:18, borderRadius:'50%', background:'#fff', position:'absolute', top:3, left: hasTeam?23:3, transition:'left 0.2s', boxShadow:'0 1px 3px rgba(0,0,0,0.3)' }} />
+          </div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>
+              {isAr?'لدي موظفون خارجيون معي':'I have outsourced workers with me'}
             </div>
-          ) : (
-            <div style={{ margin:'0 12px', background:'rgba(255,255,255,0.05)', borderRadius:14, overflow:'hidden', border:'1px solid rgba(255,255,255,0.1)' }}>
-              {siteWorkers.map((w, i) => {
+            <div style={{ fontSize:10, color:'rgba(255,255,255,0.45)', marginTop:2 }}>
+              {isAr?'بدل ثابت 20 ريال لكل موظف خارجي':'Fixed SAR 20 per outsourced worker — from site assignment'}
+            </div>
+          </div>
+          <span style={{ fontSize:18 }}>{hasTeam ? '👥' : '👤'}</span>
+        </div>
+      </div>
+
+      {/* ── Worker picker — only when toggle is ON ───────────────────────── */}
+      {hasTeam && (
+        <div style={{ margin:'10px 12px 0' }}>
+          {false ? null : (
+            <div style={{ background:'rgba(255,255,255,0.05)', borderRadius:14, overflow:'hidden', border:'1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ padding:'9px 14px 6px', fontSize:10, color:'rgba(255,255,255,0.4)', fontWeight:700, letterSpacing:'0.5px', textTransform:'uppercase', display:'flex', justifyContent:'space-between' }}>
+                <span>{isAr?'اختر الأسماء (اسم فقط)':'Names only — checkbox'}</span>
+                <span>{selectedWorkers.length} / {visibleWorkers.length} {isAr?'محدد':'selected'}</span>
+              </div>
+              {visibleWorkers.map((w) => {
                 const sel = selectedWorkers.includes(w.id)
                 return (
                   <div key={w.id} onClick={() => toggleWorker(w.id)}
-                    style={{ display:'flex', alignItems:'center', gap:12, padding:'13px 16px', borderBottom: i<siteWorkers.length-1?'1px solid rgba(255,255,255,0.07)':'none', cursor:'pointer', background: sel?'rgba(255,255,255,0.1)':'transparent' }}>
-                    {/* Checkbox */}
-                    <div style={{ width:22, height:22, borderRadius:6, border:`2px solid ${sel?TH.headerBg:'rgba(255,255,255,0.3)'}`, background: sel?TH.headerBg:'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                      {sel && <span style={{ color:'#fff', fontSize:13, fontWeight:800 }}>✓</span>}
+                    style={{ display:'flex', alignItems:'center', gap:12, padding:'13px 16px', borderTop:'1px solid rgba(255,255,255,0.07)', cursor:'pointer', background: sel?'rgba(255,255,255,0.09)':'transparent' }}>
+                    <div style={{ width:22, height:22, borderRadius:6, border:`2px solid ${sel?'#ff80ab':'rgba(255,255,255,0.25)'}`, background: sel?'#880e4f':'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                      {sel && <span style={{ color:'#fff', fontSize:12, fontWeight:900 }}>✓</span>}
                     </div>
                     <div style={{ flex:1 }}>
-                      <div style={{ fontSize:13, fontWeight: sel?700:500, color: sel?'#fff':'rgba(255,255,255,0.8)' }}>{w.full_name_en}</div>
-                      <div style={{ fontSize:10, color:'rgba(255,255,255,0.4)', marginTop:1 }}>{w.employee_number}</div>
+                      <div style={{ fontSize:14, fontWeight: sel?700:400, color: sel?'#fff':'rgba(255,255,255,0.8)' }}>{w.full_name_en}</div>
                     </div>
-                    <div style={{ fontSize:12, fontWeight:700, color: sel?'#ff80ab':'rgba(255,255,255,0.3)' }}>
-                      SAR {OUTSOURCE_RATE}
-                    </div>
+                    {sel && <div style={{ fontSize:11, color:'rgba(255,255,255,0.4)' }}>SAR {OUTSOURCE_RATE}</div>}
                   </div>
                 )
               })}
-              {/* Select all / clear */}
-              <div style={{ display:'flex', gap:8, padding:'10px 16px', borderTop:'1px solid rgba(255,255,255,0.07)' }}>
-                <button type="button" onClick={() => setSelectedWorkers(siteWorkers.map(w=>w.id))}
-                  style={{ flex:1, padding:'7px', background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.15)', borderRadius:8, color:'rgba(255,255,255,0.7)', fontSize:11, cursor:'pointer' }}>
+              <div style={{ display:'flex', gap:8, padding:'8px 14px 10px', borderTop:'1px solid rgba(255,255,255,0.07)' }}>
+                <button type="button" onClick={() => setSelectedWorkers(visibleWorkers.map(w=>w.id))}
+                  style={{ flex:1, padding:'7px', background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.15)', borderRadius:8, color:'rgba(255,255,255,0.75)', fontSize:11, cursor:'pointer' }}>
                   {isAr?'تحديد الكل':'Select all'}
                 </button>
                 <button type="button" onClick={() => setSelectedWorkers([])}
-                  style={{ flex:1, padding:'7px', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, color:'rgba(255,255,255,0.4)', fontSize:11, cursor:'pointer' }}>
-                  {isAr?'إلغاء الكل':'Clear'}
+                  style={{ flex:1, padding:'7px', background:'transparent', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, color:'rgba(255,255,255,0.35)', fontSize:11, cursor:'pointer' }}>
+                  {isAr?'إلغاء':'Clear'}
                 </button>
               </div>
             </div>
           )}
-        </>
+        </div>
       )}
 
       {/* Calc display */}

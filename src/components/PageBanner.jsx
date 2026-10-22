@@ -79,7 +79,7 @@ export default function PageBanner({
           flexDirection: 'row',
           overflow: 'hidden',
           position: 'relative',
-          minHeight: 400,
+          minHeight: 580,
         }}>
 
           {/* ── L3 accent block — top right ── */}
@@ -123,11 +123,12 @@ export default function PageBanner({
               fontSize: 30, fontWeight: 900, color: '#172D37',
               lineHeight: 1.15, marginBottom: 18,
               fontFamily: PP, letterSpacing: '-0.3px',
+              fontStyle: 'italic',
             }}>
               {titleLines.map((line, i) => (
                 <span key={i} style={{ display: 'block' }}>
                   {i === 1
-                    ? <em style={{ color: moduleColor, fontStyle: 'normal' }}>{line}</em>
+                    ? <em style={{ color: moduleColor, fontStyle: 'italic' }}>{line}</em>
                     : line}
                 </span>
               ))}
@@ -251,10 +252,12 @@ export default function PageBanner({
               }} />
 
               <div style={{
-                fontSize: 12, fontWeight: 500,
-                color: 'rgba(255,255,255,0.85)',
-                lineHeight: 1.7, maxWidth: 220,
+                fontSize: 15, fontWeight: 700,
+                fontStyle: 'italic',
+                color: 'rgba(255,255,255,0.95)',
+                lineHeight: 1.65, maxWidth: 260,
                 fontFamily: PP,
+                textShadow: '0 1px 8px rgba(0,0,0,0.18)',
               }}>
                 {description}
               </div>

@@ -162,7 +162,7 @@ export default function IncomingPOImport({ entityId }) {
               : `contractor_name.ilike.%${(result.issuerName||'').slice(0,20).trim()}%`
           )
           .limit(1)
-          .single()
+          .maybeSingle()
         if (match?.id) setContractorId(match.id)
       }
 

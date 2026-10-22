@@ -1,0 +1,217 @@
+================================================================
+  ACCSYS — Excel VBA Supabase Integration
+  SETUP GUIDE — Read this first
+================================================================
+
+WHAT YOU GET
+─────────────────────────────────────────────────────────────
+  modSupabase.bas             Core auth + API module (import once)
+  frmLogin_Code.bas           Login form code
+  ThisWorkbook_Code.bas       Auto-login on workbook open
+  SAMPLE_UserForm_Expenses    Example of real UserForm usage
+
+These 4 files are dropped into ANY Excel workbook to give it
+full Supabase connectivity with email login.
+
+================================================================
+  STEP 1 — CONFIGURE YOUR SUPABASE DETAILS
+================================================================
+
+Open modSupabase.bas in Notepad and update lines 20-21:
+
+  Private Const SUPABASE_URL  = "https://YOUR_PROJECT_REF.supabase.co"
+  Private Const SUPABASE_ANON = "YOUR_ANON_KEY_HERE"
+
+Find these values in:
+  Supabase Dashboard → Your Project → Settings → API
+    • Project URL     → paste as SUPABASE_URL
+    • anon / public   → paste as SUPABASE_ANON
+
+The anon key is safe to store in VBA code.
+NEVER put the service_role key in any Excel file.
+
+================================================================
+  STEP 2 — IMPORT THE MODULE INTO EXCEL
+================================================================
+
+1. Open your Excel workbook
+2. Press Alt + F11 to open the VBA Editor
+3. In the menu: File → Import File
+4. Import modSupabase.bas
+   (This adds the SB_Login, SB_GET, SB_POST etc. functions)
+
+================================================================
+  STEP 3 — CREATE THE LOGIN FORM
+================================================================
+
+3a. In VBA Editor: Insert → UserForm
+3b. In the Properties panel (F4), change:
+      Name    → frmLogin
+      Caption → ACCSYS Secure Login
+
+3c. Add these controls from the Toolbox:
+
+    CONTROL         NAME           SETTINGS
+    ────────────────────────────────────────────────────────
+    Label           lblTitle       Caption: ACCSYS Login
+                                   Font: Bold, 16pt, Navy
+    Image           (optional)     Company logo
+    Label           lblEmail       Caption: Email Address
+    TextBox         txtEmail       Width: 240
+    Label           lblPass        Caption: Password
+    TextBox         txtPassword    PasswordChar: *
+                                   Width: 240
+    CommandButton   cmdLogin       Caption: Login
+                                   BackColor: Navy
+                                   ForeColor: White
+                                   Width: 100
+    CommandButton   cmdCancel      Caption: Cancel
+                                   Width: 80
+    Label           lblError       Caption: (empty)
+                                   ForeColor: Red
+                                   Visible: False
+                                   Width: 250
+
+3d. Double-click the form to open its code window
+3e. Copy and paste all code from frmLogin_Code.bas into it
+    (The Attribute VB_Name line at the top is not needed — skip it)
+
+================================================================
+  STEP 4 — WIRE UP WORKBOOK OPEN
+================================================================
+
+4a. In VBA Editor, double-click "ThisWorkbook" in Project panel
+4b. Copy the code from ThisWorkbook_Code.bas into it
+    (Skip the Attribute line at the top)
+
+Now every time the workbook opens, the login form appears.
+The user cannot proceed without valid Supabase credentials.
+
+================================================================
+  STEP 5 — CREATE YOUR SUPABASE USERS
+================================================================
+
+Each Excel user needs an account in Supabase Auth:
+
+5a. Go to your Supabase project dashboard
+5b. Click Authentication → Users
+5c. Click "Invite user" → enter their work email
+5d. They receive an email to set their password
+
+To remove access: find the user → click Delete
+(They cannot log into Excel even if the workbook is open)
+
+Optional — assign roles:
+5e. After creating the user, click their row
+5f. Under "User Metadata", add their role:
+    {
+      "role": "finance",
+      "entity_id": "ENT-001"
+    }
+5g. In your Supabase RLS policies, use auth.jwt()->'user_metadata'->>'role'
+    to restrict what each user can see
+
+================================================================
+  STEP 6 — USE IN YOUR USERFORMS
+================================================================
+
+Once the module is imported and login works, using it is simple.
+Open SAMPLE_UserForm_Expenses.bas to see working examples.
+
+FETCH DATA (read from Supabase):
+  Dim json As String
+  json = SB_GET("employees", "?emp_id=eq.EMP-001&select=*")
+  ' json now contains the employee record as JSON
+
+SUBMIT DATA (write to Supabase):
+  Dim ok As Boolean
+  ok = SB_POST("daily_expenses", "{""employee_id"":""EMP-001"",""amount"":250}")
+  If ok Then MsgBox "Saved!"
+
+UPDATE DATA:
+  ok = SB_PATCH("expense_claims", "?id=eq.123", "{""status"":""approved""}")
+
+CHECK LOGIN:
+  If Not SB_IsLoggedIn() Then
+      MsgBox "Please log in first."
+      Exit Sub
+  End If
+
+GET CURRENT USER:
+  Dim userEmail As String
+  userEmail = SB_GetEmail()
+
+================================================================
+  HOW TO USE ACROSS MULTIPLE WORKBOOKS
+================================================================
+
+Each workbook is independent. Import modSupabase.bas into each
+one. Each workbook has its own login session in memory.
+
+Recommended structure for Ratal Group:
+
+  Expenses.xlsm       → Finance team
+  Payroll.xlsm        → HR team
+  SiteCompletion.xlsm → Project Managers
+  Invoices.xlsm       → Finance / Billing
+  Fleet.xlsm          → Fleet Manager
+  SubConClaims.xlsm   → Contracts team
+
+Each file: import the module → create the login form → done.
+All read from and write to the same Supabase database.
+
+================================================================
+  SECURITY NOTES
+================================================================
+
+  ✅ SAFE to store in VBA:   SUPABASE_URL, SUPABASE_ANON key
+  ❌ NEVER store in VBA:     service_role key, database password
+
+  Passwords are never stored anywhere — only used once at login
+  Session token lives only in memory — gone when Excel closes
+  Revoking a user in Supabase = instant lockout from all workbooks
+
+================================================================
+  TROUBLESHOOTING
+================================================================
+
+"Automation Error" on http.Open
+  → Your organisation's firewall may be blocking outbound HTTPS
+  → Ask IT to whitelist: *.supabase.co on port 443
+
+Login returns error but credentials are correct
+  → Check SUPABASE_URL has no trailing slash
+  → Check SUPABASE_ANON key is the "anon" key, not "service_role"
+
+No data returned from SB_GET
+  → Check RLS policies on the table allow SELECT for authenticated users
+  → In Supabase SQL Editor run: SELECT * FROM your_table LIMIT 1
+
+Form opens but controls are missing
+  → Make sure the control Names match exactly (case-sensitive)
+  → txtEmail, txtPassword, cmdLogin, cmdCancel, lblError
+
+================================================================
+  QUICK REFERENCE — SB_ FUNCTIONS
+================================================================
+
+SB_Login(email, password)         → Boolean (True = logged in)
+SB_Logout()                       → clears session
+SB_IsLoggedIn()                   → Boolean
+SB_GetEmail()                     → String (current user email)
+SB_GetRole()                      → String (from user_metadata)
+
+SB_GET(table, query)              → JSON String
+SB_POST(table, jsonBody)          → Boolean
+SB_PATCH(table, filter, body)     → Boolean
+SB_DELETE(table, filter)          → Boolean
+SB_RPC(funcName, jsonArgs)        → JSON String
+
+ExtractStr(json, key)             → String (single value)
+ParseJSONTable(json, "k1,k2,k3")  → 2D Variant array
+JSONEscape(str)                   → String (safe for JSON)
+DumpTableToSheet(data, ws, r, c)  → writes array to worksheet
+
+================================================================
+  END OF SETUP GUIDE
+================================================================

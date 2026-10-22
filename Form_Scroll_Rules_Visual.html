@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Form Scroll Rules — Design Reference</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Poppins',sans-serif}
+body{background:#e8eaf0;padding:32px;display:flex;flex-direction:column;gap:48px}
+
+/* ── page title ── */
+.page-title{text-align:center}
+.page-title h1{font-size:22px;font-weight:900;color:#1a2035;letter-spacing:-0.5px}
+.page-title p{font-size:12px;color:#64748b;margin-top:4px}
+
+/* ── section label ── */
+.section-label{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.section-label .badge{
+  padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;
+}
+.badge-green{background:#dcfce7;color:#166534}
+.badge-amber{background:#fef9c3;color:#854d0e}
+.section-label h2{font-size:16px;font-weight:700;color:#1a2035}
+.section-label p{font-size:11px;color:#64748b;margin-top:2px}
+
+/* ── two-col layout ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;align-items:start}
+
+/* ── annotation arrow ── */
+.ann{display:flex;align-items:flex-start;gap:8px;margin-top:8px}
+.ann-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.ann-dot-green{background:#22c55e}
+.ann-dot-amber{background:#f59e0b}
+.ann-dot-red{background:#ef4444}
+.ann-dot-blue{background:#3b82f6}
+.ann-dot-purple{background:#8b5cf6}
+.ann-text{font-size:11px;color:#475569;line-height:1.5}
+.ann-text strong{color:#1e293b;font-weight:700}
+
+/* ══════════════════════════════════════
+   MOCK FORM — NO SCROLL TYPE
+══════════════════════════════════════ */
+.form-shell{
+  width:100%;
+  border-radius:16px;
+  overflow:hidden;
+  box-shadow:0 8px 32px rgba(0,0,0,0.14);
+  background:#f8fafc;
+  position:relative;
+}
+
+/* banner strip */
+.f-banner{
+  height:70px;
+  background:linear-gradient(135deg,var(--mc) 0%,var(--mc2) 100%);
+  display:flex;align-items:center;
+  padding:0 20px;gap:14px;
+  position:relative;
+}
+.f-banner-icon{font-size:28px}
+.f-banner-text{}
+.f-banner-label{font-size:9px;font-weight:700;color:rgba(255,255,255,0.65);letter-spacing:2px;text-transform:uppercase}
+.f-banner-title{font-size:15px;font-weight:900;color:#fff;letter-spacing:-0.3px}
+.sticky-tag{
+  position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  background:rgba(255,255,255,0.18);
+  border:1px solid rgba(255,255,255,0.4);
+  color:#fff;font-size:9px;font-weight:700;
+  padding:3px 9px;border-radius:10px;
+  letter-spacing:0.5px;
+  display:flex;align-items:center;gap:4px;
+}
+.sticky-tag::before{content:'📌 '}
+
+/* step nav bar */
+.f-steps{
+  background:#fff;
+  border-bottom:1px solid #e8ecf2;
+  display:flex;align-items:center;
+  padding:10px 20px;gap:6px;
+  position:relative;
+}
+.f-step-pill{
+  padding:5px 13px;border-radius:20px;
+  font-size:10px;font-weight:600;
+  background:rgba(0,0,0,0.07);color:rgba(0,0,0,0.38);
+  white-space:nowrap;
+}
+.f-step-pill.active{
+  background:var(--mc);color:#fff;
+  box-shadow:0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* form body */
+.f-body{
+  padding:18px 20px;
+}
+.f-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.f-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+.f-field{}
+.f-label{font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px}
+.f-input{
+  height:36px;background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;
+  padding:0 12px;font-size:12px;color:#334155;
+  display:flex;align-items:center;
+}
+.f-input.filled{border-color:#cbd5e1;color:#1e293b;font-weight:500}
+.f-input.select::after{content:'▾';margin-left:auto;color:#94a3b8;font-size:10px}
+.f-input{display:flex;align-items:center;justify-content:space-between}
+.f-textarea{
+  height:60px;background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;
+  padding:8px 12px;font-size:11px;color:#94a3b8;
+}
+
+/* form footer */
+.f-footer{
+  background:#fff;border-top:1px solid #e8ecf2;
+  padding:12px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:relative;
+}
+.f-btn{
+  padding:8px 20px;border-radius:8px;font-size:12px;font-weight:700;border:none;cursor:pointer;
+}
+.f-btn-gray{background:#f1f5f9;color:#475569}
+.f-btn-primary{background:var(--mc);color:#fff;box-shadow:0 3px 10px rgba(0,0,0,0.15)}
+
+/* ══ SCROLL-TYPE FORM ══ */
+.f-body-scroll{
+  padding:18px 20px;
+  max-height:220px;
+  overflow-y:auto;
+}
+/* sticky table head inside scroll area */
+.f-table{width:100%;border-collapse:collapse;font-size:11px}
+.f-table th{
+  position:sticky;top:0;z-index:2;
+  background:#1e293b;color:#fff;
+  font-size:9px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;
+  padding:8px 10px;text-align:left;
+}
+.f-table td{
+  padding:8px 10px;border-bottom:1px solid #f1f5f9;
+  color:#334155;vertical-align:middle;
+}
+.f-table tr:nth-child(even) td{background:#f8fafc}
+.f-input-sm{
+  height:28px;background:#fff;border:1px solid #e2e8f0;border-radius:6px;
+  padding:0 8px;font-size:11px;color:#1e293b;width:100%;
+}
+.add-row-btn{
+  display:flex;align-items:center;gap:6px;
+  padding:6px 14px;border-radius:8px;
+  background:rgba(0,0,0,0.05);color:rgba(0,0,0,0.5);
+  font-size:11px;font-weight:600;border:1.5px dashed rgba(0,0,0,0.15);
+  cursor:pointer;
+  font-family:'Poppins',sans-serif;
+}
+.add-row-btn:hover{background:rgba(0,0,0,0.08)}
+
+/* ══ SCROLL ZONE INDICATOR ══ */
+.scroll-zone{
+  position:relative;
+}
+.scroll-zone::after{
+  content:'↕ SCROLLS HERE';
+  position:absolute;
+  right:-88px;top:50%;transform:translateY(-50%);
+  font-size:9px;font-weight:800;letter-spacing:1px;
+  color:#f59e0b;
+  white-space:nowrap;
+}
+.scroll-arrow{
+  position:absolute;
+  right:-18px;top:50%;transform:translateY(-50%);
+  width:0;height:0;
+  border-top:5px solid transparent;
+  border-bottom:5px solid transparent;
+  border-left:8px solid #f59e0b;
+}
+
+/* ══ RULE CARD ══ */
+.rule-card{
+  background:#fff;border-radius:14px;padding:20px;
+  box-shadow:0 2px 12px rgba(0,0,0,0.07);
+  border-left:4px solid var(--rc);
+}
+.rule-card h3{font-size:13px;font-weight:800;color:#1e293b;margin-bottom:8px}
+.rule-card p{font-size:11px;color:#64748b;line-height:1.7}
+.rule-card .tag{
+  display:inline-block;
+  background:rgba(0,0,0,0.05);
+  color:#475569;font-size:10px;font-weight:700;
+  padding:2px 9px;border-radius:10px;margin:3px 3px 3px 0;
+}
+
+/* ══ STICKY ZONE LABELS ══ */
+.zone-wrap{position:relative;margin-right:90px}
+.zone-label{
+  position:absolute;
+  right:-88px;
+  font-size:9px;font-weight:800;letter-spacing:0.8px;text-transform:uppercase;
+  white-space:nowrap;display:flex;align-items:center;gap:4px;
+}
+.zone-label::before{
+  content:'';
+  display:inline-block;width:20px;height:2px;
+  background:currentColor;
+}
+.zone-green{color:#22c55e}
+.zone-amber{color:#f59e0b}
+
+/* ══ DIVIDER ══ */
+.divider{
+  border:none;border-top:2px dashed #cbd5e1;
+  margin:8px 0;
+}
+
+/* ══ SUMMARY TABLE ══ */
+.summary-table{
+  width:100%;border-collapse:collapse;font-size:12px;
+  background:#fff;border-radius:14px;overflow:hidden;
+  box-shadow:0 2px 12px rgba(0,0,0,0.07);
+}
+.summary-table th{
+  background:#1e293b;color:#fff;
+  padding:12px 16px;text-align:left;
+  font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;
+}
+.summary-table td{
+  padding:11px 16px;border-bottom:1px solid #f1f5f9;
+  color:#334155;vertical-align:top;line-height:1.5;
+}
+.summary-table tr:last-child td{border-bottom:none}
+.pill-s{
+  display:inline-block;padding:2px 9px;border-radius:10px;
+  font-size:10px;font-weight:700;
+}
+.pill-green{background:#dcfce7;color:#166534}
+.pill-amber{background:#fef9c3;color:#854d0e}
+.pill-blue{background:#dbeafe;color:#1e40af}
+.pill-red{background:#fee2e2;color:#991b1b}
+
+/* ══ VIEWPORT DIAGRAM ══ */
+.viewport-box{
+  width:100%;
+  border:2px solid #cbd5e1;
+  border-radius:14px;
+  overflow:hidden;
+  background:#f8fafc;
+  position:relative;
+}
+.viewport-row{
+  padding:12px 16px;
+  font-size:11px;font-weight:600;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.viewport-divider{height:1px;background:#e2e8f0}
+.vp-sticky{background:#f0fdf4;border-left:4px solid #22c55e}
+.vp-scroll{background:#fffbeb;border-left:4px solid #f59e0b}
+.vp-fixed{background:#eff6ff;border-left:4px solid #3b82f6}
+.vp-tag{font-size:9px;font-weight:700;padding:2px 8px;border-radius:8px}
+.vp-tag-sticky{background:#dcfce7;color:#166534}
+.vp-tag-scroll{background:#fef9c3;color:#854d0e}
+.vp-tag-fixed{background:#dbeafe;color:#1e40af}
+
+/* ══ BRACE INDICATOR ══ */
+.brace-wrap{display:flex;align-items:stretch;gap:8px}
+.brace{
+  display:flex;flex-direction:column;align-items:center;
+  width:16px;flex-shrink:0;
+}
+.brace-line{flex:1;width:2px;background:currentColor;border-radius:2px}
+.brace-tick{width:8px;height:2px;background:currentColor;border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <h1>Form Scrolling Rules — Design Reference</h1>
+  <p>Every form in the application follows one of two scroll patterns. This document defines which is which and why.</p>
+</div>
+
+<!-- ══════════════════════════
+     RULE 1 — VIEWPORT ANATOMY
+══════════════════════════ -->
+<div>
+  <div class="section-label">
+    <div class="badge badge-blue" style="background:#dbeafe;color:#1e40af">Rule 0</div>
+    <div>
+      <h2>Every Form Has 3 Zones — Always</h2>
+      <p>Regardless of scroll type, these three zones exist on every single form page</p>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <!-- Zone diagram -->
+    <div>
+      <div class="viewport-box">
+        <div class="viewport-row vp-fixed" style="height:70px">
+          <div>
+            <div style="font-size:13px;font-weight:900;color:#1e40af">🏷 Step 0 Banner</div>
+            <div style="font-size:10px;font-weight:500;color:#3b82f6;margin-top:2px">Module name · Big bold title · Emoji icon · Description · Step pills · START button</div>
+          </div>
+          <span class="vp-tag vp-tag-fixed">FULL SCREEN · ONE TIME</span>
+        </div>
+        <div class="viewport-divider"></div>
+        <div class="viewport-row vp-sticky" style="height:52px">
+          <div>
+            <div style="font-size:12px;font-weight:900;color:#166534">📌 Step Header Bar</div>
+            <div style="font-size:10px;font-weight:500;color:#22c55e;margin-top:2px">Module color · Current step name · Step progress pills · position: sticky; top: 0</div>
+          </div>
+          <span class="vp-tag vp-tag-sticky">STICKY — ALWAYS VISIBLE</span>
+        </div>
+        <div class="viewport-divider"></div>
+        <div class="viewport-row vp-scroll" style="height:130px;align-items:flex-start;padding-top:14px">
+          <div>
+            <div style="font-size:12px;font-weight:900;color:#854d0e">↕ Form Content Area</div>
+            <div style="font-size:10px;font-weight:500;color:#a16207;margin-top:2px;line-height:1.6">
+              Fields, inputs, line items table<br>
+              <strong>No-scroll forms:</strong> fits in this space — no overflow<br>
+              <strong>Scroll forms:</strong> this area grows — scrollable
+            </div>
+          </div>
+          <span class="vp-tag vp-tag-scroll">CONTENT ZONE</span>
+        </div>
+        <div class="viewport-divider"></div>
+        <div class="viewport-row vp-sticky" style="height:52px">
+          <div>
+            <div style="font-size:12px;font-weight:900;color:#166534">📌 Action Footer</div>
+            <div style="font-size:10px;font-weight:500;color:#22c55e;margin-top:2px">Back (gray) · Save & Next / Submit (module color) · position: sticky; bottom: 0</div>
+          </div>
+          <span class="vp-tag vp-tag-sticky">STICKY — ALWAYS VISIBLE</span>
+        </div>
+      </div>
+      <div class="ann" style="margin-top:10px">
+        <div class="ann-dot ann-dot-blue"></div>
+        <div class="ann-text"><strong>Step 0 Banner</strong> appears only once when the user first opens the form. After clicking START it collapses and the user sees the step header bar instead.</div>
+      </div>
+    </div>
+
+    <!-- Rules text -->
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="rule-card" style="--rc:#22c55e">
+        <h3>📌 Sticky — Never Disappears</h3>
+        <p>Step header bar and action footer are always visible. The user never loses their place or has to scroll up to find the Back or Next button.<br><br>
+        <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:10px">position: sticky; top: 0; z-index: 10;</code></p>
+      </div>
+      <div class="rule-card" style="--rc:#f59e0b">
+        <h3>↕ Scroll-allowed Zone</h3>
+        <p>Only the <strong>content area</strong> between the step header and the action footer may scroll. Nothing outside this zone ever moves.</p>
+      </div>
+      <div class="rule-card" style="--rc:#3b82f6">
+        <h3>🚫 Never Split a Form Step</h3>
+        <p>If a step has too many fields to fit the content zone, <strong>split it into two steps</strong> — do not let the form scroll. The only exception is a line-items table where the user is adding rows.</p>
+      </div>
+      <div class="rule-card" style="--rc:#8b5cf6">
+        <h3>📋 Table Column Headers Sticky Too</h3>
+        <p>Inside a scrollable line-items table, the column header row is also sticky so the user always knows which column they are editing.<br><br>
+        <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:10px">position: sticky; top: [step-header height]px;</code></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════
+     RULE 1 — NO SCROLL FORM
+══════════════════════════ -->
+<div>
+  <div class="section-label">
+    <div class="badge badge-green">Pattern A</div>
+    <div>
+      <h2>Fixed-Height Form — No Scroll</h2>
+      <p>Employee, Vehicle, Party, Project, Leave, Document Vault, Contractors … all single-step field forms</p>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <!-- mock form -->
+    <div>
+      <div class="zone-wrap">
+        <!-- sticky banner zone indicator -->
+        <div class="zone-label zone-green" style="top:0">STICKY HEADER</div>
+        <!-- sticky footer zone indicator -->
+        <div class="zone-label zone-green" style="bottom:0">STICKY FOOTER</div>
+        <!-- content zone indicator -->
+        <div class="zone-label zone-amber" style="top:50%;transform:translateY(-50%)">CONTENT ZONE<br><span style="font-weight:500;letter-spacing:0">(no overflow)</span></div>
+
+        <div class="form-shell" style="--mc:#b84600;--mc2:#9a3a00">
+          <!-- sticky header -->
+          <div class="f-banner" style="height:56px">
+            <span class="f-banner-icon" style="font-size:22px">👤</span>
+            <div class="f-banner-text">
+              <div class="f-banner-label">Human Resources</div>
+              <div class="f-banner-title" style="font-size:13px">New Employee · Step 1 of 5</div>
+            </div>
+            <div class="sticky-tag">STICKY</div>
+          </div>
+          <div class="f-steps" style="--mc:#b84600">
+            <div class="f-step-pill active" style="--mc:#b84600">1. Personal</div>
+            <div class="f-step-pill">2. Employment</div>
+            <div class="f-step-pill">3. Salary</div>
+            <div class="f-step-pill">4. Documents</div>
+            <div class="f-step-pill">5. Activate</div>
+            <div class="sticky-tag" style="right:10px">STICKY</div>
+          </div>
+
+          <!-- form body — fits without scroll -->
+          <div class="f-body">
+            <div class="f-row">
+              <div class="f-field">
+                <div class="f-label">First Name</div>
+                <div class="f-input filled">Mohammed</div>
+              </div>
+              <div class="f-field">
+                <div class="f-label">Last Name</div>
+                <div class="f-input filled">Al-Rashidi</div>
+              </div>
+            </div>
+            <div class="f-row">
+              <div class="f-field">
+                <div class="f-label">Nationality</div>
+                <div class="f-input select">Saudi Arabia <span>▾</span></div>
+              </div>
+              <div class="f-field">
+                <div class="f-label">Date of Birth</div>
+                <div class="f-input filled">12 / 03 / 1990</div>
+              </div>
+            </div>
+            <div class="f-row-3">
+              <div class="f-field">
+                <div class="f-label">Iqama / ID No.</div>
+                <div class="f-input filled">1092837465</div>
+              </div>
+              <div class="f-field">
+                <div class="f-label">Iqama Expiry</div>
+                <div class="f-input filled">31 / 12 / 2025</div>
+              </div>
+              <div class="f-field">
+                <div class="f-label">Passport No.</div>
+                <div class="f-input filled">A12345678</div>
+              </div>
+            </div>
+            <div class="f-row">
+              <div class="f-field">
+                <div class="f-label">Mobile</div>
+                <div class="f-input filled">+966 55 123 4567</div>
+              </div>
+              <div class="f-field">
+                <div class="f-label">Email</div>
+                <div class="f-input filled">m.alrashidi@accsys.com</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- sticky footer -->
+          <div class="f-footer">
+            <div style="position:absolute;right:10px;top:-18px">
+              <div class="sticky-tag" style="background:#22c55e;border-color:#22c55e;font-size:8px">STICKY</div>
+            </div>
+            <button class="f-btn f-btn-gray">← Back</button>
+            <button class="f-btn f-btn-primary" style="--mc:#b84600">Save & Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- annotations -->
+    <div style="display:flex;flex-direction:column;gap:10px;padding-top:8px">
+      <div class="ann">
+        <div class="ann-dot ann-dot-green"></div>
+        <div class="ann-text"><strong>Step header bar is sticky.</strong> Even if content were to overflow, the user always sees which step they're on and can use Back / Next without scrolling.</div>
+      </div>
+      <div class="ann">
+        <div class="ann-dot ann-dot-green"></div>
+        <div class="ann-text"><strong>Action footer is sticky.</strong> Back and Save & Next are always reachable at the bottom of the screen — no hunting.</div>
+      </div>
+      <div class="ann">
+        <div class="ann-dot ann-dot-blue"></div>
+        <div class="ann-text"><strong>Fields are split across steps.</strong> Step 1 = Personal (7 fields). Step 2 = Employment (6 fields). Step 3 = Salary (5 fields). No step is overloaded.</div>
+      </div>
+      <div class="ann">
+        <div class="ann-dot ann-dot-red"></div>
+        <div class="ann-text"><strong>No overflow on this form.</strong> The content zone never exceeds the viewport height. If you find yourself adding a 9th or 10th field — add a new step instead.</div>
+      </div>
+      <div style="margin-top:8px;padding:12px 14px;background:#f0fdf4;border-radius:10px;border:1px solid #bbf7d0">
+        <div style="font-size:10px;font-weight:800;color:#166534;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Forms using Pattern A</div>
+        <div style="font-size:10px;color:#166534;line-height:1.8">
+          Employee · Vehicle · Project · Leave Request · Document Vault<br>
+          Party Master · Contractors · Travel Request · Ticket Booking<br>
+          User Management · Sub-Con Register · Site Assignment
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════
+     RULE 2 — SCROLL FORM
+══════════════════════════ -->
+<div>
+  <div class="section-label">
+    <div class="badge badge-amber">Pattern B</div>
+    <div>
+      <h2>Line-Item Form — Controlled Scroll</h2>
+      <p>Invoice, Outgoing PO, Incoming PO, Money Request, Expense Claim … any form with an "Add Row" table</p>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <!-- mock form -->
+    <div>
+      <div class="zone-wrap">
+        <div class="zone-label zone-green" style="top:0">STICKY HEADER</div>
+        <div class="zone-label zone-amber" style="top:42%;transform:translateY(-50%)">SCROLLS ↕<br><span style="font-weight:500;letter-spacing:0">(content zone)</span></div>
+        <div class="zone-label zone-green" style="bottom:0">STICKY FOOTER</div>
+
+        <div class="form-shell" style="--mc:#00695c;--mc2:#004d40">
+          <!-- sticky header -->
+          <div class="f-banner" style="height:56px">
+            <span class="f-banner-icon" style="font-size:22px">🧾</span>
+            <div class="f-banner-text">
+              <div class="f-banner-label">Finance · Billing</div>
+              <div class="f-banner-title" style="font-size:13px">New Invoice · Step 2 of 4 — Line Items</div>
+            </div>
+            <div class="sticky-tag">STICKY</div>
+          </div>
+          <div class="f-steps" style="--mc:#00695c">
+            <div class="f-step-pill" style="--mc:#00695c">1. Header</div>
+            <div class="f-step-pill active" style="--mc:#00695c">2. Line Items</div>
+            <div class="f-step-pill">3. Tax & Totals</div>
+            <div class="f-step-pill">4. Attachments</div>
+            <div class="sticky-tag" style="right:10px">STICKY</div>
+          </div>
+
+          <!-- scrollable body with line items -->
+          <div style="padding:12px 20px 8px">
+            <div style="font-size:10px;font-weight:700;color:#64748b;letter-spacing:0.5px;margin-bottom:6px">LINE ITEMS</div>
+          </div>
+          <div class="f-body-scroll">
+            <table class="f-table">
+              <thead>
+                <tr>
+                  <th style="width:30px">#</th>
+                  <th>Description</th>
+                  <th style="width:70px">Qty</th>
+                  <th style="width:80px">Unit Price</th>
+                  <th style="width:80px">Total</th>
+                  <th style="width:30px"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="color:#94a3b8">1</td>
+                  <td><input class="f-input-sm" value="Site Supervision Services — Jan 2025" readonly></td>
+                  <td><input class="f-input-sm" value="1" readonly style="text-align:center"></td>
+                  <td><input class="f-input-sm" value="15,000.00" readonly style="text-align:right"></td>
+                  <td style="font-weight:700;color:#166534">15,000.00</td>
+                  <td style="color:#ef4444;text-align:center;cursor:pointer">✕</td>
+                </tr>
+                <tr>
+                  <td style="color:#94a3b8">2</td>
+                  <td><input class="f-input-sm" value="Safety Officer — Monthly Rate" readonly></td>
+                  <td><input class="f-input-sm" value="1" readonly style="text-align:center"></td>
+                  <td><input class="f-input-sm" value="8,500.00" readonly style="text-align:right"></td>
+                  <td style="font-weight:700;color:#166534">8,500.00</td>
+                  <td style="color:#ef4444;text-align:center;cursor:pointer">✕</td>
+                </tr>
+                <tr>
+                  <td style="color:#94a3b8">3</td>
+                  <td><input class="f-input-sm" value="Heavy Equipment — Crane Hire 3 Days" readonly></td>
+                  <td><input class="f-input-sm" value="3" readonly style="text-align:center"></td>
+                  <td><input class="f-input-sm" value="2,200.00" readonly style="text-align:right"></td>
+                  <td style="font-weight:700;color:#166534">6,600.00</td>
+                  <td style="color:#ef4444;text-align:center;cursor:pointer">✕</td>
+                </tr>
+                <tr>
+                  <td style="color:#94a3b8">4</td>
+                  <td><input class="f-input-sm" value="Site Cleaning & Waste Disposal" readonly></td>
+                  <td><input class="f-input-sm" value="1" readonly style="text-align:center"></td>
+                  <td><input class="f-input-sm" value="1,200.00" readonly style="text-align:right"></td>
+                  <td style="font-weight:700;color:#166534">1,200.00</td>
+                  <td style="color:#ef4444;text-align:center;cursor:pointer">✕</td>
+                </tr>
+                <tr>
+                  <td style="color:#94a3b8">5</td>
+                  <td><input class="f-input-sm" placeholder="Enter description…"></td>
+                  <td><input class="f-input-sm" placeholder="0" style="text-align:center"></td>
+                  <td><input class="f-input-sm" placeholder="0.00" style="text-align:right"></td>
+                  <td style="color:#94a3b8">—</td>
+                  <td style="color:#ef4444;text-align:center;cursor:pointer">✕</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="padding:10px 20px;display:flex;align-items:center;justify-content:space-between;border-top:1px dashed #e2e8f0">
+            <button class="add-row-btn">＋ Add Line Item</button>
+            <div style="font-size:12px;color:#64748b">
+              Subtotal: <strong style="color:#1e293b">31,300.00 SAR</strong>
+            </div>
+          </div>
+
+          <!-- sticky footer -->
+          <div class="f-footer" style="position:relative">
+            <div style="position:absolute;right:10px;top:-18px">
+              <div class="sticky-tag" style="background:#22c55e;border-color:#22c55e;font-size:8px">STICKY</div>
+            </div>
+            <button class="f-btn f-btn-gray">← Back</button>
+            <div style="display:flex;gap:8px">
+              <div style="font-size:11px;color:#64748b;text-align:right;line-height:1.4">5 rows added<br><span style="color:#00695c;font-weight:700">SAR 31,300.00</span></div>
+              <button class="f-btn f-btn-primary" style="--mc:#00695c">Save & Next →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- annotations -->
+    <div style="display:flex;flex-direction:column;gap:10px;padding-top:8px">
+      <div class="ann">
+        <div class="ann-dot ann-dot-green"></div>
+        <div class="ann-text"><strong>Step header stays sticky.</strong> User sees "Step 2 of 4 — Line Items" and the pill navigation even when they have scrolled 20 rows down.</div>
+      </div>
+      <div class="ann">
+        <div class="ann-dot ann-dot-purple"></div>
+        <div class="ann-text"><strong>Table column headers are sticky too.</strong> "#, Description, Qty, Unit Price, Total" row sticks below the step header so the user never forgets which column they're editing.</div>
+      </div>
+      <div class="ann">
+        <div class="ann-dot ann-dot-amber"></div>
+        <div class="ann-text"><strong>Only the table area scrolls.</strong> The padding above the table, the "Add Line Item" button, the subtotal, and the footer are all fixed. Scrolling is isolated to the rows.</div>
+      </div>
+      <div class="ann">
+        <div class="ann-dot ann-dot-green"></div>
+        <div class="ann-text"><strong>Running total in the footer.</strong> Because the footer is always visible, the user sees the live subtotal without scrolling to the bottom of the table.</div>
+      </div>
+      <div style="margin-top:8px;padding:12px 14px;background:#fffbeb;border-radius:10px;border:1px solid #fde68a">
+        <div style="font-size:10px;font-weight:800;color:#854d0e;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Forms using Pattern B</div>
+        <div style="font-size:10px;color:#854d0e;line-height:1.8">
+          Invoice (Line Items step) · Outgoing PO (Line Items step)<br>
+          Incoming PO (Line Items step) · Expense Claim (Rows step)<br>
+          Money Request (Items step) · Sub-Con Claim (Claim Lines step)
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════
+     SUMMARY TABLE
+══════════════════════════ -->
+<div>
+  <div class="section-label">
+    <div class="badge" style="background:#ede9fe;color:#5b21b6">Quick Reference</div>
+    <div>
+      <h2>What Is Sticky vs What Scrolls — Summary</h2>
+    </div>
+  </div>
+  <table class="summary-table">
+    <thead>
+      <tr>
+        <th>Element</th>
+        <th>Pattern A (no scroll)</th>
+        <th>Pattern B (line items)</th>
+        <th>CSS Rule</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Step 0 Banner</strong><br>Module name, title, emoji, START</td>
+        <td><span class="pill-s pill-blue">Full Screen · One Time</span></td>
+        <td><span class="pill-s pill-blue">Full Screen · One Time</span></td>
+        <td style="font-size:10px;color:#64748b">Replaces entire screen; not sticky</td>
+      </tr>
+      <tr>
+        <td><strong>Step Header Bar</strong><br>Module color, step name, pills</td>
+        <td><span class="pill-s pill-green">Sticky — Always Visible</span></td>
+        <td><span class="pill-s pill-green">Sticky — Always Visible</span></td>
+        <td style="font-size:10px;font-family:monospace;color:#7c3aed">position:sticky; top:0; z-index:10</td>
+      </tr>
+      <tr>
+        <td><strong>Form Fields</strong><br>Inputs, dropdowns, date pickers</td>
+        <td><span class="pill-s pill-green">No Scroll — Fits Viewport</span></td>
+        <td><span class="pill-s pill-green">No Scroll — Fits Viewport</span></td>
+        <td style="font-size:10px;color:#64748b">Max ~6–8 fields per step; split if more</td>
+      </tr>
+      <tr>
+        <td><strong>Line Items Table</strong><br>Description, Qty, Price rows</td>
+        <td><span class="pill-s pill-red">Does Not Exist</span></td>
+        <td><span class="pill-s pill-amber">Scrolls ↕ (rows grow)</span></td>
+        <td style="font-size:10px;font-family:monospace;color:#7c3aed">overflow-y:auto; max-height:calc(100vh - 220px)</td>
+      </tr>
+      <tr>
+        <td><strong>Table Column Headers</strong><br>#, Description, Qty, Price, Total</td>
+        <td><span class="pill-s pill-red">Does Not Exist</span></td>
+        <td><span class="pill-s pill-green">Sticky — Always Visible</span></td>
+        <td style="font-size:10px;font-family:monospace;color:#7c3aed">position:sticky; top:[step-bar height]px</td>
+      </tr>
+      <tr>
+        <td><strong>Action Footer</strong><br>Back (gray) · Save & Next (color)</td>
+        <td><span class="pill-s pill-green">Sticky — Always Visible</span></td>
+        <td><span class="pill-s pill-green">Sticky — Always Visible</span></td>
+        <td style="font-size:10px;font-family:monospace;color:#7c3aed">position:sticky; bottom:0; z-index:10</td>
+      </tr>
+      <tr>
+        <td><strong>Running Total / Count</strong><br>Subtotal, row count</td>
+        <td><span class="pill-s pill-red">Not Applicable</span></td>
+        <td><span class="pill-s pill-green">In Sticky Footer — Always Visible</span></td>
+        <td style="font-size:10px;color:#64748b">Shown inside the footer bar — no scrolling to see total</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════
+     RULE: SPLIT NOT SCROLL
+══════════════════════════ -->
+<div>
+  <div class="section-label">
+    <div class="badge badge-red" style="background:#fee2e2;color:#991b1b">Golden Rule</div>
+    <div>
+      <h2>Too Many Fields? Split the Step — Never Scroll</h2>
+      <p>The decision tree for handling long forms</p>
+    </div>
+  </div>
+  <div class="three-col">
+    <div class="rule-card" style="--rc:#22c55e">
+      <h3>✅ Do This</h3>
+      <p>Step has 10 fields → split into Step 1 (5 fields: personal) and Step 2 (5 fields: employment).<br><br>
+      Each step stays clean, focused, and fits the screen. The user feels clear progress.</p>
+      <br>
+      <div class="tag">Max 6–8 fields per step</div>
+      <div class="tag">Use step titles that describe the content</div>
+    </div>
+    <div class="rule-card" style="--rc:#ef4444">
+      <h3>🚫 Never Do This</h3>
+      <p>Put 12 fields on one step and let the user scroll through them.<br><br>
+      This breaks the no-scroll rule, buries fields, and makes the form feel like a long document instead of a guided wizard.</p>
+      <br>
+      <div class="tag" style="background:#fee2e2;color:#991b1b">Never scroll field forms</div>
+      <div class="tag" style="background:#fee2e2;color:#991b1b">Never stack 10+ fields</div>
+    </div>
+    <div class="rule-card" style="--rc:#f59e0b">
+      <h3>⚠️ Exception — Line Items</h3>
+      <p>A line-items table where the user adds rows is the <strong>only</strong> case where the content zone may scroll.<br><br>
+      Even then: step header, table column headers, and footer remain sticky.</p>
+      <br>
+      <div class="tag">Invoice · PO · Expense Claim</div>
+      <div class="tag">Sub-Con Claim · Money Request</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

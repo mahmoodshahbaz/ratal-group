@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACCSYS — Algorithm & Specification Reference</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #0b0e14; color: #cdd2db; font-size:13px; }
+
+/* NAV */
+.nav { background:#0f1520; border-bottom:1px solid #1e2840; padding:0; position:sticky; top:0; z-index:100; display:flex; flex-wrap:wrap; gap:0; }
+.nav a { color:#607d8b; text-decoration:none; padding:9px 14px; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.6px; border-right:1px solid #1e2840; transition:all .2s; white-space:nowrap; }
+.nav a:hover { background:#162040; color:#90caf9; }
+.nav-title { background:#0d47a1; color:#fff; padding:9px 16px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; }
+
+/* HEADER */
+.hdr { background:linear-gradient(135deg,#0d47a1,#1565c0); padding:20px 24px; }
+.hdr h1 { font-size:20px; font-weight:700; color:#fff; }
+.hdr p  { font-size:12px; color:#90caf9; margin-top:5px; line-height:1.6; }
+
+/* SECTIONS */
+.section { padding:20px 20px 0 20px; }
+.section-title {
+  font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
+  padding:10px 14px; border-radius:6px 6px 0 0; margin-bottom:0;
+  display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none;
+}
+.section-title::after { content:"▾"; margin-left:auto; font-size:16px; transition:transform .2s; }
+.section-title.collapsed::after { transform:rotate(-90deg); }
+.section-body { border:1px solid #1e2840; border-top:none; border-radius:0 0 6px 6px; overflow:hidden; }
+
+/* FORM CARDS */
+.form-block { border-bottom:1px solid #1e2840; }
+.form-block:last-child { border-bottom:none; }
+.form-header {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 14px; cursor:pointer; background:#111827;
+}
+.form-header:hover { background:#141d2e; }
+.form-header h3 { font-size:13px; font-weight:700; }
+.form-body { padding:14px 16px; background:#0d1220; display:none; }
+.form-body.open { display:block; }
+
+/* META ROW */
+.meta-row { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+.meta-item { background:#111827; border:1px solid #1e2840; border-radius:4px; padding:4px 10px; font-size:11px; }
+.meta-label { color:#546e7a; font-weight:600; }
+.meta-val { color:#90caf9; }
+
+/* ALGORITHM BLOCK */
+.algo {
+  background:#060a10; border:1px solid #1e3050; border-radius:5px;
+  padding:12px 14px; font-family:'Courier New', monospace; font-size:11.5px;
+  line-height:1.7; white-space:pre-wrap; overflow-x:auto; margin:8px 0;
+  color:#cdd2db;
+}
+.algo .kw  { color:#82aaff; }  /* keywords: IF/ELSE/WHEN/CHECK */
+.algo .fn  { color:#89ddff; }  /* functions/actions */
+.algo .val { color:#c3e88d; }  /* values/strings */
+.algo .cmt { color:#546e7a; font-style:italic; }  /* comments */
+.algo .tbl { color:#f78c6c; }  /* table names */
+.algo .gate{ color:#ef5350; font-weight:700; }  /* gate markers */
+.algo .tpl { color:#66bb6a; }  /* template markers */
+.algo .notif{ color:#29b6f6; } /* notification markers */
+
+/* SUBSECTIONS within form-body */
+.sub-title { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:#546e7a; margin:10px 0 4px 0; border-bottom:1px solid #1e2840; padding-bottom:3px; }
+
+/* TAGS */
+.tag { border-radius:10px; padding:2px 8px; font-size:10px; font-weight:600; display:inline-block; margin:1px; }
+.t-qr   { background:#1b5e20; color:#a5d6a7; }
+.t-app  { background:#004d40; color:#b2dfdb; }
+.t-tg   { background:#0277bd; color:#b3e5fc; }
+.t-em   { background:#4a148c; color:#e1bee7; }
+.t-gate { background:#b71c1c; color:#ffcdd2; }
+.t-auto { background:#1a237e; color:#bbdefb; }
+.t-xls  { background:#1b5e20; color:#a5d6a7; }
+.t-ok   { background:#1b5e20; color:#a5d6a7; }
+.t-warn { background:#e65100; color:#ffe0b2; }
+.t-miss { background:#b71c1c; color:#ffcdd2; }
+.t-bug  { background:#7b1fa2; color:#e1bee7; }
+
+/* INTER-LINKS */
+.inter-grid { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0; }
+.inter-item { background:#111827; border:1px solid #1e3050; border-radius:4px; padding:4px 10px; font-size:11px; }
+.inter-item .arrow { color:#546e7a; }
+.inter-item .target { color:#f78c6c; }
+
+/* NOTIFICATION TABLE */
+.ntable { width:100%; border-collapse:collapse; font-size:11px; margin:8px 0; }
+.ntable th { background:#111827; color:#78909c; padding:7px 10px; text-align:left; font-weight:700; border:1px solid #1e2840; }
+.ntable td { padding:6px 10px; border:1px solid #1e2840; vertical-align:top; }
+.ntable tr:nth-child(even) { background:#0d1220; }
+.ntable tr:nth-child(odd)  { background:#0a0e18; }
+.ntable td.yes-tg { color:#29b6f6; font-weight:700; }
+.ntable td.yes-em { color:#ce93d8; font-weight:700; }
+.ntable td.yes-ap { color:#80cbc4; font-weight:700; }
+.ntable td.no { color:#2a3550; }
+
+/* GATE CARDS */
+.gate-block { background:#0e0808; border:1.5px dashed #c62828; border-radius:6px; padding:14px 16px; margin-bottom:10px; }
+.gate-title { color:#ef5350; font-size:13px; font-weight:700; margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+.gate-algo { background:#060408; border:1px solid #3b0a0a; border-radius:4px; padding:10px 12px; font-family:'Courier New', monospace; font-size:11px; line-height:1.8; white-space:pre-wrap; color:#cdd2db; }
+
+/* DEPENDENCY TABLE */
+.dep-table { width:100%; border-collapse:collapse; font-size:11px; }
+.dep-table th { background:#111827; color:#78909c; padding:7px 10px; text-align:left; font-weight:700; border:1px solid #1e2840; }
+.dep-table td { padding:6px 10px; border:1px solid #1e2840; vertical-align:top; }
+.dep-table tr:nth-child(even) { background:#0d1220; }
+.dep-table tr:nth-child(odd)  { background:#0a0e18; }
+.dep-table .writes { color:#f78c6c; }
+.dep-table .reads  { color:#82aaff; }
+.dep-table .shared { color:#c3e88d; font-weight:600; }
+.dep-table .form-name { color:#90caf9; font-weight:700; }
+
+/* SECTION COLOURS */
+.s-forms  .section-title { background:#0d2040; color:#90caf9; }
+.s-gates  .section-title { background:#1a0808; color:#ef5350; }
+.s-notif  .section-title { background:#080d20; color:#29b6f6; }
+.s-deps   .section-title { background:#0a1a08; color:#a5d6a7; }
+.s-inter  .section-title { background:#1a0d00; color:#ffcc80; }
+
+/* Actor colour tags */
+.actor-subcon    { color:#a5d6a7; }
+.actor-employee  { color:#90caf9; }
+.actor-dh        { color:#ffcc80; }
+.actor-accounts  { color:#b3e5fc; }
+
+/* Bug callout */
+.bug-box { background:#1a0a2a; border-left:3px solid #9c27b0; border-radius:4px; padding:8px 12px; margin:6px 0; font-size:11px; color:#ce93d8; }
+
+/* Missing items */
+.missing-box { background:#1a0808; border-left:3px solid #c62828; border-radius:4px; padding:8px 12px; margin:6px 0; font-size:11px; color:#ef9a9a; }
+
+.footer { background:#060a10; padding:12px 20px; font-size:10px; color:#2a3550; border-top:1px solid #1e2840; margin-top:20px; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div class="nav">
+  <div class="nav-title">ACCSYS SPEC</div>
+  <a href="#forms">Form Algorithms</a>
+  <a href="#gates">Gate Logic</a>
+  <a href="#notifications">Notification Matrix</a>
+  <a href="#dependencies">Table Dependencies</a>
+  <a href="#interrelation">Inter-Relations</a>
+  <a href="#missing">Missing &amp; Bugs</a>
+</div>
+
+<!-- HEADER -->
+<div class="hdr">
+  <h1>ACCSYS Field Operations Platform — Algorithm &amp; Specification Reference</h1>
+  <p>Per-form algorithms · Gate decision trees · Notification matrix · Table dependencies · Inter-relation map · Known bugs &amp; missing items<br>
+  Click any section header to expand/collapse. Click any form name to expand its algorithm.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SECTION 1: FORM ALGORITHMS -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="section s-forms" id="forms">
+  <div class="section-title" onclick="toggleSection(this)">📋 Form Algorithms — Where Used, How, What They Do</div>
+  <div class="section-body">
+
+    <!-- FORM: SubCon Payment Request -->
+    <div class="form-block">
+      <div class="form-header" onclick="toggleForm(this)">
+        <span style="font-size:16px">📱</span>
+        <h3 class="actor-subcon">FormSubConClaim — SubCon Payment Request</h3>
+        <div style="margin-left:auto;display:flex;gap:4px;flex-wrap:wrap">
+          <span class="tag t-qr">QR Auth</span><span class="tag t-app">App Only</span><span class="tag t-gate">3 Gates</span>
+        </div>
+      </div>
+      <div class="form-body">
+        <div class="meta-row">
+          <div class="meta-item"><span class="meta-label">ACTOR: </span><span class="meta-val">Sub-Contractor</span></div>
+          <div class="meta-item"><span class="meta-label">ROUTE: </span><span class="meta-val">/forms/subcon-claim</span></div>
+          <div class="meta-item"><span class="meta-label">TABLE WRITES: </span><span class="meta-val">subcon_claims</span></div>
+          <div class="meta-item"><span class="meta-label">TABLE READS: </span><span class="meta-val">outgoing_purchase_orders, sites, contractors, qr_tokens</span></div>
+        </div>
+
+        <div class="sub-title">Algorithm</div>
+        <div class="algo"><span class="kw">TRIGGER:</span> SubCon opens App → taps "Request Payment"
+
+<span class="kw">STEP 1 — QR Authentication</span> <span class="gate">[G5]</span>
+  <span class="fn">scan_qr()</span> → resolve <span class="tbl">qr_tokens</span>.contractor_id, entity_id
+  <span class="kw">IF</span> token expired OR inactive → <span class="gate">BLOCK</span> <span class="val">"Invalid QR. Contact DH for new QR code."</span>
+
+<span class="kw">STEP 2 — PO Existence Check</span> <span class="gate">[G2]</span>
+  <span class="fn">load_open_pos(contractor_id)</span>:
+    <span class="kw">SELECT</span> * <span class="kw">FROM</span> <span class="tbl">outgoing_purchase_orders</span>
+    <span class="kw">WHERE</span> contractor_id = ? <span class="kw">AND</span> status = <span class="val">'OPEN'</span> <span class="kw">AND</span> balance > 0
+  <span class="kw">IF</span> result = [] → <span class="gate">BLOCK</span> <span class="val">"No open PO. Contact your DH."</span>
+
+<span class="kw">STEP 3 — PO Acknowledgement Check</span> <span class="gate">[G1]</span>
+  <span class="kw">IF</span> <span class="tbl">outgoing_purchase_orders</span>.acknowledged = FALSE → <span class="gate">BLOCK</span>
+    <span class="fn">show_po_details()</span> → SubCon taps <span class="val">"Acknowledge"</span>
+    <span class="fn">UPDATE</span> <span class="tbl">outgoing_purchase_orders</span> SET acknowledged = TRUE, acknowledged_at = NOW()
+    <span class="fn">THEN</span> allow payment request
+
+<span class="kw">STEP 4 — PO Selection (FIFO)</span>
+  Auto-select: <span class="kw">MIN</span>(po_date) from open POs <span class="cmt">← oldest first</span>
+  DH override: select by Site# in Money Request (not SubCon-selectable)
+
+<span class="kw">STEP 5 — Form Fields (3 taps only)</span>
+  ① Site (auto-filled from PO)
+  ② Amount (SAR) — validate: amount ≤ po.balance
+  ③ Photo attachment (evidence of work done)
+  <span class="kw">IF</span> amount > po.balance → <span class="gate">WARN</span> <span class="val">"Exceeds PO balance (SAR X remaining)"</span>
+
+<span class="kw">STEP 6 — Submit</span>
+  <span class="fn">INSERT INTO</span> <span class="tbl">subcon_claims</span> {contractor_id, site_id, po_id, amount, photo_url, status: 'PENDING', claim_number}
+  <span class="notif">NOTIFY DH:</span> In-App + Telegram <span class="val">"New payment request from [SubCon] — SAR [amount]"</span>
+
+<span class="kw">STEP 7 — DH Reviews → creates Payment Certificate</span> <span class="gate">[G3]</span>
+  <span class="cmt">← FormMoneyRequest cannot proceed for SubCon until certificate exists</span></div>
+
+        <div class="sub-title">Inter-Links</div>
+        <div class="inter-grid">
+          <div class="inter-item"><span class="arrow">REQUIRES →</span> <span class="target">outgoing_purchase_orders (open PO)</span></div>
+          <div class="inter-item"><span class="arrow">REQUIRES →</span> <span class="target">PO Acknowledged (G1)</span></div>
+          <div class="inter-item"><span class="arrow">TRIGGERS →</span> <span class="target">DH reviews → Payment Certificate</span></div>
+          <div class="inter-item"><span class="arrow">BEFORE →</span> <span class="target">FormMoneyRequest (SubCon line)</span></div>
+          <div class="inter-item"><span class="arrow">READS →</span> <span class="target">FormSiteCompletion (basis for DH certification)</span></div>
+        </div>
+
+        <div class="sub-title">Templates &amp; Notifications</div>
+        <div class="meta-row">
+          <div class="meta-item"><span class="meta-label">Template: </span><span class="meta-val" style="color:#ef9a9a">None at submission</span></div>
+          <div class="meta-item"><span class="meta-label">After Payment: </span><span class="meta-val" style="color:#66bb6a">SubCon Payment Certificate ⚠️ (rebuild needed)</span></div>
+          <div class="meta-item"><span class="meta-label">Notify DH: </span><span class="meta-val">In-App + Telegram</span></div>
+        </div>
+
+        <div class="missing-box">⚠️ CODE: FormSubConClaim needs simplification to 3 taps (amount + photo only). Current form has milestones, hours, claim type — too complex for SubCon field workers. DH fills those details in Payment Certificate, not SubCon.</div>
+      </div>
+    </div>
+
+    <!-- FORM: Money Request -->
+    <div class="form-block">
+      <div class="form-header" onclick="toggleForm(this)">
+        <span style="font-size:16px">⚙️</span>
+        <h3 class="actor-dh">FormMoneyRequest — Main Payment Engine</h3>
+        <div style="margin-left:auto;display:flex;gap:4px;flex-wrap:wrap">
+          <span class="tag t-qr">QR Auth</span><span class="tag t-xls">Excel UserForm</span><span class="tag t-app">App + Desktop</span><span class="tag t-bug">2 Bugs</span>
+        </div>
+      </div>
+      <div class="form-body">
+        <div class="meta-row">
+          <div class="meta-item"><span class="meta-label">ACTOR: </span><span class="meta-val">DH / PM / Supervisor</span></div>
+          <div class="meta-item"><span class="meta-label">ROUTE: </span><span class="meta-val">/money-requests/new</span></div>
+          <div class="meta-item"><span class="meta-label">TABLE WRITES: </span><span class="meta-val">money_requests, money_request_lines</span></div>
+          <div class="meta-item"><span class="meta-label">TABLE READS: </span><span class="meta-val">employees, contractors, suppliers, sites, projects, departments, outgoing_purchase_orders, payment_certificates, subcon_claims, bank_accounts</span></div>
+        </div>
+
+        <div class="sub-title">Algorithm</div>
+        <div class="algo"><span class="kw">TRIGGER:</span> DH opens App / Excel UserForm → New Money Request
+
+<span class="kw">STEP 1 — QR Authentication</span> <span class="gate">[G5]</span>
+  App: <span class="fn">scan_qr()</span> → resolve dh_id, entity_id
+  Excel: <span class="fn">VBA Login</span> → Supabase session token
+
+<span class="kw">STEP 2 — Header Fields</span>
+  Select: entity_id, department, bank_account (routing below), request_date, notes
+
+<span class="kw">STEP 3 — Bank Account Routing (Auto)</span>
+  <span class="kw">IF</span> department = <span class="val">'TISU'</span>       → default bank = <span class="val">'ANB-77'</span>
+  <span class="kw">IF</span> department = <span class="val">'NISU/CISU/ITSU'</span> → default bank = <span class="val">'ANB-39'</span>
+  <span class="kw">ELSE</span>                           → select ANB-15, ANB-18, ANB-11
+  <span class="cmt">DH can override per-line</span>
+
+<span class="kw">STEP 4 — Line Entry (multi-line)</span>
+  <span class="kw">FOR EACH</span> line:
+    payment_type: [Employee | Contractor | Supplier | Vendor | Sub-Contractor | Local Supplier | Petty Cash]
+    party_name, iban, expense_type (account_code), amount
+
+    <span class="kw">IF</span> payment_type = <span class="val">'Sub-Contractor'</span>:
+      <span class="kw">REQUIRE</span> Site# selection → load open POs for that site + subcon <span class="gate">[G3]</span>
+      <span class="kw">CHECK</span> <span class="tbl">payment_certificates</span> WHERE subcon_claim_id matches AND status = <span class="val">'CERTIFIED'</span>
+      <span class="kw">IF</span> no certificate → <span class="gate">BLOCK</span> <span class="val">"Create Payment Certificate first"</span>
+      <span class="kw">IF</span> amount > certificate.certified_amount → <span class="gate">WARN</span> <span class="val">"Exceeds certified amount"</span>
+
+    <span class="kw">IF</span> payment_type = <span class="val">'Petty Cash'</span>:
+      <span class="fn">auto_route_bank(department)</span> → ANB-77 or ANB-39
+
+<span class="kw">STEP 5 — Validate &amp; Submit</span>
+  <span class="fn">INSERT INTO</span> <span class="tbl">money_requests</span> {header fields}
+  <span class="fn">INSERT INTO</span> <span class="tbl">money_request_lines</span> {line_type, supplier_name, account_code, iban, amount}
+  <span class="cmt">⚠️ BUG: project_id and site_id NOT saved to money_request_lines</span>
+
+<span class="kw">STEP 6 — Notifications</span>
+  <span class="notif">EMAIL Accounts:</span> <span class="val">"New Money Request #MR-XXXX — SAR [total] — [payee types]"</span>
+  <span class="notif">TELEGRAM:</span> instant alert to Accounts channel
+  <span class="notif">IN-APP Accounts:</span> MR appears in payment queue
+
+<span class="kw">STEP 7 — After Accounts Pays</span>
+  <span class="fn">UPDATE</span> <span class="tbl">money_requests</span> SET status = <span class="val">'PAID'</span>, paid_at = NOW(), paid_by = accounts_id
+  <span class="fn">UPDATE</span> <span class="tbl">outgoing_purchase_orders</span> SET balance = balance - amount <span class="cmt">← PO balance reduced</span>
+  <span class="tpl">GENERATE:</span> Payment Receipt document
+  <span class="notif">NOTIFY DH:</span> Email confirmation of payment
+  <span class="notif">NOTIFY SubCon/Employee:</span> In-App + Telegram credit alert
+
+<span class="kw">EXCEL USERFORM PARALLEL PATH:</span>
+  VBA: <span class="fn">load_projects()</span> ← pulls from Supabase <span class="tbl">projects</span>
+  VBA: <span class="fn">load_sites(project_id)</span> ← pulls from Supabase <span class="tbl">sites</span>
+  VBA: <span class="fn">load_subcons(site_id)</span> ← pulls from Supabase <span class="tbl">contractors</span>
+  DH fills amounts → VBA: <span class="fn">submit_to_supabase(money_requests)</span>
+  <span class="cmt">← Same table as App. Accounts sees one queue regardless of interface.</span></div>
+
+        <div class="bug-box">🐛 BUG 1: project_id exists in EMPTY_LINE state but is NOT saved to money_request_lines on insert. Fix: add project_id to lineRows map.<br>
+🐛 BUG 2: No Site# field on Money Request lines. Without Site#, system cannot auto-resolve which open PO to apply SubCon payment against.<br>
+📋 PATCH SESSION: Fix both when code patches resume.</div>
+
+        <div class="sub-title">Inter-Links</div>
+        <div class="inter-grid">
+          <div class="inter-item"><span class="arrow">REQUIRES (SubCon) →</span> <span class="target">payment_certificates (G3)</span></div>
+          <div class="inter-item"><span class="arrow">REQUIRES (SubCon) →</span> <span class="target">outgoing_purchase_orders (open)</span></div>
+          <div class="inter-item"><span class="arrow">TRIGGERS →</span> <span class="target">Accounts payment queue</span></div>
+          <div class="inter-item"><span class="arrow">UPDATES →</span> <span class="target">outgoing_purchase_orders.balance (after payment)</span></div>
+          <div class="inter-item"><span class="arrow">PARALLEL →</span> <span class="target">Excel UserForm (same backend)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORM: Payment Certificate -->
+    <div class="form-block">
+      <div class="form-header" onclick="toggleForm(this)">
+        <span style="font-size:16px">📝</span>
+        <h3 class="actor-dh">Payment Certificate — SubCon Work Progress Certification</h3>
+        <div style="margin-left:auto;display:flex;gap:4px;flex-wrap:wrap">
+          <span class="tag t-app">App + Desktop</span><span class="tag t-warn">Template Rebuild Needed</span>
+        </div>
+      </div>
+      <div class="form-body">
+        <div class="meta-row">
+          <div class="meta-item"><span class="meta-label">ACTOR: </span><span class="meta-val">DH (certifies), Accounts (reads)</span></div>
+          <div class="meta-item"><span class="meta-label">TABLE WRITES: </span><span class="meta-val">payment_certificates</span></div>
+          <div class="meta-item"><span class="meta-label">TABLE READS: </span><span class="meta-val">subcon_claims, outgoing_purchase_orders, site_completion_records</span></div>
+        </div>
+
+        <div class="sub-title">Algorithm</div>
+        <div class="algo"><span class="kw">TRIGGER:</span> DH reviews SubCon payment request → opens Payment Certificate
+
+<span class="kw">STEP 1 — Load Context</span>
+  <span class="fn">load_subcon_claim(claim_id)</span>: requested amount, site, photo
+  <span class="fn">load_po_status(po_id)</span>:
+    po_value      = <span class="tbl">outgoing_purchase_orders</span>.value
+    prev_paid     = SUM(<span class="tbl">money_request_lines</span>.amount WHERE po_id = ?)
+    po_balance    = po_value - prev_paid
+  <span class="fn">load_site_completion(site_id)</span>: milestone completion %
+
+<span class="kw">STEP 2 — DH Certifies</span>
+  DH enters: work_progress_pct (0–100%)
+  System calculates:
+    earned_amount       = po_value × work_progress_pct
+    previously_paid     = prev_paid (from DB)
+    certifiable_amount  = earned_amount - previously_paid
+    this_payment        = MIN(subcon_claim.amount, certifiable_amount)
+
+  <span class="kw">IF</span> this_payment ≤ 0 → <span class="gate">WARN</span> <span class="val">"Work progress % does not support further payment"</span>
+  DH can override with manual certified_amount (with note)
+
+<span class="kw">STEP 3 — Save Certificate</span>
+  <span class="fn">INSERT INTO</span> <span class="tbl">payment_certificates</span>:
+    {subcon_claim_id, po_id, work_progress_pct, po_value, prev_paid,
+     certified_amount: this_payment, status: 'CERTIFIED', certified_by: dh_id, certified_at: NOW()}
+
+<span class="kw">STEP 4 — Generate Template</span>
+  <span class="tpl">GENERATE:</span> SubCon Payment Certificate DOCX (⚠️ needs rebuild)
+    Placeholders: po_value, prev_paid, this_payment, balance_after, work_progress_pct,
+                  contractor details, site, scope, DH signature, Accounts signature
+  <span class="fn">store_document()</span> → <span class="tbl">document_vault</span>
+  <span class="notif">NOTIFY Accounts:</span> Certificate ready → MR can now be submitted
+
+<span class="kw">STEP 5 — Unlocks Money Request</span>
+  <span class="tbl">payment_certificates</span>.status = <span class="val">'CERTIFIED'</span>
+  DH can now submit <span class="fn">FormMoneyRequest</span> for this SubCon <span class="cmt">← G3 now satisfied</span></div>
+
+        <div class="sub-title">Inter-Links</div>
+        <div class="inter-grid">
+          <div class="inter-item"><span class="arrow">REQUIRES →</span> <span class="target">subcon_claims (SubCon request)</span></div>
+          <div class="inter-item"><span class="arrow">READS →</span> <span class="target">site_completion_records (progress basis)</span></div>
+          <div class="inter-item"><span class="arrow">UNLOCKS →</span> <span class="target">FormMoneyRequest (SubCon line) [G3]</span></div>
+          <div class="inter-item"><span class="arrow">GENERATES →</span> <span class="target">SubCon Payment Certificate DOCX ⚠️</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORM: Field Payment -->
+    <div class="form-block">
+      <div class="form-header" onclick="toggleForm(this)">
+        <span style="font-size:16px">💸</span>
+        <h3 class="actor-dh">FormFieldPayment — Cash Advance to Employee</h3>
+        <div style="margin-left:auto;display:flex;gap:4px;flex-wrap:wrap">
+          <span class="tag t-app">App</span><span class="tag t-auto">Auto JE</span>
+        </div>
+      </div>
+      <div class="form-body">
+        <div class="meta-row">
+          <div class="meta-item"><span class="meta-label">ACTOR: </span><span class="meta-val">DH / PM</span></div>
+          <div class="meta-item"><span class="meta-label">TABLE WRITES: </span><span class="meta-val">employee_advances (txn_type: ADVANCE_IN)</span></div>
+          <div class="meta-item"><span class="meta-label">TABLE READS: </span><span class="meta-val">employees, bank_accounts, sites</span></div>
+          <div class="meta-item"><span class="meta-label">AUTO JE: </span><span class="meta-val">Dr 1310 Employee Advance / Cr ANB Petty Cash</span></div>
+        </div>
+
+        <div class="sub-title">Algorithm</div>
+        <div class="algo"><span class="kw">TRIGGER:</span> DH issues cash to employee on-site (outside Accounts payment cycle)
+
+<span class="kw">STEP 1 — Select Recipient</span>
+  Currently: Employee only
+  <span class="cmt">⚠️ Needs extension: SubCon payee + PO linkage (code patch session)</span>
+  Select: employee_id, amount (SAR), site_id, bank_account, notes
+
+<span class="kw">STEP 2 — Post JE (Auto)</span>
+  <span class="fn">post_journal_entry()</span>:
+    Dr: 1310 Employee Advance   amount
+    Cr: ANB-77 / ANB-39 Petty Cash   amount
+    ref: advance_id, employee_id, site_id, date
+
+<span class="kw">STEP 3 — Save Record</span>
+  <span class="fn">INSERT INTO</span> <span class="tbl">employee_advances</span>:
+    {employee_id, amount, site_id, txn_type: <span class="val">'ADVANCE_IN'</span>,
+     confirmed: FALSE, issued_by: dh_id, issued_at: NOW()}
+
+<span class="kw">STEP 4 — Trigger Payment Validation</span>
+  <span class="notif">NOTIFY Employee:</span> In-App <span class="val">"SAR X cash advance issued. Please confirm receipt."</span>
+  Employee must complete <span class="fn">FormPaymentValidation</span> <span class="gate">[G6]</span>
+  Until confirmed: flagged on DH dashboard as <span class="val">"Unconfirmed Advance"</span></div>
+
+        <div class="sub-title">Inter-Links</div>
+        <div class="inter-grid">
+          <div class="inter-item"><span class="arrow">TRIGGERS →</span> <span class="target">FormPaymentValidation (employee confirms)</span></div>
+          <div class="inter-item"><span class="arrow">CLEARS AGAINST →</span> <span class="target">FormExpenseClaim (month-end reconcile)</span></div>
+          <div class="inter-item"><span class="arrow">POSTS →</span> <span class="target">Auto JE Dr 1310 / Cr Cash</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORM: Payment Validation -->
+    <div class="form-block">
+      <div class="form-header" onclick="toggleForm(this)">
+        <span style="font-size:16px">✅</span>
+        <h3 class="actor-employee">FormPaymentValidation — Employee Confirms Advance Receipt</h3>
+        <div style="margin-left:auto;display:flex;gap:4px;flex-wrap:wrap">
+          <span class="tag t-qr">QR Auth</span><span class="tag t-app">App</span>
+        </div>
+      </div>
+      <div class="form-body">
+        <div class="meta-row">
+          <div class="meta-item"><span class="meta-label">ACTOR: </span><span class="meta-val">Employee (recipient)</span></div>
+          <div class="meta-item"><span class="meta-label">TABLE WRITES: </span><span class="meta-val">employee_advances (UPDATE confirmed = TRUE)</span></div>
+          <div class="meta-item"><span class="meta-label">TABLE READS: </span><span class="meta-val">employee_advances (unconfirmed records)</span></div>
+        </div>
+
+        <div class="sub-title">Algorithm</div>
+        <div class="algo"><span class="kw">TRIGGER:</span> Employee receives In-App notification → opens FormPaymentValidation
+
+<span class="kw">STEP 1 — Load Pending Confirmation</span>
+  <span class="fn">SELECT</span> * <span class="kw">FROM</span> <span class="tbl">employee_advances</span>
+  <span class="kw">WHERE</span> employee_id = ? <span class="kw">AND</span> confirmed = FALSE <span class="kw">AND</span> txn_type = <span class="val">'ADVANCE_IN'</span>
+  <span class="kw">IF</span> none → show <span class="val">"No pending confirmations"</span>
+
+<span class="kw">STEP 2 — Employee Confirms</span>
+  Shows: advance amount, issued by, date
+  Employee: uploads photo of signed payment voucher
+  Employee: taps Confirm
+
+<span class="kw">STEP 3 — Update Record</span>
+  <span class="fn">UPDATE</span> <span class="tbl">employee_advances</span> SET:
+    confirmed = TRUE
+    confirmation_photo = [photo_url]
+    confirmed_at = NOW()
+    confirmed_by = employee_id
+
+<span class="kw">STEP 4 — Clear Dashboard Flag</span>
+  <span class="notif">UPDATE DH Dashboard:</span> advance removed from "Unconfirmed Advances" list
+
+<span class="kw">MONITORING:</span> If not confirmed within 24h:
+  <span class="notif">ALERT DH:</span> In-App flag <span class="val">"Employee [name] has not confirmed SAR X advance"</span></div>
+
+        <div class="sub-title">Inter-Links</div>
+        <div class="inter-grid">
+          <div class="inter-item"><span class="arrow">REQUIRES →</span> <span class="target">FormFieldPayment (advance must exist)</span></div>
+          <div class="inter-item"><span class="arrow">CLEARS FLAG ON →</span> <span class="target">DH Dashboard</span></div>
+          <div class="inter-item"><span class="arrow">LINKS TO →</span> <span class="target">document_vault (signed voucher photo)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORM: Food Allowance -->
+    <div class="form-block">
+      <div class="form-header" onclick="toggleForm(this)">
+        <span style="font-size:16px">🍽️</span>
+        <h3 class="actor-employee">FormFoodAllowance — Daily Food Allowance (Remote Sites)</h3>
+        <div style="margin-left:auto;display:flex;gap:4px;flex-wrap:wrap">
+          <span class="tag t-qr">QR Auth</span><span class="tag t-app">App</span>
+        </div>
+      </div>
+      <div class="form-body">
+        <div class="meta-row">
+          <div class="meta-item"><span class="meta-label">ACTOR: </span><span class="meta-val">Employee / Supervisor</span></div>
+          <div class="meta-item"><span class="meta-label">RATE: </span><span class="meta-val">SAR 30 / day / person (remote sites)</span></div>
+          <div class="meta-item"><span class="meta-label">TABLE WRITES: </span><span class="meta-val">food_allowances</span></div>
+          <div class="meta-item"><span class="meta-label">TABLE READS: </span><span class="meta-val">employees, sites, departments, qr_tokens</span></div>
+        </div>
+
+        <div class="sub-title">Algorithm</div>
+        <div class="algo"><span class="kw">TRIGGER:</span> Employee / supervisor submits food allowance for site team
+
+<span class="kw">STEP 1 — QR Auth</span> <span class="gate">[G5]</span>
+  Resolve: employee_id, site_id, entity_id
+
+<span class="kw">STEP 2 — Form Fields</span>
+  no_persons   (how many people eating)
+  daily_rate   (default SAR 30 — editable if site rate differs)
+  no_days      (duration)
+  site_id      (auto from QR or picker)
+  notes
+
+<span class="kw">STEP 3 — Calculate</span>
+  total_amount = no_persons × daily_rate × no_days
+
+<span class="kw">STEP 4 — Submit</span>
+  <span class="fn">INSERT INTO</span> <span class="tbl">food_allowances</span> {employee_id, site_id, no_persons, daily_rate, no_days, total_amount, status: 'PENDING'}
+  <span class="notif">NOTIFY DH:</span> In-App <span class="val">"Food allowance pending approval — SAR [total]"</span>
+
+<span class="kw">STEP 5 — DH Approval</span>
+  DH reviews on Dashboard → Approve / Reject
+  <span class="fn">UPDATE</span> <span class="tbl">food_allowances</span> SET status = <span class="val">'APPROVED'</span>, approved_by = dh_id
+  <span class="notif">NOTIFY Employee:</span> In-App approval confirmation
+  Approved amount → Payroll / Expense Ledger</div>
+
+        <div class="sub-title">Inter-Links</div>
+        <div class="inter-grid">
+          <div class="inter-item"><span class="arrow">REQUIRES APPROVAL →</span> <span class="target">DH Dashboard (Gate)</span></div>
+          <div class="inter-item"><span class="arrow">FEEDS →</span> <span class="target">Payroll processing (monthly)</span></div>
+          <div class="inter-item"><span class="arrow">REPORT →</span> <span class="target">Food Allowance Summary Report</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORM: Overtime -->
+    <div class="form-block">
+      <div class="form-header" onclick="toggleForm(this)">
+        <span style="font-size:16px">⏰</span>
+        <h3 class="actor-employee">FormOvertime — Overtime Request</h3>
+        <div style="margin-left:auto;display:flex;gap:4px;flex-wrap:wrap">
+          <span class="tag t-qr">QR Auth</span><span class="tag t-app">App</span><span class="tag t-gate">DH Approval</span>
+        </div>
+      </div>
+      <div class="form-body">
+        <div class="meta-row">
+          <div class="meta-item"><span class="meta-label">MULTIPLIERS: </span><span class="meta-val">NORMAL/FRIDAY/HOLIDAY = 1.5× | TRAVEL = 1.0×</span></div>
+          <div class="meta-item"><span class="meta-label">TABLE WRITES: </span><span class="meta-val">overtime_records</span></div>
+          <div class="meta-item"><span class="meta-label">TABLE READS: </span><span class="meta-val">employees, sites, departments</span></div>
+        </div>
+
+        <div class="sub-title">Algorithm</div>
+        <div class="algo"><span class="kw">TRIGGER:</span> Employee / supervisor submits OT record
+
+<span class="kw">STEP 1 — QR Auth</span> <span class="gate">[G5]</span>
+
+<span class="kw">STEP 2 — Form Fields</span>
+  employee_id, site_id, date, hours_worked
+  ot_type: [NORMAL | FRIDAY | HOLIDAY | TRAVEL]
+
+<span class="kw">STEP 3 — Calculate</span>
+  multiplier = <span class="kw">CASE</span> ot_type
+    <span class="kw">WHEN</span> TRAVEL  → 1.0
+    <span class="kw">ELSE</span>         → 1.5
+  ot_pay = (employee.hourly_rate × multiplier × hours_worked)
+
+<span class="kw">STEP 4 — Submit</span>
+  <span class="fn">INSERT INTO</span> <span class="tbl">overtime_records</span> {employee_id, site_id, date, hours, ot_type, multiplier, ot_pay, status: 'PENDING'}
+  <span class="notif">NOTIFY DH:</span> In-App <span class="val">"OT pending approval — [employee] [hours]h [type]"</span>
+
+<span class="kw">STEP 5 — DH Approval</span> <span class="gate">[G7]</span>
+  <span class="kw">IF NOT approved:</span> excluded from payroll
+  <span class="kw">IF approved:</span>
+    <span class="fn">UPDATE</span> status = <span class="val">'APPROVED'</span>
+    <span class="notif">NOTIFY Employee:</span> In-App OT approval
+    Included in monthly payroll run</div>
+
+        <div class="sub-title">Inter-Links</div>
+        <div class="inter-grid">
+          <div class="inter-item"><span class="arrow">GATE →</span> <span class="target">DH must approve (G7)</span></div>
+          <div class="inter-item"><span class="arrow">FEEDS →</span> <span class="target">Payroll (monthly run)</span></div>
+          <div class="inter-item"><span class="arrow">REPORT →</span> <span class="target">OT Summary Report by employee/site/period</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORM: Daily Expense -->
+    <div class="form-block">
+      <div class="form-header" onclick="toggleForm(this)">
+        <span style="font-size:16px">💰</span>
+        <h3 class="actor-employee">FormDailyExpense — Daily Field Expense Entry</h3>
+        <div style="margin-left:auto;display:flex;gap:4px;flex-wrap:wrap">
+          <span class="tag t-qr">QR Auth</span><span class="tag t-app">App</span>
+        </div>
+      </div>
+      <div class="form-body">
+        <div class="meta-row">
+          <div class="meta-item"><span class="meta-label">TABLE WRITES: </span><span class="meta-val">daily_expenses</span></div>
+          <div class="meta-item"><span class="meta-label">TABLE READS: </span><span class="meta-val">employees, sites, expense_categories</span></div>
+          <div class="meta-item"><span class="meta-label">ACCUMULATES TO: </span><span class="meta-val">FormExpenseClaim (month-end)</span></div>
+        </div>
+
+        <div class="sub-title">Algorithm</div>
+        <div class="algo"><span class="kw">TRIGGER:</span> Employee submits daily expense(s) from field
+
+<span class="kw">STEP 1 — QR Auth</span> <span class="gate">[G5]</span> → resolve employee_id, site_id
+
+<span class="kw">STEP 2 — Form Fields</span>
+  date, expense_category, amount, receipt_photo, notes
+
+<span class="kw">STEP 3 — Submit</span>
+  <span class="fn">INSERT INTO</span> <span class="tbl">daily_expenses</span> {employee_id, site_id, date, category, amount, photo_url}
+
+<span class="kw">ACCUMULATION LOGIC:</span>
+  At month-end, <span class="fn">FormExpenseClaim</span> auto-pulls:
+    <span class="kw">SELECT</span> SUM(amount) <span class="kw">FROM</span> <span class="tbl">daily_expenses</span>
+    <span class="kw">WHERE</span> employee_id = ? <span class="kw">AND</span> MONTH(date) = claim_month
+    <span class="kw">AND</span> claimed = FALSE
+  Groups by category → populates expense claim lines
+  Marks daily_expenses.claimed = TRUE after claim submitted</div>
+
+        <div class="sub-title">Inter-Links</div>
+        <div class="inter-grid">
+          <div class="inter-item"><span class="arrow">ACCUMULATES TO →</span> <span class="target">FormExpenseClaim (monthly)</span></div>
+          <div class="inter-item"><span class="arrow">LINKS →</span> <span class="target">document_vault (receipt photos)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORM: Expense Claim -->
+    <div class="form-block">
+      <div class="form-header" onclick="toggleForm(this)">
+        <span style="font-size:16px">📋</span>
+        <h3 class="actor-employee">FormExpenseClaim — Monthly Expense Claim</h3>
+        <div style="margin-left:auto;display:flex;gap:4px;flex-wrap:wrap">
+          <span class="tag t-qr">QR Auth</span><span class="tag t-tg">Telegram</span><span class="tag t-em">Email</span><span class="tag t-auto">Auto JE</span><span class="tag t-ok">Template Built</span>
+        </div>
+      </div>
+      <div class="form-body">
+        <div class="meta-row">
+          <div class="meta-item"><span class="meta-label">ACTOR: </span><span class="meta-val">Employee → DH Approves → Accounts Pays</span></div>
+          <div class="meta-item"><span class="meta-label">TABLE WRITES: </span><span class="meta-val">expense_claims, expense_claim_lines</span></div>
+          <div class="meta-item"><span class="meta-label">TABLE READS: </span><span class="meta-val">daily_expenses, employees, sites, food_allowances</span></div>
+          <div class="meta-item"><span class="meta-label">TEMPLATE: </span><span class="meta-val" style="color:#66bb6a">Expense Claim DOCX ✅</span></div>
+        </div>
+
+        <div class="sub-title">Algorithm</div>
+        <div class="algo"><span class="kw">TRIGGER:</span> Month-end OR employee initiates claim
+
+<span class="kw">STEP 1 — Cut-off Check</span>
+  <span class="kw">IF</span> today > monthly_cutoff_date → <span class="val">"Claim submission closed. Wait for next cycle."</span>
+
+<span class="kw">STEP 2 — Auto-Compile Lines</span>
+  Pull all <span class="tbl">daily_expenses</span> WHERE employee_id = ? AND claimed = FALSE
+  Group by category → expense_claim_lines[]
+  Include: food_allowances (approved), any outstanding advances
+
+<span class="kw">STEP 3 — Submit</span>
+  <span class="fn">INSERT INTO</span> <span class="tbl">expense_claims</span> {employee_id, period, total, status: 'SUBMITTED'}
+  <span class="fn">INSERT INTO</span> <span class="tbl">expense_claim_lines</span> {claim_id, category, amount, …}
+  <span class="fn">UPDATE</span> <span class="tbl">daily_expenses</span> SET claimed = TRUE WHERE included
+  <span class="notif">NOTIFY DH:</span> Telegram + In-App <span class="val">"Expense claim submitted by [employee] — SAR [total]"</span>
+
+<span class="kw">STEP 4 — DH Approval</span> <span class="gate">[G8]</span>
+  DH reviews lines, receipts → Approve / Reject / Request correction
+  <span class="kw">IF</span> rejected: status = <span class="val">'REJECTED'</span> → employee corrects → resubmit
+  <span class="kw">IF</span> approved:
+    <span class="fn">UPDATE</span> status = <span class="val">'APPROVED'</span>
+    <span class="fn">post_journal_entry()</span>: Dr Expense Account / Cr Employee Payable
+    <span class="tpl">GENERATE:</span> Expense Claim DOCX ✅
+    <span class="notif">NOTIFY Employee:</span> Email + In-App <span class="val">"Expense claim approved"</span>
+    <span class="notif">NOTIFY Accounts:</span> In-App — claim appears in payment queue</div>
+
+        <div class="sub-title">Inter-Links</div>
+        <div class="inter-grid">
+          <div class="inter-item"><span class="arrow">COMPILES FROM →</span> <span class="target">FormDailyExpense (all unclaimed)</span></div>
+          <div class="inter-item"><span class="arrow">INCLUDES →</span> <span class="target">FormFoodAllowance (approved)</span></div>
+          <div class="inter-item"><span class="arrow">CLEARS →</span> <span class="target">FormFieldPayment advances (reconcile)</span></div>
+          <div class="inter-item"><span class="arrow">GENERATES →</span> <span class="target">Expense Claim DOCX ✅</span></div>
+          <div class="inter-item"><span class="arrow">GATE →</span> <span class="target">DH approval (G8) before Accounts sees it</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORM: Car Maintenance -->
+    <div class="form-block">
+      <div class="form-header" onclick="toggleForm(this)">
+        <span style="font-size:16px">🚗</span>
+        <h3 class="actor-employee">FormCarMaintenance — Vehicle Log</h3>
+        <div style="margin-left:auto;display:flex;gap:4px;flex-wrap:wrap">
+          <span class="tag t-qr">QR Auth</span><span class="tag t-app">App</span>
+        </div>
+      </div>
+      <div class="form-body">
+        <div class="meta-row">
+          <div class="meta-item"><span class="meta-label">TYPES: </span><span class="meta-val">FUEL · MAINTENANCE · INCIDENT · INSPECTION</span></div>
+          <div class="meta-item"><span class="meta-label">TABLE WRITES: </span><span class="meta-val">vehicle_maintenance</span></div>
+          <div class="meta-item"><span class="meta-label">TABLE READS: </span><span class="meta-val">vehicles, employees, sites</span></div>
+        </div>
+
+        <div class="sub-title">Algorithm</div>
+        <div class="algo"><span class="kw">TRIGGER:</span> Driver / employee records vehicle event
+
+<span class="kw">STEP 1 — QR Auth</span> <span class="gate">[G5]</span>
+
+<span class="kw">STEP 2 — Form Fields</span>
+  vehicle_id (from vehicles master)
+  record_type: [FUEL | MAINTENANCE | INCIDENT | INSPECTION]
+  date, mileage, cost, notes, photo_attachment
+  <span class="kw">IF</span> INCIDENT: additional fields (damage description, third party, police report)
+  <span class="kw">IF</span> INSPECTION: next_inspection_date, pass/fail
+
+<span class="kw">STEP 3 — Submit</span>
+  <span class="fn">INSERT INTO</span> <span class="tbl">vehicle_maintenance</span> {vehicle_id, record_type, date, mileage, cost, …}
+
+<span class="kw">REPORTING:</span>
+  → Vehicle Expense Report (cost per vehicle/period)
+  → Incident log for insurance
+  → Inspection schedule tracker</div>
+
+        <div class="sub-title">Inter-Links</div>
+        <div class="inter-grid">
+          <div class="inter-item"><span class="arrow">READS →</span> <span class="target">vehicles (master)</span></div>
+          <div class="inter-item"><span class="arrow">FEEDS →</span> <span class="target">Vehicle Expense Report</span></div>
+          <div class="inter-item"><span class="arrow">COST MAY LINK →</span> <span class="target">FormExpenseClaim (via daily expense)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORM: Site Completion -->
+    <div class="form-block">
+      <div class="form-header" onclick="toggleForm(this)">
+        <span style="font-size:16px">🏗️</span>
+        <h3 class="actor-employee">FormSiteCompletion — Site Progress Recording</h3>
+        <div style="margin-left:auto;display:flex;gap:4px;flex-wrap:wrap">
+          <span class="tag t-qr">QR Auth</span><span class="tag t-app">App</span>
+        </div>
+      </div>
+      <div class="form-body">
+        <div class="meta-row">
+          <div class="meta-item"><span class="meta-label">TABLE WRITES: </span><span class="meta-val">site_completion_records, milestone_records</span></div>
+          <div class="meta-item"><span class="meta-label">TABLE READS: </span><span class="meta-val">sites, milestones, projects, subcon_assignments</span></div>
+          <div class="meta-item"><span class="meta-label">KEY ROLE: </span><span class="meta-val" style="color:#ffcc80">BASIS FOR SubCon Payment Certification</span></div>
+        </div>
+
+        <div class="sub-title">Algorithm</div>
+        <div class="algo"><span class="kw">TRIGGER:</span> PM / Supervisor records site progress (daily or milestone basis)
+
+<span class="kw">STEP 1 — QR Auth</span> <span class="gate">[G5]</span> → resolve site_id, project_id
+
+<span class="kw">STEP 2 — Form Fields</span>
+  site_id, project_id, date
+  overall_progress_pct (0–100%)
+  milestone_records[]: {milestone_id, status: COMPLETE/IN_PROGRESS/NOT_STARTED, completion_pct, notes, photo}
+
+<span class="kw">STEP 3 — Submit</span>
+  <span class="fn">INSERT INTO</span> <span class="tbl">site_completion_records</span> {site_id, project_id, date, overall_pct, submitted_by}
+  <span class="fn">UPSERT INTO</span> <span class="tbl">milestone_records</span> {milestone_id, status, pct}
+
+<span class="kw">DOWNSTREAM USE:</span>
+  DH opens Payment Certificate → <span class="fn">load_site_completion(site_id)</span>
+  System shows: current overall_pct → DH uses as basis for certifying SubCon payment
+  <span class="cmt">Critical: site completion % justifies the certified amount. DH should not certify more than % warrants.</span></div>
+
+        <div class="sub-title">Inter-Links</div>
+        <div class="inter-grid">
+          <div class="inter-item"><span class="arrow">FEEDS →</span> <span class="target">Payment Certificate (DH certification basis)</span></div>
+          <div class="inter-item"><span class="arrow">FEEDS →</span> <span class="target">DH Dashboard (site progress view)</span></div>
+          <div class="inter-item"><span class="arrow">FEEDS →</span> <span class="target">Site Progress Report (Management)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORM: PO Request -->
+    <div class="form-block">
+      <div class="form-header" onclick="toggleForm(this)">
+        <span style="font-size:16px">📋</span>
+        <h3 class="actor-dh">FormPORequest — Purchase Order Request</h3>
+        <div style="margin-left:auto;display:flex;gap:4px;flex-wrap:wrap">
+          <span class="tag t-app">App + Desktop</span><span class="tag t-em">Email</span><span class="tag t-ok">Template Built</span>
+        </div>
+      </div>
+      <div class="form-body">
+        <div class="meta-row">
+          <div class="meta-item"><span class="meta-label">ACTOR: </span><span class="meta-val">DH / PM</span></div>
+          <div class="meta-item"><span class="meta-label">TABLE WRITES: </span><span class="meta-val">po_requests → outgoing_purchase_orders (after approval)</span></div>
+          <div class="meta-item"><span class="meta-label">TABLE READS: </span><span class="meta-val">departments, employees, projects, sites, contractors, suppliers, items</span></div>
+          <div class="meta-item"><span class="meta-label">TEMPLATE: </span><span class="meta-val" style="color:#66bb6a">Outgoing PO DOCX ✅</span></div>
+        </div>
+
+        <div class="sub-title">Algorithm</div>
+        <div class="algo"><span class="kw">TRIGGER:</span> DH needs to engage SubCon / Supplier for work or materials
+
+<span class="kw">STEP 1 — Cascade Selection</span>
+  Department → Employee → Project → Site → PO Type → Supplier/Contractor → Line Items
+
+<span class="kw">STEP 2 — Line Items</span>
+  For each item: description, qty, unit, unit_price → line_total
+  Header total = SUM(line_totals) + VAT (15%)
+
+<span class="kw">STEP 3 — Submit PO Request</span>
+  <span class="fn">INSERT INTO</span> <span class="tbl">po_requests</span> {dept, project, site, contractor_id, items[], total, status: 'PENDING'}
+  <span class="notif">NOTIFY Accounts:</span> Email + In-App <span class="val">"New PO Request #PR-XXXX for [contractor] — SAR [total]"</span>
+
+<span class="kw">STEP 4 — Accounts Approves PO</span>
+  <span class="fn">INSERT INTO</span> <span class="tbl">outgoing_purchase_orders</span>:
+    {contractor_id, site_id, value: total, balance: total, status: 'OPEN',
+     po_number, po_date, acknowledged: FALSE}
+  <span class="tpl">GENERATE:</span> Outgoing PO DOCX ✅ → PDF → sent to SubCon
+  <span class="notif">NOTIFY SubCon:</span> In-App + Telegram + Email <span class="val">"New PO #PO-XXXX issued. Tap to acknowledge."</span>
+  <span class="cmt">← This triggers G1 (PO acknowledgement gate)</span></div>
+
+        <div class="sub-title">Inter-Links</div>
+        <div class="inter-grid">
+          <div class="inter-item"><span class="arrow">GENERATES →</span> <span class="target">outgoing_purchase_orders record</span></div>
+          <div class="inter-item"><span class="arrow">TRIGGERS →</span> <span class="target">G1 (SubCon must acknowledge)</span></div>
+          <div class="inter-item"><span class="arrow">GENERATES →</span> <span class="target">Outgoing PO Template ✅</span></div>
+          <div class="inter-item"><span class="arrow">UNLOCKS →</span> <span class="target">SubCon Payment Request (G2)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORM: FormPayment (Shareable) -->
+    <div class="form-block">
+      <div class="form-header" onclick="toggleForm(this)">
+        <span style="font-size:16px">✈️</span>
+        <h3 class="actor-dh">FormPayment — Travel &amp; Field Distribution (Shareable)</h3>
+        <div style="margin-left:auto;display:flex;gap:4px;flex-wrap:wrap">
+          <span class="tag t-qr">QR Auth</span><span class="tag t-app">Shareable Link</span>
+        </div>
+      </div>
+      <div class="form-body">
+        <div class="meta-row">
+          <div class="meta-item"><span class="meta-label">ENTITY RAT/GWT: </span><span class="meta-val">Travel Payment (per diem, hotel, transport, visa, misc)</span></div>
+          <div class="meta-item"><span class="meta-label">ENTITY ACCSYS: </span><span class="meta-val">Field Distribution (employees, subcons, suppliers)</span></div>
+          <div class="meta-item"><span class="meta-label">BANK ACCOUNTS: </span><span class="meta-val">ANB-77, ANB-39, ANB-15, ANB-18, ANB-11, OTHER</span></div>
+          <div class="meta-item"><span class="meta-label">ROUTE: </span><span class="meta-val">/forms/payment</span></div>
+        </div>
+
+        <div class="sub-title">Algorithm</div>
+        <div class="algo"><span class="kw">TRIGGER:</span> Shared link sent to authorized party OR DH opens directly
+
+<span class="kw">STEP 1 — Entity Detection</span>
+  <span class="fn">detect_entity(qr_token / url_param)</span> → entityCode
+  <span class="kw">IF</span> RAT or GWT → show Travel Payment fields
+  <span class="kw">IF</span> ACCSYS     → show Field Distribution fields
+
+<span class="kw">ENTITY = RAT/GWT — Travel Payment</span>
+  Fields: travel_type [per diem | hotel | flight | transport | visa | misc]
+  traveler_id, destination, travel_dates, receipt_photo
+  bank_account selection
+  amount (SAR)
+
+<span class="kw">ENTITY = ACCSYS — Field Distribution</span>
+  Fields: payee_type [employee | sub-contractor | supplier]
+  payee_id, site_id, bank_account, amount, photo, notes
+
+<span class="kw">STEP 2 — Submit</span>
+  <span class="fn">INSERT INTO</span> <span class="tbl">payments</span> {entity_code, payment_type, payee_id, amount, bank_account, …}
+  Auto-route to appropriate ledger account based on payment_type</div>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /forms section -->
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SECTION 2: GATE LOGIC -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="section s-gates" id="gates" style="margin-top:14px">
+  <div class="section-title" onclick="toggleSection(this)">🔒 Gate Decision Logic — Every Hard Block Explained</div>
+  <div class="section-body" style="padding:14px;">
+
+    <div class="gate-block">
+      <div class="gate-title">🔒 G1 — PO Acknowledgement Gate</div>
+      <div class="gate-algo"><span class="kw">WHEN:</span>     SubCon submits payment request
+<span class="kw">CHECK:</span>
+  ack = <span class="tbl">outgoing_purchase_orders</span>.acknowledged WHERE contractor_id = X
+  <span class="kw">IF</span> ack = FALSE:
+    <span class="gate">BLOCK</span> payment request
+    ACTION: show PO details → SubCon taps Acknowledge
+    <span class="fn">UPDATE</span> <span class="tbl">outgoing_purchase_orders</span> SET acknowledged=TRUE, acknowledged_at=NOW()
+    ALLOW: payment request now unlocked
+  <span class="kw">ELSE:</span> proceed to G2
+
+<span class="kw">PURPOSE:</span> Ensures SubCon is aware of PO terms before requesting payment.
+         Prevents "I didn't know" disputes later.
+<span class="kw">OVERRIDE:</span> None. DH cannot bypass this on SubCon's behalf.</div>
+    </div>
+
+    <div class="gate-block">
+      <div class="gate-title">🔒 G2 — PO Balance &amp; Open Status Gate</div>
+      <div class="gate-algo"><span class="kw">WHEN:</span>     SubCon submits payment request (after G1 passes)
+<span class="kw">CHECK:</span>
+  open_pos = <span class="kw">SELECT</span> * <span class="kw">FROM</span> <span class="tbl">outgoing_purchase_orders</span>
+             <span class="kw">WHERE</span> contractor_id=X <span class="kw">AND</span> status='OPEN' <span class="kw">AND</span> balance > 0
+
+  <span class="kw">IF</span> open_pos = []:
+    <span class="gate">BLOCK</span> <span class="val">"No open PO with remaining balance. Contact DH."</span>
+    EXIT
+
+  FIFO SELECTION:
+    selected_po = <span class="fn">MIN</span>(open_pos, key=po_date)  <span class="cmt">← oldest PO first</span>
+    available   = selected_po.value - <span class="fn">SUM</span>(payments WHERE po_id=selected_po.id)
+
+  AMOUNT VALIDATION:
+    <span class="kw">IF</span> requested_amount > available:
+      <span class="gate">WARN</span> <span class="val">"Amount (SAR X) exceeds PO balance (SAR Y). Reduce amount."</span>
+      (not a hard block — DH can certify up to available)
+
+  CHECK EXHAUSTION: <span class="cmt">→ triggers G4</span>
+    <span class="kw">IF</span> available = 0 AND invoice_not_attached:
+      <span class="gate">BLOCK</span> → redirect to Invoice Submission gate (G4)
+
+<span class="kw">DH OVERRIDE:</span> DH can select a different PO by choosing Site# in Money Request.
+             FIFO is a suggestion, not absolute. DH sees all open POs for the SubCon.</div>
+    </div>
+
+    <div class="gate-block">
+      <div class="gate-title">🔒 G3 — Payment Certificate Required Before Money Request (SubCon)</div>
+      <div class="gate-algo"><span class="kw">WHEN:</span>     DH adds Sub-Contractor line to FormMoneyRequest
+<span class="kw">CHECK:</span>
+  cert = <span class="kw">SELECT</span> * <span class="kw">FROM</span> <span class="tbl">payment_certificates</span>
+         <span class="kw">WHERE</span> contractor_id=X <span class="kw">AND</span> site_id=Y <span class="kw">AND</span> status='CERTIFIED'
+         <span class="kw">AND</span> certified_at >= subcon_claim.submitted_at
+
+  <span class="kw">IF</span> cert = NULL:
+    <span class="gate">BLOCK</span> <span class="val">"Create Payment Certificate first. Certify work progress for this SubCon."</span>
+    SHOW LINK: → Payment Certificate screen
+    EXIT
+
+  AMOUNT CAP:
+    <span class="kw">IF</span> money_request.amount > cert.certified_amount:
+      <span class="gate">WARN</span> <span class="val">"Amount exceeds certified amount (SAR X). Cannot pay more than certified."</span>
+      HARD BLOCK: system prevents overpayment above certified amount
+
+<span class="kw">PURPOSE:</span> DH must witness site progress before authorizing payment.
+         Prevents paying SubCon for work not yet done.
+         Certified amount = PO_value × work_progress_pct − previously_paid
+<span class="kw">OVERRIDE:</span> DH can manually override with justified note (audit-logged).</div>
+    </div>
+
+    <div class="gate-block">
+      <div class="gate-title">🔒 G4 — Invoice Submission on PO Exhaustion</div>
+      <div class="gate-algo"><span class="kw">WHEN:</span>     SubCon attempts next payment request OR DH submits MR
+<span class="kw">CHECK:</span>
+  total_paid = <span class="fn">SUM</span>(<span class="tbl">money_request_lines</span>.amount WHERE po_id=X AND status='PAID')
+  po_value   = <span class="tbl">outgoing_purchase_orders</span>.value
+
+  <span class="kw">IF</span> total_paid >= po_value:
+    invoice_present = <span class="tbl">outgoing_purchase_orders</span>.invoice_url IS NOT NULL
+    <span class="kw">IF</span> NOT invoice_present:
+      <span class="gate">BLOCK</span> ALL further payment requests for this PO
+      TRIGGER: <span class="notif">NOTIFY SubCon:</span> In-App + Telegram <span class="val">"PO fully paid. Submit invoice to proceed."</span>
+      TRIGGER: <span class="notif">NOTIFY DH:</span> In-App <span class="val">"PO #X exhausted. Invoice required from [SubCon]."</span>
+      ALLOW: DH can attach invoice on SubCon's behalf
+
+  AFTER INVOICE ATTACHED:
+    <span class="fn">UPDATE</span> <span class="tbl">outgoing_purchase_orders</span> SET invoice_url=?, invoice_date=?, status='INVOICED'
+    <span class="notif">NOTIFY Accounts:</span> Invoice received → ZATCA validation queue
+    New PO can now be issued if further work needed
+
+<span class="kw">PURPOSE:</span> Forces formal invoicing cycle. Prevents informal payment chains.
+         Ensures ZATCA compliance. Accounts can reconcile PO vs invoice vs payments.</div>
+    </div>
+
+    <div class="gate-block">
+      <div class="gate-title">🔒 G5 — QR Authentication (All Field Forms)</div>
+      <div class="gate-algo"><span class="kw">WHEN:</span>     Any field form URL opened (mobile/tablet)
+<span class="kw">CHECK:</span>
+  token = URL param OR QR scan result
+  record = <span class="kw">SELECT</span> * <span class="kw">FROM</span> <span class="tbl">qr_tokens</span> WHERE token=?
+
+  <span class="kw">IF</span> record = NULL:
+    <span class="gate">BLOCK</span> <span class="val">"Invalid QR code."</span>
+
+  <span class="kw">IF</span> record.expiry < NOW():
+    <span class="gate">BLOCK</span> <span class="val">"QR code expired. Contact supervisor."</span>
+
+  <span class="kw">IF</span> record.active = FALSE:
+    <span class="gate">BLOCK</span> <span class="val">"QR code deactivated."</span>
+
+  RESOLVE ACTOR:
+    <span class="kw">IF</span> record.actor_type = 'EMPLOYEE'   → load employee, filter forms by role
+    <span class="kw">IF</span> record.actor_type = 'CONTRACTOR' → load contractor, show SubCon forms only
+    <span class="kw">IF</span> record.actor_type = 'DH'         → load DH, show DH forms
+
+  PREFILL: entity_id, site_id, actor_id on all forms
+  AUDIT: log token use → <span class="tbl">qr_access_log</span> {token_id, form, timestamp, ip}
+
+<span class="kw">MANAGEMENT:</span> QR Manager (desktop) → create, deactivate, regenerate tokens.
+             One token per employee/SubCon. Rotate on security events.</div>
+    </div>
+
+    <div class="gate-block">
+      <div class="gate-title">🔒 G6 — Payment Validation (Employee Confirms Advance)</div>
+      <div class="gate-algo"><span class="kw">WHEN:</span>     Cash advance issued via FormFieldPayment
+<span class="kw">IMMEDIATE ACTION:</span>
+  <span class="notif">NOTIFY Employee:</span> In-App <span class="val">"SAR X advance issued. Confirm receipt."</span>
+  advance.confirmed = FALSE ← flagged on DH dashboard
+
+<span class="kw">CHECK (24h monitoring):</span>
+  <span class="kw">IF</span> confirmed = FALSE after 24 hours:
+    <span class="notif">ALERT DH:</span> <span class="val">"[Employee] has not confirmed SAR X advance. Follow up."</span>
+    Flag persists until confirmed
+
+<span class="kw">WHEN EMPLOYEE CONFIRMS:</span>
+  <span class="fn">UPDATE</span> <span class="tbl">employee_advances</span>:
+    confirmed=TRUE, confirmation_photo=URL, confirmed_at=NOW()
+  DH dashboard flag removed
+
+<span class="kw">OVERRIDE:</span> DH can mark confirmed manually (with audit note) if physical paper signed.
+<span class="kw">PURPOSE:</span> Creates paper trail for cash distribution. Reduces disputes.
+         Signed voucher photo = physical evidence of receipt.</div>
+    </div>
+
+    <div class="gate-block">
+      <div class="gate-title">🔒 G7 — OT Approval Gate (Before Payroll)</div>
+      <div class="gate-algo"><span class="kw">WHEN:</span>     Monthly payroll run initiated
+<span class="kw">CHECK:</span>
+  pending_ot = <span class="kw">SELECT</span> * <span class="kw">FROM</span> <span class="tbl">overtime_records</span>
+               <span class="kw">WHERE</span> status = 'PENDING' AND month = payroll_month
+
+  <span class="kw">IF</span> pending_ot EXISTS:
+    <span class="gate">EXCLUDE</span> from payroll calculation
+    DH DASHBOARD: shows list of pending OT for approval
+
+  DH ACTIONS PER RECORD:
+    Approve → status='APPROVED' → included in payroll
+    Reject  → status='REJECTED' → excluded, employee notified
+
+  PAYROLL FORMULA:
+    ot_pay = hours × hourly_rate × multiplier
+    multiplier: NORMAL/FRIDAY/HOLIDAY=1.5, TRAVEL=1.0
+
+<span class="kw">SAFETY:</span> Payroll cannot close month with pending (unapproved) OT records.
+         Forces DH to consciously approve or reject each claim.</div>
+    </div>
+
+    <div class="gate-block">
+      <div class="gate-title">🔒 G8 — Expense Claim DH Approval Gate</div>
+      <div class="gate-algo"><span class="kw">WHEN:</span>     Employee submits monthly expense claim
+<span class="kw">FLOW:</span>
+  1. Employee submits → status = 'SUBMITTED'
+  2. <span class="notif">NOTIFY DH:</span> Telegram + In-App
+  3. DH reviews each line: receipt photos, amounts, categories
+
+  DH ACTION:
+    Approve → status='APPROVED'
+      → <span class="fn">post_je()</span> Dr Expense / Cr Employee Payable
+      → <span class="tpl">GENERATE</span> Expense Claim DOCX ✅
+      → <span class="notif">NOTIFY Employee:</span> Email + In-App
+      → Claim VISIBLE to Accounts for payment
+    Reject  → status='REJECTED'
+      → <span class="notif">NOTIFY Employee:</span> rejection reason
+      → Employee corrects → resubmits
+    Partial → DH edits amounts → partial approval → employee notified
+
+<span class="kw">ACCOUNTS VISIBILITY RULE:</span>
+  Accounts CANNOT see claim until DH approval. Payment queue only shows approved claims.
+<span class="kw">CUTOFF:</span>
+  Submission closed after monthly_cutoff_date. Next cycle only.</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SECTION 3: NOTIFICATION MATRIX -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="section s-notif" id="notifications" style="margin-top:14px">
+  <div class="section-title" onclick="toggleSection(this)">📡 Notification Matrix — Every Event, Every Channel, Every Recipient</div>
+  <div class="section-body" style="padding:14px;">
+    <table class="ntable">
+      <thead>
+        <tr>
+          <th style="width:22%">Event</th>
+          <th style="width:18%">Telegram</th>
+          <th style="width:18%">Email</th>
+          <th style="width:22%">In-App</th>
+          <th style="width:20%">Template / Content</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="5" style="background:#0a1530;color:#546e7a;font-weight:700;padding:6px 10px;">── PO CYCLE ──</td></tr>
+        <tr>
+          <td>PO issued to SubCon</td>
+          <td class="yes-tg">✓ SubCon</td>
+          <td class="yes-em">✓ SubCon ❌ template missing</td>
+          <td class="yes-ap">✓ SubCon — "New PO #X. Tap to acknowledge."</td>
+          <td>Outgoing PO DOCX ✅ attached</td>
+        </tr>
+        <tr>
+          <td>SubCon acknowledges PO</td>
+          <td class="no">—</td>
+          <td class="no">—</td>
+          <td class="yes-ap">✓ DH — "[SubCon] acknowledged PO #X"</td>
+          <td>None</td>
+        </tr>
+        <tr>
+          <td>Incoming PO from Client</td>
+          <td class="no">—</td>
+          <td class="yes-em">✓ Accounts ❌ template missing</td>
+          <td class="yes-ap">✓ Accounts — "Client PO received"</td>
+          <td>Incoming PO Template ❌</td>
+        </tr>
+
+        <tr><td colspan="5" style="background:#0a1530;color:#546e7a;font-weight:700;padding:6px 10px;">── SUBCON PAYMENT CYCLE ──</td></tr>
+        <tr>
+          <td>SubCon payment request submitted</td>
+          <td class="yes-tg">✓ DH</td>
+          <td class="no">—</td>
+          <td class="yes-ap">✓ DH — "Payment request from [SubCon] — SAR X"</td>
+          <td>None (DH reviews then certifies)</td>
+        </tr>
+        <tr>
+          <td>Payment Certificate created</td>
+          <td class="no">—</td>
+          <td class="no">—</td>
+          <td class="yes-ap">✓ Accounts — "MR can now be submitted for [SubCon]"</td>
+          <td>SubCon Payment Certificate ⚠️ rebuild needed</td>
+        </tr>
+        <tr>
+          <td>Money Request submitted</td>
+          <td class="yes-tg">✓ Accounts</td>
+          <td class="yes-em">✓ Accounts ❌ template missing</td>
+          <td class="yes-ap">✓ Accounts — "New MR #X — SAR Y"</td>
+          <td>Money Request Template ❌</td>
+        </tr>
+        <tr>
+          <td>Payment made to SubCon</td>
+          <td class="yes-tg">✓ SubCon</td>
+          <td class="yes-em">✓ DH ❌ template missing</td>
+          <td class="yes-ap">✓ SubCon — "SAR X credited. PO balance: SAR Y"</td>
+          <td>Email: Payment Made ❌</td>
+        </tr>
+        <tr>
+          <td>PO exhausted — invoice required</td>
+          <td class="yes-tg">✓ SubCon + DH</td>
+          <td class="no">—</td>
+          <td class="yes-ap">✓ SubCon — "PO fully paid. Submit invoice." ✓ DH — "[SubCon] must submit invoice"</td>
+          <td>None (invoice upload triggered)</td>
+        </tr>
+        <tr>
+          <td>Invoice received from SubCon</td>
+          <td class="no">—</td>
+          <td class="yes-em">✓ Accounts</td>
+          <td class="yes-ap">✓ Accounts — "Invoice received from [SubCon] for PO #X"</td>
+          <td>ZATCA invoice validation</td>
+        </tr>
+
+        <tr><td colspan="5" style="background:#0a1530;color:#546e7a;font-weight:700;padding:6px 10px;">── EMPLOYEE / FIELD CYCLE ──</td></tr>
+        <tr>
+          <td>Site Assignment created</td>
+          <td class="no">—</td>
+          <td class="yes-em">✓ Employee ❌ template missing</td>
+          <td class="yes-ap">✓ Employee — "You are assigned to Site [X]"</td>
+          <td>Email: Site Assignment ❌</td>
+        </tr>
+        <tr>
+          <td>Cash advance issued (Field Payment)</td>
+          <td class="no">—</td>
+          <td class="no">—</td>
+          <td class="yes-ap">✓ Employee — "SAR X advance issued. Confirm receipt."</td>
+          <td>None (employee confirms via form)</td>
+        </tr>
+        <tr>
+          <td>Payment validation received</td>
+          <td class="no">—</td>
+          <td class="no">—</td>
+          <td class="yes-ap">✓ DH — "[Employee] confirmed SAR X advance receipt"</td>
+          <td>Signed voucher photo in vault</td>
+        </tr>
+        <tr>
+          <td>Advance NOT confirmed (24h)</td>
+          <td class="no">—</td>
+          <td class="no">—</td>
+          <td class="yes-ap">✓ DH — "⚠️ [Employee] has not confirmed SAR X advance"</td>
+          <td>Dashboard flag — persistent</td>
+        </tr>
+        <tr>
+          <td>OT submitted</td>
+          <td class="no">—</td>
+          <td class="no">—</td>
+          <td class="yes-ap">✓ DH — "OT pending approval: [Employee] [Xh] [Type]"</td>
+          <td>None</td>
+        </tr>
+        <tr>
+          <td>OT approved</td>
+          <td class="no">—</td>
+          <td class="no">—</td>
+          <td class="yes-ap">✓ Employee — "OT approved — SAR X"</td>
+          <td>None</td>
+        </tr>
+        <tr>
+          <td>Food Allowance submitted</td>
+          <td class="no">—</td>
+          <td class="no">—</td>
+          <td class="yes-ap">✓ DH — "Food allowance pending: SAR X / [no_persons] persons"</td>
+          <td>None</td>
+        </tr>
+        <tr>
+          <td>Food Allowance approved</td>
+          <td class="no">—</td>
+          <td class="no">—</td>
+          <td class="yes-ap">✓ Employee — "Food allowance approved"</td>
+          <td>None</td>
+        </tr>
+        <tr>
+          <td>Expense claim submitted</td>
+          <td class="yes-tg">✓ DH</td>
+          <td class="no">—</td>
+          <td class="yes-ap">✓ DH — "Expense claim from [Employee] — SAR X"</td>
+          <td>None (pending DH approval)</td>
+        </tr>
+        <tr>
+          <td>Expense claim approved</td>
+          <td class="no">—</td>
+          <td class="yes-em">✓ Employee ❌ template missing</td>
+          <td class="yes-ap">✓ Employee — "Expense claim approved — SAR X"</td>
+          <td>Expense Claim DOCX ✅ generated</td>
+        </tr>
+        <tr>
+          <td>Payment made to Employee</td>
+          <td class="no">—</td>
+          <td class="yes-em">✓ DH ❌ template missing</td>
+          <td class="yes-ap">✓ Employee — "SAR X payment processed"</td>
+          <td>Email: Payment Made ❌</td>
+        </tr>
+
+        <tr><td colspan="5" style="background:#0a1530;color:#546e7a;font-weight:700;padding:6px 10px;">── CLIENT BILLING CYCLE ──</td></tr>
+        <tr>
+          <td>Invoice sent to client</td>
+          <td class="no">—</td>
+          <td class="yes-em">✓ Client ❌ template missing</td>
+          <td class="yes-ap">✓ Accounts — "Invoice #X sent to [Client]"</td>
+          <td>ZATCA Invoice Template ❌</td>
+        </tr>
+        <tr>
+          <td>Invoice paid by client</td>
+          <td class="no">—</td>
+          <td class="no">—</td>
+          <td class="yes-ap">✓ Accounts — "Payment received for Invoice #X"</td>
+          <td>Receipt issued</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SECTION 4: TABLE DEPENDENCIES -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="section s-deps" id="dependencies" style="margin-top:14px">
+  <div class="section-title" onclick="toggleSection(this)">🗄️ Table Dependency Map — What Each Form Reads &amp; Writes</div>
+  <div class="section-body" style="padding:14px;">
+    <table class="dep-table">
+      <thead>
+        <tr>
+          <th>Form</th>
+          <th>Writes To</th>
+          <th>Reads From</th>
+          <th>Shared Table (Inter-Form Dependency)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="form-name">FormSubConClaim</td>
+          <td class="writes">subcon_claims</td>
+          <td class="reads">outgoing_purchase_orders, sites, contractors, qr_tokens</td>
+          <td class="shared">outgoing_purchase_orders — also read by FormMoneyRequest, Payment Certificate</td>
+        </tr>
+        <tr>
+          <td class="form-name">Payment Certificate</td>
+          <td class="writes">payment_certificates</td>
+          <td class="reads">subcon_claims, outgoing_purchase_orders, site_completion_records</td>
+          <td class="shared">payment_certificates — read by FormMoneyRequest (G3 check)</td>
+        </tr>
+        <tr>
+          <td class="form-name">FormMoneyRequest</td>
+          <td class="writes">money_requests, money_request_lines</td>
+          <td class="reads">employees, contractors, suppliers, sites, projects, departments, outgoing_purchase_orders, payment_certificates, subcon_claims, bank_accounts</td>
+          <td class="shared">money_request_lines — reduces outgoing_purchase_orders.balance after payment</td>
+        </tr>
+        <tr>
+          <td class="form-name">FormFieldPayment</td>
+          <td class="writes">employee_advances (ADVANCE_IN), journal_entries</td>
+          <td class="reads">employees, bank_accounts, sites</td>
+          <td class="shared">employee_advances — updated by FormPaymentValidation</td>
+        </tr>
+        <tr>
+          <td class="form-name">FormPaymentValidation</td>
+          <td class="writes">employee_advances (UPDATE confirmed=TRUE)</td>
+          <td class="reads">employee_advances (unconfirmed only)</td>
+          <td class="shared">employee_advances — must exist from FormFieldPayment</td>
+        </tr>
+        <tr>
+          <td class="form-name">FormFoodAllowance</td>
+          <td class="writes">food_allowances</td>
+          <td class="reads">employees, sites, departments</td>
+          <td class="shared">food_allowances — compiled into FormExpenseClaim</td>
+        </tr>
+        <tr>
+          <td class="form-name">FormOvertime</td>
+          <td class="writes">overtime_records</td>
+          <td class="reads">employees, sites, departments</td>
+          <td class="shared">overtime_records — read by Payroll run (after DH approval)</td>
+        </tr>
+        <tr>
+          <td class="form-name">FormDailyExpense</td>
+          <td class="writes">daily_expenses</td>
+          <td class="reads">employees, sites, expense_categories</td>
+          <td class="shared">daily_expenses — compiled into FormExpenseClaim at month-end</td>
+        </tr>
+        <tr>
+          <td class="form-name">FormExpenseClaim</td>
+          <td class="writes">expense_claims, expense_claim_lines, journal_entries</td>
+          <td class="reads">daily_expenses, employees, sites, food_allowances, employee_advances</td>
+          <td class="shared">expense_claims — read by Accounts payment queue (after approval)</td>
+        </tr>
+        <tr>
+          <td class="form-name">FormCarMaintenance</td>
+          <td class="writes">vehicle_maintenance</td>
+          <td class="reads">vehicles, employees, sites</td>
+          <td class="shared">vehicle_maintenance — independent (feeds Vehicle Report only)</td>
+        </tr>
+        <tr>
+          <td class="form-name">FormSiteCompletion</td>
+          <td class="writes">site_completion_records, milestone_records</td>
+          <td class="reads">sites, milestones, projects, subcon_assignments</td>
+          <td class="shared">site_completion_records — read by Payment Certificate (progress basis)</td>
+        </tr>
+        <tr>
+          <td class="form-name">FormPORequest</td>
+          <td class="writes">po_requests → outgoing_purchase_orders (after approval)</td>
+          <td class="reads">departments, employees, projects, sites, contractors, suppliers, items</td>
+          <td class="shared">outgoing_purchase_orders — central table, read by G1/G2/G3/G4/FormSubConClaim/FormMoneyRequest</td>
+        </tr>
+        <tr>
+          <td class="form-name">FormPayment (Shareable)</td>
+          <td class="writes">payments (travel or field distribution)</td>
+          <td class="reads">employees, contractors, bank_accounts, qr_tokens</td>
+          <td class="shared">payments — feeds into ledger accounts by payment_type</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SECTION 5: INTER-RELATION MAP -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="section s-inter" id="interrelation" style="margin-top:14px">
+  <div class="section-title" onclick="toggleSection(this)">🔗 Inter-Relation Map — Form-to-Form Dependencies &amp; Shared Chains</div>
+  <div class="section-body" style="padding:14px;">
+
+    <div class="sub-title" style="margin-bottom:10px;">Critical Chain: SubCon Payment</div>
+    <div class="algo" style="font-family:monospace;font-size:11px;line-height:1.8;">
+FormPORequest
+  └──► outgoing_purchase_orders (OPEN, balance = po_value)
+         │
+         ├──► [G1] SubCon acknowledges PO
+         │
+         └──► FormSubConClaim (SubCon requests payment)
+                │
+                ├──► FormSiteCompletion (DH checks site progress %)
+                │
+                └──► Payment Certificate (DH certifies work % + amount)
+                       │
+                       └──► [G3 UNLOCKED] FormMoneyRequest (SubCon line)
+                              │
+                              └──► Accounts pays → UPDATE po.balance
+                                     │
+                                     ├──► [G4] IF po.balance=0 → Invoice gate
+                                     │          SubCon submits invoice → ZATCA
+                                     │
+                                     └──► SubCon In-App notification (payment credited)
+    </div>
+
+    <div class="sub-title" style="margin-bottom:10px;margin-top:14px;">Employee Expense Chain</div>
+    <div class="algo" style="font-family:monospace;font-size:11px;line-height:1.8;">
+Site Assignment (Desktop)
+  └──► Employee assigned to site (email notification)
+         │
+         ├──► FormFoodAllowance (daily, per site)
+         │       └──► DH approves → Payroll
+         │
+         ├──► FormOvertime (daily/weekly)
+         │       └──► [G7] DH approves → Payroll
+         │
+         ├──► FormDailyExpense (daily field costs)
+         │       └──► Accumulates → month-end
+         │
+         └──► FormExpenseClaim (month-end)
+                Compiles: daily_expenses + food_allowances
+                [G8] DH approves
+                  └──► Auto JE + Expense Claim DOCX ✅
+                         └──► Accounts payment queue
+    </div>
+
+    <div class="sub-title" style="margin-bottom:10px;margin-top:14px;">Cash Advance Chain</div>
+    <div class="algo" style="font-family:monospace;font-size:11px;line-height:1.8;">
+FormFieldPayment (DH issues advance)
+  └──► employee_advances (ADVANCE_IN)
+       Auto JE: Dr 1310 / Cr Petty Cash
+         │
+         └──► [G6] FormPaymentValidation (employee confirms)
+                └──► confirmed = TRUE, photo = vault
+                       │
+                       └──► FormExpenseClaim (month-end reconcile vs advance)
+    </div>
+
+    <div class="sub-title" style="margin-bottom:10px;margin-top:14px;">Central Table: outgoing_purchase_orders</div>
+    <table class="dep-table" style="margin:0;">
+      <thead><tr><th>Form / Process</th><th>Relationship</th><th>Field Used</th></tr></thead>
+      <tbody>
+        <tr><td>FormPORequest</td><td class="writes">CREATES record</td><td>All fields, status='OPEN', balance=po_value</td></tr>
+        <tr><td>SubCon Acknowledgement</td><td>UPDATES</td><td>acknowledged=TRUE</td></tr>
+        <tr><td>FormSubConClaim</td><td class="reads">READS (G2 check)</td><td>status, balance, contractor_id</td></tr>
+        <tr><td>Payment Certificate</td><td class="reads">READS</td><td>value, prev_paid (calculates certifiable)</td></tr>
+        <tr><td>FormMoneyRequest</td><td class="reads">READS (G3 check)</td><td>po_id for line linking</td></tr>
+        <tr><td>After Accounts Pays</td><td>UPDATES</td><td>balance = balance − paid_amount</td></tr>
+        <tr><td>G4 (PO Exhaustion)</td><td class="reads">READS</td><td>balance=0 → triggers invoice gate</td></tr>
+        <tr><td>Invoice Submission</td><td>UPDATES</td><td>invoice_url, invoice_date, status='INVOICED'</td></tr>
+        <tr><td>BankRecon (month-end)</td><td class="reads">READS</td><td>Cross-checks actual bank debit vs po payments</td></tr>
+      </tbody>
+    </table>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SECTION 6: MISSING & BUGS -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="section" id="missing" style="margin-top:14px">
+  <div class="section-title" style="background:#12080a;color:#ef5350;" onclick="toggleSection(this)">⚠️ Known Bugs, Missing Features &amp; Code Patches Required</div>
+  <div class="section-body" style="padding:14px;background:#0a0608;">
+
+    <div class="sub-title">Code Bugs (Patch Session)</div>
+    <div class="bug-box">
+      🐛 <strong>BUG 1 — FormMoneyRequest: project_id not saved to lines</strong><br>
+      File: src/forms/FormMoneyRequest.jsx<br>
+      EMPTY_LINE has project_id in state but lineRows insert omits it.<br>
+      Fix: add <code>project_id: l.project_id || null, site_id: l.site_id || null</code> to lineRows map.
+    </div>
+    <div class="bug-box">
+      🐛 <strong>BUG 2 — FormMoneyRequest: No Site# field on lines</strong><br>
+      Without Site#, system cannot auto-resolve which open PO to apply SubCon payment to.<br>
+      Fix: Add site_id selector per line (cascade from project → site → open POs for SubCon).
+    </div>
+
+    <div class="sub-title" style="margin-top:14px;">Code Patches (Planned)</div>
+    <div class="missing-box">📋 PATCH 1 — Simplify FormSubConClaim to 3 taps<br>Remove: claim_type, milestones, hours, hourly_rate, scope_type, work_description fields<br>Keep: site picker, amount, photo, submit. Move complex fields to DH Payment Certificate screen.</div>
+    <div class="missing-box">📋 PATCH 2 — Extend FormFieldPayment to support SubCon payees<br>Currently: Employee only. Needs: SubCon as payee + linkage to open Outgoing PO.</div>
+    <div class="missing-box">📋 PATCH 3 — Excel UserForm interface<br>One Excel file, UserForms that pull Project/Site/SubCon from Supabase. VBA submits to money_requests table (same as App). Interface only — same backend.</div>
+    <div class="missing-box">📋 PATCH 4 — G1/G2/G3/G4 enforcement in FormSubConClaim + FormMoneyRequest<br>Gates exist conceptually but need code-level enforcement in form validation and submission handlers.</div>
+
+    <div class="sub-title" style="margin-top:14px;">Missing Templates (Build Queue)</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      <div style="background:#1a0808;border-left:3px solid #c62828;border-radius:4px;padding:8px 12px;min-width:200px;font-size:11px;">
+        <strong style="color:#ef9a9a">SubCon Payment Certificate ⚠️</strong><br>
+        <span style="color:#78909c">Rebuild: add work_progress_pct, PO status block (Total/Prev/This/Balance), earned vs certified.</span>
+      </div>
+      <div style="background:#1a0808;border-left:3px solid #c62828;border-radius:4px;padding:8px 12px;min-width:200px;font-size:11px;">
+        <strong style="color:#ef9a9a">Incoming PO Template ❌</strong><br>
+        <span style="color:#78909c">Client PO receipt acknowledgement.</span>
+      </div>
+      <div style="background:#1a0808;border-left:3px solid #c62828;border-radius:4px;padding:8px 12px;min-width:200px;font-size:11px;">
+        <strong style="color:#ef9a9a">Money Request Template ❌</strong><br>
+        <span style="color:#78909c">Printable MR for Accounts physical records.</span>
+      </div>
+      <div style="background:#1a0808;border-left:3px solid #c62828;border-radius:4px;padding:8px 12px;min-width:200px;font-size:11px;">
+        <strong style="color:#ef9a9a">Invoice / ZATCA (6 types) ❌</strong><br>
+        <span style="color:#78909c">Standard, Simplified, Credit Note, Debit Note, Proforma, Receipt Voucher.</span>
+      </div>
+      <div style="background:#1a0808;border-left:3px solid #c62828;border-radius:4px;padding:8px 12px;min-width:200px;font-size:11px;">
+        <strong style="color:#ef9a9a">8 Email Body Templates ❌</strong><br>
+        <span style="color:#78909c">Site Assignment, PO Issued, MR Submitted, Payment Made, Expense Approved, Invoice Sent, SubCon Paid, Invoice Due.</span>
+      </div>
+    </div>
+
+    <div class="sub-title" style="margin-top:14px;">Missing Relationships (To Add)</div>
+    <div class="missing-box">🔍 Bank Reconciliation ↔ outgoing_purchase_orders: BankRecon should flag unmatched bank debits against open PO payments. ATM-bypass payments show as unmatched → red flag to Accounts.</div>
+    <div class="missing-box">🔍 FormSiteCompletion → FormExpenseClaim: Site completion % could auto-validate whether field expenses are reasonable for the work volume claimed.</div>
+    <div class="missing-box">🔍 FormPORequest → Incoming PO: System needs a mechanism to record client POs (Incoming) — currently only Outgoing POs are managed. Incoming PO is the AR trigger.</div>
+    <div class="missing-box">🔍 FormOvertime → FormSiteCompletion: OT hours on a site should align with site activity. Cross-validation possible to flag OT on inactive sites.</div>
+  </div>
+</div>
+
+<div class="footer">
+  ACCSYS Field Operations Platform · Algorithm &amp; Specification Reference · Ratal Group · September 2026<br>
+  companion to: ACCSYS_System_Flow.html · Supabase backend · React frontend · Google Docs compatible templates
+</div>
+
+<script>
+function toggleSection(el) {
+  el.classList.toggle('collapsed');
+  const body = el.nextElementSibling;
+  body.style.display = body.style.display === 'none' ? '' : 'none';
+}
+function toggleForm(el) {
+  const body = el.nextElementSibling;
+  body.classList.toggle('open');
+}
+</script>
+</body>
+</html>

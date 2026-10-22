@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth'
 import PageBanner from '../components/PageBanner'
@@ -12,9 +12,146 @@ import PageBanner from '../components/PageBanner'
 // Expiry alerts at configurable threshold.
 // ═══════════════════════════════════════════════════════════════════
 
-const CATEGORIES = ['CONTRACT','LICENSE','MOU','INSURANCE','VISA','CERTIFICATE','INVOICE','LEGAL','OTHER']
+// ── Context-aware document categories by linked_type ─────────────
+// Category = WHAT the document IS (not a filing bucket)
+const DOC_CATEGORIES = {
+  EMPLOYEE: [
+    'IQAMA',          // Residency Permit (Expats)
+    'DRIVING_LICENSE',// DL
+    'PASSPORT',       // Passport
+    'NATIONAL_ID',    // Saudi ID
+    'QIWA',           // QIWA Labour platform certificate
+    'SCE',            // Saudi Council of Engineers
+    'MEDICAL_INSURANCE',
+    'WORK_PERMIT',
+    'EMPLOYMENT_CONTRACT',
+    'SALARY_CERTIFICATE',
+    'TRAINING_CERTIFICATE',
+    'GOSI_CERTIFICATE',
+    'OTHER',
+  ],
+  CONTRACTOR: [
+    'CR',             // Commercial Registration
+    'VAT_CERTIFICATE',
+    'CHAMBER_OF_COMMERCE',
+    'GOSI_CERTIFICATE',
+    'SAUDIZATION',    // Nitaqat certificate
+    'ISO_CERTIFICATE',
+    'VENDOR_APPROVAL',// Client/Aramco/SABIC approval
+    'MOI_LICENSE',
+    'CONTRACT',
+    'MOU',
+    'BANK_GUARANTEE',
+    'INSURANCE',
+    'OTHER',
+  ],
+  SUBCONTRACTOR: [
+    // Individual / person-based sub-contractors (no formal company registration)
+    'IQAMA',          // Most common for individual SubCons
+    'DRIVING_LICENSE',
+    'PASSPORT',
+    'NATIONAL_ID',    // Saudi nationals
+    'QIWA',           // QIWA individual labour card
+    'SCE',            // Engineering certification (individual)
+    'MEDICAL_INSURANCE',
+    // Company-based sub-contractors
+    'CR',
+    'VAT_CERTIFICATE',
+    'CHAMBER_OF_COMMERCE',
+    'GOSI_CERTIFICATE',
+    'SAUDIZATION',
+    'VENDOR_APPROVAL',
+    'MOI_LICENSE',
+    // Common to both
+    'CONTRACT',
+    'PERFORMANCE_BOND',
+    'INSURANCE',
+    'OTHER',
+  ],
+  VEHICLE: [
+    'ISTIMARA',       // Vehicle registration (Mulkia)
+    'INSURANCE',
+    'INSPECTION',     // Periodic inspection / Fahas
+    'DRIVING_LICENSE',// Driver license copy
+    'LEASING_CONTRACT',
+    'OTHER',
+  ],
+  PROJECT: [
+    'CONTRACT',
+    'MOU',
+    'PURCHASE_ORDER',
+    'BANK_GUARANTEE',
+    'INSURANCE',
+    'COMPLETION_CERTIFICATE',
+    'HANDOVER_CERTIFICATE',
+    'VARIATION_ORDER',
+    'OTHER',
+  ],
+  COMPANY: [
+    'CR',
+    'VAT_CERTIFICATE',
+    'CHAMBER_OF_COMMERCE',
+    'GOSI_CERTIFICATE',
+    'SAUDIZATION',
+    'MOI_LICENSE',
+    'ARAMCO_APPROVAL',
+    'SABIC_APPROVAL',
+    'ISO_CERTIFICATE',
+    'OTHER',
+  ],
+  OTHER: [
+    'CONTRACT','CERTIFICATE','LICENSE','INVOICE','LEGAL','OTHER',
+  ],
+}
+
+// All unique categories (for filter dropdown across all types)
+const ALL_CATEGORIES = [...new Set(Object.values(DOC_CATEGORIES).flat())]
+
+// Helper — get category list for a given linked_type (fallback to generic)
+function getCats(linkedType) {
+  return DOC_CATEGORIES[linkedType] || DOC_CATEGORIES.OTHER
+}
+
 const STATUSES   = ['ACTIVE','EXPIRING_SOON','EXPIRED','RENEWED','CANCELLED']
-const LINK_TYPES = ['EMPLOYEE','PROJECT','SUPPLIER','VEHICLE','OTHER']
+const LINK_TYPES = ['EMPLOYEE','PROJECT','CONTRACTOR','SUBCONTRACTOR','VEHICLE','COMPANY','OTHER']
+
+// Map linked_type → { table, labelCol, numberCol }
+const LINK_TABLE = {
+  EMPLOYEE:      { table:'employees',  labelCol:'full_name_en', numberCol:'employee_number' },
+  PROJECT:       { table:'projects',   labelCol:'project_name', numberCol:'project_code' },
+  CONTRACTOR:    { table:'contractors',labelCol:'company_name', numberCol:'cr_number' },
+  SUBCONTRACTOR: { table:'contractors',labelCol:'company_name', numberCol:'cr_number' },
+  VEHICLE:       { table:'vehicles',   labelCol:'plate_number', numberCol:'vehicle_model' },
+}
+
+// Auto-fill: which authority issues each document type
+const ISSUING_AUTHORITY = {
+  IQAMA:               'Ministry of Interior (MOI)',
+  DRIVING_LICENSE:     'General Directorate of Traffic (MOI)',
+  PASSPORT:            'General Directorate of Passports (MOI)',
+  NATIONAL_ID:         'National Information Center (NIC)',
+  QIWA:                'Ministry of Human Resources (MHRSD) — QIWA',
+  SCE:                 'Saudi Council of Engineers (SCE)',
+  WORK_PERMIT:         'Ministry of Human Resources (MHRSD)',
+  GOSI_CERTIFICATE:    'General Organization for Social Insurance (GOSI)',
+  CR:                  'Ministry of Commerce (MOC)',
+  VAT_CERTIFICATE:     'Zakat, Tax and Customs Authority (ZATCA)',
+  CHAMBER_OF_COMMERCE: 'Chamber of Commerce',
+  SAUDIZATION:         'Ministry of Human Resources (MHRSD)',
+  MOI_LICENSE:         'Ministry of Interior (MOI)',
+  ARAMCO_APPROVAL:     'Saudi Aramco',
+  SABIC_APPROVAL:      'SABIC',
+  ISTIMARA:            'General Directorate of Traffic (MOI)',
+  INSPECTION:          'General Directorate of Traffic (MOI)',
+  ISO_CERTIFICATE:     'ISO Certification Body',
+}
+
+// Entity code → company name (for Owner auto-fill)
+const ENTITY_COMPANY = {
+  ACCSYS: 'Ratal Advanced Technologies',
+  RAT:    'Ratal Group',
+  GWT:    'GWT',
+}
 
 const STATUS_COLORS = {
   ACTIVE:        { bg:'#e8f5e9', color:'#2e7d32', border:'#a5d6a7' },
@@ -25,8 +162,65 @@ const STATUS_COLORS = {
 }
 
 const CAT_ICONS = {
-  CONTRACT:'📄', LICENSE:'🪪', MOU:'🤝', INSURANCE:'🛡️',
-  VISA:'✈️', CERTIFICATE:'🏅', INVOICE:'🧾', LEGAL:'⚖️', OTHER:'📁',
+  // Employee docs
+  IQAMA:'🪪', DRIVING_LICENSE:'🚗', PASSPORT:'✈️', NATIONAL_ID:'🪪',
+  QIWA:'💼', SCE:'🏗️', MEDICAL_INSURANCE:'🏥', WORK_PERMIT:'📋',
+  EMPLOYMENT_CONTRACT:'📄', SALARY_CERTIFICATE:'💰', TRAINING_CERTIFICATE:'🏅',
+  // Contractor/Company docs
+  CR:'🏢', VAT_CERTIFICATE:'💹', CHAMBER_OF_COMMERCE:'🏛️',
+  GOSI_CERTIFICATE:'🛡️', SAUDIZATION:'🇸🇦', ISO_CERTIFICATE:'✅',
+  VENDOR_APPROVAL:'👍', MOI_LICENSE:'⚖️', BANK_GUARANTEE:'🏦',
+  ARAMCO_APPROVAL:'⛽', SABIC_APPROVAL:'🧪', PERFORMANCE_BOND:'📑',
+  // Vehicle docs
+  ISTIMARA:'🚘', INSPECTION:'🔍', LEASING_CONTRACT:'🔑',
+  // Project docs
+  PURCHASE_ORDER:'📦', COMPLETION_CERTIFICATE:'✔️', HANDOVER_CERTIFICATE:'🤝',
+  VARIATION_ORDER:'🔄',
+  // Generic
+  MOU:'🤝', CONTRACT:'📄', CERTIFICATE:'🏅', LICENSE:'🪪',
+  INVOICE:'🧾', LEGAL:'⚖️', INSURANCE:'🛡️', OTHER:'📁',
+}
+
+// Human-readable labels for category codes
+const CAT_LABELS = {
+  IQAMA:'🪪 Iqama (Residency Permit)',
+  DRIVING_LICENSE:'🚗 Driving Licence',
+  PASSPORT:'✈️ Passport',
+  NATIONAL_ID:'🪪 National ID (Saudi)',
+  QIWA:'💼 QIWA Certificate',
+  SCE:'🏗️ SCE Certificate',
+  MEDICAL_INSURANCE:'🏥 Medical Insurance',
+  WORK_PERMIT:'📋 Work Permit',
+  EMPLOYMENT_CONTRACT:'📄 Employment Contract',
+  SALARY_CERTIFICATE:'💰 Salary Certificate',
+  TRAINING_CERTIFICATE:'🏅 Training Certificate',
+  GOSI_CERTIFICATE:'🛡️ GOSI Certificate',
+  CR:'🏢 CR (Commercial Registration)',
+  VAT_CERTIFICATE:'💹 VAT Registration Certificate',
+  CHAMBER_OF_COMMERCE:'🏛️ Chamber of Commerce',
+  SAUDIZATION:'🇸🇦 Saudization / Nitaqat',
+  ISO_CERTIFICATE:'✅ ISO Certificate',
+  VENDOR_APPROVAL:'👍 Vendor / Client Approval',
+  MOI_LICENSE:'⚖️ MOI License',
+  BANK_GUARANTEE:'🏦 Bank Guarantee',
+  ARAMCO_APPROVAL:'⛽ Aramco Approval',
+  SABIC_APPROVAL:'🧪 SABIC Approval',
+  PERFORMANCE_BOND:'📑 Performance Bond',
+  ISTIMARA:'🚘 Istimara (Vehicle Registration)',
+  INSPECTION:'🔍 Inspection / Fahas Certificate',
+  LEASING_CONTRACT:'🔑 Leasing / Rental Contract',
+  PURCHASE_ORDER:'📦 Purchase Order',
+  COMPLETION_CERTIFICATE:'✔️ Completion Certificate',
+  HANDOVER_CERTIFICATE:'🤝 Handover Certificate',
+  VARIATION_ORDER:'🔄 Variation Order',
+  MOU:'🤝 MOU',
+  CONTRACT:'📄 Contract',
+  CERTIFICATE:'🏅 Certificate',
+  LICENSE:'🪪 License',
+  INVOICE:'🧾 Invoice',
+  LEGAL:'⚖️ Legal Document',
+  INSURANCE:'🛡️ Insurance',
+  OTHER:'📁 Other',
 }
 
 const today = () => new Date().toISOString().slice(0,10)
@@ -68,7 +262,7 @@ function DocModal({ entityId, item, onClose, onSaved }) {
   const { user } = useAuth()
   const [step, setStep] = useState(1)
   const [form, setForm] = useState({
-    title:'', doc_number:'', category:'CONTRACT', description:'',
+    title:'', doc_number:'', category:'OTHER', description:'',
     counterparty:'', issued_by:'', issue_date:'', effective_date:'',
     expiry_date:'', alert_days:30, is_renewable:false,
     status:'ACTIVE', linked_type:'', linked_id:'', linked_name:'',
@@ -76,12 +270,71 @@ function DocModal({ entityId, item, onClose, onSaved }) {
     file_url:'', file_name:'', file_type:'',
     ...item,
   })
-  const [file,      setFile]      = useState(null)
-  const [saving,    setSaving]    = useState(false)
-  const [err,       setErr]       = useState('')
-  const [uploading, setUploading] = useState(false)
+  const [file,        setFile]        = useState(null)
+  const [saving,      setSaving]      = useState(false)
+  const [err,         setErr]         = useState('')
+  const [uploading,   setUploading]   = useState(false)
+  const [lookupList,  setLookupList]  = useState([])
+  const [lookupLoading, setLookupLoading] = useState(false)
+  const [deptMap,     setDeptMap]     = useState({}) // dept_id → { code, name }
 
   const setF = (k,v) => setForm(f=>({...f,[k]:v}))
+  const setFM = (patch) => setForm(f=>({...f,...patch}))
+  const isMount = useRef(true) // skip resets on initial mount (edit mode)
+
+  // When linked_type changes: fetch lookup list, load depts if EMPLOYEE, auto-set category
+  useEffect(() => {
+    const cfg = LINK_TABLE[form.linked_type]
+    const cats = getCats(form.linked_type)
+    if (!isMount.current) {
+      // Only reset when user actually changes the type (not on initial open)
+      setF('category', cats[0])
+      setF('linked_id', '')
+      setF('linked_name', '')
+    }
+    isMount.current = false
+    if (!cfg || !entityId) { setLookupList([]); return }
+    setLookupLoading(true)
+    const cols = `id,${cfg.labelCol},${cfg.numberCol}`
+    supabase.from(cfg.table)
+      .select(cols)
+      .eq('entity_id', entityId)
+      .order(cfg.labelCol)
+      .then(({ data }) => { setLookupList(data||[]); setLookupLoading(false) })
+    // Load departments for auto-fill
+    if (form.linked_type === 'EMPLOYEE') {
+      supabase.from('departments').select('id,dept_code,dept_name').eq('entity_id', entityId)
+        .then(({ data }) => {
+          const map = {}
+          ;(data||[]).forEach(d => { map[d.id] = d })
+          setDeptMap(map)
+        })
+    }
+  }, [form.linked_type, entityId])
+
+  // Auto-fill Issued By / Counterparty when category changes
+  useEffect(() => {
+    const auth = ISSUING_AUTHORITY[form.category]
+    if (auth) setFM({ issued_by: auth, counterparty: auth })
+  }, [form.category])
+
+  // Auto-fill Department + Owner when employee selected — fetch full record separately
+  useEffect(() => {
+    if (form.linked_type !== 'EMPLOYEE' || !form.linked_id) return
+    // Fetch the full employee record for dept/owner auto-fill
+    supabase.from('employees')
+      .select('id,department_id,employee_category,entity_code')
+      .eq('id', form.linked_id)
+      .maybeSingle()
+      .then(({ data: emp }) => {
+        if (!emp) return
+        const dept = deptMap[emp.department_id]
+        const deptCode = dept?.dept_code || dept?.dept_name || ''
+        const cat = emp.employee_category || ''
+        const owner = cat === '03' ? 'Self' : (ENTITY_COMPANY[emp.entity_code] || ENTITY_COMPANY.ACCSYS)
+        setFM({ department: deptCode, owner_name: owner })
+      })
+  }, [form.linked_id, form.linked_type, deptMap])
 
   async function uploadFile(f) {
     if (!f) return null
@@ -110,7 +363,7 @@ function DocModal({ entityId, item, onClose, onSaved }) {
       issue_date:form.issue_date||null, effective_date:form.effective_date||null,
       expiry_date:form.expiry_date||null, alert_days:+form.alert_days||30,
       is_renewable:form.is_renewable, status:form.status,
-      linked_type:form.linked_type||null, linked_name:form.linked_name||null,
+      linked_type:form.linked_type||null, linked_id:form.linked_id||null, linked_name:form.linked_name||null,
       department:form.department||null, owner_name:form.owner_name||null,
       owner_user_id:user?.id||null, notes:form.notes||null,
       created_by:user?.id||null, ...fileData,
@@ -185,9 +438,9 @@ function DocModal({ entityId, item, onClose, onSaved }) {
                   </div>
                   <div style={row2}>
                     <div>
-                      <label style={lbl}>Category</label>
+                      <label style={lbl}>Document Type {form.linked_type && <span style={{ color:'#9e9e9e', fontWeight:400 }}>({form.linked_type})</span>}</label>
                       <select value={form.category} onChange={e=>setF('category',e.target.value)} style={inp()}>
-                        {CATEGORIES.map(c=><option key={c}>{c}</option>)}
+                        {getCats(form.linked_type).map(c=><option key={c} value={c}>{CAT_LABELS[c]||c.replace(/_/g,' ')}</option>)}
                       </select>
                     </div>
                     <div>
@@ -212,18 +465,49 @@ function DocModal({ entityId, item, onClose, onSaved }) {
                   </div>
                   <div style={row2}>
                     <div>
-                      <label style={lbl}>Counterparty / Other Party</label>
-                      <input style={inp()} value={form.counterparty} onChange={e=>setF('counterparty',e.target.value)} placeholder="Company or authority name" />
+                      <label style={lbl}>Counterparty / Issuing Authority {ISSUING_AUTHORITY[form.category]&&<span style={{ color:'#2e7d32', fontWeight:400 }}>✓ auto</span>}</label>
+                      <input style={inp()} value={form.counterparty} onChange={e=>setF('counterparty',e.target.value)} placeholder="e.g. Ministry of Interior (MOI)" />
                     </div>
                     <div>
-                      <label style={lbl}>Issued By</label>
+                      <label style={lbl}>Issued By {ISSUING_AUTHORITY[form.category]&&<span style={{ color:'#2e7d32', fontWeight:400 }}>✓ auto</span>}</label>
                       <input style={inp()} value={form.issued_by} onChange={e=>setF('issued_by',e.target.value)} placeholder="Issuing authority" />
                     </div>
                   </div>
-                  {form.linked_type && (
+                  {form.linked_type && form.linked_type !== 'COMPANY' && form.linked_type !== 'OTHER' && (
                     <div style={mb12}>
-                      <label style={lbl}>{form.linked_type} Name</label>
-                      <input style={inp()} value={form.linked_name} onChange={e=>setF('linked_name',e.target.value)} placeholder={`Name of linked ${form.linked_type.toLowerCase()}`} />
+                      <label style={lbl}>
+                        {form.linked_type === 'EMPLOYEE' ? 'Employee' :
+                         form.linked_type === 'PROJECT'  ? 'Project'  :
+                         form.linked_type === 'CONTRACTOR' || form.linked_type === 'SUBCONTRACTOR' ? 'Party (Contractor / Vendor)' :
+                         form.linked_type === 'VEHICLE' ? 'Vehicle' : form.linked_type}
+                      </label>
+                      {lookupLoading
+                        ? <div style={{ fontSize:11, color:'#6b7c93', padding:'8px 0' }}>Loading…</div>
+                        : lookupList.length > 0
+                          ? (
+                            <select style={inp()} value={form.linked_id||''} onChange={e => {
+                              const rec = lookupList.find(r=>r.id===e.target.value)
+                              const cfg = LINK_TABLE[form.linked_type]
+                              setF('linked_id', e.target.value)
+                              setF('linked_name', rec ? rec[cfg.labelCol] : '')
+                            }}>
+                              <option value="">— Select {form.linked_type.toLowerCase()} —</option>
+                              {lookupList.map(r => {
+                                const cfg = LINK_TABLE[form.linked_type]
+                                const label = r[cfg.labelCol] || '—'
+                                const num   = r[cfg.numberCol] ? ` (${r[cfg.numberCol]})` : ''
+                                return <option key={r.id} value={r.id}>{label}{num}</option>
+                              })}
+                            </select>
+                          )
+                          : <input style={inp()} value={form.linked_name} onChange={e=>setF('linked_name',e.target.value)} placeholder={`Name of linked ${form.linked_type.toLowerCase()}`} />
+                      }
+                    </div>
+                  )}
+                  {(form.linked_type === 'COMPANY' || form.linked_type === 'OTHER') && (
+                    <div style={mb12}>
+                      <label style={lbl}>{form.linked_type === 'COMPANY' ? 'Company / Entity Name' : 'Reference Name'}</label>
+                      <input style={inp()} value={form.linked_name} onChange={e=>setF('linked_name',e.target.value)} placeholder={form.linked_type==='COMPANY'?'e.g. Ratal Advanced Technologies':'Reference name'} />
                     </div>
                   )}
                   <div style={mb12}>
@@ -256,12 +540,24 @@ function DocModal({ entityId, item, onClose, onSaved }) {
                   </div>
                   <div style={row2}>
                     <div>
-                      <label style={lbl}>Department</label>
-                      <input style={inp()} value={form.department} onChange={e=>setF('department',e.target.value)} />
+                      <label style={lbl}>Department {form.linked_type==='EMPLOYEE'&&form.department&&<span style={{ color:'#2e7d32', fontWeight:400 }}>✓ auto</span>}</label>
+                      {Object.keys(deptMap).length > 0 ? (
+                        <select style={inp()} value={form.department} onChange={e=>setF('department',e.target.value)}>
+                          <option value="">— Select department —</option>
+                          {Object.values(deptMap).sort((a,b)=>(a.dept_code||'').localeCompare(b.dept_code||'')).map(d=>(
+                            <option key={d.id} value={d.dept_code||d.dept_name}>{d.dept_code} — {d.dept_name}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input style={inp()} value={form.department} onChange={e=>setF('department',e.target.value)} placeholder="e.g. TISU, NIS, CISU" />
+                      )}
                     </div>
                     <div>
-                      <label style={lbl}>Owner / Responsible</label>
-                      <input style={inp()} value={form.owner_name} onChange={e=>setF('owner_name',e.target.value)} placeholder="Person responsible for renewal" />
+                      <label style={lbl}>Owner / Responsible {form.linked_type==='EMPLOYEE'&&form.owner_name&&<span style={{ color:'#2e7d32', fontWeight:400 }}>✓ auto</span>}</label>
+                      <div style={{ position:'relative' }}>
+                        <input style={inp({ paddingRight: form.owner_name ? 32 : 11 })} value={form.owner_name} onChange={e=>setF('owner_name',e.target.value)} placeholder="Responsible for renewal" />
+                        {form.owner_name && <span style={{ position:'absolute', right:9, top:'50%', transform:'translateY(-50%)', fontSize:14 }}>👤</span>}
+                      </div>
                     </div>
                   </div>
                   <div style={mb12}>
@@ -363,10 +659,11 @@ export default function DocumentVault({ entityId }) {
   const [loading,  setLoading] = useState(true)
   const [modal,    setModal]   = useState(null)
   const [showBanner, setShowBanner] = useState(false)
-  const [filterCat,setFilterCat]=useState('')
-  const [filterSt, setFilterSt]=useState('')
-  const [search,   setSearch]  = useState('')
-  const [view,     setView]    = useState('grid')  // grid | list
+  const [filterCat,    setFilterCat]    = useState('')
+  const [filterSt,     setFilterSt]     = useState('')
+  const [filterLinked, setFilterLinked] = useState('')
+  const [search,       setSearch]       = useState('')
+  const [view,         setView]         = useState('grid')  // grid | list
 
   const load = useCallback(async () => {
     if (!entityId) return
@@ -389,7 +686,8 @@ export default function DocumentVault({ entityId }) {
   // Compute statuses client-side for filtering
   const allDocs = docs.map(d=>({ ...d, _status: computeStatus(d) }))
   const visible = allDocs
-    .filter(d => !filterSt || d._status===filterSt)
+    .filter(d => !filterSt     || d._status===filterSt)
+    .filter(d => !filterLinked || d.linked_type===filterLinked)
     .filter(d => !search ||
       d.title.toLowerCase().includes(search.toLowerCase()) ||
       (d.doc_number||'').toLowerCase().includes(search.toLowerCase()) ||
@@ -460,10 +758,17 @@ export default function DocumentVault({ entityId }) {
           <input style={S.input} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Title, number, counterparty…" />
         </div>
         <div>
-          <label style={S.label}>Category</label>
-          <select style={{ ...S.input, width:130 }} value={filterCat} onChange={e=>setFilterCat(e.target.value)}>
-            <option value="">All Categories</option>
-            {CATEGORIES.map(c=><option key={c}>{c}</option>)}
+          <label style={S.label}>Linked To</label>
+          <select style={{ ...S.input, width:130 }} value={filterLinked} onChange={e=>setFilterLinked(e.target.value)}>
+            <option value="">All Types</option>
+            {LINK_TYPES.map(t=><option key={t}>{t}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={S.label}>Document Type</label>
+          <select style={{ ...S.input, width:190 }} value={filterCat} onChange={e=>setFilterCat(e.target.value)}>
+            <option value="">All Types</option>
+            {ALL_CATEGORIES.map(c=><option key={c} value={c}>{CAT_LABELS[c]||c.replace(/_/g,' ')}</option>)}
           </select>
         </div>
         <div>

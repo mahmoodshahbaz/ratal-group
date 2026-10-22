@@ -197,7 +197,7 @@ export default function ExpensesPage({ entityId, entityName, isAr }) {
         expense_type:   r.category,
         department_name: dept.dept_code || dept.dept_name || '',  // abbreviation first
         requester_name:  emp.full_name_en || '',
-        total_amount:    (r.amount||0) + (r.vat_amount||0),
+        total_amount:    r.amount||0,   // amount already includes VAT
         document_url:    r.receipt_url,
       }
     })
@@ -489,7 +489,7 @@ export default function ExpensesPage({ entityId, entityName, isAr }) {
                 {/* Amount */}
                 <div style={{ textAlign:'right' }}>
                   <div style={{ fontSize:13, fontWeight:700, color:'#1a237e', whiteSpace:'nowrap' }}>SAR {tot.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-                  {vat>0 && <div style={{ fontSize:10, color:'#888' }}>+VAT {vat.toFixed(2)}</div>}
+                  {vat>0 && <div style={{ fontSize:10, color:'#888' }}>incl. VAT {vat.toFixed(2)}</div>}
                 </div>
                 {/* Status */}
                 <div>

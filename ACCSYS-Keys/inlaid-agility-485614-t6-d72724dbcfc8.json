@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "inlaid-agility-485614-t6",
+  "private_key_id": "d72724dbcfc8623d88293fc676a7c13aaccc4fdf",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQC9Y2mTVTyTADq9\nxehwHqltLQHLaX1GTMWlJBsJZmivhfr5H1cSyIhNIs8KvGr8++XFQh150iB5ahij\n7YXgU5yBWIWggbqmDv49cKNuE3fstqNvOuSde3QJNTY6MY+U7+SXX6roWwQu4p3D\n5WRna/NGiT3RIR5oUZ4l1l967CMilYOiqH2uUbbZGkQs2NZBWaQVCQLzzQDWnsp3\nWEDHedOmYBduWAYRPhDxDT/kUEzbER5ZQHqKHt40KNhU1BTDdcrvAHwIk3d9Ahg1\nCP/7BgdlesgonENh4U/uIsKlBFWpbUczN4EGeL+o24FRre/93cDoY/JNQ8YD/sAx\nRc4PZ5OBAgMBAAECggEATZ3vh9VYBPsEGACDGWhHkZnvcVkjYWtXWS3p8rlI0B69\n09mXSvhqfAp3BfRgeJwX9/b3s5R9gKUNwik3Q8+ghZYs9bIVN7dPVQjTweoyrQ3Q\n/2YIic4tqRRozALB0I1chvlLRvz+QuTXOZDKzGP+iPr4HbxQBPrmMKWh7fPXFnWw\nMD6Hiab2Aq9ifEgGem2wfIZvnwFiwuMxKDlxzI7TdQFm8QdrZav0AQwk/+BQJDA1\n5AeziNDIWUXwu1ogSPOQ/iPXEa9TUpp5eqA4oaDB+9Kt5Wzeur3N+fUdl4Npgn1e\nkby6qMlsKUzYyMQn8Z6qduksXnLxdDTcJ4toNod9bQKBgQD7eShQFhMhrwn28CpP\njOkuCbro3Wb/Eh980P9iSgehTkFunJUOCdfxibkc8d6K+xWYg8LWsg26z7vAHdQC\nQQMfrzTaI2Ynkwl8w5cIeNlV27nW60qX7hjcnSfmIZLKwxkCp6ddaRMAQMie+pFg\nVAFxFlbVQ9PzhNXbFdzV55h9twKBgQDAzCd96bGeXYdYcH+RZ3Qo+O334CfxDBFj\ncZ1QFWC8OZetpcpcbibsi3qzFBij0W840bETJ5VMDVYYeptZdaE6yu8ulzKyfxR8\nPxNKWJh1JHy/ttDwaiROTJg8ekiw/0Eqo2D5hReLUiRrvK1c36PApWG1zrPFgRKR\nviuBLWz4hwKBgQDGhWIevx6BU+ag6/3q6QnYD1RfqxE5Qfxbk75YwKp/XADpqnE9\nMOYpxxi80fBmdUsaKMJyrQOLu5yzUJji4qHtrGoj3xgxG7G8rceYp5ajYh+2m+86\nO3ujBenOkiiJKzWeU+4bHu0iIQKABr0nd4nf1cvc9nvnXbFaEEtTDk7ixwKBgQCP\nzrgWX14xdioieadt2fD3Ltax8e1ZC1tdBb4FoiyJuZu91tBeqXs3LcLUGMVYTDvd\n8etXEkt2cuwpTiraS7d7lytZYUZbhhbNpm7JIdR2bETw63hmG4YBMXjMg5n9DCib\nmUoYVIH/VcH86ruVbutCIxoC9q95PpGPTH4+2JdTuQKBgQDEZseRj2hXk3vlQFmO\nvd+s8+w85RpHO3BFK4yHQT4uvWDdGGD88UGEvW1fFXktwl2FiOitJjI1fEn/W+3r\nqw0Vbt4QBpE+eocXmoeXtpaTz36b6csoH4aa1qXaoQhe5s1OI1MqXVy+WLgOlJoz\n45umscqbXmdE39ylPgyZvu+ouA==\n-----END PRIVATE KEY-----\n",
+  "client_email": "accsys@inlaid-agility-485614-t6.iam.gserviceaccount.com",
+  "client_id": "106280484623638458886",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/accsys%40inlaid-agility-485614-t6.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

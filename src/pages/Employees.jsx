@@ -1,11 +1,12 @@
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
 import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
-const MC = GROUP_COLORS.HR   // HR chapter (Ch08)
+const MC = GROUP_COLORS.Masters  // Masters chapter (Ch02)
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth'
 import { QRButton } from '../components/QRCard'
+import EntityDocs from '../components/EntityDocs'
 
 const POPPINS = "'Poppins','Inter',system-ui,sans-serif"
 const S = {
@@ -202,6 +203,7 @@ export default function Employees({ entityId, entityCode }) {
   const [showInactive, setShowInactive] = useState(false)
   const [expandedRow,  setExpandedRow]  = useState(null)
   const [viewEmp,      setViewEmp]      = useState(null)
+  const [viewEmpTab,   setViewEmpTab]   = useState('details')
   const [showPrint,    setShowPrint]    = useState(false)
   const [photoUploading, setPhotoUploading] = useState(false)
   const photoRef = useRef()
@@ -1005,9 +1007,9 @@ export default function Employees({ entityId, entityCode }) {
                   <span style={{ background:emp.is_active?'#e8f5e9':'#ffebee', color:emp.is_active?'#2e7d32':'#c62828', borderRadius:20, padding:'2px 10px', fontSize:10, fontWeight:800, whiteSpace:'nowrap' }}>
                     {emp.is_active?'● Active':'○ Off'}
                   </span>
-                  {emp.employee_category && (
+                  {emp.employee_category && emp.employee_category !== 'ACCSYS-LOCAL' && (
                     <span style={{ background:CAT_BG[emp.employee_category]||'#f3e5f5', color:CAT_COLORS[emp.employee_category]||'#6a1b9a', borderRadius:8, padding:'2px 7px', fontSize:9, fontWeight:800, whiteSpace:'nowrap' }}>
-                      {emp.employee_category} {CAT_LABELS[emp.employee_category]||''}
+                      {emp.employee_category}
                     </span>
                   )}
                 </div>
@@ -1056,7 +1058,7 @@ export default function Employees({ entityId, entityCode }) {
                     </div>
                   </div>
                   <div style={{ marginTop:12, display:'flex', gap:8, flexWrap:'wrap' }}>
-                    <button onClick={()=>setViewEmp(emp)} style={{ background:'#ede7f6', color:'#6a1b9a', border:'none', borderRadius:7, padding:'6px 14px', cursor:'pointer', fontSize:12, fontWeight:700 }}>👁 View</button>
+                    <button onClick={()=>{ setViewEmpTab('details'); setViewEmp(emp) }} style={{ background:'#ede7f6', color:'#6a1b9a', border:'none', borderRadius:7, padding:'6px 14px', cursor:'pointer', fontSize:12, fontWeight:700 }}>👁 View</button>
                     <button onClick={()=>openEdit(emp)} style={{ background:'#e3f2fd', color:'#0277bd', border:'none', borderRadius:7, padding:'6px 14px', cursor:'pointer', fontSize:12, fontWeight:700 }}>✏ Edit</button>
                     <button onClick={()=>toggleActive(emp)} style={{ background:emp.is_active?'#ffebee':'#e8f5e9', color:emp.is_active?'#c62828':'#2e7d32', border:'none', borderRadius:7, padding:'6px 12px', cursor:'pointer', fontSize:12, fontWeight:700 }}>
                       {emp.is_active?'⏸ Deactivate':'▶ Activate'}
@@ -1106,7 +1108,17 @@ export default function Employees({ entityId, entityCode }) {
               </div>
             </div>
 
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0 28px' }}>
+            {/* Tab bar */}
+            <div style={{ display:'flex', gap:4, marginBottom:16, borderBottom:'2px solid #f3e5f5' }}>
+              {[['details','📋 Details'],['docs','📎 Documents']].map(([k,l])=>(
+                <button key={k} onClick={()=>setViewEmpTab(k)} style={{ background:'none', border:'none', padding:'8px 16px', fontSize:12, fontWeight:700, cursor:'pointer', color:viewEmpTab===k?'#6a1b9a':'#9e9e9e', borderBottom:viewEmpTab===k?'3px solid #6a1b9a':'3px solid transparent', marginBottom:-2 }}>
+                  {l}
+                </button>
+              ))}
+            </div>
+
+            {/* Details tab */}
+            {viewEmpTab === 'details' && <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0 28px' }}>
               <div>
                 <div style={S.sec}>Personal</div>
                 <Field label="Nationality" value={viewEmp.nationality} />
@@ -1204,7 +1216,20 @@ export default function Employees({ entityId, entityCode }) {
                   </>
                 )}
               </div>
-            </div>
+            </div>}
+
+            {/* Documents tab */}
+            {viewEmpTab === 'docs' && (
+              <div style={{ padding:'4px 0' }}>
+                <EntityDocs
+                  entityId={entityId}
+                  linkedType="EMPLOYEE"
+                  linkedId={viewEmp.id}
+                  linkedName={viewEmp.full_name_en}
+                  accentColor="#6a1b9a"
+                />
+              </div>
+            )}
 
             {/* Footer actions */}
             <div style={{ display:'flex', gap:8, justifyContent:'flex-end', marginTop:16, paddingTop:14, borderTop:'1px solid #f3e5f5' }}>

@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Banner Step 0 — Updated Layout</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,900;1,400&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Poppins',sans-serif}
+body{font-family:'Poppins',sans-serif;background:#d0d5dd;padding:28px;display:flex;flex-direction:column;gap:28px}
+
+/* ══ BANNER SHELL ══ */
+.banner{
+  width:860px;
+  height:460px;
+  border-radius:20px;
+  overflow:hidden;
+  display:flex;
+  box-shadow:0 16px 48px rgba(0,0,0,0.22);
+  position:relative;
+}
+
+/* ══ LEFT PANEL ══ (unchanged from your existing banners) */
+.b-left{
+  flex:1;
+  background:#f0f2f4;
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:36px 44px;
+  text-align:center;
+  overflow:hidden;
+}
+/* dot grid watermark */
+.b-left::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background-image:radial-gradient(circle,rgba(0,0,0,0.07) 1.2px,transparent 1.2px);
+  background-size:20px 20px;
+  pointer-events:none;
+}
+/* corner triangle — top left */
+.b-corner{
+  position:absolute;
+  top:0;left:0;
+  width:90px;height:90px;
+  clip-path:polygon(0 0,100% 0,0 100%);
+  background:var(--mc);
+}
+/* company name top right */
+.b-company{
+  position:absolute;
+  top:14px;right:16px;
+  font-size:9px;
+  font-weight:700;
+  color:rgba(0,0,0,0.25);
+  letter-spacing:0.5px;
+  z-index:2;
+}
+
+/* left content */
+.b-module-name{
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  color:var(--mc);
+  margin-bottom:10px;
+  position:relative;
+  z-index:2;
+}
+.b-title{
+  font-size:40px;
+  font-weight:900;
+  color:#1a2e3d;
+  line-height:1.1;
+  text-transform:uppercase;
+  letter-spacing:-0.5px;
+  margin-bottom:20px;
+  position:relative;
+  z-index:2;
+}
+.b-title em{
+  color:var(--mc);
+  font-style:normal;
+}
+/* vertical left rule */
+.b-rule{
+  position:absolute;
+  left:28px;top:50%;transform:translateY(-50%);
+  width:3px;height:48px;
+  background:var(--mc);
+  border-radius:2px;
+  opacity:0.5;
+}
+
+/* step pills — solid fill */
+.b-pills{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  justify-content:center;
+  margin-bottom:22px;
+  position:relative;z-index:2;
+  font-family:'Poppins',sans-serif;
+}
+.b-pill{
+  padding:6px 14px;
+  border-radius:20px;
+  border:none;
+  font-size:10px;
+  font-weight:600;
+  font-family:'Poppins',sans-serif;
+  color:rgba(0,0,0,0.38);
+  background:rgba(0,0,0,0.07);
+  white-space:nowrap;
+  letter-spacing:0.2px;
+}
+.b-pill.active{
+  background:var(--mc);
+  color:#fff;
+  font-weight:700;
+  box-shadow:0 3px 10px rgba(0,0,0,0.18);
+}
+
+/* START button — centered, pill shape, two-part */
+.b-start{
+  display:inline-flex;
+  align-items:center;
+  background:#fff;
+  border-radius:50px;
+  box-shadow:0 4px 16px rgba(0,0,0,0.12);
+  overflow:hidden;
+  position:relative;z-index:2;
+}
+.b-start-circle{
+  width:46px;height:46px;
+  border-radius:50%;
+  background:var(--mc);
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;color:#fff;
+  flex-shrink:0;
+}
+.b-start-text{
+  padding:0 20px;
+  font-size:14px;
+  font-weight:800;
+  color:#1a2e3d;
+  letter-spacing:2px;
+}
+.b-start-arrow{
+  width:40px;height:40px;
+  margin:3px;
+  border-radius:50%;
+  background:var(--mc);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;color:#fff;
+  flex-shrink:0;
+}
+
+/* ══ RIGHT PANEL ══ (updated: icon larger + description below) */
+.b-right{
+  width:300px;
+  flex-shrink:0;
+  background:var(--mc);
+  position:relative;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:28px 24px;
+}
+/* big faded circle bg decoration */
+.b-right::before{
+  content:'';
+  position:absolute;
+  right:-50px;top:-50px;
+  width:240px;height:240px;
+  border-radius:50%;
+  background:rgba(255,255,255,0.07);
+}
+.b-right::after{
+  content:'';
+  position:absolute;
+  left:-60px;bottom:-60px;
+  width:200px;height:200px;
+  border-radius:50%;
+  background:rgba(255,255,255,0.05);
+}
+/* company name on right */
+.b-right-company{
+  position:absolute;
+  top:14px;right:14px;
+  font-size:9px;font-weight:700;
+  color:rgba(255,255,255,0.35);
+  letter-spacing:0.5px;
+  z-index:2;
+}
+/* icon wrapper */
+.b-icon-wrap{
+  position:relative;z-index:2;
+  display:flex;flex-direction:column;
+  align-items:center;
+  gap:14px;
+  text-align:center;
+}
+.b-icon{
+  font-size:90px;
+  line-height:1;
+  filter:drop-shadow(0 8px 24px rgba(0,0,0,0.3));
+}
+/* description — NOW ON RIGHT, under icon */
+.b-desc{
+  font-size:11px;
+  font-weight:500;
+  color:rgba(255,255,255,0.78);
+  line-height:1.7;
+  text-align:center;
+  max-width:230px;
+}
+/* thin divider between icon and desc */
+.b-divider{
+  width:40px;height:2px;
+  background:rgba(255,255,255,0.25);
+  border-radius:2px;
+}
+
+/* label strip at top of page */
+.pg-label{
+  font-size:10px;font-weight:900;
+  text-transform:uppercase;letter-spacing:1.5px;
+  color:#fff;
+  background:rgba(0,0,0,0.3);
+  padding:4px 12px;
+  border-radius:10px;
+  display:inline-block;
+  margin-bottom:8px;
+}
+</style>
+</head>
+<body>
+
+<!-- ══ 1. INCOMING PURCHASE ORDER ══ -->
+<div>
+<div class="pg-label">Finance · Incoming Purchase Order</div>
+<div class="banner" style="--mc:#00695c">
+  <div class="b-left" style="--mc:#00695c">
+    <div class="b-corner"></div>
+    <div class="b-company">Ratal Advanced Technologies</div>
+    <div class="b-rule"></div>
+    <div class="b-module-name">Accounts Receivable</div>
+    <div class="b-title">Incoming<br><em>Purchase</em><br>Order</div>
+    <div class="b-pills">
+      <div class="b-pill active">1. PO Details</div>
+      <div class="b-pill">2. Billing & Terms</div>
+      <div class="b-pill">3. Line Items</div>
+    </div>
+    <div class="b-start">
+      <div class="b-start-circle">↓</div>
+      <div class="b-start-text">START</div>
+      <div class="b-start-arrow">→</div>
+    </div>
+  </div>
+  <div class="b-right" style="--mc:#00695c">
+    <div class="b-right-company">Ratal Advanced Technologies</div>
+    <div class="b-icon-wrap">
+      <div class="b-icon">📋</div>
+      <div class="b-divider"></div>
+      <div class="b-desc">Register a PO received from a main contractor. Feeds directly into the Accounts Receivable pipeline and links to your project.</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ 2. OUTGOING PURCHASE ORDER ══ -->
+<div>
+<div class="pg-label">Finance · Outgoing Purchase Order</div>
+<div class="banner" style="--mc:#1a3a6b">
+  <div class="b-left" style="--mc:#1a3a6b">
+    <div class="b-corner"></div>
+    <div class="b-company">Ratal Advanced Technologies</div>
+    <div class="b-rule"></div>
+    <div class="b-module-name">Accounts Payable</div>
+    <div class="b-title">Outgoing<br><em>Purchase</em><br>Order</div>
+    <div class="b-pills">
+      <div class="b-pill active">1. Dept & Project</div>
+      <div class="b-pill">2. Supplier & Terms</div>
+      <div class="b-pill">3. Line Items</div>
+    </div>
+    <div class="b-start">
+      <div class="b-start-circle">↓</div>
+      <div class="b-start-text">START</div>
+      <div class="b-start-arrow">→</div>
+    </div>
+  </div>
+  <div class="b-right" style="--mc:#1a3a6b">
+    <div class="b-right-company">Ratal Advanced Technologies</div>
+    <div class="b-icon-wrap">
+      <div class="b-icon">📦</div>
+      <div class="b-divider"></div>
+      <div class="b-desc">Issue a PO to a supplier or sub-contractor. Authorises payment and feeds into the Accounts Payable pipeline.</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ 3. VACATION / LEAVE REQUEST ══ -->
+<div>
+<div class="pg-label">Human Resources · Vacation Request</div>
+<div class="banner" style="--mc:#b84600">
+  <div class="b-left" style="--mc:#b84600">
+    <div class="b-corner"></div>
+    <div class="b-company">Ratal Advanced Technologies</div>
+    <div class="b-rule"></div>
+    <div class="b-module-name">Human Resources</div>
+    <div class="b-title">Vacation<br><em>Leave</em><br>Request</div>
+    <div class="b-pills">
+      <div class="b-pill active">1. Leave Details</div>
+      <div class="b-pill">2. Travel Info</div>
+      <div class="b-pill">3. Confirm</div>
+    </div>
+    <div class="b-start">
+      <div class="b-start-circle">↓</div>
+      <div class="b-start-text">START</div>
+      <div class="b-start-arrow">→</div>
+    </div>
+  </div>
+  <div class="b-right" style="--mc:#b84600">
+    <div class="b-right-company">Ratal Advanced Technologies</div>
+    <div class="b-icon-wrap">
+      <div class="b-icon">🏖️</div>
+      <div class="b-divider"></div>
+      <div class="b-desc">Request your annual leave. Your balance is calculated automatically and your Department Head will be notified for approval.</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ 4. NEW EMPLOYEE ══ -->
+<div>
+<div class="pg-label">Human Resources · New Employee</div>
+<div class="banner" style="--mc:#c0392b">
+  <div class="b-left" style="--mc:#c0392b">
+    <div class="b-corner"></div>
+    <div class="b-company">Ratal Advanced Technologies</div>
+    <div class="b-rule"></div>
+    <div class="b-module-name">Human Resources</div>
+    <div class="b-title">New<br><em>Employee</em><br>Onboarding</div>
+    <div class="b-pills">
+      <div class="b-pill active">1. Personal</div>
+      <div class="b-pill">2. Employment</div>
+      <div class="b-pill">3. Salary</div>
+      <div class="b-pill">4. Documents</div>
+      <div class="b-pill">5. Activate</div>
+    </div>
+    <div class="b-start">
+      <div class="b-start-circle">↓</div>
+      <div class="b-start-text">START</div>
+      <div class="b-start-arrow">→</div>
+    </div>
+  </div>
+  <div class="b-right" style="--mc:#c0392b">
+    <div class="b-right-company">Ratal Advanced Technologies</div>
+    <div class="b-icon-wrap">
+      <div class="b-icon">👤</div>
+      <div class="b-divider"></div>
+      <div class="b-desc">Complete full employee onboarding in 5 steps. Personal details, salary, GOSI registration, and all legal documents in one place.</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ 5. NEW PROJECT ══ -->
+<div>
+<div class="pg-label">Operations · New Project</div>
+<div class="banner" style="--mc:#4a27c2">
+  <div class="b-left" style="--mc:#4a27c2">
+    <div class="b-corner"></div>
+    <div class="b-company">Ratal Advanced Technologies</div>
+    <div class="b-rule"></div>
+    <div class="b-module-name">Operations</div>
+    <div class="b-title">New<br><em>Project</em><br>Register</div>
+    <div class="b-pills">
+      <div class="b-pill active">1. Project Info</div>
+      <div class="b-pill">2. Scope & Budget</div>
+      <div class="b-pill">3. Team & Docs</div>
+    </div>
+    <div class="b-start">
+      <div class="b-start-circle">↓</div>
+      <div class="b-start-text">START</div>
+      <div class="b-start-arrow">→</div>
+    </div>
+  </div>
+  <div class="b-right" style="--mc:#4a27c2">
+    <div class="b-right-company">Ratal Advanced Technologies</div>
+    <div class="b-icon-wrap">
+      <div class="b-icon">🏗️</div>
+      <div class="b-divider"></div>
+      <div class="b-desc">Open a new project and link it to a contractor and PO. All invoices, expenses, and payroll will be tracked against this project code.</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ 6. REGISTER VEHICLE ══ -->
+<div>
+<div class="pg-label">Operations · Register Vehicle</div>
+<div class="banner" style="--mc:#2d6a8f">
+  <div class="b-left" style="--mc:#2d6a8f">
+    <div class="b-corner"></div>
+    <div class="b-company">Ratal Advanced Technologies</div>
+    <div class="b-rule"></div>
+    <div class="b-module-name">Fleet Management</div>
+    <div class="b-title">Register<br><em>Vehicle</em><br>to Fleet</div>
+    <div class="b-pills">
+      <div class="b-pill active">1. Vehicle Details</div>
+      <div class="b-pill">2. Documents</div>
+      <div class="b-pill">3. Assignment</div>
+    </div>
+    <div class="b-start">
+      <div class="b-start-circle">↓</div>
+      <div class="b-start-text">START</div>
+      <div class="b-start-arrow">→</div>
+    </div>
+  </div>
+  <div class="b-right" style="--mc:#2d6a8f">
+    <div class="b-right-company">Ratal Advanced Technologies</div>
+    <div class="b-icon-wrap">
+      <div class="b-icon">🚙</div>
+      <div class="b-divider"></div>
+      <div class="b-desc">Add an owned or rented vehicle to the fleet. Istimara, insurance, and inspection expiry dates are tracked with automatic alerts.</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ 7. MONEY REQUEST ══ -->
+<div>
+<div class="pg-label">Finance · Money Request</div>
+<div class="banner" style="--mc:#0a5277">
+  <div class="b-left" style="--mc:#0a5277">
+    <div class="b-corner"></div>
+    <div class="b-company">Ratal Advanced Technologies</div>
+    <div class="b-rule"></div>
+    <div class="b-module-name">Finance</div>
+    <div class="b-title">New<br><em>Money</em><br>Request</div>
+    <div class="b-pills">
+      <div class="b-pill active">1. Request Details</div>
+      <div class="b-pill">2. Attachments</div>
+    </div>
+    <div class="b-start">
+      <div class="b-start-circle">↓</div>
+      <div class="b-start-text">START</div>
+      <div class="b-start-arrow">→</div>
+    </div>
+  </div>
+  <div class="b-right" style="--mc:#0a5277">
+    <div class="b-right-company">Ratal Advanced Technologies</div>
+    <div class="b-icon-wrap">
+      <div class="b-icon">💰</div>
+      <div class="b-divider"></div>
+      <div class="b-desc">Request cash funds for field operations. Goes through DH → Accounts → Finance approval before funds are issued to you.</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ 8. NEW INVOICE ══ -->
+<div>
+<div class="pg-label">Finance · New Invoice</div>
+<div class="banner" style="--mc:#006a4e">
+  <div class="b-left" style="--mc:#006a4e">
+    <div class="b-corner"></div>
+    <div class="b-company">Ratal Advanced Technologies</div>
+    <div class="b-rule"></div>
+    <div class="b-module-name">Finance · Billing</div>
+    <div class="b-title">New<br><em>Invoice</em><br>to Client</div>
+    <div class="b-pills">
+      <div class="b-pill active">1. Header</div>
+      <div class="b-pill">2. Line Items</div>
+      <div class="b-pill">3. Tax & Totals</div>
+      <div class="b-pill">4. Attachments</div>
+    </div>
+    <div class="b-start">
+      <div class="b-start-circle">↓</div>
+      <div class="b-start-text">START</div>
+      <div class="b-start-arrow">→</div>
+    </div>
+  </div>
+  <div class="b-right" style="--mc:#006a4e">
+    <div class="b-right-company">Ratal Advanced Technologies</div>
+    <div class="b-icon-wrap">
+      <div class="b-icon">🧾</div>
+      <div class="b-divider"></div>
+      <div class="b-desc">Create an official VAT invoice linked to a project and PO. PDF is generated automatically and saved to Google Drive.</div>
+    </div>
+  </div>
+</div>
+</div>
+
+</body>
+</html>

@@ -3,214 +3,31 @@
  * Route: /forms/payment-validation
  * Auth:  useFieldAuth (any field role)
  *
- * Purpose:
- *  When the DH issues a cash advance via FormFieldPayment, the advance
- *  record is created with status = 'ISSUED'. This form lets the RECIPIENT
- *  employee confirm they physically received the money — by reviewing the
- *  amount, taking a photo of the signed voucher, and tapping Confirm.
- *
- * Flow:
- *  1. Load all ISSUED advances for this employee (pending confirmation)
- *  2. Show each one: amount, date, who issued it
- *  3. Employee taps confirm, takes a voucher photo, optionally adds notes
- *  4. Updates employee_advances: status → CONFIRMED, confirmed_at, receipt_photo_url
- *  5. Sends notification back to the DH who issued it
+ * Dark mobile-first design: black bg, yellow pending card, green confirm button.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { useFieldAuth, ROLE_COLORS }                 from '../lib/useFieldAuth'
-import { supabase }                                  from '../lib/supabase'
-import { uploadToDrive }                             from '../hooks/useDriveUpload'
+import { useState, useEffect, useCallback } from 'react'
+import { useFieldAuth }                      from '../lib/useFieldAuth'
+import { supabase }                          from '../lib/supabase'
 
-// ── Styles ────────────────────────────────────────────────────────────────────
-const S = {
-  wrap:    { minHeight:'100vh', background:'#f0f4f8', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'flex-start', padding:'20px 16px 40px' },
-  card:    { background:'#fff', borderRadius:20, padding:24, width:'100%', maxWidth:440, boxShadow:'0 4px 20px rgba(0,0,0,0.10)', marginBottom:16 },
-  h1:      { fontSize:20, fontWeight:800, color:'#1a2540', marginBottom:4 },
-  sub:     { fontSize:13, color:'#6b7c93', marginBottom:20 },
-  label:   { display:'block', fontSize:12, color:'#6b7c93', fontWeight:700, marginBottom:5 },
-  badge:   (color) => ({ background:color+'22', color, fontWeight:700, fontSize:11, padding:'3px 10px', borderRadius:20, display:'inline-block', marginBottom:14 }),
-  amount:  { fontSize:36, fontWeight:900, color:'#e65100', marginBottom:4, textAlign:'center' },
-  detail:  { fontSize:13, color:'#6b7c93', textAlign:'center', marginBottom:20 },
-  photoBox:{ border:'2px dashed #dde3ec', borderRadius:14, padding:24, textAlign:'center', cursor:'pointer', marginBottom:16 },
-  bigBtn:  (color) => ({ background:color||'linear-gradient(135deg,#2e7d32,#388e3c)', color:'#fff', border:'none', borderRadius:14, padding:'16px', fontSize:16, fontWeight:800, cursor:'pointer', width:'100%' }),
-  row:     { display:'flex', alignItems:'center', gap:12, padding:'14px 0', borderBottom:'1px solid #f0f4f8' },
-  pendingCard: { background:'#fff8f0', border:'2px solid #ffe0b2', borderRadius:16, padding:20, marginBottom:12 },
-  greenCard:   { background:'#f1f8e9', border:'2px solid #c5e1a5', borderRadius:16, padding:20, marginBottom:12 },
-}
-
-const fmt = (n) => Number(n||0).toLocaleString('en-SA', { minimumFractionDigits:2, maximumFractionDigits:2 })
+const fmt     = (n) => Number(n || 0).toLocaleString('en-SA', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-GB') : ''
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
 function AuthGuard({ error }) {
   const msgs = {
-    no_token:          { icon:'🔒', title:'Authentication Required', body:'Please scan your QR code to access this form.' },
-    invalid_token:     { icon:'❌', title:'Invalid QR Code',          body:'QR code not recognised. Contact your DH.' },
-    token_inactive:    { icon:'⛔', title:'QR Code Expired',          body:'Please ask your DH for a fresh QR code.' },
-    employee_inactive: { icon:'🚫', title:'Account Inactive',         body:'Contact HR to reactivate your account.' },
+    no_token:          { icon: '🔒', title: 'Authentication Required', body: 'Please scan your QR code.' },
+    invalid_token:     { icon: '❌', title: 'Invalid QR Code',          body: 'Contact your DH.' },
+    token_inactive:    { icon: '⛔', title: 'QR Code Expired',          body: 'Ask your DH for a fresh QR.' },
+    employee_inactive: { icon: '🚫', title: 'Account Inactive',         body: 'Contact HR.' },
   }
   const m = msgs[error] || msgs.no_token
   return (
-    <div style={S.wrap}>
-      <div style={{ ...S.card, textAlign:'center', padding:40 }}>
-        <div style={{ fontSize:56, marginBottom:16 }}>{m.icon}</div>
-        <div style={{ fontSize:20, fontWeight:800, color:'#c62828', marginBottom:8 }}>{m.title}</div>
-        <div style={{ fontSize:14, color:'#6b7c93' }}>{m.body}</div>
-      </div>
-    </div>
-  )
-}
-
-// ── Single advance confirmation card ─────────────────────────────────────────
-function AdvanceCard({ advance, employeeId, onConfirmed }) {
-  const [expanded,   setExpanded]   = useState(false)
-  const [photo,      setPhoto]      = useState(null)
-  const [photoFile,  setPhotoFile]  = useState(null)
-  const [notes,      setNotes]      = useState('')
-  const [confirming, setConfirming] = useState(false)
-  const fileRef = useRef()
-
-  const days = Math.floor((Date.now() - new Date(advance.advance_date)) / 86400000)
-
-  async function confirm() {
-    if (!photo) { alert('Please take a photo of the signed voucher first.'); return }
-    setConfirming(true)
-
-    try {
-      // 1. Upload voucher photo
-      let photoUrl = null
-      if (photoFile) {
-        const path = `payment-receipts/${advance.id}/${Date.now()}.jpg`
-        const result = await uploadToDrive(photoFile, 'vouchers')
-        if (result) photoUrl = result.viewUrl
-      }
-
-      // 2. Update advance status
-      const { error } = await supabase
-        .from('employee_advances')
-        .update({
-          status:            'CONFIRMED',
-          confirmed_at:      new Date().toISOString(),
-          confirmed_by:      employeeId,
-          receipt_photo_url: photoUrl,
-          recipient_notes:   notes || null,
-        })
-        .eq('id', advance.id)
-
-      if (error) throw error
-
-      // 3. Notify the issuer (fire and forget)
-      if (advance.issued_by) {
-        await supabase.from('notifications').insert({
-          entity_id:   advance.entity_id,
-          employee_id: advance.issued_by,
-          type:        'ADVANCE_RETURN',
-          title:       `Receipt Confirmed — SAR ${fmt(advance.amount)}`,
-          body:        `${advance.employee_name || 'Employee'} confirmed receipt of SAR ${fmt(advance.amount)} advance dated ${advance.advance_date}.`,
-          metadata:    { advance_id: advance.id, amount: advance.amount },
-        }).then(() => {})
-      }
-
-      onConfirmed(advance.id)
-    } catch (err) {
-      alert(err.message || 'Confirmation failed. Please try again.')
-    }
-    setConfirming(false)
-  }
-
-  return (
-    <div style={S.pendingCard}>
-      {/* Summary row — always visible */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', cursor:'pointer' }}
-        onClick={() => setExpanded(e => !e)}>
-        <div>
-          <div style={{ fontWeight:900, fontSize:22, color:'#e65100' }}>SAR {fmt(advance.amount)}</div>
-          <div style={{ fontSize:12, color:'#6b7c93', marginTop:2 }}>
-            {advance.advance_date}
-            {advance.issued_by_name && ` · from ${advance.issued_by_name}`}
-          </div>
-          {days > 0 && (
-            <div style={{ fontSize:11, color: days >= 30 ? '#c62828' : '#e65100', marginTop:2 }}>
-              {days} day{days > 1 ? 's' : ''} pending confirmation
-            </div>
-          )}
-        </div>
-        <div style={{ fontSize:24, color:'#e65100' }}>{expanded ? '▲' : '▼'}</div>
-      </div>
-
-      {/* Expanded: confirmation form */}
-      {expanded && (
-        <div style={{ marginTop:16 }}>
-          {advance.reference && (
-            <div style={{ fontSize:12, color:'#6b7c93', marginBottom:12 }}>
-              Ref: <strong>{advance.reference}</strong>
-            </div>
-          )}
-          {advance.notes && (
-            <div style={{ fontSize:12, color:'#6b7c93', background:'#fff8f0', borderRadius:8, padding:'8px 10px', marginBottom:12 }}>
-              Note from DH: {advance.notes}
-            </div>
-          )}
-
-          {/* Voucher photo */}
-          <label style={S.label}>Voucher / Receipt Photo * (mandatory)</label>
-          <div style={{ ...S.photoBox, borderColor: photo ? '#e65100' : '#dde3ec' }}
-            onClick={() => fileRef.current?.click()}>
-            {photo
-              ? <img src={photo} alt="voucher" style={{ maxHeight:160, maxWidth:'100%', borderRadius:8, objectFit:'cover' }} />
-              : <>
-                  <div style={{ fontSize:36, marginBottom:8 }}>📄</div>
-                  <div style={{ fontSize:14, color:'#6b7c93' }}>Photograph the signed voucher</div>
-                  <div style={{ fontSize:11, color:'#bbb', marginTop:4 }}>Required to confirm receipt</div>
-                </>
-            }
-          </div>
-          <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display:'none' }}
-            onChange={e => {
-              const f = e.target.files?.[0]
-              if (f) { setPhotoFile(f); setPhoto(URL.createObjectURL(f)) }
-            }} />
-          {photo && (
-            <div style={{ fontSize:12, color:'#e65100', cursor:'pointer', textAlign:'right', marginBottom:10 }}
-              onClick={() => { setPhoto(null); setPhotoFile(null) }}>
-              ✕ Remove
-            </div>
-          )}
-
-          {/* Notes */}
-          <label style={S.label}>Notes (optional)</label>
-          <textarea rows={2}
-            style={{ width:'100%', padding:'10px', borderRadius:10, border:'1.5px solid #dde3ec', fontSize:14, outline:'none', resize:'none', fontFamily:'inherit', boxSizing:'border-box', marginBottom:14 }}
-            placeholder="Any comments about this payment…"
-            value={notes} onChange={e => setNotes(e.target.value)} />
-
-          {/* Confirm button */}
-          <button
-            style={{ ...S.bigBtn(), opacity: confirming ? 0.7 : 1 }}
-            disabled={confirming}
-            onClick={confirm}>
-            {confirming ? 'Confirming…' : `✓ Confirm Receipt of SAR ${fmt(advance.amount)}`}
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Confirmed advance card (read-only) ────────────────────────────────────────
-function ConfirmedCard({ advance }) {
-  return (
-    <div style={S.greenCard}>
-      <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-        <div style={{ fontSize:28 }}>✅</div>
-        <div>
-          <div style={{ fontWeight:800, fontSize:15, color:'#2e7d32' }}>SAR {fmt(advance.amount)} — Confirmed</div>
-          <div style={{ fontSize:12, color:'#6b7c93' }}>
-            {advance.advance_date}
-            {advance.issued_by_name ? ` · from ${advance.issued_by_name}` : ''}
-            {advance.confirmed_at ? ` · confirmed ${new Date(advance.confirmed_at).toLocaleDateString('en-GB')}` : ''}
-          </div>
-        </div>
+    <div style={{ minHeight:'100vh', background:'#111', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
+      <div style={{ background:'#1e1e1e', borderRadius:20, padding:40, maxWidth:340, width:'100%', textAlign:'center' }}>
+        <div style={{ fontSize:52, marginBottom:14 }}>{m.icon}</div>
+        <div style={{ fontSize:18, fontWeight:800, color:'#ef5350', marginBottom:8 }}>{m.title}</div>
+        <div style={{ fontSize:13, color:'#888' }}>{m.body}</div>
       </div>
     </div>
   )
@@ -220,129 +37,321 @@ function ConfirmedCard({ advance }) {
 export default function FormPaymentValidation() {
   const auth = useFieldAuth()
 
-  const [pending,    setPending]    = useState([])
-  const [confirmed,  setConfirmed]  = useState([])
-  const [loading,    setLoading]    = useState(true)
-  const [justDone,   setJustDone]   = useState([])  // IDs confirmed this session
+  const [pending,   setPending]   = useState([])
+  const [confirmed, setConfirmed] = useState([])
+  const [loading,   setLoading]   = useState(true)
+  const [checked,   setChecked]   = useState({})
+  const [saving,    setSaving]    = useState(false)
+
+  const isPreview = new URLSearchParams(window.location.search).get('preview') === '1'
+    || new URLSearchParams(window.location.search).get('dev') === '1'
+
+  const MOCK_PENDING = [
+    { id:'p1', payment_date:'2026-10-10', total_amount:1000, payment_method:'Cash', notes:null,                  ack_status:'PENDING', submitter_name:'Accounts', project:{ project_name:'CISU-HQ' } },
+    { id:'p2', payment_date:'2026-10-10', total_amount:1000, payment_method:'Cash', notes:null,                  ack_status:'PENDING', submitter_name:'Accounts', project:{ project_name:'NISU-Site A' } },
+    { id:'p3', payment_date:'2026-10-10', total_amount:1000, payment_method:'Cash', notes:'October allowance',   ack_status:'PENDING', submitter_name:'Accounts', project:null },
+    { id:'p4', payment_date:'2026-10-10', total_amount:1000, payment_method:'Cash', notes:null,                  ack_status:'PENDING', submitter_name:'Accounts', project:{ project_name:'TISU-Tower' } },
+    { id:'p5', payment_date:'2026-10-10', total_amount:1000, payment_method:'Cash', notes:null,                  ack_status:'PENDING', submitter_name:'Accounts', project:null },
+    { id:'p6', payment_date:'2026-10-10', total_amount:1000, payment_method:'Cash', notes:null,                  ack_status:'PENDING', submitter_name:'Accounts', project:null },
+  ]
 
   const load = useCallback(async () => {
     if (!auth.employee?.id) return
     setLoading(true)
 
-    const { data } = await supabase
-      .from('employee_advances')
-      .select(`
-        id, entity_id, advance_date, amount, txn_type, status,
-        reference, notes, issued_by, confirmed_at, receipt_photo_url,
-        issuer:issued_by ( full_name_en, full_name_ar, designation )
-      `)
-      .eq('employee_id', auth.employee.id)
-      .eq('txn_type', 'ADVANCE_IN')
-      .order('advance_date', { ascending: false })
-      .limit(30)
+    if (isPreview) {
+      setPending(MOCK_PENDING)
+      setConfirmed([])
+      const c = {}; for (const p of MOCK_PENDING) c[p.id] = false
+      setChecked(c)
+      setLoading(false)
+      return
+    }
 
-    const rows = data || []
-    setPending(rows.filter(r => r.status === 'ISSUED'))
-    setConfirmed(rows.filter(r => r.status === 'CONFIRMED'))
+    const empId = auth.employee.id
+    const { data: rows, error } = await supabase
+      .from('field_payments')
+      .select('id, payment_date, total_amount, payment_method, notes, ack_status, ack_at, submitted_by, project:project_id(project_name)')
+      .eq('employee_id', empId)
+      .order('payment_date', { ascending: false })
+      .limit(50)
+
+    if (error) { console.error(error); setLoading(false); return }
+
+    const submitterIds = [...new Set((rows || []).map(r => r.submitted_by).filter(Boolean))]
+    let nameMap = {}
+    if (submitterIds.length) {
+      const { data: emps } = await supabase.from('employees').select('id, full_name_en').in('id', submitterIds)
+      for (const e of emps || []) nameMap[e.id] = e.full_name_en
+    }
+
+    const enriched = (rows || []).map(r => ({ ...r, submitter_name: nameMap[r.submitted_by] || 'Accounts' }))
+    const pend = enriched.filter(r => r.ack_status === 'PENDING' || !r.ack_status)
+    const conf = enriched.filter(r => r.ack_status === 'CONFIRMED')
+
+    setPending(pend)
+    setConfirmed(conf)
+    const c = {}; for (const p of pend) c[p.id] = false
+    setChecked(c)
     setLoading(false)
   }, [auth.employee?.id])
 
   useEffect(() => { if (!auth.loading) load() }, [auth.loading, load])
 
-  function handleConfirmed(id) {
-    setJustDone(prev => [...prev, id])
-    setPending(prev => prev.filter(r => r.id !== id))
-    load()  // reload to move into confirmed list
+  function toggle(id) { setChecked(p => ({ ...p, [id]: !p[id] })) }
+  function toggleAll() {
+    const anyOff = pending.some(p => !checked[p.id])
+    const c = {}; for (const p of pending) c[p.id] = anyOff
+    setChecked(c)
   }
 
-  // ── Loading ──────────────────────────────────────────────
-  if (auth.loading) {
-    return (
-      <div style={S.wrap}>
-        <div style={{ ...S.card, textAlign:'center', padding:40 }}>
-          <div style={{ fontSize:36, marginBottom:16 }}>⏳</div>
-          <div style={{ color:'#6b7c93' }}>Verifying…</div>
-        </div>
-      </div>
-    )
+  async function handleConfirm() {
+    const toConfirm = pending.filter(p => checked[p.id])
+    if (!toConfirm.length) { alert('Select at least one payment to confirm.'); return }
+    if (isPreview) { alert(`Preview: would confirm ${toConfirm.length} payment(s).`); return }
+    setSaving(true)
+    try {
+      const { error } = await supabase
+        .from('field_payments')
+        .update({ ack_status:'CONFIRMED', ack_at: new Date().toISOString(), ack_by: auth.employee.id })
+        .in('id', toConfirm.map(p => p.id))
+      if (error) throw error
+      await load()
+    } catch (err) { alert(err.message || 'Failed. Try again.') }
+    setSaving(false)
   }
 
+  // ── Loading ──────────────────────────────────────────────────────────────
+  if (auth.loading) return (
+    <div style={{ minHeight:'100vh', background:'#111', display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ color:'#aaa', fontSize:14 }}>⏳ Verifying…</div>
+    </div>
+  )
   if (auth.error) return <AuthGuard error={auth.error} />
 
-  const roleColor = ROLE_COLORS[auth.role] || '#37474f'
+  const checkedCount = pending.filter(p => checked[p.id]).length
+  const allChecked   = pending.length > 0 && pending.every(p => checked[p.id])
 
+  // ── Full-screen sticky layout: header pinned top, list scrolls, button pinned bottom ──
   return (
-    <div style={S.wrap}>
+    <div style={{
+      position:      'fixed',
+      inset:         0,
+      background:    '#111',
+      display:       'flex',
+      flexDirection: 'column',
+      fontFamily:    '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      maxWidth:      480,
+      margin:        '0 auto',
+    }}>
 
-      {/* Header card */}
-      <div style={S.card}>
-        <div style={S.badge(roleColor)}>{auth.employee?.designation || auth.role}</div>
-        <div style={S.h1}>💳 Payment Confirmation</div>
-        <div style={S.sub}>
-          Review advances issued to you and confirm physical receipt by photographing the signed voucher.
+      {/* ── PINNED TOP: Header ─────────────────────────────────────────── */}
+      <div style={{
+        flexShrink:   0,
+        background:   '#1a1a1a',
+        padding:      '36px 20px 16px',
+        textAlign:    'center',
+        borderBottom: '1px solid #2a2a2a',
+      }}>
+        <div style={{ fontSize:20, fontWeight:900, color:'#fff', letterSpacing:0.3 }}>
+          Payment Confirmation
         </div>
+        <div style={{ fontSize:12, color:'#888', marginTop:4 }}>
+          Review Your Receipts &amp; Confirm
+        </div>
+      </div>
 
-        {/* Summary row */}
-        {!loading && (
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-            <div style={{ background:'#fff3e0', borderRadius:12, padding:'12px 14px', textAlign:'center' }}>
-              <div style={{ fontSize:22, fontWeight:900, color:'#e65100' }}>{pending.length}</div>
-              <div style={{ fontSize:11, color:'#6b7c93', fontWeight:600 }}>Pending Confirmation</div>
-            </div>
-            <div style={{ background:'#f1f8e9', borderRadius:12, padding:'12px 14px', textAlign:'center' }}>
-              <div style={{ fontSize:22, fontWeight:900, color:'#2e7d32' }}>{confirmed.length}</div>
-              <div style={{ fontSize:11, color:'#6b7c93', fontWeight:600 }}>Confirmed</div>
+      {/* ── PINNED TOP: Stats bar ──────────────────────────────────────── */}
+      {!loading && (
+        <div style={{
+          flexShrink: 0,
+          display:    'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap:        12,
+          padding:    '14px 16px',
+          background: '#111',
+        }}>
+          <div style={{
+            background:   '#4caf50',
+            borderRadius: 14,
+            padding:      '14px 10px',
+            textAlign:    'center',
+            boxShadow:    '0 4px 14px rgba(76,175,80,0.3)',
+          }}>
+            <div style={{ fontSize:38, fontWeight:900, color:'#c62828', lineHeight:1 }}>{pending.length}</div>
+            <div style={{ fontSize:13, color:'#fff', fontWeight:700, marginTop:5 }}>Pending</div>
+          </div>
+          <div style={{
+            background:   '#bbdefb',
+            borderRadius: 14,
+            padding:      '14px 10px',
+            textAlign:    'center',
+            boxShadow:    '0 4px 14px rgba(33,150,243,0.15)',
+          }}>
+            <div style={{ fontSize:38, fontWeight:900, color:'#1565c0', lineHeight:1 }}>{confirmed.length}</div>
+            <div style={{ fontSize:13, color:'#1565c0', fontWeight:700, marginTop:5 }}>Confirmed</div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SCROLLABLE MIDDLE ──────────────────────────────────────────── */}
+      <div style={{
+        flex:       1,
+        overflowY:  'auto',
+        padding:    '0 16px 12px',
+        WebkitOverflowScrolling: 'touch',
+      }}>
+
+        {/* Loading */}
+        {loading && (
+          <div style={{ textAlign:'center', padding:48, color:'#666' }}>Loading payments…</div>
+        )}
+
+        {/* All clear */}
+        {!loading && pending.length === 0 && (
+          <div style={{ background:'#1e1e1e', borderRadius:20, padding:'40px 24px', textAlign:'center', marginTop:8 }}>
+            <div style={{ fontSize:52, marginBottom:12 }}>🎉</div>
+            <div style={{ fontSize:17, fontWeight:800, color:'#4caf50', marginBottom:6 }}>All clear!</div>
+            <div style={{ fontSize:13, color:'#666' }}>
+              {confirmed.length > 0
+                ? `All ${confirmed.length} payment${confirmed.length > 1 ? 's' : ''} confirmed.`
+                : 'No payments sent to you yet.'}
             </div>
           </div>
         )}
+
+        {/* Pending list */}
+        {!loading && pending.length > 0 && (
+          <>
+            {/* Select-all row */}
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, paddingLeft:2 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:'#ffa726' }}>⚡ {pending.length} Pending</div>
+              <button onClick={toggleAll} style={{
+                background:'none', border:'none', fontSize:12,
+                color:'#90caf9', fontWeight:700, cursor:'pointer', padding:'4px 0',
+              }}>
+                {allChecked ? 'Deselect All' : 'Select All'}
+              </button>
+            </div>
+
+            {/* Yellow scrollable card */}
+            <div style={{
+              background:   '#ffc107',
+              borderRadius: 22,
+              padding:      '14px 12px 16px',
+              boxShadow:    '0 6px 24px rgba(255,193,7,0.35)',
+            }}>
+              {pending.map((item, idx) => (
+                <div
+                  key={item.id}
+                  onClick={() => toggle(item.id)}
+                  style={{
+                    display:      'flex',
+                    alignItems:   'center',
+                    gap:          10,
+                    background:   '#fff',
+                    borderRadius: 12,
+                    padding:      '11px 12px',
+                    marginBottom: idx < pending.length - 1 ? 8 : 0,
+                    cursor:       'pointer',
+                    boxShadow:    checked[item.id] ? '0 0 0 2.5px #4caf50' : '0 1px 3px rgba(0,0,0,0.10)',
+                    transition:   'box-shadow 0.15s',
+                  }}>
+
+                  {/* Checkbox */}
+                  <div style={{
+                    width:46, height:46, borderRadius:8,
+                    border:     `2px solid ${checked[item.id] ? '#4caf50' : '#ddd'}`,
+                    background: checked[item.id] ? '#4caf50' : '#fff',
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    flexShrink:0, transition:'all 0.15s',
+                  }}>
+                    {checked[item.id]
+                      ? <svg width="20" height="16" viewBox="0 0 13 10" fill="none">
+                          <path d="M1 5L4.5 8.5L12 1" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      : <div style={{ width:18, height:18, borderRadius:4, border:'2px solid #ccc', background:'#f8f8f8' }}/>
+                    }
+                  </div>
+
+                  {/* Text */}
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:'#1a2540', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                      Payment by {item.submitter_name}
+                    </div>
+                    <div style={{ fontSize:11, color:'#777', marginTop:2 }}>
+                      Date {fmtDate(item.payment_date)}
+                      {item.project?.project_name ? ` · ${item.project.project_name}` : ''}
+                    </div>
+                  </div>
+
+                  {/* Amount */}
+                  <div style={{ fontSize:13, fontWeight:900, color:'#e65100', flexShrink:0 }}>
+                    SAR {fmt(item.total_amount)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Confirmed history */}
+        {!loading && confirmed.length > 0 && (
+          <div style={{ marginTop:16 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:'#4caf50', marginBottom:8, paddingLeft:2 }}>✓ Confirmed</div>
+            <div style={{ background:'#1e1e1e', borderRadius:16, overflow:'hidden' }}>
+              {confirmed.map((item, idx) => (
+                <div key={item.id} style={{
+                  display:'flex', alignItems:'center', gap:12,
+                  padding:'12px 16px',
+                  borderBottom: idx < confirmed.length - 1 ? '1px solid #2a2a2a' : 'none',
+                }}>
+                  <div style={{ fontSize:18 }}>✅</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:'#4caf50' }}>SAR {fmt(item.total_amount)} — Confirmed</div>
+                    <div style={{ fontSize:11, color:'#666', marginTop:2 }}>
+                      {fmtDate(item.payment_date)}{item.ack_at ? ` · ${fmtDate(item.ack_at)}` : ''}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
       </div>
+      {/* ── END SCROLLABLE ─────────────────────────────────────────────── */}
 
-      {/* Loading state */}
-      {loading && (
-        <div style={{ ...S.card, textAlign:'center', padding:32 }}>
-          <div style={{ color:'#6b7c93' }}>Loading your advances…</div>
-        </div>
-      )}
-
-      {/* Pending confirmation */}
+      {/* ── PINNED BOTTOM: Confirm button ─────────────────────────────── */}
       {!loading && pending.length > 0 && (
-        <div style={{ width:'100%', maxWidth:440 }}>
-          <div style={{ fontSize:13, fontWeight:800, color:'#e65100', marginBottom:10, paddingLeft:4 }}>
-            ⚡ {pending.length} Advance{pending.length > 1 ? 's' : ''} Pending Confirmation
-          </div>
-          {pending.map(adv => (
-            <AdvanceCard
-              key={adv.id}
-              advance={{ ...adv, issued_by_name: adv.issuer?.full_name_en, employee_name: auth.employee?.full_name_en }}
-              employeeId={auth.employee.id}
-              onConfirmed={handleConfirmed}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* All clear */}
-      {!loading && pending.length === 0 && (
-        <div style={{ ...S.card, textAlign:'center', padding:36 }}>
-          <div style={{ fontSize:48, marginBottom:12 }}>🎉</div>
-          <div style={{ fontWeight:800, fontSize:16, color:'#2e7d32', marginBottom:6 }}>All clear!</div>
-          <div style={{ fontSize:13, color:'#6b7c93' }}>
-            {confirmed.length > 0
-              ? `You have confirmed all ${confirmed.length} advance${confirmed.length > 1 ? 's' : ''}. Nothing pending.`
-              : 'No advances have been issued to you yet.'}
-          </div>
-        </div>
-      )}
-
-      {/* Confirmed history */}
-      {!loading && confirmed.length > 0 && (
-        <div style={{ width:'100%', maxWidth:440 }}>
-          <div style={{ fontSize:13, fontWeight:800, color:'#2e7d32', marginBottom:10, paddingLeft:4 }}>
-            ✓ Confirmed History
-          </div>
-          {confirmed.map(adv => (
-            <ConfirmedCard key={adv.id} advance={{ ...adv, issued_by_name: adv.issuer?.full_name_en }} />
-          ))}
+        <div style={{
+          flexShrink:  0,
+          padding:     '12px 16px 28px',
+          background:  '#111',
+          borderTop:   '1px solid #1e1e1e',
+        }}>
+          <button
+            onClick={handleConfirm}
+            disabled={saving || checkedCount === 0}
+            style={{
+              display:      'block',
+              width:        '100%',
+              background:   checkedCount === 0
+                ? '#2a2a2a'
+                : 'linear-gradient(135deg, #2e7d32, #43a047)',
+              color:        checkedCount === 0 ? '#555' : '#fff',
+              border:       'none',
+              borderRadius: 16,
+              padding:      '17px',
+              fontSize:     16,
+              fontWeight:   900,
+              cursor:       checkedCount === 0 ? 'default' : 'pointer',
+              boxShadow:    checkedCount > 0 ? '0 4px 20px rgba(46,125,50,0.5)' : 'none',
+              letterSpacing:0.4,
+              transition:   'all 0.2s',
+            }}>
+            {saving ? 'Confirming…' : checkedCount === 0 ? 'Select payments to confirm' : '✓  confirm'}
+          </button>
         </div>
       )}
 

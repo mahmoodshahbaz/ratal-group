@@ -31,8 +31,8 @@ function TimePicker({ value, onChange, label, dark }) {
     appearance:'none', WebkitAppearance:'none', MozAppearance:'none',
     cursor:'pointer', fontFamily:'inherit',
   }
-  function setH(newH) { onChange(newH && m ? `${newH}:${m||'00'}` : '') }
-  function setM(newM) { onChange(h && newM ? `${h}:${newM}` : '') }
+  function setH(newH) { onChange(newH ? `${newH}:${m||'00'}` : '') }
+  function setM(newM) { onChange(h ? `${h}:${newM||'00'}` : '') }
   return (
     <div>
       <div style={{ fontSize:10, color: dark?'#7c3a00':'#7c3a00', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:6 }}>{label}</div>
@@ -246,7 +246,7 @@ export default function FormOvertime() {
     const d = deptMap[e.department_id] || {}
     const code = d.dept_code || d.dept_name || ''
     setEmpName(e.full_name_en || ''); setEmpNum(e.employee_number || '')
-    setDept(d.dept_name || code);     setEmpDeptCode(code)
+    setDept(d.dept_code || d.dept_name || '');  setEmpDeptCode(code)
     setEmpDeptId(e.department_id || ''); setContact(e.phone || '')
     setEmpEntityId(e.entity_id || '')
     setProjectId(''); setProjNum(''); setProjName('')

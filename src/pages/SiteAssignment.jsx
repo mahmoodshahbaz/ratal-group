@@ -80,6 +80,43 @@ export default function SiteAssignment({ entityId }) {
   const [periodType,   setPeriodType]   = useState('DAILY')
   const [activeTab,    setActiveTab]    = useState('EMPLOYEE')
 
+  // ── Site Allowances (FA / OT / Others) ───────────────────────
+  const [allowFA,     setAllowFA]     = useState(false)
+  const [allowOT,     setAllowOT]     = useState(false)
+  const [allowOthers, setAllowOthers] = useState(false)
+  // Which toggles are visible for the selected dept
+  const [showTogFA,     setShowTogFA]     = useState(true)
+  const [showTogOT,     setShowTogOT]     = useState(true)
+  const [showTogOthers, setShowTogOthers] = useState(true)
+  // Global remote toggle — sets all roster rows at once
+  const [allRemote, setAllRemote] = useState(true)
+
+  // Dept-code defaults matrix
+  // fa/ot/others = default value  |  showFA/showOT/showOthers = whether the toggle is shown at all
+  const DEPT_DEFAULTS = {
+    NISU: { fa:true,  ot:true,  others:true,  showFA:true,  showOT:true,  showOthers:true  },
+    CISU: { fa:true,  ot:true,  others:true,  showFA:true,  showOT:true,  showOthers:true  },
+    TISU: { fa:false, ot:false, others:true,  showFA:false, showOT:false, showOthers:true  },
+    ITSU: { fa:true,  ot:false, others:true,  showFA:true,  showOT:false, showOthers:true  },
+  }
+  function applyDeptDefaults(deptId) {
+    const dept = depts.find(d => d.id === deptId)
+    const code = (dept?.dept_code || '').toUpperCase()
+    const match = Object.entries(DEPT_DEFAULTS).find(([k]) => code.startsWith(k))
+    const def = match ? match[1] : { fa:false, ot:false, others:false, showFA:true, showOT:true, showOthers:true }
+    setAllowFA(def.fa);     setShowTogFA(def.showFA)
+    setAllowOT(def.ot);     setShowTogOT(def.showOT)
+    setAllowOthers(def.others); setShowTogOthers(def.showOthers)
+    // Cascade defaults to all existing roster rows
+    setEmpRows(rows => rows.map(r => ({ ...r, fa: def.fa, ot: def.ot, others: def.others })))
+    setSubconRows(rows => rows.map(r => ({ ...r, fa: def.fa, ot: def.ot, others: def.others })))
+  }
+
+  // Global bar cascade helpers — set all rows + update display state
+  function setAllFA(val)     { setAllowFA(val);     setEmpRows(rows => rows.map(r => ({ ...r, fa:     val }))) }
+  function setAllOT(val)     { setAllowOT(val);     setEmpRows(rows => rows.map(r => ({ ...r, ot:     val }))) }
+  function setAllOthers(val) { setAllowOthers(val); setEmpRows(rows => rows.map(r => ({ ...r, others: val }))) }
+
   // ── Master data ───────────────────────────────────────────────
   const [depts,     setDepts]     = useState([])
   const [projects,  setProjects]  = useState([])
@@ -148,7 +185,7 @@ export default function SiteAssignment({ entityId }) {
   const loadAssignments = useCallback(async () => {
     if (!entityId) return
     const { data } = await supabase.from('site_assignments')
-      .select('id,employee_id,subcon_id,site_master_id,project_id,department_id,assignment_date,is_remote,status,notes')
+      .select('id,employee_id,subcon_id,site_master_id,project_id,department_id,assignment_date,is_remote,status,notes,allow_fa,allow_ot,allow_others')
       .eq('entity_id', entityId)
       .eq('status', 'ACTIVE')
     const relevant = (data || []).filter(a => a.assignment_date === dateRange.start)
@@ -257,6 +294,12 @@ export default function SiteAssignment({ entityId }) {
 
   // ── Build employee roster rows ────────────────────────────────
   useEffect(() => {
+    // Resolve dept defaults for per-row FA/OT/Others initialization
+    const dept    = depts.find(d => d.id === selectedDept)
+    const code    = (dept?.dept_code || '').toUpperCase()
+    const match   = Object.entries(DEPT_DEFAULTS).find(([k]) => code.startsWith(k))
+    const def     = match ? match[1] : { fa:false, ot:false, others:false }
+
     setEmpRows(filteredEmployees.map(emp => {
       const existing = existingAssignments.find(a => a.employee_id === emp.id)
       return {
@@ -267,9 +310,13 @@ export default function SiteAssignment({ entityId }) {
         isRemote:   existing ? existing.is_remote : true,
         notes:      existing?.notes || '',
         existingId: existing?.id || null,
+        // Per-row allowances — restore from DB if assigned, else use dept defaults
+        fa:         existing ? (existing.allow_fa     ?? def.fa)     : def.fa,
+        ot:         existing ? (existing.allow_ot     ?? def.ot)     : def.ot,
+        others:     existing ? (existing.allow_others ?? def.others) : def.others,
       }
     }))
-  }, [filteredEmployees, existingAssignments])
+  }, [filteredEmployees, existingAssignments, selectedDept, depts])
 
   // ── Build sub-con roster rows ─────────────────────────────────
   useEffect(() => {
@@ -329,6 +376,9 @@ export default function SiteAssignment({ entityId }) {
         is_remote:       r.isRemote,
         status:          'ACTIVE',
         notes:           r.notes || null,
+        allow_fa:        r.fa     ?? false,
+        allow_ot:        r.ot     ?? false,
+        allow_others:    r.others ?? false,
       }))
 
       const { error } = await supabase.from('site_assignments').insert(records)
@@ -355,6 +405,15 @@ export default function SiteAssignment({ entityId }) {
     await loadAssignments()
   }
 
+  // ── Global remote toggle — applies to all rows ────────────────
+  function toggleAllRemote(val) {
+    setAllRemote(val)
+    if (activeTab === 'EMPLOYEE')
+      setEmpRows(rows => rows.map(r => ({ ...r, isRemote: val })))
+    else
+      setSubconRows(rows => rows.map(r => ({ ...r, isRemote: val })))
+  }
+
   // ── Select-all free (unchecked) ───────────────────────────────
   function toggleSelectAll(checked) {
     if (activeTab === 'EMPLOYEE')
@@ -379,11 +438,31 @@ export default function SiteAssignment({ entityId }) {
 
   // ── Header labels ─────────────────────────────────────────────
   const HEADERS = activeTab === 'EMPLOYEE'
-    ? ['', 'Employee', 'Status', 'Project', 'Site', 'Type', '']
+    ? ['', 'Employee  ·  FA / OT / Oth', 'Status', 'Project', 'Site', 'Type', '']
     : ['', 'Sub-Contractor', 'PO Status', 'Project', 'Site', 'Type', '']
 
   return (
     <div>
+
+      {/* ── Masters chapter header strip ── */}
+      <div style={{
+        background: `linear-gradient(135deg, ${L1}, #d9c9a8)`,
+        borderLeft: `4px solid ${PRI}`,
+        padding: '12px 20px',
+        marginBottom: 4,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+      }}>
+        <span style={{ fontSize: 22 }}>📋</span>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: PRI, textTransform: 'uppercase', letterSpacing: 1 }}>Masters · Ch02</div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: '#3a2208' }}>Site Assignment</div>
+        </div>
+        <div style={{ marginLeft: 'auto', fontSize: 11, color: '#6b5c3e' }}>
+          Assign employees & sub-contractors to projects and sites
+        </div>
+      </div>
 
       {/* ══ STICKY CONTEXT BAR ══════════════════════════════════ */}
       <div style={{ position: 'sticky', top: 0, zIndex: 20, background: '#f4f7fb', boxShadow: '0 2px 6px rgba(0,0,0,0.06)' }}>
@@ -394,7 +473,7 @@ export default function SiteAssignment({ entityId }) {
           {/* Department */}
           <div style={{ minWidth: 210 }}>
             <div style={S.label}>Department</div>
-            <select style={S.inp} value={selectedDept} onChange={e => setSelectedDept(e.target.value)}>
+            <select style={S.inp} value={selectedDept} onChange={e => { setSelectedDept(e.target.value); applyDeptDefaults(e.target.value) }}>
               <option value="">All Departments</option>
               {depts.map(d => (
                 <option key={d.id} value={d.id}>{d.dept_code || d.dept_name}</option>
@@ -478,8 +557,33 @@ export default function SiteAssignment({ entityId }) {
           )}
         </div>
 
+        {/* Allowances bar — sticky, dept-aware, sets all rows at once */}
+        {activeTab !== 'HISTORY' && selectedDept && (
+          <div style={{ display:'flex', alignItems:'center', gap:14, padding:'6px 14px', borderTop:'1px solid #ede8dc', background: L2 }}>
+            <span style={{ fontSize:10, fontWeight:800, color: PRI, textTransform:'uppercase', letterSpacing:0.8 }}>Set All:</span>
+            {[
+              { key:'fa',  label:'FA',  on:allowFA,     set:setAllFA,     show:showTogFA     },
+              { key:'ot',  label:'OT',  on:allowOT,     set:setAllOT,     show:showTogOT     },
+              { key:'oth', label:'Oth', on:allowOthers, set:setAllOthers, show:showTogOthers },
+            ].filter(t => t.show).map(({ key, label, on, set }) => (
+              <label key={key} style={{ display:'flex', alignItems:'center', gap:5, cursor:'pointer', userSelect:'none' }}>
+                <input type="checkbox" checked={on} onChange={e => set(e.target.checked)}
+                  style={{ width:13, height:13, accentColor: PRI, cursor:'pointer' }} />
+                <span style={{ fontSize:11, fontWeight:700, color: on ? PRI : '#b0bec5' }}>{label}</span>
+              </label>
+            ))}
+            <div style={{ width:1, height:14, background:'#d8ceb8', margin:'0 2px' }} />
+            <label style={{ display:'flex', alignItems:'center', gap:5, cursor:'pointer', userSelect:'none' }}>
+              <input type="checkbox" checked={allRemote} onChange={e => toggleAllRemote(e.target.checked)}
+                style={{ width:13, height:13, accentColor:'#2e7d32', cursor:'pointer' }} />
+              <span style={{ fontSize:11, fontWeight:700, color: allRemote ? '#2e7d32' : '#b0bec5' }}>Remote</span>
+            </label>
+            <span style={{ fontSize:10, color:'#c5b99a', marginLeft:2 }}>— override per person below</span>
+          </div>
+        )}
+
         {/* Column headers — roster tabs only */}
-        {activeTab !== 'HISTORY' && <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 8, background: '#fff', borderTop: '2px solid #e8edf2', borderBottom: '1px solid #e8edf2', padding: '8px 14px', alignItems: 'center' }}>
+        {activeTab !== 'HISTORY' && <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 8, background: PRI, borderTop: '2px solid #e8edf2', borderBottom: '1px solid #e8edf2', padding: '8px 14px', alignItems: 'center' }}>
           {HEADERS.map((h, i) => (
             <div key={i} style={{ fontSize: 10, color: '#fff', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'left' }}>{h}</div>
           ))}
@@ -495,6 +599,7 @@ export default function SiteAssignment({ entityId }) {
         </div>
       ) : (<>
       <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 2px 8px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
+
 
         {/* ── HISTORY TAB ──────────────────────────────────── */}
         {activeTab === 'HISTORY' && (
@@ -589,10 +694,25 @@ export default function SiteAssignment({ entityId }) {
                     onChange={e => updateEmpRow(row.id, { checked: e.target.checked })}
                     style={{ width: 15, height: 15, cursor: 'pointer', accentColor: PRI }} />
 
-                  {/* Name */}
+                  {/* Name + per-row allowances */}
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: '#1a2540', textAlign: 'left' }}>{emp?.full_name_en}</div>
-                    <div style={{ fontSize: 10, color: '#aab2bd', textAlign: 'left' }}>{emp?.employee_number || emp?.employee_code || ''}</div>
+                    <div style={{ fontSize: 10, color: '#aab2bd', textAlign: 'left', marginBottom: 2 }}>{emp?.employee_number || emp?.employee_code || ''}</div>
+                    {/* Per-person FA / OT / Oth mini-toggles */}
+                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                      {[
+                        { key:'fa',     label:'FA',  val:row.fa,     field:'fa',     show:showTogFA     },
+                        { key:'ot',     label:'OT',  val:row.ot,     field:'ot',     show:showTogOT     },
+                        { key:'others', label:'Oth', val:row.others, field:'others', show:showTogOthers },
+                      ].filter(t => t.show).map(({ key, label, val, field }) => (
+                        <label key={key} style={{ display:'flex', alignItems:'center', gap:3, cursor:'pointer', userSelect:'none' }}>
+                          <input type="checkbox" checked={val}
+                            onChange={e => updateEmpRow(row.id, { [field]: e.target.checked })}
+                            style={{ width:11, height:11, accentColor: PRI, cursor:'pointer' }} />
+                          <span style={{ fontSize:10, fontWeight:700, color: val ? PRI : '#c5cdd8' }}>{label}</span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Status */}

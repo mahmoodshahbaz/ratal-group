@@ -1,0 +1,213 @@
+========================================================
+ACCSYS FIELD OPERATIONS PLATFORM — INTRO VIDEO SCRIPT
+Estimated duration: 8 to 10 minutes
+Voice: Male, calm and professional tone
+========================================================
+
+[SCENE 1 — INTRO — 0:00 to 0:30]
+
+Welcome to ACCSYS — the Field Operations Platform built for Ratal Group.
+
+This system connects office administration with field teams in real time.
+Department Heads, Project Managers, Supervisors, Technicians, Drivers,
+and Sub-Contractors all work through one unified platform — no paper,
+no WhatsApp chasing, and no manual follow-up.
+
+Let us walk through the complete workflow from start to finish.
+
+---
+
+[SCENE 2 — ADMIN: GENERATE QR TOKEN — 0:30 to 1:30]
+
+Everything starts in the Administration panel.
+
+Before a field employee can use any form, the admin generates a personal
+QR token for them.
+
+Go to Administration, then QR Code Manager.
+
+Click "Generate QR Token."
+
+Select the employee from the list — in this case, Ahmed Al-Rashidi,
+a Site Technician.
+
+Choose his field role — Staff Technician.
+
+You can set an expiry date if the project is time-limited, or leave it
+blank for a permanent token.
+
+Click Generate.
+
+The system instantly creates a unique secure link and displays a QR code.
+
+From here, you can copy the link and share it directly via WhatsApp
+or Telegram with one click.
+
+Ahmed receives the link on his phone. That is his personal entry point
+to all his field forms.
+
+---
+
+[SCENE 3 — FIELD: LANDING PAGE — 1:30 to 2:15]
+
+When Ahmed opens the link on his phone, the system reads his token,
+identifies him, and shows his personal dashboard.
+
+He can see his name, his role, and all the forms he is authorised to use.
+
+No username. No password. The QR token handles authentication securely.
+
+The forms are large, touch-friendly cards — designed entirely for mobile use
+in the field, even in bright sunlight.
+
+---
+
+[SCENE 4 — FIELD: DAILY EXPENSE — 2:15 to 3:15]
+
+Ahmed taps "Daily Expense" to record today's field costs.
+
+He selects the date, then picks the expense type — in this case, Fuel.
+
+He enters the amount in Saudi Riyals, adds a brief description,
+and attaches a photo of the receipt by tapping the camera icon.
+
+He hits Submit.
+
+The entry is saved instantly to the system. His supervisor and Department
+Head can see it immediately in their dashboards.
+
+Over the course of the month, Ahmed logs all his field expenses the same way —
+fuel, accommodation, materials, and meals.
+
+---
+
+[SCENE 5 — FIELD: EXPENSE CLAIM — 3:15 to 4:00]
+
+At the end of the month, Ahmed submits his Expense Claim.
+
+He taps "Expense Claim" from his landing page.
+
+The system automatically pulls in all his recorded daily expenses
+for the current month, calculates the total, and presents them for review.
+
+Ahmed checks the summary, adds any final notes, and taps Submit Claim.
+
+The claim is now in the system with status "Submitted" and is waiting
+for Department Head approval.
+
+---
+
+[SCENE 6 — FIELD: SITE COMPLETION — 4:00 to 4:50]
+
+Ahmed's other key task is updating site progress.
+
+He taps "Site Completion" and selects his assigned site.
+
+The system shows the full milestone checklist for that site's scope —
+in this case, Tower Installation.
+
+Ahmed ticks off the milestones completed today — Foundation installed,
+Tower section one erected, and Tower section two erected.
+
+He adds a site photo and a brief note, then submits.
+
+The system calculates the updated completion percentage and logs the update
+with a timestamp. The Project Manager and Department Head are notified immediately.
+
+---
+
+[SCENE 7 — FIELD: PAYMENT CONFIRMATION — 4:50 to 5:30]
+
+When a Department Head issues a cash advance to a field employee,
+the employee receives a notification to confirm receipt.
+
+Ahmed taps "Payment Confirmation."
+
+He can see the advance issued to him — the amount, the date, and who issued it.
+
+He taps to expand the card, uploads a photo of the signed voucher,
+adds a note, and confirms receipt.
+
+This creates a complete, auditable trail from cash issuance all the way
+to signed confirmation — no paper forms required.
+
+---
+
+[SCENE 8 — FIELD: VEHICLE REPORT — 5:30 to 6:10]
+
+For drivers and supervisors managing fleet vehicles, there is the
+Vehicle Report form.
+
+The employee selects the vehicle from the registered fleet,
+then chooses the log type — Fuel, Maintenance, Incident, or Inspection.
+
+For a fuel log, he enters the litres filled, the cost, the station name,
+and the odometer reading.
+
+For an incident, he uploads up to two photos and describes what happened.
+The Department Head receives an immediate notification for any incident
+or high-urgency maintenance report.
+
+---
+
+[SCENE 9 — ADMIN: DH COMMAND CENTRE — 6:10 to 7:30]
+
+Now let us switch to the Department Head's view.
+
+The DH opens the Command Centre — a live dashboard with five panels.
+
+The first panel is Cash. It shows every outstanding advance issued to
+field employees, colour-coded by age. Green for recent, orange for advances
+over thirty days, red for over sixty days. The total outstanding balance
+is shown at the top.
+
+The second panel is Sites. All active site assignments are listed with
+their current completion percentage as a progress bar.
+
+The third panel is Claims. This is where the DH approves expenses.
+Pending claims appear at the top. The DH reviews the claim details
+and taps Approve. The employee is notified instantly.
+
+The fourth panel is Team — a full list of all assigned field personnel
+with their designation and a direct call button.
+
+The fifth panel is Notifications — all recent alerts from the field,
+sorted by newest first. Unread items are highlighted.
+
+---
+
+[SCENE 10 — ADMIN: QR MANAGER & NOTIFICATIONS — 7:30 to 8:15]
+
+Back in the administration panel, the Field Notifications page gives
+a system-wide view of every notification sent across all employees and entities —
+with Telegram delivery status shown for each one.
+
+If a token needs to be revoked — for example when an employee leaves the project —
+the admin goes to QR Manager, finds the token, and clicks the revoke button.
+Access is removed instantly. The link no longer works.
+
+New tokens can be generated for new team members in seconds.
+
+---
+
+[SCENE 11 — CLOSING — 8:15 to 8:45]
+
+ACCSYS Field Operations covers the complete cycle:
+
+Cash advances issued and confirmed. Daily expenses recorded and claimed.
+Site milestones tracked and approved. Fleet incidents reported in real time.
+Sub-contractor work documented and submitted for payment.
+
+All of this from a phone, with no paper, no manual data entry back at the office,
+and a full audit trail for every action.
+
+This is just the overview. A detailed training video for each role —
+Technician, Supervisor, Department Head, Sub-Contractor, and Driver —
+will follow once the Telegram notification system is fully configured.
+
+Thank you for watching.
+
+========================================================
+END OF SCRIPT — Total word count approx. 920 words
+Paste this into ElevenLabs or TTSMaker to generate audio
+========================================================

@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ratal Group — Form Design Visuals</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f1923; color: #1a2e3d; min-height: 100vh; }
+
+/* ── Top strip ── */
+.top-strip { background: linear-gradient(90deg, #0f1923, #1a2e3d); padding: 20px 36px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.top-strip h1 { color: #fff; font-size: 18px; font-weight: 900; }
+.top-strip p { color: rgba(255,255,255,0.4); font-size: 12px; margin-top: 3px; }
+.approval-badge { background: rgba(255,204,0,0.12); border: 1px solid rgba(255,204,0,0.3); color: #ffd700; border-radius: 20px; padding: 6px 16px; font-size: 11px; font-weight: 800; }
+
+/* ── Section picker ── */
+.section-picker { padding: 20px 36px; background: #151f2b; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.picker-label { font-size: 10px; font-weight: 800; letter-spacing: 2px; color: rgba(255,255,255,0.3); text-transform: uppercase; margin-bottom: 12px; }
+.picker-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.section-btn { padding: 8px 16px; border-radius: 24px; border: 1.5px solid transparent; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.5); font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s; }
+.section-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.section-btn.active { color: #fff; border-color: transparent; }
+
+/* ── Main demo area ── */
+.demo-area { padding: 28px 36px; }
+.demo-label { font-size: 10px; font-weight: 800; letter-spacing: 2px; color: rgba(255,255,255,0.3); text-transform: uppercase; margin-bottom: 16px; }
+
+/* ── Step selector ── */
+.step-selector { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
+.step-btn { padding: 8px 20px; border-radius: 10px; border: 1.5px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5); font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s; }
+.step-btn:hover { border-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.8); }
+.step-btn.active { color: #fff; border-color: transparent; }
+.step-divider { color: rgba(255,255,255,0.15); font-size: 18px; }
+
+/* ── Modal frame ── */
+.modal-frame { background: #fff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 80px rgba(0,0,0,0.6); max-width: 920px; height: 560px; display: flex; position: relative; transition: all 0.3s; }
+
+/* ── STEP 0 — Banner ── */
+.banner-left { flex: 1; position: relative; display: flex; flex-direction: column; overflow: hidden; }
+.banner-dots { position: absolute; inset: 0; background-image: radial-gradient(circle, rgba(0,0,0,0.07) 1px, transparent 1px); background-size: 22px 22px; pointer-events: none; }
+.banner-corner-tri { position: absolute; top: 0; left: 0; width: 0; height: 0; border-style: solid; }
+.banner-brand-top { position: absolute; top: 14px; right: 20px; font-size: 10px; font-weight: 800; letter-spacing: 0.5px; z-index: 5; }
+.banner-close { position: absolute; top: 12px; left: 14px; width: 28px; height: 28px; border-radius: 8px; background: rgba(0,0,0,0.06); border: none; cursor: pointer; font-size: 13px; color: #666; z-index: 10; display: flex; align-items: center; justify-content: center; }
+.banner-body { position: relative; z-index: 2; flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 52px 40px 28px; }
+.banner-section-tag { font-size: 10px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 8px; }
+.banner-title { font-size: 38px; font-weight: 900; text-transform: uppercase; line-height: 1; margin-bottom: 4px; }
+.banner-title2 { font-size: 38px; font-weight: 900; text-transform: uppercase; line-height: 1.05; margin-bottom: 12px; }
+.banner-desc-strip { font-size: 12px; color: #5a7080; line-height: 1.6; border-left: 3px solid; padding-left: 10px; max-width: 320px; margin-bottom: 18px; }
+.banner-pills { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
+.pill { padding: 5px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; background: rgba(0,0,0,0.05); color: #6b7c93; }
+.pill.active { color: #fff; }
+.start-btn { display: inline-flex; align-items: center; gap: 8px; border: none; border-radius: 28px; padding: 12px 26px; font-size: 14px; font-weight: 800; color: #fff; cursor: pointer; letter-spacing: 0.3px; width: fit-content; }
+.start-btn .circles { display: flex; gap: -2px; }
+.banner-right { width: 280px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+.banner-right-inner { width: 160px; height: 160px; background: rgba(255,255,255,0.1); border-radius: 28px; display: flex; align-items: center; justify-content: center; font-size: 72px; }
+
+/* ── STEPS 1+ ── */
+.outer-ring { flex: 1; display: flex; padding: 18px; overflow: hidden; }
+.inner-container { flex: 1; border-radius: 12px; position: relative; display: flex; overflow: hidden; }
+.corner-accent { position: absolute; top: 0; right: 0; width: 52%; height: 34%; z-index: 1; opacity: 0.2; }
+.sidebar { width: 220px; flex-shrink: 0; padding: 20px 16px 16px; display: flex; flex-direction: column; position: relative; z-index: 2; }
+.sidebar-brand { font-size: 10px; font-weight: 800; margin-bottom: 20px; letter-spacing: 0.5px; }
+.sidebar-cat { font-size: 9px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; opacity: 0.7; }
+.sidebar-step-name { font-size: 24px; font-weight: 900; color: #0d1f1a; line-height: 1.1; margin-bottom: 6px; }
+.sidebar-step-desc { font-size: 11px; color: #5a7080; line-height: 1.5; margin-bottom: 8px; }
+.sidebar-step-count { font-size: 9px; font-weight: 800; letter-spacing: 1px; margin-bottom: 14px; opacity: 0.65; }
+.step-list { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+.step-item { padding: 9px 0 9px 12px; border-left: 3px solid rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+.step-item.s-active { }
+.step-item.s-done { cursor: pointer; }
+.step-item-label { font-size: 12px; font-weight: 500; color: #aab; }
+.step-item.s-active .step-item-label { color: #0d1f1a; font-weight: 700; }
+.step-item.s-done .step-item-label { color: #5a8070; }
+.step-check { font-size: 10px; color: #5a8070; }
+
+/* ── Floating white card ── */
+.white-card { position: absolute; top: 18px; right: 18px; bottom: 18px; left: 244px; background: #fff; border-radius: 14px; box-shadow: 0 6px 28px rgba(0,0,0,0.14); display: flex; flex-direction: column; overflow: hidden; z-index: 3; }
+.card-header { padding: 18px 22px 14px; border-bottom: 1px solid #edf2f8; flex-shrink: 0; display: flex; align-items: flex-start; justify-content: space-between; }
+.card-title { font-size: 18px; font-weight: 800; }
+.card-close { width: 28px; height: 28px; border-radius: 8px; background: #f0f4f8; border: none; cursor: pointer; font-size: 13px; color: #666; display: flex; align-items: center; justify-content: center; }
+.card-body { flex: 1; padding: 16px 22px; overflow-y: auto; }
+.card-footer { padding: 12px 22px; border-top: 1px solid #f0f4f8; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+
+/* ── Form fields ── */
+.f-row { display: flex; gap: 12px; margin-bottom: 14px; }
+.f-col { flex: 1; min-width: 0; }
+.f-label { font-size: 10px; font-weight: 800; color: #8a9db0; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+.f-input { width: 100%; height: 38px; border: 1.5px solid #e8edf5; border-radius: 9px; background: #f8faff; padding: 0 12px; font-size: 13px; color: #1a2e3d; display: flex; align-items: center; }
+.f-input.select::after { content: '▾'; margin-left: auto; color: #9aabbf; }
+.f-input.filled { background: #fff; border-color: #d0d8e4; color: #1a2e3d; font-weight: 600; }
+.f-input.focus-ring { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+.f-textarea { width: 100%; height: 72px; border: 1.5px solid #e8edf5; border-radius: 9px; background: #f8faff; padding: 10px 12px; font-size: 13px; color: #1a2e3d; resize: none; }
+
+/* line items table */
+.li-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.li-table th { background: #f0f4f8; padding: 8px 10px; font-size: 10px; font-weight: 800; color: #7a8fa0; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; }
+.li-table td { padding: 8px 10px; border-bottom: 1px solid #f0f4f8; }
+.li-table tr:last-child td { border-bottom: none; }
+.li-add-btn { margin-top: 8px; background: #f0f4f8; border: 1.5px dashed #c8d4e0; border-radius: 8px; padding: 8px; width: 100%; font-size: 12px; font-weight: 700; color: #7a8fa0; cursor: pointer; }
+
+/* footer btns */
+.btn-ghost { background: #f0f4f8; border: none; border-radius: 9px; padding: 10px 18px; font-size: 13px; font-weight: 700; color: #6b7c93; cursor: pointer; }
+.btn-fill { border: none; border-radius: 9px; padding: 10px 22px; font-size: 13px; font-weight: 800; color: #fff; cursor: pointer; }
+.progress-dots { display: flex; gap: 5px; align-items: center; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: #d0d8e4; }
+.dot.active { width: 18px; border-radius: 3px; }
+
+/* ── annotations ── */
+.annotation { display: flex; gap: 16px; max-width: 920px; margin-top: 14px; }
+.anno-item { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px 16px; flex: 1; }
+.anno-icon { font-size: 16px; margin-bottom: 4px; }
+.anno-title { font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.7); margin-bottom: 3px; }
+.anno-text { font-size: 11px; color: rgba(255,255,255,0.4); line-height: 1.5; }
+
+/* ── Section colors ── */
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- TOP STRIP -->
+<div class="top-strip">
+  <div>
+    <h1>📋 Form Design Visuals — All Sections</h1>
+    <p>Click any section below to see its color theme. Use the step buttons to walk through the full form experience.</p>
+  </div>
+  <div class="approval-badge">⏳ Awaiting Your Approval</div>
+</div>
+
+<!-- SECTION PICKER -->
+<div class="section-picker">
+  <div class="picker-label">Choose a Section to Preview</div>
+  <div class="picker-row" id="sectionPicker"></div>
+</div>
+
+<!-- DEMO AREA -->
+<div class="demo-area">
+  <div class="step-selector">
+    <div class="demo-label" style="margin-bottom:0;">View Step:</div>
+    <button class="step-btn active" onclick="setStep(0)" id="stepBtn0">Step 0 — Intro Banner</button>
+    <span class="step-divider">→</span>
+    <button class="step-btn" onclick="setStep(1)" id="stepBtn1">Step 1 — Basic Details</button>
+    <span class="step-divider">→</span>
+    <button class="step-btn" onclick="setStep(2)" id="stepBtn2">Step 2 — Terms</button>
+    <span class="step-divider">→</span>
+    <button class="step-btn" onclick="setStep(3)" id="stepBtn3">Step 3 — Line Items</button>
+  </div>
+
+  <!-- MODAL -->
+  <div class="modal-frame" id="modalFrame">
+
+    <!-- ════ STEP 0 — BANNER ════ -->
+    <div id="step0" style="display:flex;width:100%;height:100%;">
+      <!-- left -->
+      <div class="banner-left" id="bannerLeft">
+        <div class="banner-dots"></div>
+        <div class="banner-corner-tri" id="bannerCorner"></div>
+        <div class="banner-brand-top" id="bannerBrand"></div>
+        <button class="banner-close">✕</button>
+        <div class="banner-body">
+          <div class="banner-section-tag" id="b0Tag"></div>
+          <div class="banner-title" id="b0Title1"></div>
+          <div class="banner-title2" id="b0Title2"></div>
+          <div class="banner-desc-strip" id="b0Desc"></div>
+          <div class="banner-pills" id="b0Pills"></div>
+          <button class="start-btn" id="b0StartBtn" onclick="setStep(1)">
+            <span>Start</span>
+            <span style="display:flex;align-items:center;gap:-4px;">
+              <span style="width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;font-size:10px;">➤</span>
+            </span>
+          </button>
+        </div>
+      </div>
+      <!-- right -->
+      <div class="banner-right" id="bannerRight">
+        <div class="banner-right-inner" id="bannerIcon"></div>
+      </div>
+    </div>
+
+    <!-- ════ STEPS 1-3 — WIZARD ════ -->
+    <div id="step1to3" class="hidden" style="display:flex;width:100%;height:100%;">
+      <div class="outer-ring" id="outerRing">
+        <div class="inner-container" id="innerContainer">
+          <div class="corner-accent" id="cornerAccent"></div>
+          <!-- Sidebar -->
+          <div class="sidebar" id="sidebar">
+            <div class="sidebar-brand" id="sbBrand"></div>
+            <div class="sidebar-cat" id="sbCat"></div>
+            <div class="sidebar-step-name" id="sbStepName"></div>
+            <div class="sidebar-step-desc" id="sbStepDesc"></div>
+            <div class="sidebar-step-count" id="sbStepCount"></div>
+            <div class="step-list" id="sbStepList"></div>
+          </div>
+          <!-- White card -->
+          <div class="white-card" id="whiteCard">
+            <div class="card-header">
+              <div class="card-title" id="cardTitle"></div>
+              <button class="card-close">✕</button>
+            </div>
+            <div class="card-body" id="cardBody"></div>
+            <div class="card-footer">
+              <button class="btn-ghost" id="backBtn"></button>
+              <div class="progress-dots" id="progressDots"></div>
+              <button class="btn-fill" id="nextBtn"></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANNOTATIONS -->
+  <div class="annotation" id="annotations"></div>
+</div>
+
+<script>
+// ──────────────────────────────────────────────────────
+// DATA
+// ──────────────────────────────────────────────────────
+const SECTIONS = [
+  {
+    id: 'finance',
+    label: '💰 Finance',
+    group: 'Finance',
+    color: '#0277bd',
+    colorDark: '#01579b',
+    colorLight: '#e3f2fd',
+    formName: 'New Invoice',
+    title1: 'NEW',
+    title2: 'INVOICE',
+    icon: '🧾',
+    desc: 'Create a tax invoice, credit note or debit note.\nAuto-posts to the general ledger on issue.',
+    steps: ['Invoice Details', 'Terms & VAT', 'Line Items', 'Review'],
+    stepDescs: [
+      'Select type, client, project and billing date.',
+      'Set currency, VAT rate, due date and notes.',
+      'Add line items with quantity and unit price.',
+      'Confirm totals and post the invoice.'
+    ],
+    step1Fields: [
+      { row: [{ label:'Invoice Type', placeholder:'Tax Invoice (B2B) ▾', filled:true }, { label:'Invoice Date', placeholder:'01 / 10 / 2026' }] },
+      { row: [{ label:'Client / Customer', placeholder:'Select client ▾' }, { label:'Project', placeholder:'Select project ▾' }] },
+      { row: [{ label:'PO Reference #', placeholder:'e.g. PO-11207' }, { label:'Currency', placeholder:'SAR ▾', filled:true }] },
+      { row: [{ label:'Department', placeholder:'Select department ▾' }, { label:'Due Date', placeholder:'31 / 10 / 2026' }] },
+    ],
+    step2Fields: [
+      { row: [{ label:'VAT Rate (%)', placeholder:'15', filled:true }, { label:'Billing Mode', placeholder:'Regular ▾', filled:true }] },
+      { row: [{ label:'Retention (%)', placeholder:'0' }, { label:'Payment Terms', placeholder:'Net 30 ▾' }] },
+      { row: [{ label:'Bank Account', placeholder:'Select account ▾' }, { label:'Notes / Remarks', placeholder:'Optional remarks', textarea:true }] },
+    ],
+    step3LineItems: true,
+  },
+  {
+    id: 'hr',
+    label: '👥 Human Resources',
+    group: 'Human Resources',
+    color: '#e65100',
+    colorDark: '#bf360c',
+    colorLight: '#fff3e0',
+    formName: 'New Vacation Request',
+    title1: 'VACATION',
+    title2: 'REQUEST',
+    icon: '🏖️',
+    desc: 'Submit a leave application for approval.\nBalance is checked automatically against entitlement.',
+    steps: ['Leave Details', 'Attachments'],
+    stepDescs: [
+      'Specify employee, leave type, dates and replacement.',
+      'Upload any supporting documents and submit.'
+    ],
+    step1Fields: [
+      { row: [{ label:'Employee', placeholder:'Select employee ▾' }, { label:'Leave Type', placeholder:'Annual Leave ▾', filled:true }] },
+      { row: [{ label:'From Date', placeholder:'01 / 10 / 2026' }, { label:'Return Date', placeholder:'15 / 10 / 2026' }] },
+      { row: [{ label:'Number of Days', placeholder:'14', filled:true }, { label:'Balance Available', placeholder:'21 days', filled:true }] },
+      { row: [{ label:'Coverage / Replacement', placeholder:'Who will cover? ▾' }, { label:'Remarks', placeholder:'Optional', textarea:false }] },
+    ],
+    step2Fields: [
+      { row: [{ label:'Upload Document', placeholder:'Click to attach file...' }] },
+      { row: [{ label:'Manager Notes', placeholder:'Auto-sent for approval after submission', filled:true }] },
+    ],
+    step3LineItems: false,
+  },
+  {
+    id: 'accounting',
+    label: '📒 Accounting',
+    group: 'Accounting',
+    color: '#00838f',
+    colorDark: '#005f69',
+    colorLight: '#e0f7fa',
+    formName: 'New Journal Voucher',
+    title1: 'JOURNAL',
+    title2: 'VOUCHER',
+    icon: '📝',
+    desc: 'Record a manual journal entry.\nDebit and credit totals must balance before posting.',
+    steps: ['Header Info', 'Debit / Credit Lines', 'Attachments'],
+    stepDescs: [
+      'Set voucher date, reference and narration.',
+      'Enter all debit and credit account lines.',
+      'Attach supporting documents and post.'
+    ],
+    step1Fields: [
+      { row: [{ label:'Voucher Date', placeholder:'01 / 10 / 2026' }, { label:'Reference #', placeholder:'JV-0001' }] },
+      { row: [{ label:'Voucher Type', placeholder:'General Journal ▾', filled:true }, { label:'Currency', placeholder:'SAR ▾', filled:true }] },
+      { row: [{ label:'Narration / Description', placeholder:'e.g. Monthly accrual — October 2026', textarea:true }] },
+    ],
+    step2Fields: [
+      { row: [{ label:'Cost Center', placeholder:'Select department ▾' }, { label:'Project Allocation', placeholder:'Optional ▾' }] },
+    ],
+    step3LineItems: true,
+  },
+  {
+    id: 'planning',
+    label: '📐 Planning',
+    group: 'Planning',
+    color: '#6a1b9a',
+    colorDark: '#4a148c',
+    colorLight: '#f3e5f5',
+    formName: 'New Fixed Asset',
+    title1: 'FIXED',
+    title2: 'ASSET',
+    icon: '🏗️',
+    desc: 'Register a capital asset and set up its\ndepreciation schedule per IFRS rules.',
+    steps: ['Asset Details', 'Depreciation', 'Documents'],
+    stepDescs: [
+      'Enter asset name, category, purchase details.',
+      'Set depreciation method, rate and useful life.',
+      'Upload invoice, warranty and insurance docs.'
+    ],
+    step1Fields: [
+      { row: [{ label:'Asset Name', placeholder:'e.g. Toyota Land Cruiser 2026' }, { label:'Asset Category', placeholder:'Vehicle ▾', filled:true }] },
+      { row: [{ label:'Purchase Date', placeholder:'01 / 06 / 2026' }, { label:'Purchase Cost (SAR)', placeholder:'185,000' }] },
+      { row: [{ label:'Supplier / Vendor', placeholder:'Select party ▾' }, { label:'Serial / Plate No.', placeholder:'Optional' }] },
+      { row: [{ label:'Location / Dept', placeholder:'Select department ▾' }, { label:'Assigned To', placeholder:'Select employee ▾' }] },
+    ],
+    step2Fields: [
+      { row: [{ label:'Depreciation Method', placeholder:'Straight-Line (SL) ▾', filled:true }, { label:'Useful Life (Years)', placeholder:'5', filled:true }] },
+      { row: [{ label:'Salvage Value (SAR)', placeholder:'0' }, { label:'Start Depreciating', placeholder:'01 / 07 / 2026' }] },
+      { row: [{ label:'Annual Rate (%)', placeholder:'20.00', filled:true }, { label:'GL Account', placeholder:'Select account ▾' }] },
+    ],
+    step3LineItems: false,
+  },
+  {
+    id: 'operations',
+    label: '🏗 Operations',
+    group: 'Operations',
+    color: '#5A32D4',
+    colorDark: '#3a1fa0',
+    colorLight: '#EEF0F8',
+    formName: 'New Money Request',
+    title1: 'MONEY',
+    title2: 'REQUEST',
+    icon: '💰',
+    desc: 'Submit a site cash advance or purchase request\nfor department head approval.',
+    steps: ['Request Details', 'Supporting Info'],
+    stepDescs: [
+      'Select project, site, amount and purpose.',
+      'Add notes, attach quotes and submit for approval.'
+    ],
+    step1Fields: [
+      { row: [{ label:'Request Type', placeholder:'Cash Advance ▾', filled:true }, { label:'Amount (SAR)', placeholder:'e.g. 5,000' }] },
+      { row: [{ label:'Project', placeholder:'Select project ▾' }, { label:'Department', placeholder:'Select department ▾' }] },
+      { row: [{ label:'Site', placeholder:'Select site ▾' }, { label:'Required By', placeholder:'05 / 10 / 2026' }] },
+      { row: [{ label:'Purpose / Description', placeholder:'e.g. Materials for Phase 2 site works', textarea:false }] },
+    ],
+    step2Fields: [
+      { row: [{ label:'Supplier (if known)', placeholder:'Optional' }, { label:'Quotation #', placeholder:'Optional' }] },
+      { row: [{ label:'Upload Quotation / Doc', placeholder:'Click to attach file...' }] },
+      { row: [{ label:'Additional Notes', placeholder:'Any notes for the approver', textarea:true }] },
+    ],
+    step3LineItems: false,
+  },
+  {
+    id: 'masters',
+    label: '🗃️ Masters',
+    group: 'Masters',
+    color: '#00695c',
+    colorDark: '#004d40',
+    colorLight: '#E8F5E9',
+    formName: 'New Department',
+    title1: 'NEW',
+    title2: 'DEPARTMENT',
+    icon: '🏛️',
+    desc: 'Create a new department and assign a head.\nDepartments are used across payroll, HR and reporting.',
+    steps: ['Department Info', 'Assignments'],
+    stepDescs: [
+      'Set department name, code and type.',
+      'Assign the department head and cost center.'
+    ],
+    step1Fields: [
+      { row: [{ label:'Department Name', placeholder:'e.g. IT Support Unit' }, { label:'Dept Code', placeholder:'e.g. ITSU' }] },
+      { row: [{ label:'Department Type', placeholder:'Technical ▾', filled:true }, { label:'Entity', placeholder:'ACCSYS ▾', filled:true }] },
+      { row: [{ label:'Description', placeholder:'Brief description of this department', textarea:true }] },
+    ],
+    step2Fields: [
+      { row: [{ label:'Department Head', placeholder:'Select employee ▾' }, { label:'Cost Center GL', placeholder:'Select account ▾' }] },
+      { row: [{ label:'Parent Department', placeholder:'None (top-level) ▾', filled:true }, { label:'Status', placeholder:'Active ▾', filled:true }] },
+    ],
+    step3LineItems: false,
+  },
+  {
+    id: 'admin',
+    label: '⚙️ Administration',
+    group: 'Administration',
+    color: '#37474f',
+    colorDark: '#1c313a',
+    colorLight: '#ECEFF1',
+    formName: 'New User',
+    title1: 'NEW',
+    title2: 'USER',
+    icon: '👤',
+    desc: 'Create a login account and assign role-based\naccess permissions for this entity.',
+    steps: ['User Info', 'Access & Role'],
+    stepDescs: [
+      'Enter name, email, department and employee link.',
+      'Assign role, entity access and module permissions.'
+    ],
+    step1Fields: [
+      { row: [{ label:'Full Name', placeholder:'e.g. Ahmad Al-Harbi' }, { label:'Email Address', placeholder:'ahmad@accsys.com' }] },
+      { row: [{ label:'Mobile', placeholder:'+966 5X XXX XXXX' }, { label:'Department', placeholder:'Select department ▾' }] },
+      { row: [{ label:'Link to Employee', placeholder:'Search employee ▾' }, { label:'Language', placeholder:'English ▾', filled:true }] },
+    ],
+    step2Fields: [
+      { row: [{ label:'Role', placeholder:'Select role ▾', filled:true }, { label:'Entity Access', placeholder:'ACCSYS ▾', filled:true }] },
+      { row: [{ label:'Send Welcome Email?', placeholder:'Yes — send credentials ▾', filled:true }, { label:'Status', placeholder:'Active ▾', filled:true }] },
+    ],
+    step3LineItems: false,
+  },
+  {
+    id: 'reports',
+    label: '📊 Reports',
+    group: 'Reports',
+    color: '#558b2f',
+    colorDark: '#33691e',
+    colorLight: '#F1F8E9',
+    formName: 'AR Aging Report',
+    title1: 'AR',
+    title2: 'AGING',
+    icon: '📊',
+    desc: 'Review outstanding receivables by age bucket.\nFilter by client, project or date range.',
+    steps: ['Filter Options', 'Export Settings'],
+    stepDescs: [
+      'Set the as-of date, client filter and currency.',
+      'Choose export format and delivery method.'
+    ],
+    step1Fields: [
+      { row: [{ label:'As-of Date', placeholder:'30 / 09 / 2026', filled:true }, { label:'Currency', placeholder:'SAR ▾', filled:true }] },
+      { row: [{ label:'Client Filter', placeholder:'All Clients ▾', filled:true }, { label:'Project Filter', placeholder:'All Projects ▾', filled:true }] },
+      { row: [{ label:'Bucket 1 (days)', placeholder:'1–30', filled:true }, { label:'Bucket 2 (days)', placeholder:'31–60', filled:true }] },
+    ],
+    step2Fields: [
+      { row: [{ label:'Export Format', placeholder:'Excel (.xlsx) ▾', filled:true }, { label:'Include Zero Balance?', placeholder:'No ▾', filled:true }] },
+      { row: [{ label:'Email Report To', placeholder:'Optional — enter email' }] },
+    ],
+    step3LineItems: false,
+  },
+  {
+    id: 'travel',
+    label: '✈️ Travel',
+    group: 'Travel',
+    color: '#1565C0',
+    colorDark: '#0d47a1',
+    colorLight: '#E3F2FD',
+    formName: 'New Ticket',
+    title1: 'NEW',
+    title2: 'TICKET',
+    icon: '✈️',
+    desc: 'Issue a travel ticket and attach it to a\ncustomer booking for billing and BSP reporting.',
+    steps: ['Passenger & Route', 'Fare & Charges', 'Documents'],
+    stepDescs: [
+      'Enter passenger name, origin, destination and dates.',
+      'Set fare, taxes, agent markup and currency.',
+      'Attach ticket PDF and confirm issuance.'
+    ],
+    step1Fields: [
+      { row: [{ label:'Passenger Name', placeholder:'e.g. Ahmad Ali' }, { label:'Ticket Type', placeholder:'One-way ▾', filled:true }] },
+      { row: [{ label:'Origin', placeholder:'RUH — Riyadh' }, { label:'Destination', placeholder:'DXB — Dubai' }] },
+      { row: [{ label:'Departure Date', placeholder:'15 / 10 / 2026' }, { label:'Return Date', placeholder:'N/A (one-way)' }] },
+      { row: [{ label:'Airline', placeholder:'Select airline ▾' }, { label:'Customer', placeholder:'Select customer ▾' }] },
+    ],
+    step2Fields: [
+      { row: [{ label:'Base Fare (SAR)', placeholder:'850.00' }, { label:'Taxes & Fees', placeholder:'127.50' }] },
+      { row: [{ label:'Agent Markup', placeholder:'50.00' }, { label:'Total Fare', placeholder:'1,027.50', filled:true }] },
+      { row: [{ label:'Payment Method', placeholder:'Cash ▾', filled:true }, { label:'Commission (%)', placeholder:'1.5' }] },
+    ],
+    step3LineItems: false,
+  },
+];
+
+let currentSection = SECTIONS[0];
+let currentStep = 0;
+
+// ──────────────────────────────────────────────────────
+// RENDER SECTION PICKER
+// ──────────────────────────────────────────────────────
+function renderPicker() {
+  const container = document.getElementById('sectionPicker');
+  container.innerHTML = '';
+  SECTIONS.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'section-btn' + (s.id === currentSection.id ? ' active' : '');
+    btn.textContent = s.label;
+    btn.style.borderColor = s.id === currentSection.id ? s.color : 'transparent';
+    btn.style.background = s.id === currentSection.id ? s.color + '22' : 'rgba(255,255,255,0.06)';
+    btn.style.color = s.id === currentSection.id ? '#fff' : 'rgba(255,255,255,0.5)';
+    btn.onclick = () => { currentSection = s; currentStep = 0; renderAll(); };
+    container.appendChild(btn);
+  });
+}
+
+// ──────────────────────────────────────────────────────
+// RENDER STEP BUTTONS
+// ──────────────────────────────────────────────────────
+function renderStepButtons() {
+  [0,1,2,3].forEach(i => {
+    const btn = document.getElementById('stepBtn' + i);
+    if (btn) {
+      btn.classList.toggle('active', currentStep === i);
+      if (currentStep === i) {
+        btn.style.background = currentSection.color + '33';
+        btn.style.borderColor = currentSection.color;
+        btn.style.color = '#fff';
+      } else {
+        btn.style.background = 'rgba(255,255,255,0.05)';
+        btn.style.borderColor = 'rgba(255,255,255,0.12)';
+        btn.style.color = 'rgba(255,255,255,0.5)';
+      }
+    }
+  });
+  // disable step 3 if no line items
+  const btn3 = document.getElementById('stepBtn3');
+  if (btn3) {
+    if (!currentSection.step3LineItems) {
+      btn3.style.opacity = '0.3';
+      btn3.style.cursor = 'not-allowed';
+    } else {
+      btn3.style.opacity = '1';
+      btn3.style.cursor = 'pointer';
+    }
+  }
+}
+
+// ──────────────────────────────────────────────────────
+// RENDER STEP 0 — BANNER
+// ──────────────────────────────────────────────────────
+function renderBanner() {
+  const s = currentSection;
+  document.getElementById('bannerLeft').style.background = '#F4F7F4';
+  document.getElementById('bannerCorner').style.cssText = `
+    border-top: 100px solid ${s.colorDark};
+    border-right: 100px solid transparent;
+    position: absolute; top: 0; left: 0;
+  `;
+  document.getElementById('bannerBrand').style.color = s.color;
+  document.getElementById('bannerBrand').textContent = 'Ratal Advanced Technologies';
+  document.getElementById('b0Tag').style.color = s.color;
+  document.getElementById('b0Tag').textContent = s.group;
+  document.getElementById('b0Title1').style.color = '#1a2e3d';
+  document.getElementById('b0Title1').textContent = s.title1;
+  document.getElementById('b0Title2').style.color = s.color;
+  document.getElementById('b0Title2').textContent = s.title2;
+  document.getElementById('b0Desc').style.borderColor = s.color;
+  document.getElementById('b0Desc').innerHTML = s.desc.replace('\n', '<br>');
+  document.getElementById('b0StartBtn').style.background = s.color;
+
+  // pills
+  const pillsEl = document.getElementById('b0Pills');
+  pillsEl.innerHTML = '';
+  (s.steps || []).forEach((step, i) => {
+    const pill = document.createElement('span');
+    pill.className = 'pill' + (i === 0 ? ' active' : '');
+    if (i === 0) { pill.style.background = s.color; pill.style.color = '#fff'; }
+    pill.textContent = `${['①','②','③','④'][i]} ${step}`;
+    pillsEl.appendChild(pill);
+  });
+
+  // right panel
+  document.getElementById('bannerRight').style.background = `linear-gradient(160deg, ${s.colorDark} 0%, ${s.colorDark}cc 100%)`;
+  document.getElementById('bannerIcon').textContent = s.icon;
+}
+
+// ──────────────────────────────────────────────────────
+// RENDER STEPS 1-3 — WIZARD
+// ──────────────────────────────────────────────────────
+function renderWizard() {
+  const s = currentSection;
+  const stepIdx = currentStep - 1; // 0-based within steps array
+
+  // outer ring
+  document.getElementById('outerRing').style.background = s.color;
+
+  // inner container light
+  document.getElementById('innerContainer').style.background = s.colorLight;
+
+  // corner accent
+  document.getElementById('cornerAccent').style.background = s.color;
+
+  // sidebar
+  document.getElementById('sbBrand').style.color = s.color;
+  document.getElementById('sbBrand').textContent = 'Ratal Advanced Technologies';
+  document.getElementById('sbCat').style.color = s.color;
+  document.getElementById('sbCat').textContent = s.formName;
+  document.getElementById('sbStepName').textContent = s.steps[stepIdx] || s.steps[s.steps.length-1];
+  document.getElementById('sbStepDesc').textContent = s.stepDescs[stepIdx] || s.stepDescs[s.stepDescs.length-1];
+  document.getElementById('sbStepCount').style.color = s.color;
+  document.getElementById('sbStepCount').textContent = `STEP ${stepIdx+1} OF ${s.steps.length}`;
+
+  // step list
+  const listEl = document.getElementById('sbStepList');
+  listEl.innerHTML = '';
+  s.steps.forEach((name, i) => {
+    const item = document.createElement('div');
+    const isAct = i === stepIdx, isDone = i < stepIdx;
+    item.className = 'step-item' + (isAct ? ' s-active' : isDone ? ' s-done' : '');
+    item.style.borderLeftColor = isAct ? s.color : isDone ? s.color + '55' : 'rgba(0,0,0,0.08)';
+    item.innerHTML = `<span class="step-item-label">${name}</span>${isDone ? '<span class="step-check">✓</span>' : ''}`;
+    if (isDone) item.onclick = () => { currentStep = i+1; renderAll(); };
+    listEl.appendChild(item);
+  });
+
+  // white card title
+  document.getElementById('cardTitle').style.color = s.color;
+  document.getElementById('cardTitle').textContent = s.steps[stepIdx] || s.steps[s.steps.length-1];
+
+  // card body
+  const bodyEl = document.getElementById('cardBody');
+  bodyEl.innerHTML = '';
+  bodyEl.style.setProperty('--accent', s.color);
+  bodyEl.style.setProperty('--accent-light', s.color + '22');
+
+  if (currentStep === 3 && s.step3LineItems) {
+    // Line items table
+    const table = document.createElement('table');
+    table.className = 'li-table';
+    table.innerHTML = `<thead><tr><th>Description</th><th>Qty</th><th>Unit Price</th><th>VAT</th><th>Total</th></tr></thead>
+      <tbody>
+        <tr><td><input style="border:none;outline:none;width:100%;font-size:12px;" placeholder="e.g. Site Works — Phase 1"></td><td><input style="border:none;width:50px;text-align:center;outline:none;font-size:12px;" value="1"></td><td><input style="border:none;width:80px;text-align:right;outline:none;font-size:12px;" placeholder="0.00"></td><td>15%</td><td style="font-weight:700;color:${s.color}">0.00</td></tr>
+        <tr><td><input style="border:none;outline:none;width:100%;font-size:12px;" placeholder="Add another line..."></td><td></td><td></td><td></td><td></td></tr>
+      </tbody>`;
+    bodyEl.appendChild(table);
+    const addBtn = document.createElement('button');
+    addBtn.className = 'li-add-btn';
+    addBtn.style.borderColor = s.color + '55';
+    addBtn.innerHTML = `+ Add Line`;
+    bodyEl.appendChild(addBtn);
+    const totals = document.createElement('div');
+    totals.style.cssText = 'margin-top:12px;display:flex;justify-content:flex-end;';
+    totals.innerHTML = `<div style="background:#f8faff;border:1px solid #e8edf5;border-radius:10px;padding:12px 16px;min-width:220px;font-size:13px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="color:#9aabbf;">Subtotal</span><span style="font-weight:700;">SAR 0.00</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="color:#9aabbf;">VAT (15%)</span><span style="font-weight:700;">SAR 0.00</span></div>
+      <div style="display:flex;justify-content:space-between;border-top:1px solid #e8edf5;padding-top:6px;"><span style="font-weight:800;color:${s.color};">TOTAL</span><span style="font-weight:900;color:${s.color};font-size:15px;">SAR 0.00</span></div>
+    </div>`;
+    bodyEl.appendChild(totals);
+  } else {
+    // Regular fields
+    const fields = currentStep === 1 ? s.step1Fields : s.step2Fields;
+    (fields || []).forEach(row => {
+      const rowEl = document.createElement('div');
+      rowEl.className = 'f-row';
+      row.row.forEach(f => {
+        const colEl = document.createElement('div');
+        colEl.className = 'f-col';
+        const lbl = document.createElement('div');
+        lbl.className = 'f-label';
+        lbl.textContent = f.label;
+        colEl.appendChild(lbl);
+        if (f.textarea) {
+          const ta = document.createElement('div');
+          ta.className = 'f-textarea';
+          ta.style.display = 'flex';
+          ta.style.alignItems = 'flex-start';
+          ta.style.padding = '10px 12px';
+          ta.style.color = '#c8d4e0';
+          ta.style.fontSize = '13px';
+          ta.textContent = f.placeholder;
+          colEl.appendChild(ta);
+        } else {
+          const inp = document.createElement('div');
+          inp.className = 'f-input' + (f.filled ? ' filled' : '');
+          inp.style.display = 'flex';
+          inp.style.alignItems = 'center';
+          inp.style.color = f.filled ? '#1a2e3d' : '#c8d4e0';
+          inp.textContent = f.placeholder;
+          colEl.appendChild(inp);
+        }
+        rowEl.appendChild(colEl);
+      });
+      bodyEl.appendChild(rowEl);
+    });
+  }
+
+  // Footer
+  const isFirst = stepIdx === 0;
+  const isLast = stepIdx === s.steps.length - 1;
+  document.getElementById('backBtn').textContent = isFirst ? 'Cancel' : '← Back';
+  document.getElementById('nextBtn').textContent = isLast ? '✓ Save & Close' : 'Next →';
+  document.getElementById('nextBtn').style.background = s.color;
+
+  // Progress dots
+  const dots = document.getElementById('progressDots');
+  dots.innerHTML = '';
+  s.steps.forEach((_, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'dot' + (i === stepIdx ? ' active' : '');
+    if (i === stepIdx) dot.style.background = s.color;
+    dots.appendChild(dot);
+  });
+
+  // Back button
+  document.getElementById('backBtn').onclick = () => {
+    if (stepIdx === 0) { setStep(0); } else { setStep(currentStep - 1); }
+  };
+  document.getElementById('nextBtn').onclick = () => {
+    if (!isLast) {
+      const nextStep = currentStep + 1;
+      if (nextStep === 3 && !s.step3LineItems) { setStep(nextStep + 1); } else { setStep(nextStep); }
+    }
+  };
+}
+
+// ──────────────────────────────────────────────────────
+// ANNOTATIONS
+// ──────────────────────────────────────────────────────
+const ANNOTATIONS = {
+  0: [
+    { icon: '🎨', title: 'Light Gray Background', text: 'Every section banner uses the same light gray (#F4F7F4). Only the accent color changes.' },
+    { icon: '▲', title: 'Corner Triangle', text: 'Dark colored triangle in top-left. Acts as a strong visual anchor for the section color.' },
+    { icon: '📍', title: 'Step Pills', text: 'Shows all steps upfront so users know what\'s coming before they start.' },
+    { icon: '🖼️', title: 'Right Panel', text: 'Dark gradient panel (section color) with a large icon. Gives visual weight and identity.' },
+  ],
+  1: [
+    { icon: '🟣', title: 'Outer Ring = Section Color', text: 'The outer padding background is the full section color — bold and clear.' },
+    { icon: '🪟', title: 'Inner Container = Light', text: 'Inside the ring, the container uses a light tint of the section color. Easy on the eyes.' },
+    { icon: '📋', title: 'Left Sidebar', text: '220px sidebar: brand, step name, description, and thin left-border step tracker (not circles).' },
+    { icon: '🃏', title: 'Floating White Card', text: 'Form fields live on a white card floating over the inner container. Clean and focused.' },
+  ],
+  2: [
+    { icon: '↩️', title: 'Back / Cancel', text: 'First step shows Cancel. Later steps show ← Back to go to previous step.' },
+    { icon: '⬛', title: 'Progress Dots', text: 'Small dots at bottom center show current step position at a glance.' },
+    { icon: '✓', title: 'Done Steps', text: 'Completed steps show a check mark ✓ and a faded left border. Clickable to go back.' },
+    { icon: '📐', title: 'Max 5 Fields', text: 'Each step holds max 5 field rows. Longer forms get more steps — never scrolling.' },
+  ],
+  3: [
+    { icon: '📊', title: 'Line Items Step', text: 'Forms with line items (Invoices, JVs, POs) get a dedicated step — full-width table.' },
+    { icon: '🔢', title: 'Auto Totals', text: 'Subtotal, VAT, and Total calculated live as rows are entered.' },
+    { icon: '➕', title: 'Add Line Button', text: 'Dashed "Add Line" button at bottom of table. Clean and obvious.' },
+    { icon: '🎯', title: 'Same Card, Different Data', text: 'The white card layout never changes — only the content inside differs by form and section.' },
+  ],
+};
+
+function renderAnnotations() {
+  const container = document.getElementById('annotations');
+  container.innerHTML = '';
+  const notes = ANNOTATIONS[currentStep] || ANNOTATIONS[1];
+  notes.forEach(n => {
+    const div = document.createElement('div');
+    div.className = 'anno-item';
+    div.innerHTML = `<div class="anno-icon">${n.icon}</div><div class="anno-title">${n.title}</div><div class="anno-text">${n.text}</div>`;
+    container.appendChild(div);
+  });
+}
+
+// ──────────────────────────────────────────────────────
+// MAIN RENDER
+// ──────────────────────────────────────────────────────
+function renderAll() {
+  renderPicker();
+  renderStepButtons();
+
+  if (currentStep === 0) {
+    document.getElementById('step0').style.display = 'flex';
+    document.getElementById('step1to3').style.display = 'none';
+    renderBanner();
+  } else {
+    document.getElementById('step0').style.display = 'none';
+    document.getElementById('step1to3').style.display = 'flex';
+    renderWizard();
+  }
+  renderAnnotations();
+}
+
+function setStep(n) {
+  currentStep = n;
+  renderAll();
+}
+
+// Init
+renderAll();
+</script>
+</body>
+</html>

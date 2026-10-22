@@ -489,12 +489,13 @@ export default function Vehicles({ entityId }) {
       </div>
 
       {/* Tabs */}
-      <div style={{ display:'flex', gap:4, marginBottom:0, borderBottom:'2px solid #e8edf2' }}>
+      <div style={{ display:'flex', gap:4, marginBottom:0, borderBottom:'2px solid #e8edf2', flexWrap:'wrap' }}>
         {[
           ['register',    '📋 Registered Vehicles'],
           ['assign',      '🔑 Register Vehicle'],
           ['assignments', '🚦 Assignments'],
           ['maintenance', '🔧 Maintenance Log'],
+          ['incidents',   '🚨 Incidents / Accidents'],
         ].map(([k,l])=>(
           <button key={k} style={S.tab(tab===k)}
             onClick={()=>{ setTab(k==='assign'?'assign':k); if(k==='assign'){ setShowAssignBanner(true) } }}>
@@ -713,6 +714,12 @@ export default function Vehicles({ entityId }) {
             </div>
             <AllMaintenance entityId={entityId} vehicles={vehicles} />
           </div>
+        </div>
+      )}
+
+      {tab==='incidents' && (
+        <div style={{ marginTop:14 }}>
+          <AllIncidents vehicles={vehicles} />
         </div>
       )}
 
@@ -1357,6 +1364,124 @@ function AllMaintenance({ entityId, vehicles }) {
           ))}
         </tbody>
       </table>
+    </>
+  )
+}
+
+// Sub-component: Incidents & Accidents log across all vehicles
+function AllIncidents({ vehicles }) {
+  const [records, setRecords] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [typeFilter, setTypeFilter] = useState('ALL') // ALL | BREAKDOWN | ACCIDENT_REPAIR
+
+  const vehMap = Object.fromEntries(vehicles.map(v => [v.id, v.plate_number]))
+  const vehIds = vehicles.map(v => v.id)
+
+  useEffect(() => {
+    if (!vehIds.length) { setLoading(false); return }
+    supabase.from('vehicle_maintenance')
+      .select('*')
+      .in('vehicle_id', vehIds)
+      .in('log_type', ['BREAKDOWN','ACCIDENT_REPAIR'])
+      .order('service_date', { ascending:false })
+      .limit(200)
+      .then(({ data }) => { setRecords(data||[]); setLoading(false) })
+  }, [vehicles.length])
+
+  const filtered = typeFilter === 'ALL' ? records : records.filter(r => r.log_type === typeFilter)
+
+  const accCount = records.filter(r => r.log_type === 'ACCIDENT_REPAIR').length
+  const brkCount = records.filter(r => r.log_type === 'BREAKDOWN').length
+  const injCount = records.filter(r => r.has_injuries).length
+
+  const TH = S.th
+  const TD = (ex={}) => ({ ...S.td, ...ex })
+
+  const urgBadge = (u) => {
+    const map = { LOW:{bg:'#e8f5e9',c:'#2e7d32'}, MEDIUM:{bg:'#fff3e0',c:'#e65100'}, HIGH:{bg:'#ffebee',c:'#c62828'}, CRITICAL:{bg:'#f3e5f5',c:'#7b1fa2'} }
+    const s = map[u] || map.MEDIUM
+    return <span style={{ background:s.bg, color:s.c, padding:'2px 8px', borderRadius:10, fontSize:10, fontWeight:800 }}>{u||'—'}</span>
+  }
+
+  if (loading) return <div style={{ ...S.card, textAlign:'center', padding:40, color:'#6b7c93' }}>Loading…</div>
+
+  return (
+    <>
+      {/* Summary KPI strip */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:14 }}>
+        {[
+          { label:'Total Reports',  value:records.length,  grad:'linear-gradient(135deg,#0079BC,#005a8e)', icon:'📋' },
+          { label:'Breakdowns',     value:brkCount,        grad:'linear-gradient(135deg,#0369a1,#0284c7)', icon:'⚠️' },
+          { label:'Accidents',      value:accCount,        grad:'linear-gradient(135deg,#b91c1c,#dc2626)', icon:'🚨' },
+          { label:'With Injuries',  value:injCount,        grad:'linear-gradient(135deg,#7c3aed,#6d28d9)', icon:'🩺' },
+        ].map(c => (
+          <div key={c.label} style={{ background:c.grad, borderRadius:12, padding:'12px 14px', display:'flex', alignItems:'center', gap:10, boxShadow:'0 3px 12px rgba(0,0,0,0.14)' }}>
+            <span style={{ fontSize:20 }}>{c.icon}</span>
+            <div>
+              <div style={{ fontSize:20, fontWeight:800, color:'#fff', lineHeight:1 }}>{c.value}</div>
+              <div style={{ fontSize:9, color:'rgba(255,255,255,.8)', fontWeight:700, marginTop:2, whiteSpace:'nowrap' }}>{c.label}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filter pills */}
+      <div style={{ display:'flex', gap:8, marginBottom:12 }}>
+        {[['ALL','All Events'],['BREAKDOWN','⚠️ Breakdowns'],['ACCIDENT_REPAIR','🚨 Accidents']].map(([v,l]) => (
+          <button key={v} onClick={() => setTypeFilter(v)}
+            style={{ padding:'6px 16px', borderRadius:20, border:'none', fontWeight:700, fontSize:11, cursor:'pointer',
+              background: typeFilter===v ? '#1a2e3d' : '#f0f4f8', color: typeFilter===v ? '#fff' : '#6b7c93' }}>
+            {l}
+          </button>
+        ))}
+        <div style={{ marginLeft:'auto', fontSize:12, color:'#6b7c93', alignSelf:'center' }}>{filtered.length} records</div>
+      </div>
+
+      <div style={{ ...S.card, padding:0, overflow:'hidden' }}>
+        {!filtered.length ? (
+          <div style={{ textAlign:'center', padding:40, color:'#aab2bd' }}>
+            No incident or accident records found for this fleet.
+          </div>
+        ) : (
+          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+            <thead><tr>
+              {['Date','Vehicle','Type','Location','Najm Report','Injuries','Urgency','Status'].map(h => (
+                <th key={h} style={TH}>{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {filtered.map((r, i) => (
+                <tr key={r.id} style={{ background: i%2===0?'#fff':'#fafbfc' }}>
+                  <td style={TD()}>{fmt(r.service_date)}</td>
+                  <td style={TD({ fontWeight:800, fontFamily:'monospace', color:'#1a2e3d' })}>{vehMap[r.vehicle_id]||'—'}</td>
+                  <td style={TD()}>
+                    {r.log_type === 'ACCIDENT_REPAIR'
+                      ? <span style={{ background:'#fee2e2', color:'#991b1b', padding:'2px 8px', borderRadius:10, fontSize:10, fontWeight:800 }}>🚨 Accident</span>
+                      : <span style={{ background:'#e0f2fe', color:'#0369a1', padding:'2px 8px', borderRadius:10, fontSize:10, fontWeight:800 }}>⚠️ Breakdown</span>}
+                  </td>
+                  <td style={TD({ fontSize:11, color:'#546e7a', maxWidth:160, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' })}>{r.location||'—'}</td>
+                  <td style={TD({ fontFamily:'monospace', fontSize:11, color: r.najm_report_no ? '#1a2e3d' : '#c0c8d4' })}>
+                    {r.najm_report_no || '—'}
+                  </td>
+                  <td style={TD()}>
+                    {r.has_injuries
+                      ? <span style={{ background:'#f3e5f5', color:'#7b1fa2', padding:'2px 8px', borderRadius:10, fontSize:10, fontWeight:800 }}>Yes</span>
+                      : <span style={{ color:'#aab2bd', fontSize:11 }}>No</span>}
+                  </td>
+                  <td style={TD()}>{urgBadge(r.urgency)}</td>
+                  <td style={TD()}>
+                    <span style={{ background: r.status==='OPEN'?'#fff3e0':r.status==='RESOLVED'?'#e8f5e9':'#f5f7fa',
+                      color: r.status==='OPEN'?'#e65100':r.status==='RESOLVED'?'#2e7d32':'#aab2bd',
+                      padding:'2px 10px', borderRadius:20, fontSize:10, fontWeight:800 }}>
+                      {r.status||'OPEN'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </>
   )
 }

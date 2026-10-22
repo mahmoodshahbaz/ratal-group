@@ -3,17 +3,15 @@
  * Route: /forms/site-completion
  * Auth:  useFieldAuth (QR token or ?dev=1 bypass)
  *
- * Flow:
- *  1. Auth guard → employee + assignments from useFieldAuth
- *  2. If >1 assignment → site picker
- *  3. Load previous milestone completions from site_status_logs
- *  4. Milestone checklist (scope-aware) + mandatory photo + notes
- *  5. Submit → site_status_logs INSERT + site_assignments UPDATE
+ * Design: 3-step mobile wizard — orange/amber construction theme
+ * Step 1: Site Selection
+ * Step 2: Milestone Checklist
+ * Step 3: Photo + Notes + Submit
  */
 
 import { useState, useEffect, useRef } from 'react'
-import { useFieldAuth, ROLE_COLORS }    from '../lib/useFieldAuth'
-import { supabase }                     from '../lib/supabase'
+import { useFieldAuth }                from '../lib/useFieldAuth'
+import { supabase }                    from '../lib/supabase'
 import { uploadToDrive }               from '../hooks/useDriveUpload'
 
 // ── Milestone sets per scope ──────────────────────────────────────────────────
@@ -50,392 +48,560 @@ const MILESTONE_SETS = {
   ],
 }
 
-// ── Shared styles ─────────────────────────────────────────────────────────────
-const S = {
-  wrap:    { minHeight:'100vh', background:'#f0f4f8', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'flex-start', padding:'20px 16px 40px' },
-  card:    { background:'#fff', borderRadius:20, padding:24, width:'100%', maxWidth:440, boxShadow:'0 4px 20px rgba(0,0,0,0.10)' },
-  h1:      { fontSize:20, fontWeight:800, color:'#1a2540', marginBottom:4 },
-  sub:     { fontSize:13, color:'#6b7c93', marginBottom:20 },
-  label:   { display:'block', fontSize:12, color:'#6b7c93', fontWeight:700, marginBottom:5 },
-  progress:{ height:10, borderRadius:8, background:'#e3f2fd', overflow:'hidden', marginBottom:20 },
-  bar:     (pct) => ({ height:'100%', width:`${pct}%`, background:'linear-gradient(90deg,#1565c0,#1976d2)', borderRadius:8, transition:'width 0.4s' }),
-  ms:      { display:'flex', alignItems:'center', gap:12, padding:'12px 14px', borderRadius:12, marginBottom:6, cursor:'pointer', border:'2px solid', transition:'all 0.15s' },
-  photoBox:{ border:'2px dashed #dde3ec', borderRadius:14, padding:24, textAlign:'center', cursor:'pointer', marginBottom:16 },
-  bigBtn:  { background:'linear-gradient(135deg,#e65100,#f4511e)', color:'#fff', border:'none', borderRadius:14, padding:'16px', fontSize:16, fontWeight:800, cursor:'pointer', width:'100%', marginTop:4 },
-  badge:   (color) => ({ background:color+'22', color, fontWeight:700, fontSize:11, padding:'3px 10px', borderRadius:20, display:'inline-block', marginBottom:16 }),
-  siteRow: { display:'flex', alignItems:'center', gap:12, padding:'14px 16px', borderRadius:14, border:'2px solid #dde3ec', marginBottom:10, cursor:'pointer', background:'#fafbfc', transition:'border-color 0.15s' },
+const MOCK_ASSIGNMENTS = [
+  { id:'a1', site_number:'TW-0042', site_name:'Al Nakheel Tower', scope_type:'TOWER_INSTALLATION', project:{ project_name:'CISU-HQ' } },
+  { id:'a2', site_number:'FB-0017', site_name:'Ring Road Fibre', scope_type:'FIBRE', project:{ project_name:'NISU-Site A' } },
+]
+
+const SCOPE_ICON = {
+  TOWER_INSTALLATION:'📡', ACTIVE_INSTALLATION:'📶', CIVIL:'🏗️',
+  FIBRE:'🔌', DOCUMENTATION:'📋', TESTING:'🔬', GENERAL:'🏕️',
+}
+const SCOPE_COLOR = {
+  TOWER_INSTALLATION:'#f97316', ACTIVE_INSTALLATION:'#3b82f6', CIVIL:'#eab308',
+  FIBRE:'#a855f7', DOCUMENTATION:'#06b6d4', TESTING:'#10b981', GENERAL:'#64748b',
 }
 
-// ── Auth guard screen ─────────────────────────────────────────────────────────
+// ── Theme ─────────────────────────────────────────────────────────────────────
+const TH = {
+  orange:'#f97316', orangeDark:'#c2410c', orangeLight:'#fff7ed',
+  orangeMid:'#fed7aa', bg:'#f8fafc', white:'#ffffff',
+  text:'#1e293b', muted:'#64748b', border:'#e2e8f0',
+  shadow:'0 4px 20px rgba(0,0,0,0.08)',
+}
+
+const FF = '"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif'
+
+// ── Shared pill progress ──────────────────────────────────────────────────────
+function Pills({ step, total }) {
+  return (
+    <div style={{ display:'flex', gap:6, justifyContent:'center', marginTop:10 }}>
+      {Array.from({length:total},(_,i)=>(
+        <div key={i} style={{
+          width: i===step-1 ? 20 : 6, height:6, borderRadius:3,
+          background: i < step ? TH.orange : (i===step-1 ? TH.orange : TH.border),
+          transition:'all 0.3s',
+        }}/>
+      ))}
+    </div>
+  )
+}
+
+// ── Auth guard ────────────────────────────────────────────────────────────────
 function AuthGuard({ error }) {
   const msgs = {
-    no_token:          { icon:'🔒', title:'Authentication Required', body:'Please scan the QR code provided to access this form.', color:'#c62828' },
-    invalid_token:     { icon:'❌', title:'Invalid QR Code',         body:'This QR code is not recognised. Please contact your DH.',  color:'#c62828' },
-    token_inactive:    { icon:'⛔', title:'QR Code Expired',         body:'This QR code has been deactivated. Ask your DH for a new one.', color:'#e65100' },
-    employee_inactive: { icon:'🚫', title:'Account Inactive',        body:'Your account is not active. Contact HR.',                  color:'#c62828' },
+    no_token:          { icon:'🔒', title:'Authentication Required', body:'Scan your QR code to access this form.' },
+    invalid_token:     { icon:'❌', title:'Invalid QR Code',          body:'This code was not recognised. Contact your DH.' },
+    token_inactive:    { icon:'⛔', title:'QR Code Expired',          body:'Ask your Department Head for a fresh code.' },
+    employee_inactive: { icon:'🚫', title:'Account Inactive',         body:'Contact HR to reactivate your account.' },
   }
   const m = msgs[error] || msgs.no_token
   return (
-    <div style={S.wrap}>
-      <div style={{ ...S.card, textAlign:'center', padding:40 }}>
-        <div style={{ fontSize:56, marginBottom:16 }}>{m.icon}</div>
-        <div style={{ fontSize:20, fontWeight:800, color:m.color, marginBottom:8 }}>{m.title}</div>
-        <div style={{ fontSize:14, color:'#6b7c93' }}>{m.body}</div>
+    <div style={{ minHeight:'100dvh', background:TH.bg, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:FF, padding:24 }}>
+      <div style={{ background:TH.white, borderRadius:20, padding:'40px 28px', maxWidth:340, width:'100%', textAlign:'center', boxShadow:TH.shadow }}>
+        <div style={{ fontSize:52, marginBottom:14 }}>{m.icon}</div>
+        <div style={{ fontSize:18, fontWeight:800, color:'#ef4444', marginBottom:8 }}>{m.title}</div>
+        <div style={{ fontSize:14, color:TH.muted, lineHeight:1.6 }}>{m.body}</div>
       </div>
     </div>
   )
 }
 
-// ── Site picker (when employee has multiple assignments) ──────────────────────
-function SitePicker({ assignments, onSelect }) {
-  return (
-    <div style={S.wrap}>
-      <div style={S.card}>
-        <div style={S.h1}>📍 Select Site</div>
-        <div style={S.sub}>Which site are you updating today?</div>
-        {assignments.map(a => (
-          <div key={a.id} style={S.siteRow}
-            onMouseEnter={e => e.currentTarget.style.borderColor='#e65100'}
-            onMouseLeave={e => e.currentTarget.style.borderColor='#dde3ec'}
-            onClick={() => onSelect(a)}>
-            <div style={{ flex:1 }}>
-              <div style={{ fontWeight:700, fontSize:15, color:'#1a2540' }}>{a.site_number}</div>
-              <div style={{ fontSize:12, color:'#6b7c93' }}>{a.site_name}</div>
-              {a.project && <div style={{ fontSize:11, color:'#1565c0', marginTop:2 }}>{a.project.project_name}</div>}
-            </div>
-            <div style={{ fontSize:11, color:'#fff', background:'#37474f', padding:'4px 10px', borderRadius:20 }}>
-              {(a.scope_type||'GENERAL').replace(/_/g,' ')}
-            </div>
-            <div style={{ color:'#e65100', fontSize:18 }}>›</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ── Main form ─────────────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────────
 export default function FormSiteCompletion() {
   const auth = useFieldAuth()
 
-  const [assignment,  setAssignment]  = useState(null)  // selected site_assignment row
-  const [prevDone,    setPrevDone]    = useState({})    // milestones already completed (locked)
-  const [checked,     setChecked]     = useState({})    // current session ticks
-  const [photo,       setPhoto]       = useState(null)  // preview URL
+  const [step,        setStep]        = useState(1) // 1=site, 2=milestones, 3=photo+notes
+  const [assignment,  setAssignment]  = useState(null)
+  const [prevDone,    setPrevDone]    = useState({})
+  const [checked,     setChecked]     = useState({})
+  const [photo,       setPhoto]       = useState(null)
   const [photoFile,   setPhotoFile]   = useState(null)
   const [notes,       setNotes]       = useState('')
   const [submitting,  setSubmitting]  = useState(false)
   const [submitted,   setSubmitted]   = useState(false)
   const [loadingPrev, setLoadingPrev] = useState(false)
+  const [error,       setError]       = useState('')
   const fileRef = useRef()
 
-  // Auto-select if only one assignment
+  const isPreview = new URLSearchParams(window.location.search).get('preview') === '1'
+    || new URLSearchParams(window.location.search).get('dev') === '1'
+
   useEffect(() => {
+    if (isPreview) return
     if (!auth.loading && auth.assignments?.length === 1) {
       setAssignment(auth.assignments[0])
+      setStep(2)
     }
   }, [auth.loading, auth.assignments])
 
-  // Load previously completed milestones for this assignment
   useEffect(() => {
-    if (!assignment?.id) return
+    if (!assignment?.id || isPreview) return
     setLoadingPrev(true)
-    supabase
-      .from('site_assignments')
-      .select('completed_milestones, completion_pct')
-      .eq('id', assignment.id)
-      .single()
+    supabase.from('site_assignments').select('completed_milestones').eq('id', assignment.id).maybeSingle()
       .then(({ data }) => {
         if (data?.completed_milestones?.length) {
           const map = {}
-          data.completed_milestones.forEach(name => { map[name] = true })
-          setPrevDone(map)
-          setChecked(map)
+          data.completed_milestones.forEach(n => { map[n] = true })
+          setPrevDone(map); setChecked(map)
         }
         setLoadingPrev(false)
       })
   }, [assignment])
 
-  // ── Loading ────────────────────────────────────────────────
-  if (auth.loading) {
-    return (
-      <div style={S.wrap}>
-        <div style={{ ...S.card, textAlign:'center', padding:40 }}>
-          <div style={{ fontSize:36, marginBottom:16 }}>⏳</div>
-          <div style={{ color:'#6b7c93' }}>Checking authentication…</div>
-        </div>
+  // ── Loading ──────────────────────────────────────────────────────────────
+  if (auth.loading && !isPreview) return (
+    <div style={{ minHeight:'100dvh', background:TH.bg, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:FF }}>
+      <div style={{ textAlign:'center' }}>
+        <div style={{ width:44, height:44, border:`3px solid ${TH.border}`, borderTop:`3px solid ${TH.orange}`,
+          borderRadius:'50%', animation:'spin 0.8s linear infinite', margin:'0 auto 14px' }}/>
+        <div style={{ color:TH.muted, fontSize:13, letterSpacing:0.5 }}>Verifying…</div>
       </div>
-    )
-  }
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  )
 
-  // ── Auth error ─────────────────────────────────────────────
-  if (auth.error) return <AuthGuard error={auth.error} />
+  if (auth.error && !isPreview) return <AuthGuard error={auth.error} />
 
-  // ── Site picker ────────────────────────────────────────────
-  if (!assignment) {
-    if (!auth.assignments?.length) {
-      return (
-        <div style={S.wrap}>
-          <div style={{ ...S.card, textAlign:'center', padding:40 }}>
-            <div style={{ fontSize:40, marginBottom:12 }}>📍</div>
-            <div style={{ color:'#c62828', fontWeight:700 }}>No site assigned</div>
-            <div style={{ color:'#6b7c93', fontSize:13, marginTop:8 }}>Contact your PM to get assigned to a site.</div>
-          </div>
-        </div>
-      )
-    }
-    return <SitePicker assignments={auth.assignments} onSelect={setAssignment} />
-  }
+  const assignments = isPreview ? MOCK_ASSIGNMENTS : (auth.assignments || [])
 
-  const scopeType  = assignment.scope_type || 'GENERAL'
-  const milestones = MILESTONE_SETS[scopeType] || MILESTONE_SETS.GENERAL
-
-  const checkedCount   = milestones.filter(m => checked[m]).length
-  const totalCount     = milestones.length
-  const pct            = totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 0
-  const newlyChecked   = milestones.filter(m => checked[m] && !prevDone[m])
+  // ── Computed values ───────────────────────────────────────────────────────
+  const scopeType    = assignment?.scope_type || 'GENERAL'
+  const scopeColor   = SCOPE_COLOR[scopeType] || TH.orange
+  const scopeIcon    = SCOPE_ICON[scopeType] || '🏕️'
+  const milestones   = MILESTONE_SETS[scopeType] || MILESTONE_SETS.GENERAL
+  const checkedCount = milestones.filter(m => checked[m]).length
+  const totalCount   = milestones.length
+  const pct          = totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 0
+  const newlyChecked = milestones.filter(m => checked[m] && !prevDone[m])
 
   const toggle = (name) => {
-    if (prevDone[name]) return   // already completed — locked
+    if (prevDone[name]) return
     setChecked(prev => ({ ...prev, [name]: !prev[name] }))
   }
 
-  // ── Submit ─────────────────────────────────────────────────
+  // ── Submit ────────────────────────────────────────────────────────────────
   async function submit() {
-    if (newlyChecked.length === 0) { alert('Tick at least one new milestone to update.'); return }
-    if (!photo)                    { alert('A site photo is required.'); return }
+    setError('')
+    if (newlyChecked.length === 0) { setError('Tick at least one new milestone.'); return }
+    if (!photo)                    { setError('A site photo is required.'); return }
+    if (isPreview) { alert(`Preview: would submit ${newlyChecked.length} milestone(s) at ${pct}%.`); return }
     setSubmitting(true)
-
     try {
-      // 1. Upload photo
       let photoUrl = null
       if (photoFile) {
-        const path = `site-status/${assignment.id}/${Date.now()}.jpg`
         const result = await uploadToDrive(photoFile, 'sites')
         if (result) photoUrl = result.viewUrl
       }
-
       const today = new Date().toISOString().split('T')[0]
       const now   = new Date().toISOString()
-
-      // 2. Build full milestones snapshot
       const allMilestones = milestones.map(name => ({
-        name,
-        done:  !!checked[name],
-        date:  checked[name] ? (prevDone[name] ? 'previous' : today) : null,
+        name, done: !!checked[name],
+        date: checked[name] ? (prevDone[name] ? 'previous' : today) : null,
         photo_url: newlyChecked.includes(name) ? photoUrl : null,
         notes: newlyChecked.includes(name) ? (notes || null) : null,
       }))
-
-      // 3. Insert log
       const { error: logErr } = await supabase.from('site_status_logs').insert({
-        entity_id:           auth.entityId,
-        assignment_id:       assignment.id,
-        employee_id:         auth.employee.id,
-        scope_type:          scopeType,
-        milestones_newly_done: newlyChecked,
-        all_milestones:      allMilestones,
-        completion_pct:      pct,
-        photo_url:           photoUrl,
-        notes:               notes || null,
-        submitted_at:        now,
+        entity_id: auth.entityId, assignment_id: assignment.id,
+        employee_id: auth.employee.id, scope_type: scopeType,
+        milestones_newly_done: newlyChecked, all_milestones: allMilestones,
+        completion_pct: pct, photo_url: photoUrl,
+        notes: notes || null, submitted_at: now,
       })
       if (logErr) throw logErr
-
-      // 4. Update site_assignments progress
-      const allDoneNames = milestones.filter(m => checked[m])
       await supabase.from('site_assignments').update({
-        completion_pct:       pct,
-        completed_milestones: allDoneNames,
-        last_status_at:       now,
+        completion_pct: pct,
+        completed_milestones: milestones.filter(m => checked[m]),
+        last_status_at: now,
       }).eq('id', assignment.id)
-
-      // 5. Send notification to DH / PM (fire and forget)
-      if (auth.employee?.id !== (auth.assignments?.[0]?.employee_id)) {
-        await supabase.from('notifications').insert({
-          entity_id:   auth.entityId,
-          employee_id: auth.employee.id,
-          type:        'SITE_STATUS',
-          title:       `Site ${assignment.site_number} updated to ${pct}%`,
-          body:        `${newlyChecked.length} milestone(s) completed: ${newlyChecked.join(', ')}`,
-          metadata:    { assignment_id: assignment.id, pct },
-        }).then(() => {}) // ignore errors
-      }
-
       setSubmitted(true)
-    } catch (err) {
-      alert(err.message || 'Submission failed. Please try again.')
-    }
+    } catch (err) { setError(err.message || 'Submission failed. Try again.') }
     setSubmitting(false)
   }
 
-  // ── Success screen ─────────────────────────────────────────
-  if (submitted) {
+  // ─────────────────────────────────────────────────────────────────────────
+  // HEADER component (shared across steps)
+  // ─────────────────────────────────────────────────────────────────────────
+  const Header = ({ title, subtitle, showBack=false, onBack }) => (
+    <div style={{
+      background:`linear-gradient(135deg,${TH.orangeDark},${TH.orange})`,
+      padding:'20px 20px 16px', borderRadius:'0 0 24px 24px',
+      boxShadow:`0 8px 24px ${TH.orange}40`, flexShrink:0,
+    }}>
+      <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:4 }}>
+        {showBack && (
+          <button onClick={onBack} style={{
+            background:'rgba(255,255,255,0.2)', border:'none', borderRadius:10,
+            width:34, height:34, cursor:'pointer', color:'#fff', fontSize:18,
+            display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
+          }}>‹</button>
+        )}
+        <div style={{
+          width:42, height:42, background:'rgba(255,255,255,0.2)', borderRadius:12,
+          display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0,
+        }}>🏗️</div>
+        <div>
+          <div style={{ fontSize:18, fontWeight:800, color:'#fff', letterSpacing:'-0.3px' }}>{title}</div>
+          <div style={{ fontSize:11, color:'rgba(255,255,255,0.75)', marginTop:1 }}>{subtitle}</div>
+        </div>
+      </div>
+      <Pills step={step} total={3} />
+    </div>
+  )
+
+  // ── SUCCESS SCREEN ────────────────────────────────────────────────────────
+  if (submitted) return (
+    <div style={{ minHeight:'100dvh', background:TH.bg, fontFamily:FF, display:'flex', flexDirection:'column', maxWidth:480, margin:'0 auto' }}>
+      {/* Hero */}
+      <div style={{
+        background:`linear-gradient(135deg,${TH.orangeDark},${TH.orange})`,
+        padding:'40px 24px 28px', textAlign:'center',
+        boxShadow:`0 8px 32px ${TH.orange}50`,
+      }}>
+        <div style={{ width:72, height:72, background:'rgba(255,255,255,0.2)', borderRadius:20,
+          display:'flex', alignItems:'center', justifyContent:'center', fontSize:38,
+          margin:'0 auto 16px' }}>✅</div>
+        <div style={{ fontSize:24, fontWeight:900, color:'#fff' }}>Site Updated!</div>
+        <div style={{ fontSize:13, color:'rgba(255,255,255,0.8)', marginTop:6 }}>
+          {pct}% complete · {checkedCount}/{totalCount} milestones done
+        </div>
+      </div>
+
+      <div style={{ padding:'16px 16px 24px', flex:1, overflowY:'auto' }}>
+        {/* Site card */}
+        <div style={{ background:TH.white, borderRadius:16, boxShadow:TH.shadow, overflow:'hidden', marginBottom:12 }}>
+          <div style={{ background:TH.orangeLight, padding:'12px 18px', borderBottom:`2px solid ${TH.orange}22` }}>
+            <div style={{ fontSize:12, fontWeight:700, color:TH.orange, letterSpacing:1, textTransform:'uppercase' }}>Site Summary</div>
+          </div>
+          <div style={{ padding:'14px 18px', display:'flex', flexDirection:'column', gap:10 }}>
+            {[
+              { icon:scopeIcon, label:'Site',    val:`${assignment.site_number}${assignment.site_name ? ' · '+assignment.site_name : ''}` },
+              { icon:'📊',      label:'Progress', val:`${pct}% · ${checkedCount} of ${totalCount}`, bold:true },
+              { icon:'📅',      label:'Date',     val:new Date().toLocaleDateString('en-SA',{day:'numeric',month:'short',year:'numeric'}) },
+            ].map(r=>(
+              <div key={r.label} style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, color:TH.muted, fontSize:13 }}>
+                  <span>{r.icon}</span><span>{r.label}</span>
+                </div>
+                <div style={{ fontSize:r.bold?15:13, fontWeight:r.bold?800:600, color:r.bold?TH.orange:TH.text }}>{r.val}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Newly completed */}
+        <div style={{ background:TH.white, borderRadius:16, boxShadow:TH.shadow, overflow:'hidden', marginBottom:16 }}>
+          <div style={{ background:`#f0fdf4`, padding:'12px 18px', borderBottom:'2px solid #bbf7d0' }}>
+            <div style={{ fontSize:12, fontWeight:700, color:'#16a34a', letterSpacing:1, textTransform:'uppercase' }}>
+              ✓ {newlyChecked.length} Newly Completed
+            </div>
+          </div>
+          <div style={{ padding:'12px 18px', display:'flex', flexDirection:'column', gap:8 }}>
+            {newlyChecked.map(m=>(
+              <div key={m} style={{ display:'flex', alignItems:'center', gap:10, fontSize:14, color:TH.text }}>
+                <div style={{ width:22, height:22, borderRadius:6, background:'#16a34a',
+                  display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  <svg width="11" height="9" viewBox="0 0 11 9"><path d="M1 4.5L3.8 7.5L10 1" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>
+                </div>
+                {m}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div style={{ background:TH.white, borderRadius:16, boxShadow:TH.shadow, padding:'16px 18px', marginBottom:16 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
+            <span style={{ fontSize:13, color:TH.muted }}>Overall progress</span>
+            <span style={{ fontSize:14, fontWeight:800, color:pct===100?'#16a34a':TH.orange }}>{pct}%</span>
+          </div>
+          <div style={{ height:10, borderRadius:6, background:TH.border, overflow:'hidden' }}>
+            <div style={{ height:'100%', width:`${pct}%`, borderRadius:6,
+              background: pct===100 ? 'linear-gradient(90deg,#16a34a,#22c55e)' : `linear-gradient(90deg,${TH.orangeDark},${TH.orange})`,
+              transition:'width 0.6s ease' }}/>
+          </div>
+        </div>
+
+        <button onClick={() => {
+          setSubmitted(false); setNotes(''); setPhoto(null); setPhotoFile(null); setStep(2)
+          setPrevDone(prev => ({ ...prev, ...Object.fromEntries(newlyChecked.map(m=>[m,true])) }))
+        }} style={{
+          width:'100%', padding:18, background:`linear-gradient(135deg,${TH.orangeDark},${TH.orange})`,
+          color:'#fff', border:'none', borderRadius:14, fontSize:16, fontWeight:800,
+          cursor:'pointer', boxShadow:`0 6px 20px ${TH.orange}40`,
+        }}>
+          + Submit Another Update
+        </button>
+      </div>
+    </div>
+  )
+
+  // ── STEP 1: Site Picker ───────────────────────────────────────────────────
+  if (step === 1 || !assignment) {
+    if (!assignments.length) return (
+      <div style={{ minHeight:'100dvh', background:TH.bg, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:FF, padding:24 }}>
+        <div style={{ background:TH.white, borderRadius:20, padding:'40px 28px', maxWidth:340, width:'100%', textAlign:'center', boxShadow:TH.shadow }}>
+          <div style={{ fontSize:52, marginBottom:14 }}>📍</div>
+          <div style={{ fontSize:18, fontWeight:800, color:'#ef4444', marginBottom:8 }}>No Site Assigned</div>
+          <div style={{ fontSize:14, color:TH.muted, lineHeight:1.6 }}>Contact your PM to get assigned to a site.</div>
+        </div>
+      </div>
+    )
+
     return (
-      <div style={S.wrap}>
-        <div style={{ ...S.card, textAlign:'center', padding:40 }}>
-          <div style={{ fontSize:64 }}>✅</div>
-          <div style={{ fontSize:22, fontWeight:800, color:'#e65100', marginTop:16, marginBottom:8 }}>
-            Site Status Updated!
-          </div>
-          <div style={{ fontSize:15, color:'#1a2540', fontWeight:700, marginBottom:4 }}>
-            {assignment.site_number} · {scopeType.replace(/_/g,' ')}
-          </div>
-          <div style={{ fontSize:14, color:'#6b7c93', marginBottom:20 }}>
-            {pct}% complete · {checkedCount}/{totalCount} milestones
-          </div>
-          {/* Progress */}
-          <div style={{ ...S.progress, marginBottom:24 }}>
-            <div style={S.bar(pct)} />
-          </div>
-          <div style={{ fontSize:13, color:'#2e7d32', fontWeight:700, marginBottom:4 }}>
-            ✓ Newly completed ({newlyChecked.length}):
-          </div>
-          <div style={{ fontSize:12, color:'#6b7c93', marginBottom:24 }}>
-            {newlyChecked.join(' · ')}
-          </div>
-          <button style={{ ...S.bigBtn, background:'#1565c0' }}
-            onClick={() => {
-              setSubmitted(false)
-              setNotes('')
-              setPhoto(null)
-              setPhotoFile(null)
-              // Keep checked state so prev is accurate
-              setPrevDone({ ...prevDone, ...Object.fromEntries(newlyChecked.map(m=>[m,true])) })
-            }}>
-            Update Again
-          </button>
+      <div style={{ minHeight:'100dvh', background:TH.bg, fontFamily:FF, display:'flex', flexDirection:'column', maxWidth:480, margin:'0 auto' }}>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        <Header title="Site Completion" subtitle="RATAL GROUP · ACCSYS" />
+
+        <div style={{ padding:'20px 16px 4px' }}>
+          <div style={{ fontSize:18, fontWeight:800, color:TH.text }}>Select Your Site</div>
+          <div style={{ fontSize:13, color:TH.muted, marginTop:4 }}>Which site are you updating today?</div>
+        </div>
+
+        <div style={{ flex:1, overflowY:'auto', padding:'12px 16px 32px' }}>
+          {assignments.map((a) => {
+            const sc = SCOPE_COLOR[a.scope_type] || TH.orange
+            const si = SCOPE_ICON[a.scope_type] || '🏕️'
+            return (
+              <div key={a.id} onClick={() => { setAssignment(a); setStep(2) }} style={{
+                background:TH.white, border:`2px solid ${TH.border}`,
+                borderRadius:16, padding:'16px 18px', marginBottom:10,
+                cursor:'pointer', display:'flex', alignItems:'center', gap:14,
+                boxShadow:TH.shadow, transition:'all 0.18s',
+              }}
+              onMouseEnter={e=>{ e.currentTarget.style.borderColor=sc; e.currentTarget.style.boxShadow=`0 4px 20px ${sc}30` }}
+              onMouseLeave={e=>{ e.currentTarget.style.borderColor=TH.border; e.currentTarget.style.boxShadow=TH.shadow }}
+              >
+                <div style={{ width:48, height:48, borderRadius:14, background:`${sc}18`,
+                  border:`2px solid ${sc}40`, display:'flex', alignItems:'center', justifyContent:'center',
+                  fontSize:24, flexShrink:0 }}>{si}</div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontWeight:800, fontSize:16, color:TH.text }}>{a.site_number}</div>
+                  {a.site_name && <div style={{ fontSize:12, color:TH.muted, marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{a.site_name}</div>}
+                  {a.project && <div style={{ fontSize:11, color:sc, marginTop:4, fontWeight:700 }}>{a.project.project_name}</div>}
+                </div>
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:6 }}>
+                  <span style={{ fontSize:10, fontWeight:800, letterSpacing:0.5, padding:'4px 10px', borderRadius:20,
+                    background:`${sc}15`, color:sc, border:`1px solid ${sc}40` }}>
+                    {(a.scope_type||'GENERAL').replace(/_/g,' ')}
+                  </span>
+                  <span style={{ color:sc, fontSize:20, fontWeight:300 }}>›</span>
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
     )
   }
 
-  // ── Main form ──────────────────────────────────────────────
-  const roleColor = ROLE_COLORS[auth.role] || '#37474f'
+  // ── STEP 2: Milestone Checklist ───────────────────────────────────────────
+  if (step === 2) return (
+    <div style={{ minHeight:'100dvh', background:TH.bg, fontFamily:FF, display:'flex', flexDirection:'column', maxWidth:480, margin:'0 auto' }}>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes checkPop{0%{transform:scale(0)}70%{transform:scale(1.2)}100%{transform:scale(1)}}`}</style>
 
-  return (
-    <div style={S.wrap}>
-      <div style={S.card}>
-        {/* Header */}
-        <div style={S.badge(roleColor)}>{auth.employee?.designation || auth.role}</div>
-        <div style={S.h1}>📍 Site Status Update</div>
-        <div style={S.sub}>
-          <strong>{assignment.site_number}</strong>
-          {assignment.site_name ? ` · ${assignment.site_name}` : ''}
-          {auth.assignments?.length > 1 && (
-            <span style={{ color:'#e65100', cursor:'pointer', marginLeft:8 }}
-              onClick={() => { setAssignment(null); setChecked({}); setPrevDone({}) }}>
-              ⬅ change
-            </span>
-          )}
+      <Header
+        title={assignment.site_number}
+        subtitle={`${scopeType.replace(/_/g,' ')} · tap milestones to mark done`}
+        showBack={assignments.length > 1}
+        onBack={() => { setStep(1); setAssignment(null); setChecked({}); setPrevDone({}) }}
+      />
+
+      {/* Progress strip */}
+      <div style={{ background:TH.white, padding:'12px 20px', borderBottom:`1px solid ${TH.border}`, flexShrink:0 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+          <span style={{ fontSize:12, color:TH.muted, fontWeight:600 }}>Overall Progress</span>
+          <span style={{ fontSize:13, fontWeight:800, color: pct===100?'#16a34a':TH.orange }}>{pct}% · {checkedCount}/{totalCount}</span>
         </div>
-
-        {/* Scope badge */}
-        <div style={{ display:'inline-block', fontSize:11, padding:'4px 12px', borderRadius:20, background:'#37474f22', color:'#37474f', fontWeight:700, marginBottom:16 }}>
-          {scopeType.replace(/_/g,' ')}
+        <div style={{ height:8, borderRadius:5, background:TH.border, overflow:'hidden' }}>
+          <div style={{ height:'100%', width:`${pct}%`, borderRadius:5, transition:'width 0.4s ease',
+            background: pct===100 ? 'linear-gradient(90deg,#16a34a,#22c55e)' : `linear-gradient(90deg,${TH.orangeDark},${TH.orange})` }}/>
         </div>
+        {newlyChecked.length > 0 && (
+          <div style={{ fontSize:11, color:TH.orange, fontWeight:700, marginTop:6 }}>
+            ✓ {newlyChecked.length} newly ticked this session
+          </div>
+        )}
+      </div>
 
-        {/* Progress bar */}
-        <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:6 }}>
-          <span style={{ color:'#6b7c93' }}>Overall Progress</span>
-          <span style={{ fontWeight:800, color:'#1565c0' }}>{pct}% ({checkedCount}/{totalCount})</span>
-        </div>
-        <div style={S.progress}><div style={S.bar(pct)} /></div>
-
-        {/* Milestones */}
+      {/* Milestone list */}
+      <div style={{ flex:1, overflowY:'auto', WebkitOverflowScrolling:'touch', padding:'12px 16px 8px' }}>
         {loadingPrev ? (
-          <div style={{ textAlign:'center', padding:20, color:'#6b7c93' }}>Loading previous progress…</div>
+          <div style={{ textAlign:'center', padding:40 }}>
+            <div style={{ width:36, height:36, border:`3px solid ${TH.border}`, borderTop:`3px solid ${TH.orange}`,
+              borderRadius:'50%', animation:'spin 0.8s linear infinite', margin:'0 auto 12px' }}/>
+            <div style={{ color:TH.muted, fontSize:12 }}>Loading your progress…</div>
+          </div>
         ) : (
-          <div style={{ marginBottom:20 }}>
+          <>
+            <div style={{ fontSize:11, fontWeight:700, color:TH.muted, letterSpacing:1, marginBottom:10, textTransform:'uppercase' }}>
+              Milestones — tap to mark complete
+            </div>
             {milestones.map((name, i) => {
               const done   = !!checked[name]
               const locked = !!prevDone[name]
+              const isNew  = done && !locked
               return (
-                <div key={name} style={{
-                  ...S.ms,
-                  borderColor: done ? '#2e7d32' : '#dde3ec',
-                  background:  done ? '#e8f5e9' : '#fafbfc',
-                  opacity:     locked ? 0.72 : 1,
-                }} onClick={() => toggle(name)}>
+                <div key={name} onClick={() => toggle(name)} style={{
+                  display:'flex', alignItems:'center', gap:12,
+                  background: done ? '#f0fdf4' : TH.white,
+                  border: `2px solid ${done ? (isNew ? '#16a34a' : '#86efac') : TH.border}`,
+                  borderRadius:14, padding:'13px 14px', marginBottom:8,
+                  cursor: locked ? 'default' : 'pointer',
+                  boxShadow: isNew ? '0 4px 16px rgba(22,163,74,0.15)' : TH.shadow,
+                  transition:'all 0.18s',
+                }}>
                   {/* Checkbox */}
                   <div style={{
-                    width:24, height:24, borderRadius:6, flexShrink:0,
-                    border:`2px solid ${done ? '#2e7d32' : '#dde3ec'}`,
-                    background: done ? '#2e7d32' : '#fff',
+                    width:30, height:30, borderRadius:9, flexShrink:0,
+                    background: done ? '#16a34a' : TH.bg,
+                    border: done ? 'none' : `2px solid ${TH.border}`,
                     display:'flex', alignItems:'center', justifyContent:'center',
+                    transition:'all 0.2s',
                   }}>
-                    {done && <span style={{ color:'#fff', fontSize:14, fontWeight:900 }}>✓</span>}
+                    {done
+                      ? <svg width="13" height="10" viewBox="0 0 13 10" fill="none" style={{ animation:'checkPop 0.25s ease' }}>
+                          <path d="M1 5L4.5 8.5L12 1" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      : <span style={{ fontSize:10, fontWeight:700, color:TH.muted }}>{i+1}</span>
+                    }
                   </div>
-
-                  {/* Step number + name */}
-                  <div style={{ flex:1 }}>
-                    <span style={{ fontSize:11, color:'#9e9e9e', marginRight:6 }}>{i+1}.</span>
-                    <span style={{ fontSize:14, fontWeight: done ? 700 : 400, color: done ? '#2e7d32' : '#1a2540' }}>
-                      {name}
-                    </span>
-                  </div>
-
+                  {/* Label */}
+                  <span style={{ flex:1, fontSize:14, fontWeight: done ? 700 : 500, color: done ? '#15803d' : TH.text, transition:'all 0.18s' }}>
+                    {name}
+                  </span>
                   {locked && (
-                    <span style={{ fontSize:10, color:'#2e7d32', background:'#e8f5e9', padding:'2px 8px', borderRadius:10 }}>
-                      Done
+                    <span style={{ fontSize:10, color:'#16a34a', fontWeight:800, letterSpacing:0.5,
+                      background:'#dcfce7', padding:'3px 8px', borderRadius:10, border:'1px solid #86efac', flexShrink:0 }}>
+                      DONE
                     </span>
                   )}
                 </div>
               )
             })}
-          </div>
+            <div style={{ height:16 }}/>
+          </>
         )}
+      </div>
 
-        {/* Photo */}
-        <div style={{ marginBottom:16 }}>
-          <label style={S.label}>Site Photo * (mandatory)</label>
-          <div style={{ ...S.photoBox, borderColor: photo ? '#e65100' : '#dde3ec' }}
-            onClick={() => fileRef.current?.click()}>
-            {photo
-              ? <img src={photo} alt="site" style={{ maxHeight:180, maxWidth:'100%', borderRadius:10, objectFit:'cover' }} />
-              : <>
-                  <div style={{ fontSize:40, marginBottom:8 }}>📷</div>
-                  <div style={{ fontSize:14, color:'#6b7c93' }}>Tap to take a photo of the site / work done</div>
-                  <div style={{ fontSize:11, color:'#bbb', marginTop:4 }}>Required for each update</div>
-                </>
-            }
+      {/* Bottom bar */}
+      <div style={{ padding:'12px 16px', background:TH.white, borderTop:`1px solid ${TH.border}`, flexShrink:0 }}>
+        <button
+          onClick={() => { if(newlyChecked.length===0){ setError('Tick at least one new milestone first.'); return } setError(''); setStep(3) }}
+          style={{
+            width:'100%', padding:16, borderRadius:14, border:'none',
+            background: newlyChecked.length > 0 ? `linear-gradient(135deg,${TH.orangeDark},${TH.orange})` : '#e2e8f0',
+            color: newlyChecked.length > 0 ? '#fff' : '#94a3b8',
+            fontSize:15, fontWeight:800, cursor: newlyChecked.length > 0 ? 'pointer' : 'not-allowed',
+            boxShadow: newlyChecked.length > 0 ? `0 6px 20px ${TH.orange}40` : 'none',
+            transition:'all 0.2s',
+          }}>
+          {newlyChecked.length > 0
+            ? `Next → Add Photo & Submit (${newlyChecked.length} milestone${newlyChecked.length>1?'s':''})`
+            : 'Tick at least one milestone to continue'
+          }
+        </button>
+        {error && <div style={{ color:'#ef4444', fontSize:12, fontWeight:600, marginTop:8, textAlign:'center' }}>⚠️ {error}</div>}
+      </div>
+    </div>
+  )
+
+  // ── STEP 3: Photo + Notes + Submit ────────────────────────────────────────
+  return (
+    <div style={{ minHeight:'100dvh', background:TH.bg, fontFamily:FF, display:'flex', flexDirection:'column', maxWidth:480, margin:'0 auto' }}>
+      <Header
+        title="Photo & Notes"
+        subtitle={`${newlyChecked.length} milestone${newlyChecked.length>1?'s':''} ready · ${assignment.site_number}`}
+        showBack
+        onBack={() => { setStep(2); setError('') }}
+      />
+
+      <div style={{ flex:1, overflowY:'auto', WebkitOverflowScrolling:'touch', padding:'16px 16px 8px' }}>
+
+        {/* Newly ticked summary */}
+        <div style={{ background:'#f0fdf4', border:'2px solid #86efac', borderRadius:14, padding:'12px 16px', marginBottom:14 }}>
+          <div style={{ fontSize:11, fontWeight:700, color:'#16a34a', letterSpacing:0.8, marginBottom:8, textTransform:'uppercase' }}>
+            ✓ Milestones to submit
           </div>
-          <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display:'none' }}
-            onChange={e => {
-              const f = e.target.files?.[0]
-              if (f) { setPhotoFile(f); setPhoto(URL.createObjectURL(f)) }
-            }} />
-          {photo && (
-            <div style={{ fontSize:12, color:'#e65100', cursor:'pointer', textAlign:'right', marginTop:4 }}
-              onClick={() => { setPhoto(null); setPhotoFile(null) }}>
-              ✕ Remove photo
+          {newlyChecked.map(m => (
+            <div key={m} style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, color:'#15803d', marginBottom:5 }}>
+              <div style={{ width:6, height:6, borderRadius:'50%', background:'#16a34a', flexShrink:0 }}/>
+              {m}
             </div>
-          )}
+          ))}
+        </div>
+
+        {/* Photo upload */}
+        <div style={{ background:TH.white, borderRadius:16, boxShadow:TH.shadow, overflow:'hidden', marginBottom:14 }}>
+          <div style={{ padding:'12px 18px', borderBottom:`1px solid ${TH.border}` }}>
+            <div style={{ fontSize:13, fontWeight:700, color:TH.text }}>📷 Site Photo <span style={{ color:'#ef4444', fontSize:12 }}>*</span></div>
+            <div style={{ fontSize:12, color:TH.muted, marginTop:2 }}>Required for every update · max 10 MB</div>
+          </div>
+          <div style={{ padding:14 }}>
+            <div onClick={() => fileRef.current?.click()} style={{
+              border: `2px dashed ${photo ? '#16a34a' : TH.orange}`,
+              borderRadius:14, padding: photo ? 8 : 32, textAlign:'center',
+              cursor:'pointer', background: photo ? '#f0fdf4' : TH.orangeLight,
+              transition:'all 0.2s',
+            }}>
+              {photo
+                ? <img src={photo} alt="site" style={{ maxHeight:220, maxWidth:'100%', borderRadius:10, objectFit:'cover', display:'block', margin:'0 auto' }}/>
+                : <>
+                    <div style={{ fontSize:36, marginBottom:10 }}>📷</div>
+                    <div style={{ fontSize:14, fontWeight:700, color:TH.orangeDark, marginBottom:4 }}>Tap to take a photo</div>
+                    <div style={{ fontSize:12, color:TH.muted }}>Camera opens automatically on mobile</div>
+                  </>
+              }
+            </div>
+            <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display:'none' }}
+              onChange={e => { const f = e.target.files?.[0]; if (f) { setPhotoFile(f); setPhoto(URL.createObjectURL(f)) } }}/>
+            {photo && (
+              <button onClick={() => { setPhoto(null); setPhotoFile(null) }}
+                style={{ fontSize:12, color:'#ef4444', cursor:'pointer', background:'none', border:'none',
+                  fontWeight:700, marginTop:8, float:'right', padding:0 }}>
+                ✕ Remove photo
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Notes */}
-        <div style={{ marginBottom:20 }}>
-          <label style={S.label}>Notes (optional)</label>
-          <textarea rows={2} style={{ width:'100%', padding:'11px', borderRadius:10, border:'1.5px solid #dde3ec', fontSize:14, outline:'none', resize:'none', fontFamily:'inherit', boxSizing:'border-box' }}
-            placeholder="Any blockers, delays, or observations…"
-            value={notes} onChange={e => setNotes(e.target.value)} />
+        <div style={{ background:TH.white, borderRadius:16, boxShadow:TH.shadow, overflow:'hidden', marginBottom:14 }}>
+          <div style={{ padding:'12px 18px', borderBottom:`1px solid ${TH.border}` }}>
+            <div style={{ fontSize:13, fontWeight:700, color:TH.text }}>📝 Notes <span style={{ fontSize:11, color:TH.muted, fontWeight:500 }}>(optional)</span></div>
+          </div>
+          <div style={{ padding:14 }}>
+            <textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)}
+              placeholder="Blockers, delays, observations, material issues…"
+              style={{
+                width:'100%', padding:'12px 14px', borderRadius:12,
+                border:`2px solid ${TH.border}`, background:TH.bg, color:TH.text,
+                fontSize:14, outline:'none', resize:'none', fontFamily:FF,
+                boxSizing:'border-box', lineHeight:1.5, transition:'border-color 0.2s',
+              }}
+              onFocus={e => e.target.style.borderColor=TH.orange}
+              onBlur={e => e.target.style.borderColor=TH.border}
+            />
+          </div>
         </div>
 
-        {/* Newly ticked summary */}
-        {newlyChecked.length > 0 && (
-          <div style={{ background:'#e8f5e9', borderRadius:12, padding:'10px 14px', marginBottom:16 }}>
-            <div style={{ fontSize:12, color:'#2e7d32', fontWeight:700, marginBottom:4 }}>
-              ✓ {newlyChecked.length} milestone{newlyChecked.length > 1 ? 's' : ''} to submit:
-            </div>
-            {newlyChecked.map(m => (
-              <div key={m} style={{ fontSize:12, color:'#388e3c' }}>· {m}</div>
-            ))}
-          </div>
-        )}
+        <div style={{ height:8 }}/>
+      </div>
 
-        <button style={{ ...S.bigBtn, opacity: submitting ? 0.7 : 1 }}
-          onClick={submit} disabled={submitting}>
-          {submitting ? 'Submitting…' : `Submit Site Update (${pct}% complete)`}
+      {/* Bottom bar */}
+      <div style={{ padding:'12px 16px', background:TH.white, borderTop:`1px solid ${TH.border}`, flexShrink:0 }}>
+        {error && <div style={{ background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:10,
+          padding:'10px 14px', color:'#dc2626', fontSize:13, fontWeight:600, marginBottom:10 }}>⛔ {error}</div>}
+        <button
+          onClick={submit} disabled={submitting || !photo}
+          style={{
+            width:'100%', padding:18, borderRadius:14, border:'none',
+            background: photo ? `linear-gradient(135deg,${TH.orangeDark},${TH.orange})` : '#e2e8f0',
+            color: photo ? '#fff' : '#94a3b8',
+            fontSize:16, fontWeight:800, cursor: photo ? 'pointer' : 'not-allowed',
+            boxShadow: photo ? `0 6px 20px ${TH.orange}40` : 'none',
+          }}>
+          {submitting ? '⏳ Submitting…' : '✓ Submit Site Update'}
         </button>
       </div>
     </div>

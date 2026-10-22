@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ratal Group — Dashboard & Tables Visual</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f0f2f5; color: #1a2e3d; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── TOP SWITCHER ── */
+.switcher { background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 0; padding: 0 24px; height: 46px; flex-shrink: 0; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+.sw-btn { padding: 0 20px; height: 46px; font-size: 12px; font-weight: 800; cursor: pointer; border: none; background: none; color: #94a3b8; border-bottom: 2px solid transparent; transition: all 0.12s; letter-spacing: 0.3px; }
+.sw-btn:hover { color: #475569; }
+.sw-btn.active { color: #1a2e3d; border-bottom-color: #0277bd; }
+.sw-label { margin-left: auto; font-size: 10px; font-weight: 800; letter-spacing: 2px; color: #cbd5e1; }
+
+/* ── MAIN CONTAINER ── */
+.view { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+.view.active { display: flex; }
+
+/* ════════════════════════════════════════════════════
+   DASHBOARD VIEW
+════════════════════════════════════════════════════ */
+.dash-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* dash top bar */
+.dash-topbar { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 20px; height: 52px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.dt-left { display: flex; align-items: center; gap: 10px; }
+.dt-logo { width: 30px; height: 30px; background: #0277bd; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+.dt-title { color: #1a2e3d; font-size: 14px; font-weight: 900; }
+.dt-entity { color: #94a3b8; font-size: 11px; }
+.dt-right { display: flex; align-items: center; gap: 8px; }
+.dt-entity-tag { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 20px; padding: 4px 12px; font-size: 11px; font-weight: 700; color: #64748b; }
+.dt-date { font-size: 11px; color: #94a3b8; }
+.dt-notif { width: 32px; height: 32px; background: #f1f5f9; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 15px; cursor: pointer; border: 1px solid #e2e8f0; }
+
+/* sidebar + content */
+.dash-body { flex: 1; display: flex; overflow: hidden; }
+
+/* sidebar */
+.dash-sidebar { width: 54px; background: #1e293b; border-right: none; display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 4px; flex-shrink: 0; }
+.ds-icon { width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 17px; cursor: pointer; color: rgba(255,255,255,0.35); transition: all 0.12s; }
+.ds-icon:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); }
+.ds-icon.act { background: rgba(2,119,189,0.35); color: #90caf9; }
+.ds-sep { width: 26px; height: 1px; background: rgba(255,255,255,0.1); margin: 6px 0; }
+
+/* dashboard content */
+.dash-content { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: #f0f2f5; }
+
+/* ── KPI CARDS ROW ── */
+.kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; flex-shrink: 0; }
+.kpi { border-radius: 12px; padding: 13px 15px 11px; position: relative; overflow: hidden; cursor: default; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+.kpi::after { content: ''; position: absolute; top: -20px; right: -20px; width: 72px; height: 72px; border-radius: 50%; background: rgba(255,255,255,0.08); }
+.kpi-icon { font-size: 17px; margin-bottom: 6px; display: block; }
+.kpi-val { font-size: 19px; font-weight: 900; color: #fff; margin-bottom: 2px; line-height: 1; }
+.kpi-lbl { font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.6); letter-spacing: 0.5px; text-transform: uppercase; }
+.kpi-trend { position: absolute; top: 11px; right: 12px; font-size: 9px; font-weight: 800; padding: 2px 7px; border-radius: 10px; }
+.kpi-trend.up { background: rgba(255,255,255,0.2); color: #fff; }
+.kpi-trend.dn { background: rgba(0,0,0,0.15); color: rgba(255,255,255,0.85); }
+
+/* ── CHART GRID ── */
+.chart-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; flex: 1; min-height: 0; }
+.chart-card { background: #fff; border: 1px solid #e8edf5; border-radius: 13px; padding: 14px 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+.chart-card.span2 { grid-column: span 2; }
+.cc-hdr { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; flex-shrink: 0; }
+.cc-title { font-size: 12px; font-weight: 800; color: #1a2e3d; }
+.cc-sub { font-size: 9px; color: #94a3b8; margin-top: 2px; }
+.cc-badge { font-size: 9px; font-weight: 800; padding: 3px 9px; border-radius: 9px; background: #e3f2fd; color: #0277bd; }
+.cc-body { flex: 1; position: relative; min-height: 0; }
+
+/* bar chart */
+.bar-chart { display: flex; align-items: flex-end; gap: 5px; height: 100%; padding-bottom: 20px; position: relative; }
+.bar-chart::after { content: ''; position: absolute; bottom: 20px; left: 0; right: 0; height: 1px; background: #e8edf5; }
+.bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+.bar { width: 100%; border-radius: 5px 5px 0 0; transition: opacity 0.2s; min-height: 4px; }
+.bar:hover { opacity: 0.75; }
+.bar-lbl { font-size: 8px; color: #94a3b8; white-space: nowrap; }
+
+/* donut */
+.donut-wrap { display: flex; align-items: center; gap: 14px; height: 100%; }
+.donut-legend { display: flex; flex-direction: column; gap: 7px; flex: 1; min-width: 0; }
+.dl-item { display: flex; align-items: center; gap: 7px; }
+.dl-dot { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
+.dl-name { font-size: 10px; color: #64748b; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dl-pct { font-size: 10px; font-weight: 800; color: #1a2e3d; }
+
+/* horizontal bar */
+.hbar-list { display: flex; flex-direction: column; gap: 8px; height: 100%; justify-content: space-evenly; }
+.hbar-top { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.hbar-name { font-size: 10px; color: #64748b; }
+.hbar-val { font-size: 10px; font-weight: 800; color: #1a2e3d; }
+.hbar-track { height: 7px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
+.hbar-fill { height: 100%; border-radius: 4px; }
+
+/* annotations */
+.ann-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; flex-shrink: 0; }
+.ann-card { background: #fff; border: 1px solid #e8edf5; border-radius: 10px; padding: 11px 13px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.ann-icon { font-size: 14px; margin-bottom: 4px; }
+.ann-t { font-size: 10px; font-weight: 800; color: #334155; margin-bottom: 2px; }
+.ann-d { font-size: 9px; color: #94a3b8; line-height: 1.5; }
+
+/* ════════════════════════════════════════════════════
+   TABLE PAGES VIEW
+════════════════════════════════════════════════════ */
+.tbl-wrap { flex: 1; display: flex; overflow: hidden; }
+
+/* left: table selector */
+.tbl-nav { width: 205px; background: #fff; border-right: 1px solid #e2e8f0; overflow-y: auto; flex-shrink: 0; }
+.tn-group { padding: 14px 15px 5px; font-size: 9px; font-weight: 800; letter-spacing: 2px; color: #94a3b8; text-transform: uppercase; }
+.tn-item { padding: 9px 15px; display: flex; align-items: center; gap: 8px; cursor: pointer; border-left: 3px solid transparent; transition: all 0.12s; }
+.tn-item:hover { background: #f8faff; }
+.tn-item.active { background: #f0f6ff; border-left-color: var(--c); }
+.tn-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.tn-label { font-size: 12px; font-weight: 600; color: #64748b; }
+.tn-item.active .tn-label { color: #1a2e3d; font-weight: 800; }
+
+/* right: table area */
+.tbl-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #f0f2f5; }
+
+/* page header */
+.tbl-page-hdr { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 13px 20px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.tph-left { display: flex; align-items: center; gap: 10px; }
+.tph-dot { width: 10px; height: 10px; border-radius: 50%; }
+.tph-title { color: #1a2e3d; font-size: 15px; font-weight: 900; }
+.tph-count { font-size: 11px; color: #94a3b8; }
+.tph-right { display: flex; gap: 8px; }
+.tph-btn { border: none; border-radius: 8px; padding: 8px 15px; font-size: 11px; font-weight: 800; cursor: pointer; }
+.tph-btn-ghost { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
+.tph-btn-ghost:hover { background: #e8edf5; }
+.tph-btn-primary { color: #fff; }
+
+/* ── FILTER STRIP ── */
+.filter-strip { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 9px 20px; display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+.fs-label { font-size: 9px; font-weight: 800; color: #cbd5e1; letter-spacing: 1px; text-transform: uppercase; flex-shrink: 0; }
+.fs-input { height: 32px; background: #f8faff; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 0 11px; font-size: 11px; color: #64748b; min-width: 160px; display: flex; align-items: center; gap: 6px; cursor: pointer; flex-shrink: 0; transition: border-color 0.12s; }
+.fs-input:hover { border-color: #cbd5e1; }
+.fs-input-wide { min-width: 210px; }
+.fs-sep { width: 1px; height: 22px; background: #e2e8f0; flex-shrink: 0; }
+.fs-chip { height: 28px; border-radius: 14px; padding: 0 12px; border: 1.5px solid #e2e8f0; font-size: 10px; font-weight: 700; color: #64748b; display: flex; align-items: center; gap: 5px; cursor: pointer; background: #f8faff; flex-shrink: 0; transition: all 0.12s; }
+.fs-chip:hover { border-color: #cbd5e1; color: #334155; }
+.fs-chip.act { border-color: var(--c); color: var(--c); background: #fff; font-weight: 900; }
+.fs-chip-dot { width: 6px; height: 6px; border-radius: 50%; }
+.fs-clear { margin-left: auto; font-size: 10px; font-weight: 700; color: #94a3b8; cursor: pointer; }
+.fs-clear:hover { color: #475569; }
+
+/* ── TABLE ── */
+.tbl-scroll { flex: 1; overflow: auto; }
+.data-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+
+/* STICKY HEADER */
+.data-table thead th {
+  position: sticky; top: 0; z-index: 10;
+  background: #f8faff;
+  border-bottom: 1.5px solid #e2e8f0;
+  border-top: 1px solid #e2e8f0;
+  padding: 9px 14px;
+  font-size: 10px; font-weight: 800; color: #64748b;
+  text-transform: uppercase; letter-spacing: 0.7px;
+  white-space: nowrap; cursor: pointer; user-select: none;
+}
+.data-table thead th:hover { background: #f0f4ff; color: #334155; }
+.data-table thead th:first-child { padding-left: 20px; }
+.sort-arrow { opacity: 0.35; margin-left: 4px; font-size: 9px; }
+
+/* ROWS */
+.data-table tbody tr { background: #fff; border-bottom: 1px solid #f1f5f9; transition: background 0.1s; }
+.data-table tbody tr:hover { background: #f8faff; }
+.data-table td { padding: 10px 14px; font-size: 12px; color: #475569; white-space: nowrap; border-bottom: 1px solid #f1f5f9; }
+.data-table td:first-child { padding-left: 20px; }
+
+/* cell types */
+.cell-id { font-size: 10px; font-weight: 800; color: #94a3b8; font-family: monospace; }
+.cell-name { font-weight: 700; color: #1a2e3d; }
+.cell-amt { font-weight: 800; color: #166534; font-variant-numeric: tabular-nums; }
+.badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 11px; font-size: 9px; font-weight: 800; }
+.badge-dot { width: 5px; height: 5px; border-radius: 50%; }
+.cell-date { color: #94a3b8; font-size: 11px; }
+.cell-action { display: flex; gap: 5px; }
+.act-btn { width: 27px; height: 27px; border-radius: 7px; background: #f1f5f9; border: 1px solid #e2e8f0; cursor: pointer; font-size: 12px; color: #64748b; display: flex; align-items: center; justify-content: center; }
+.act-btn:hover { background: #e8edf5; color: #1a2e3d; }
+.cb { width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid #cbd5e1; flex-shrink: 0; }
+.cb.chk { background: #0277bd; border-color: #0277bd; }
+
+/* summary footer */
+.tbl-footer { background: #fff; border-top: 1px solid #e2e8f0; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.tbl-footer-count { font-size: 11px; color: #94a3b8; }
+.tbl-pagination { display: flex; gap: 5px; }
+.pg-btn { width: 30px; height: 30px; border-radius: 8px; background: #f1f5f9; border: 1px solid #e2e8f0; font-size: 11px; font-weight: 700; color: #64748b; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.pg-btn:hover { background: #e8edf5; }
+.pg-btn.act { background: #0277bd; color: #fff; border-color: #0277bd; }
+
+/* annotation bar */
+.ann-bar { background: #fff; border-top: 1px solid #e2e8f0; padding: 10px 20px; display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<!-- TOP SWITCHER -->
+<div class="switcher">
+  <button class="sw-btn active" onclick="switchView('dash',this)">📊 Dashboard</button>
+  <button class="sw-btn" onclick="switchView('tables',this)">📋 Data Tables</button>
+  <div class="sw-label">Visual Mockup — Awaiting Approval</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- DASHBOARD VIEW                                       -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="view active" id="view-dash">
+<div class="dash-wrap">
+
+  <!-- TOP BAR -->
+  <div class="dash-topbar">
+    <div class="dt-left">
+      <div class="dt-logo">🏗</div>
+      <div>
+        <div class="dt-title">Ratal Advanced Technologies</div>
+        <div class="dt-entity">ACCSYS ERP — October 2026</div>
+      </div>
+    </div>
+    <div class="dt-right">
+      <div class="dt-entity-tag">🏢 ACCSYS</div>
+      <div class="dt-entity-tag">🏢 RAT</div>
+      <div class="dt-entity-tag">✈️ GWT</div>
+      <div class="dt-date">Thu 01 Oct 2026</div>
+      <div class="dt-notif">🔔</div>
+      <div class="dt-notif">👤</div>
+    </div>
+  </div>
+
+  <div class="dash-body">
+
+    <!-- MINI SIDEBAR (dark, as it will be in app) -->
+    <div class="dash-sidebar">
+      <div class="ds-icon act" title="Dashboard">📊</div>
+      <div class="ds-icon" title="Finance">💰</div>
+      <div class="ds-icon" title="HR">👥</div>
+      <div class="ds-icon" title="Operations">🏗</div>
+      <div class="ds-sep"></div>
+      <div class="ds-icon" title="Accounting">📒</div>
+      <div class="ds-icon" title="Planning">📐</div>
+      <div class="ds-sep"></div>
+      <div class="ds-icon" title="Reports">📈</div>
+      <div class="ds-icon" title="Settings">⚙️</div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="dash-content">
+
+      <!-- KPI CARDS — compact, colorful -->
+      <div class="kpi-row">
+        <div class="kpi" style="background:linear-gradient(135deg,#0277bd,#01579b)">
+          <span class="kpi-icon">💰</span>
+          <div class="kpi-val">SAR 2.4M</div>
+          <div class="kpi-lbl">Total Revenue</div>
+          <div class="kpi-trend up">▲ 12%</div>
+        </div>
+        <div class="kpi" style="background:linear-gradient(135deg,#00695c,#004d40)">
+          <span class="kpi-icon">📊</span>
+          <div class="kpi-val">SAR 380K</div>
+          <div class="kpi-lbl">Net Profit</div>
+          <div class="kpi-trend up">▲ 8%</div>
+        </div>
+        <div class="kpi" style="background:linear-gradient(135deg,#e65100,#bf360c)">
+          <span class="kpi-icon">👷</span>
+          <div class="kpi-val">214</div>
+          <div class="kpi-lbl">Active Staff</div>
+          <div class="kpi-trend up">▲ 3</div>
+        </div>
+        <div class="kpi" style="background:linear-gradient(135deg,#5A32D4,#3a1fa0)">
+          <span class="kpi-icon">🏗</span>
+          <div class="kpi-val">18</div>
+          <div class="kpi-lbl">Live Projects</div>
+          <div class="kpi-trend dn">▼ 2</div>
+        </div>
+        <div class="kpi" style="background:linear-gradient(135deg,#00838f,#005f69)">
+          <span class="kpi-icon">📄</span>
+          <div class="kpi-val">SAR 640K</div>
+          <div class="kpi-lbl">AR Outstanding</div>
+          <div class="kpi-trend dn">▲ 40K</div>
+        </div>
+        <div class="kpi" style="background:linear-gradient(135deg,#b71c1c,#7f0000)">
+          <span class="kpi-icon">⚠️</span>
+          <div class="kpi-val">7</div>
+          <div class="kpi-lbl">Compliance Alerts</div>
+          <div class="kpi-trend dn">3 critical</div>
+        </div>
+      </div>
+
+      <!-- CHARTS GRID -->
+      <div class="chart-grid">
+
+        <!-- 1. Revenue bar chart (wide, spans 2 cols) -->
+        <div class="chart-card span2">
+          <div class="cc-hdr">
+            <div>
+              <div class="cc-title">Monthly Revenue vs Cost</div>
+              <div class="cc-sub">Jan – Oct 2026 · SAR thousands</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="display:flex;align-items:center;gap:4px;font-size:9px;color:#94a3b8"><div style="width:10px;height:10px;border-radius:3px;background:#0277bd"></div>Revenue</div>
+              <div style="display:flex;align-items:center;gap:4px;font-size:9px;color:#94a3b8"><div style="width:10px;height:10px;border-radius:3px;background:#e65100;opacity:0.7"></div>Cost</div>
+              <div class="cc-badge">Oct 2026</div>
+            </div>
+          </div>
+          <div class="cc-body">
+            <div class="bar-chart" id="barChart"></div>
+          </div>
+        </div>
+
+        <!-- 2. Project status donut -->
+        <div class="chart-card">
+          <div class="cc-hdr">
+            <div>
+              <div class="cc-title">Projects by Status</div>
+              <div class="cc-sub">18 active projects</div>
+            </div>
+          </div>
+          <div class="cc-body">
+            <div class="donut-wrap">
+              <svg viewBox="0 0 80 80" width="80" height="80" style="flex-shrink:0">
+                <circle cx="40" cy="40" r="28" fill="none" stroke="#e8edf5" stroke-width="12"/>
+                <circle cx="40" cy="40" r="28" fill="none" stroke="#5A32D4" stroke-width="12"
+                  stroke-dasharray="70.4 105.6" stroke-dashoffset="0" transform="rotate(-90 40 40)"/>
+                <circle cx="40" cy="40" r="28" fill="none" stroke="#0277bd" stroke-width="12"
+                  stroke-dasharray="37.7 138.3" stroke-dashoffset="-70.4" transform="rotate(-90 40 40)"/>
+                <circle cx="40" cy="40" r="28" fill="none" stroke="#558b2f" stroke-width="12"
+                  stroke-dasharray="18.8 157.2" stroke-dashoffset="-108.1" transform="rotate(-90 40 40)"/>
+                <circle cx="40" cy="40" r="28" fill="none" stroke="#e65100" stroke-width="12"
+                  stroke-dasharray="50.3 125.7" stroke-dashoffset="-126.9" transform="rotate(-90 40 40)"/>
+                <text x="40" y="38" text-anchor="middle" font-size="13" font-weight="900" fill="#1a2e3d">18</text>
+                <text x="40" y="50" text-anchor="middle" font-size="7" fill="#94a3b8">projects</text>
+              </svg>
+              <div class="donut-legend">
+                <div class="dl-item"><div class="dl-dot" style="background:#5A32D4"></div><div class="dl-name">In Progress</div><div class="dl-pct">40%</div></div>
+                <div class="dl-item"><div class="dl-dot" style="background:#0277bd"></div><div class="dl-name">Planned</div><div class="dl-pct">22%</div></div>
+                <div class="dl-item"><div class="dl-dot" style="background:#558b2f"></div><div class="dl-name">Completed</div><div class="dl-pct">11%</div></div>
+                <div class="dl-item"><div class="dl-dot" style="background:#e65100"></div><div class="dl-name">On Hold</div><div class="dl-pct">27%</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. AR aging -->
+        <div class="chart-card">
+          <div class="cc-hdr">
+            <div>
+              <div class="cc-title">AR Aging Breakdown</div>
+              <div class="cc-sub">Total SAR 640K outstanding</div>
+            </div>
+          </div>
+          <div class="cc-body">
+            <div class="hbar-list">
+              <div class="hbar-item">
+                <div class="hbar-top"><span class="hbar-name">Current (0–30d)</span><span class="hbar-val">SAR 280K</span></div>
+                <div class="hbar-track"><div class="hbar-fill" style="width:72%;background:#558b2f"></div></div>
+              </div>
+              <div class="hbar-item">
+                <div class="hbar-top"><span class="hbar-name">31–60 days</span><span class="hbar-val">SAR 140K</span></div>
+                <div class="hbar-track"><div class="hbar-fill" style="width:36%;background:#0277bd"></div></div>
+              </div>
+              <div class="hbar-item">
+                <div class="hbar-top"><span class="hbar-name">61–90 days</span><span class="hbar-val">SAR 95K</span></div>
+                <div class="hbar-track"><div class="hbar-fill" style="width:24%;background:#e65100"></div></div>
+              </div>
+              <div class="hbar-item">
+                <div class="hbar-top"><span class="hbar-name">90+ days</span><span class="hbar-val" style="color:#b71c1c">SAR 125K</span></div>
+                <div class="hbar-track"><div class="hbar-fill" style="width:32%;background:#b71c1c"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. HR summary -->
+        <div class="chart-card">
+          <div class="cc-hdr">
+            <div>
+              <div class="cc-title">HR Overview</div>
+              <div class="cc-sub">October 2026</div>
+            </div>
+          </div>
+          <div class="cc-body">
+            <div class="hbar-list">
+              <div class="hbar-item">
+                <div class="hbar-top"><span class="hbar-name">Direct Staff</span><span class="hbar-val">87</span></div>
+                <div class="hbar-track"><div class="hbar-fill" style="width:42%;background:#e65100"></div></div>
+              </div>
+              <div class="hbar-item">
+                <div class="hbar-top"><span class="hbar-name">Outsourced</span><span class="hbar-val">127</span></div>
+                <div class="hbar-track"><div class="hbar-fill" style="width:61%;background:#6a1b9a"></div></div>
+              </div>
+              <div class="hbar-item">
+                <div class="hbar-top"><span class="hbar-name">On Leave</span><span class="hbar-val">12</span></div>
+                <div class="hbar-track"><div class="hbar-fill" style="width:6%;background:#00838f"></div></div>
+              </div>
+              <div class="hbar-item">
+                <div class="hbar-top"><span class="hbar-name">Expiring Docs</span><span class="hbar-val" style="color:#b71c1c">7 🔴</span></div>
+                <div class="hbar-track"><div class="hbar-fill" style="width:3%;background:#b71c1c"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Cash positions -->
+        <div class="chart-card">
+          <div class="cc-hdr">
+            <div>
+              <div class="cc-title">Cash Positions</div>
+              <div class="cc-sub">All accounts · SAR</div>
+            </div>
+          </div>
+          <div class="cc-body">
+            <div class="hbar-list">
+              <div class="hbar-item">
+                <div class="hbar-top"><span class="hbar-name">ANB — Main Ops</span><span class="hbar-val">SAR 1.2M</span></div>
+                <div class="hbar-track"><div class="hbar-fill" style="width:90%;background:#0277bd"></div></div>
+              </div>
+              <div class="hbar-item">
+                <div class="hbar-top"><span class="hbar-name">Petty Cash — Site</span><span class="hbar-val">SAR 18K</span></div>
+                <div class="hbar-track"><div class="hbar-fill" style="width:14%;background:#00838f"></div></div>
+              </div>
+              <div class="hbar-item">
+                <div class="hbar-top"><span class="hbar-name">Travel A/C (GWT)</span><span class="hbar-val">SAR 95K</span></div>
+                <div class="hbar-track"><div class="hbar-fill" style="width:45%;background:#1565C0"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- end chart-grid -->
+
+      <!-- ANNOTATIONS -->
+      <div class="ann-row">
+        <div class="ann-card">
+          <div class="ann-icon">📏</div>
+          <div class="ann-t">Compact KPI Cards</div>
+          <div class="ann-d">6 small cards in one row. Colorful gradients per module. Trend arrow top-right. No wasted height.</div>
+        </div>
+        <div class="ann-card">
+          <div class="ann-icon">📐</div>
+          <div class="ann-t">Charts fit the viewport</div>
+          <div class="ann-d">3-col × 2-row grid fills the remaining height. Everything visible without scrolling.</div>
+        </div>
+        <div class="ann-card">
+          <div class="ann-icon">🎨</div>
+          <div class="ann-t">Module Colors on KPIs</div>
+          <div class="ann-d">Finance=blue, HR=orange, Ops=purple, Accounting=teal, Alerts=red — matching sidebar section colors.</div>
+        </div>
+        <div class="ann-card">
+          <div class="ann-icon">🌤</div>
+          <div class="ann-t">Light Mode Background</div>
+          <div class="ann-d">White cards on #f0f2f5 page. Top bar white. Sidebar stays dark for contrast. Clean and professional.</div>
+        </div>
+      </div>
+
+    </div><!-- dash-content -->
+  </div><!-- dash-body -->
+</div>
+</div><!-- view-dash -->
+
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- TABLES VIEW                                          -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="view" id="view-tables">
+<div class="tbl-wrap">
+
+  <!-- TABLE NAV -->
+  <div class="tbl-nav">
+    <div class="tn-group">Finance</div>
+    <div class="tn-item active" style="--c:#0277bd" onclick="loadTable('invoices')" id="tn-invoices">
+      <div class="tn-dot" style="background:#0277bd"></div><div class="tn-label">Invoices</div>
+    </div>
+    <div class="tn-item" style="--c:#0277bd" onclick="loadTable('expenses')" id="tn-expenses">
+      <div class="tn-dot" style="background:#0277bd"></div><div class="tn-label">Expenses</div>
+    </div>
+    <div class="tn-item" style="--c:#0277bd" onclick="loadTable('payments')" id="tn-payments">
+      <div class="tn-dot" style="background:#0277bd"></div><div class="tn-label">Payments</div>
+    </div>
+    <div class="tn-group">Human Resources</div>
+    <div class="tn-item" style="--c:#e65100" onclick="loadTable('employees')" id="tn-employees">
+      <div class="tn-dot" style="background:#e65100"></div><div class="tn-label">Employees</div>
+    </div>
+    <div class="tn-item" style="--c:#e65100" onclick="loadTable('vacations')" id="tn-vacations">
+      <div class="tn-dot" style="background:#e65100"></div><div class="tn-label">Vacations</div>
+    </div>
+    <div class="tn-item" style="--c:#e65100" onclick="loadTable('overtime')" id="tn-overtime">
+      <div class="tn-dot" style="background:#e65100"></div><div class="tn-label">Overtime</div>
+    </div>
+    <div class="tn-group">Accounting</div>
+    <div class="tn-item" style="--c:#00838f" onclick="loadTable('journals')" id="tn-journals">
+      <div class="tn-dot" style="background:#00838f"></div><div class="tn-label">Journal Vouchers</div>
+    </div>
+    <div class="tn-item" style="--c:#00838f" onclick="loadTable('cheques')" id="tn-cheques">
+      <div class="tn-dot" style="background:#00838f"></div><div class="tn-label">Cheques</div>
+    </div>
+    <div class="tn-group">Operations</div>
+    <div class="tn-item" style="--c:#5A32D4" onclick="loadTable('projects')" id="tn-projects">
+      <div class="tn-dot" style="background:#5A32D4"></div><div class="tn-label">Projects</div>
+    </div>
+    <div class="tn-item" style="--c:#5A32D4" onclick="loadTable('moneyreqs')" id="tn-moneyreqs">
+      <div class="tn-dot" style="background:#5A32D4"></div><div class="tn-label">Money Requests</div>
+    </div>
+    <div class="tn-group">Travel</div>
+    <div class="tn-item" style="--c:#1565C0" onclick="loadTable('tickets')" id="tn-tickets">
+      <div class="tn-dot" style="background:#1565C0"></div><div class="tn-label">Tickets</div>
+    </div>
+  </div>
+
+  <!-- TABLE MAIN AREA -->
+  <div class="tbl-main" id="tblMain"></div>
+
+</div>
+</div><!-- view-tables -->
+
+<script>
+function switchView(id, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.sw-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'tables') loadTable('invoices');
+}
+
+// Build bar chart
+(function() {
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct'];
+  const rev  = [180,210,195,240,280,265,310,290,330,240];
+  const cost = [140,160,155,180,210,200,240,220,250,185];
+  const maxV = Math.max(...rev);
+  const el = document.getElementById('barChart');
+  if (!el) return;
+  months.forEach((m,i) => {
+    const rh = (rev[i]/maxV*100).toFixed(1);
+    const ch = (cost[i]/maxV*100).toFixed(1);
+    el.innerHTML += `<div class="bar-wrap">
+      <div style="display:flex;align-items:flex-end;gap:2px;height:calc(100% - 20px)">
+        <div class="bar" style="height:${rh}%;background:#0277bd;flex:1"></div>
+        <div class="bar" style="height:${ch}%;background:#e65100;opacity:0.65;flex:1"></div>
+      </div>
+      <div class="bar-lbl">${m}</div>
+    </div>`;
+  });
+})();
+
+// Table data
+const TABLES = {
+  invoices: {
+    title:'Invoices', color:'#0277bd', count:'247 records', total:'SAR 2,418,650',
+    filters:[
+      {type:'search',placeholder:'🔍  Search client or invoice #',wide:true},
+      {type:'sep'},
+      {type:'select',placeholder:'📅 Period ▾'},
+      {type:'select',placeholder:'🏗 Project ▾'},
+      {type:'sep'},
+      {type:'chips',options:['All','Draft','Issued','Paid','Overdue','Cancelled'],active:'All'},
+    ],
+    cols:['','#','Client','Project','Date','Due Date','Amount','VAT','Total','Status','Actions'],
+    rows:[
+      ['chk','INV-2026-0247','Saudi Aramco','NEOM-Site-4','01/10/26','31/10/26','48,000','7,200','55,200','Issued','actions'],
+      ['chk','INV-2026-0246','ACWA Power','PP-Riyadh-2','30/09/26','30/10/26','125,000','18,750','143,750','Issued','actions'],
+      ['chk','INV-2026-0245','Mobiserve KSA','KSA-Maint-7','28/09/26','28/10/26','32,500','4,875','37,375','Paid','actions'],
+      ['chk','INV-2026-0244','SABIC Industrial','Yanbu-Proj','25/09/26','25/10/26','89,000','13,350','102,350','Overdue','actions'],
+      ['chk','INV-2026-0243','Al-Rushaid Group','Site-A-Civil','20/09/26','20/10/26','210,000','31,500','241,500','Paid','actions'],
+      ['chk','INV-2026-0242','NEOM Company','NEOM-Infra-1','15/09/26','15/10/26','55,000','8,250','63,250','Draft','actions'],
+      ['chk','INV-2026-0241','Saudi Aramco','ARB-Site-B','10/09/26','10/10/26','77,500','11,625','89,125','Issued','actions'],
+      ['chk','INV-2026-0240','ACWA Power','PP-Tabuk','05/09/26','05/10/26','43,800','6,570','50,370','Overdue','actions'],
+      ['chk','INV-2026-0239','Saudi Aramco','RAS-TK-2','01/09/26','01/10/26','65,000','9,750','74,750','Paid','actions'],
+    ],
+    statusColors:{
+      'Issued': {bg:'#dbeafe',color:'#1d4ed8',dot:'#1d4ed8'},
+      'Paid':   {bg:'#dcfce7',color:'#166534',dot:'#16a34a'},
+      'Draft':  {bg:'#f1f5f9',color:'#64748b',dot:'#94a3b8'},
+      'Overdue':{bg:'#fee2e2',color:'#b91c1c',dot:'#dc2626'},
+      'Cancelled':{bg:'#f1f5f9',color:'#94a3b8',dot:'#cbd5e1'},
+    },
+  },
+  expenses:{
+    title:'Expenses', color:'#0277bd', count:'184 records', total:'SAR 312,440',
+    filters:[
+      {type:'search',placeholder:'🔍  Search employee or description',wide:true},
+      {type:'select',placeholder:'📅 Date Range ▾'},
+      {type:'select',placeholder:'🏛 Department ▾'},
+      {type:'select',placeholder:'🏗 Project ▾'},
+      {type:'sep'},
+      {type:'chips',options:['All','Pending','Approved','Rejected'],active:'All'},
+    ],
+    cols:['','Ref','Employee','Department','Date','Category','Amount','VAT','Total','Status','Actions'],
+    rows:[
+      ['chk','EXP-0184','Ahmad Al-Harbi','Operations','01/10/26','Site Materials','850','127','977','Pending','actions'],
+      ['chk','EXP-0183','Mohammed Khalid','Engineering','30/09/26','Travel','320','0','320','Approved','actions'],
+      ['chk','EXP-0182','Sara Al-Otaibi','Admin','28/09/26','Stationery','145','21','166','Approved','actions'],
+      ['chk','EXP-0181','Faisal Al-Qahtani','HR','25/09/26','Training','2,500','375','2,875','Pending','actions'],
+      ['chk','EXP-0180','Nora Al-Ghamdi','Finance','20/09/26','Fuel','280','42','322','Approved','actions'],
+      ['chk','EXP-0179','Khalid Mansoor','Operations','18/09/26','Tools','1,100','165','1,265','Rejected','actions'],
+    ],
+    statusColors:{
+      'Pending': {bg:'#fef3c7',color:'#92400e',dot:'#d97706'},
+      'Approved':{bg:'#dcfce7',color:'#166534',dot:'#16a34a'},
+      'Rejected':{bg:'#fee2e2',color:'#b91c1c',dot:'#dc2626'},
+    },
+  },
+  payments:{
+    title:'Outgoing Payments', color:'#0277bd', count:'96 records', total:'SAR 1,240,800',
+    filters:[
+      {type:'search',placeholder:'🔍  Search payee or reference',wide:true},
+      {type:'select',placeholder:'📅 Period ▾'},
+      {type:'sep'},
+      {type:'chips',options:['All','Pending','Paid','Cancelled'],active:'All'},
+    ],
+    cols:['','Ref','Payee','Type','Amount (SAR)','Date','Bank','Method','Status','Actions'],
+    rows:[
+      ['chk','PAY-0096','Ahmad Al-Harbi','Employee','5,000','01/10/26','ANB','Transfer','Paid','actions'],
+      ['chk','PAY-0095','ABC Trading Co.','Supplier','18,500','30/09/26','ANB','Transfer','Pending','actions'],
+      ['chk','PAY-0094','NEOM Sub-Contractor','Contractor','75,000','28/09/26','SAB','Transfer','Paid','actions'],
+      ['chk','PAY-0093','Mobiserve KSA','Supplier','32,000','25/09/26','ANB','Cheque','Pending','actions'],
+    ],
+    statusColors:{
+      'Paid':     {bg:'#dcfce7',color:'#166534',dot:'#16a34a'},
+      'Pending':  {bg:'#fef3c7',color:'#92400e',dot:'#d97706'},
+      'Cancelled':{bg:'#f1f5f9',color:'#94a3b8',dot:'#cbd5e1'},
+    },
+  },
+  employees:{
+    title:'Employees', color:'#e65100', count:'214 records', total:'',
+    filters:[
+      {type:'search',placeholder:'🔍  Search name, ID or Iqama',wide:true},
+      {type:'select',placeholder:'🏛 Department ▾'},
+      {type:'select',placeholder:'🏷 Category ▾'},
+      {type:'sep'},
+      {type:'chips',options:['All','Active','On Leave','Released'],active:'Active'},
+    ],
+    cols:['','ID','Full Name','Nationality','Department','Designation','Join Date','Iqama Exp.','Status','Actions'],
+    rows:[
+      ['chk','EMP-0214','Ahmad Al-Harbi','Saudi','Operations','Site Supervisor','01/03/22','15/06/27','Active','actions'],
+      ['chk','EMP-0213','Mohammed Nasser','Yemeni','Engineering','Electrician','10/06/21','01/02/27','Active','actions'],
+      ['chk','EMP-0212','Khalid Ibrahim','Pakistani','Mechanical','Piping Tech','20/09/20','30/04/27','Active','actions'],
+      ['chk','EMP-0211','Abdul Rahman','Indian','Admin','Office Coordinator','15/01/23','01/12/26','Active','actions'],
+      ['chk','EMP-0210','Faisal Al-Ghamdi','Saudi','HR','HR Officer','05/07/22','N/A (Saudi)','Active','actions'],
+      ['chk','EMP-0209','Saleh Mohammed','Bangladeshi','Operations','Helper','01/11/19','05/09/26 🔴','Active','actions'],
+    ],
+    statusColors:{
+      'Active':  {bg:'#dcfce7',color:'#166534',dot:'#16a34a'},
+      'On Leave':{bg:'#dbeafe',color:'#1d4ed8',dot:'#1d4ed8'},
+      'Released':{bg:'#f1f5f9',color:'#64748b',dot:'#94a3b8'},
+    },
+  },
+  vacations:{
+    title:'Vacation / Leave Requests', color:'#e65100', count:'62 records', total:'',
+    filters:[
+      {type:'search',placeholder:'🔍  Search employee name',wide:true},
+      {type:'select',placeholder:'📅 Month ▾'},
+      {type:'select',placeholder:'🏷 Leave Type ▾'},
+      {type:'sep'},
+      {type:'chips',options:['All','Pending','Approved','Active','Rejected'],active:'All'},
+    ],
+    cols:['','Ref','Employee','Leave Type','From','To','Days','Balance','Status','Actions'],
+    rows:[
+      ['chk','LV-0062','Ahmad Al-Harbi','Annual Leave','01/10/26','15/10/26','14','21 days','Approved','actions'],
+      ['chk','LV-0061','Sara Al-Otaibi','Sick Leave','28/09/26','30/09/26','2','14 days','Approved','actions'],
+      ['chk','LV-0060','Mohammed Nasser','Annual Leave','15/10/26','29/10/26','14','28 days','Pending','actions'],
+      ['chk','LV-0059','Khalid Ibrahim','Emergency','20/09/26','22/09/26','2','5 days','Approved','actions'],
+    ],
+    statusColors:{
+      'Pending': {bg:'#fef3c7',color:'#92400e',dot:'#d97706'},
+      'Approved':{bg:'#dcfce7',color:'#166534',dot:'#16a34a'},
+      'Active':  {bg:'#dbeafe',color:'#1d4ed8',dot:'#1d4ed8'},
+      'Rejected':{bg:'#fee2e2',color:'#b91c1c',dot:'#dc2626'},
+    },
+  },
+  overtime:{
+    title:'Overtime Records', color:'#e65100', count:'348 records', total:'SAR 88,420',
+    filters:[
+      {type:'search',placeholder:'🔍  Search employee or job #',wide:true},
+      {type:'select',placeholder:'🏗 Project ▾'},
+      {type:'select',placeholder:'📅 Month ▾'},
+      {type:'sep'},
+      {type:'chips',options:['All','Pending','Approved','Paid'],active:'All'},
+    ],
+    cols:['','Ref','Employee','Project','Date','OT Type','Hrs','Rate/hr','Amount','Status','Actions'],
+    rows:[
+      ['chk','OT-0348','Ahmad Al-Harbi','NEOM-Site-4','01/10/26','Normal','8','SAR 28','SAR 224','Pending','actions'],
+      ['chk','OT-0347','Mohammed Nasser','PP-Riyadh','30/09/26','Shutdown','12','SAR 35','SAR 420','Approved','actions'],
+      ['chk','OT-0346','Khalid Ibrahim','ARB-Site','28/09/26','Normal','6','SAR 25','SAR 150','Paid','actions'],
+      ['chk','OT-0345','Abdul Rahman','NEOM-Site-4','25/09/26','Normal','4','SAR 22','SAR 88','Paid','actions'],
+    ],
+    statusColors:{
+      'Pending': {bg:'#fef3c7',color:'#92400e',dot:'#d97706'},
+      'Approved':{bg:'#ede9fe',color:'#6d28d9',dot:'#7c3aed'},
+      'Paid':    {bg:'#dcfce7',color:'#166534',dot:'#16a34a'},
+    },
+  },
+  journals:{
+    title:'Journal Vouchers', color:'#00838f', count:'1,247 records', total:'',
+    filters:[
+      {type:'search',placeholder:'🔍  Search voucher # or narration',wide:true},
+      {type:'select',placeholder:'📅 Period ▾'},
+      {type:'select',placeholder:'🏷 Type ▾'},
+      {type:'sep'},
+      {type:'chips',options:['All','Draft','Posted','Reversed'],active:'Posted'},
+    ],
+    cols:['','Voucher #','Type','Date','Narration','DR (SAR)','CR (SAR)','Balanced?','Status','Actions'],
+    rows:[
+      ['chk','JV-2026-1247','General JV','01/10/26','Monthly salary accrual','285,000','285,000','✓ Yes','Posted','actions'],
+      ['chk','JV-2026-1246','Accrual','30/09/26','Utility expense accrual','12,500','12,500','✓ Yes','Posted','actions'],
+      ['chk','JV-2026-1245','General JV','28/09/26','Insurance prepayment','45,000','45,000','✓ Yes','Draft','actions'],
+      ['chk','JV-2026-1244','Reclassification','25/09/26','Cost center realloc — IT','8,200','8,200','✓ Yes','Posted','actions'],
+    ],
+    statusColors:{
+      'Draft':   {bg:'#f1f5f9',color:'#64748b',dot:'#94a3b8'},
+      'Posted':  {bg:'#dcfce7',color:'#166534',dot:'#16a34a'},
+      'Reversed':{bg:'#fee2e2',color:'#b91c1c',dot:'#dc2626'},
+    },
+  },
+  cheques:{
+    title:'Cheque Register', color:'#00838f', count:'89 records', total:'SAR 680,000',
+    filters:[
+      {type:'search',placeholder:'🔍  Search payee or cheque #',wide:true},
+      {type:'select',placeholder:'🏦 Bank ▾'},
+      {type:'select',placeholder:'🏷 Type ▾'},
+      {type:'sep'},
+      {type:'chips',options:['All','Pending','Deposited','Cleared','Bounced'],active:'All'},
+    ],
+    cols:['','Chq #','Type','Payee / Drawer','Amount (SAR)','Date','Bank','Account','Status','Actions'],
+    rows:[
+      ['chk','001456','Issued','ABC Trading Co.','18,500','01/10/26','ANB','Current','Pending','actions'],
+      ['chk','001455','Issued','NEOM Sub-Con','75,000','30/09/26','SAB','Current','Cleared','actions'],
+      ['chk','001454','Received','Saudi Aramco','120,000','28/09/26','ANB','Current','Deposited','actions'],
+      ['chk','001453','Issued','Al-Rushaid','45,000','25/09/26','ANB','Current','Bounced','actions'],
+    ],
+    statusColors:{
+      'Pending':  {bg:'#fef3c7',color:'#92400e',dot:'#d97706'},
+      'Deposited':{bg:'#dbeafe',color:'#1d4ed8',dot:'#1d4ed8'},
+      'Cleared':  {bg:'#dcfce7',color:'#166534',dot:'#16a34a'},
+      'Bounced':  {bg:'#fee2e2',color:'#b91c1c',dot:'#dc2626'},
+    },
+  },
+  projects:{
+    title:'Projects', color:'#5A32D4', count:'18 active', total:'SAR 12.4M backlog',
+    filters:[
+      {type:'search',placeholder:'🔍  Search project name or number',wide:true},
+      {type:'select',placeholder:'🏛 Department ▾'},
+      {type:'select',placeholder:'📅 Year ▾'},
+      {type:'sep'},
+      {type:'chips',options:['All','Active','Planned','On Hold','Completed'],active:'Active'},
+    ],
+    cols:['','Job #','Project Name','Client','Value (SAR)','Start','End','Dept','Status','Actions'],
+    rows:[
+      ['chk','JOB-2024-018','NEOM Infrastructure Ph.2','NEOM Co.','4,500,000','01/03/24','31/12/26','Operations','Active','actions'],
+      ['chk','JOB-2024-017','PP Riyadh Electrical','ACWA Power','2,100,000','15/06/24','30/06/27','Electrical','Active','actions'],
+      ['chk','JOB-2024-016','Yanbu Mechanical Works','SABIC','1,800,000','01/01/24','30/09/26','Mechanical','Active','actions'],
+      ['chk','JOB-2024-015','ARB Site Maintenance','Al-Rushaid','580,000','01/07/23','31/03/27','Operations','Active','actions'],
+      ['chk','JOB-2024-014','Tabuk Power Infra','ACWA Power','3,200,000','01/10/24','31/10/27','Electrical','Planned','actions'],
+    ],
+    statusColors:{
+      'Active':   {bg:'#ede9fe',color:'#6d28d9',dot:'#7c3aed'},
+      'Planned':  {bg:'#dbeafe',color:'#1d4ed8',dot:'#1d4ed8'},
+      'On Hold':  {bg:'#fef3c7',color:'#92400e',dot:'#d97706'},
+      'Completed':{bg:'#dcfce7',color:'#166534',dot:'#16a34a'},
+    },
+  },
+  moneyreqs:{
+    title:'Money Requests', color:'#5A32D4', count:'73 records', total:'SAR 445,000',
+    filters:[
+      {type:'search',placeholder:'🔍  Search payee or project',wide:true},
+      {type:'select',placeholder:'🏗 Project ▾'},
+      {type:'select',placeholder:'📅 Month ▾'},
+      {type:'sep'},
+      {type:'chips',options:['All','Pending','Approved','Paid','Rejected'],active:'All'},
+    ],
+    cols:['','Ref','Payment To','Project','Amount (SAR)','Required By','Purpose','Status','Actions'],
+    rows:[
+      ['chk','MR-0073','Ahmad Al-Harbi','NEOM-Site-4','8,500','05/10/26','Electrical materials','Pending','actions'],
+      ['chk','MR-0072','Site Store','PP-Riyadh','25,000','03/10/26','Pipe fittings purchase','Approved','actions'],
+      ['chk','MR-0071','Khalid Ibrahim','ARB-Site','3,200','01/10/26','Tools & consumables','Paid','actions'],
+      ['chk','MR-0070','Faisal Al-Qahtani','KSA-Maint','15,000','28/09/26','Safety gear','Rejected','actions'],
+    ],
+    statusColors:{
+      'Pending': {bg:'#fef3c7',color:'#92400e',dot:'#d97706'},
+      'Approved':{bg:'#ede9fe',color:'#6d28d9',dot:'#7c3aed'},
+      'Paid':    {bg:'#dcfce7',color:'#166534',dot:'#16a34a'},
+      'Rejected':{bg:'#fee2e2',color:'#b91c1c',dot:'#dc2626'},
+    },
+  },
+  tickets:{
+    title:'Travel Tickets', color:'#1565C0', count:'1,840 records', total:'SAR 1,924,500',
+    filters:[
+      {type:'search',placeholder:'🔍  Search passenger or ticket #',wide:true},
+      {type:'select',placeholder:'✈️ Airline ▾'},
+      {type:'select',placeholder:'📅 Month ▾'},
+      {type:'select',placeholder:'👥 Customer ▾'},
+      {type:'sep'},
+      {type:'chips',options:['All','Issued','Used','Refunded','Cancelled'],active:'All'},
+    ],
+    cols:['','Ticket #','Passenger','Airline','Route','Travel Date','Fare (SAR)','Total','Status','Actions'],
+    rows:[
+      ['chk','TKT-1840','Ahmad Al-Harbi','Saudia (SV)','RUH→DXB','15/10/26','850','977','Issued','actions'],
+      ['chk','TKT-1839','Sara Al-Otaibi','Emirates (EK)','RUH→LHR','20/10/26','3,200','3,680','Issued','actions'],
+      ['chk','TKT-1838','Mohammed Nasser','Flyadeal (F3)','RUH→JED','05/10/26','180','207','Used','actions'],
+      ['chk','TKT-1837','Khalid Ibrahim','Saudia (SV)','JED→RUH','02/10/26','220','253','Refunded','actions'],
+      ['chk','TKT-1836','Nora Al-Ghamdi','Qatar (QR)','DOH→RUH','10/10/26','1,100','1,265','Issued','actions'],
+    ],
+    statusColors:{
+      'Issued':  {bg:'#dbeafe',color:'#1d4ed8',dot:'#1d4ed8'},
+      'Used':    {bg:'#dcfce7',color:'#166534',dot:'#16a34a'},
+      'Refunded':{bg:'#fef3c7',color:'#92400e',dot:'#d97706'},
+      'Cancelled':{bg:'#fee2e2',color:'#b91c1c',dot:'#dc2626'},
+    },
+  },
+};
+
+let curTable = 'invoices';
+
+function loadTable(id) {
+  curTable = id;
+  document.querySelectorAll('.tn-item').forEach(el => el.classList.remove('active'));
+  const navEl = document.getElementById('tn-' + id);
+  if (navEl) navEl.classList.add('active');
+  const T = TABLES[id];
+  if (!T) return;
+  const container = document.getElementById('tblMain');
+  container.innerHTML = `
+    <div class="tbl-page-hdr">
+      <div class="tph-left">
+        <div class="tph-dot" style="background:${T.color}"></div>
+        <div class="tph-title">${T.title}</div>
+        <div class="tph-count">${T.count}${T.total?' · Total: '+T.total:''}</div>
+      </div>
+      <div class="tph-right">
+        <button class="tph-btn tph-btn-ghost">⬇ Export</button>
+        <button class="tph-btn tph-btn-ghost">🖨 Print</button>
+        <button class="tph-btn tph-btn-primary" style="background:${T.color}">+ New</button>
+      </div>
+    </div>
+    <div class="filter-strip" style="--c:${T.color}">${buildFilters(T.filters, T.color)}</div>
+    <div class="tbl-scroll">
+      <table class="data-table">
+        <thead><tr>${T.cols.map((c,i)=>`<th>${i===0?'<div class="cb chk"></div>':c+(i>0?'<span class="sort-arrow">↕</span>':'')}</th>`).join('')}</tr></thead>
+        <tbody>${T.rows.map(r=>buildRow(r,T.cols,T.statusColors)).join('')}</tbody>
+      </table>
+    </div>
+    <div class="tbl-footer">
+      <div class="tbl-footer-count">Showing ${T.rows.length} of ${T.count}${T.total?' · Total: <strong style="color:#166534">'+T.total+'</strong>':''}</div>
+      <div class="tbl-pagination">
+        <button class="pg-btn">«</button>
+        <button class="pg-btn act">1</button>
+        <button class="pg-btn">2</button>
+        <button class="pg-btn">3</button>
+        <button class="pg-btn">»</button>
+      </div>
+    </div>
+    <div class="ann-bar">
+      <div class="ann-card"><div class="ann-icon">📌</div><div class="ann-t">Sticky Column Headers</div><div class="ann-d">Header row locks at the top as you scroll. Always know what column you're reading.</div></div>
+      <div class="ann-card"><div class="ann-icon">🔍</div><div class="ann-t">Filters Above Headers</div><div class="ann-d">Search + dropdowns + status chips sit above the sticky header — accessible at all times.</div></div>
+      <div class="ann-card"><div class="ann-icon">🏷</div><div class="ann-t">Colored Status Badges</div><div class="ann-d">Green=Paid/Active, Blue=Issued, Orange=Pending, Red=Overdue/Rejected. Consistent across all tables.</div></div>
+      <div class="ann-card"><div class="ann-icon">☀️</div><div class="ann-t">Light Mode</div><div class="ann-d">White background, light gray rows on hover, blue accent. Clean and easy to read in office lighting.</div></div>
+    </div>`;
+}
+
+function buildFilters(filters, color) {
+  return filters.map(f => {
+    if (f.type==='sep') return `<div class="fs-sep"></div>`;
+    if (f.type==='search') return `<div class="fs-input${f.wide?' fs-input-wide':''}">${f.placeholder}</div>`;
+    if (f.type==='select') return `<div class="fs-input">${f.placeholder}</div>`;
+    if (f.type==='chips') return f.options.map(o =>
+      `<div class="fs-chip${o===f.active?' act':''}" style="--c:${color}">
+        ${o===f.active?`<div class="fs-chip-dot" style="background:${color}"></div>`:''}${o}
+      </div>`).join('');
+    return '';
+  }).join('') + `<div class="fs-clear">Clear ✕</div>`;
+}
+
+function buildRow(row, cols, statusColors) {
+  return `<tr>${row.map((cell,i) => {
+    if (i===0) return `<td><div class="cb"></div></td>`;
+    if (cell==='actions') return `<td><div class="cell-action"><button class="act-btn" title="View">👁</button><button class="act-btn" title="Edit">✏</button><button class="act-btn" title="More">⋯</button></div></td>`;
+    if (statusColors && statusColors[cell]) {
+      const s=statusColors[cell];
+      return `<td><span class="badge" style="background:${s.bg};color:${s.color}"><div class="badge-dot" style="background:${s.dot}"></div>${cell}</span></td>`;
+    }
+    if (/^\d{2}\/\d{2}\/\d{2}$/.test(cell)) return `<td class="cell-date">${cell}</td>`;
+    if (/^(EMP|INV|EXP|PAY|LV|OT|JV|MR|TKT|JOB)-/.test(cell)||/^\d{6}$/.test(cell)) return `<td class="cell-id">${cell}</td>`;
+    if (i===2) return `<td class="cell-name">${cell}</td>`;
+    if (/^[\d,]+$/.test(cell.replace(/,/g,''))) return `<td class="cell-amt">${cell}</td>`;
+    return `<td>${cell}</td>`;
+  }).join('')}</tr>`;
+}
+
+loadTable('invoices');
+</script>
+</body>
+</html>

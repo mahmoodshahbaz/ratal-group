@@ -87,6 +87,44 @@ const t = {
   mhead:  { fontSize:18, fontWeight:900, color:'#1a2e3d', marginBottom:20 },
 }
 
+// ── Dropdown menu item style ─────────────────────────────────────────────────
+const menuItem = {
+  display:'block', width:'100%', textAlign:'left',
+  padding:'11px 18px', background:'none', border:'none',
+  fontSize:13, color:'#1a2e3d', cursor:'pointer',
+  fontFamily:'Arial,sans-serif',
+  letterSpacing: 0.1,
+}
+
+// ── All available form keys with labels ──────────────────────────────────────
+
+const ALL_FORMS = [
+  { key:'expense_daily',       label:'Daily Expense',       icon:'🧾' },
+  { key:'expense_claim',       label:'Expense Claim',       icon:'📋' },
+  { key:'food_allowance',      label:'Food Allowance',      icon:'🍱' },
+  { key:'overtime',            label:'Overtime Request',    icon:'⏱️' },
+  { key:'site_completion',     label:'Site Completion',     icon:'🏗️' },
+  { key:'money_request',       label:'Money Request',       icon:'💰' },
+  { key:'po_request',          label:'PO Request',          icon:'📦' },
+  { key:'field_payment',       label:'Field Payment',       icon:'💳' },
+  { key:'subcon_claim',        label:'Sub-Con Claim',       icon:'🤝' },
+  { key:'car_maintenance',     label:'Car / Maintenance',   icon:'🚗' },
+  { key:'payment_validation',  label:'Payment Confirmation',icon:'✅' },
+  { key:'dh_dashboard',        label:'DH Dashboard',        icon:'📊' },
+]
+
+// ── Role-to-form map (must mirror useFieldAuth.js ROLE_FORM_ACCESS) ──────────
+const ROLE_FORM_ACCESS = {
+  STAFF_TECH:       ['expense_daily','expense_claim','food_allowance','overtime','site_completion','payment_validation'],
+  STAFF_SUPERVISOR: ['expense_daily','expense_claim','food_allowance','overtime','site_completion','money_request','po_request','payment_validation'],
+  STAFF_PM:         ['expense_daily','expense_claim','food_allowance','overtime','site_completion','money_request','po_request','field_payment','payment_validation','dh_dashboard'],
+  STAFF_DH:         ['expense_daily','expense_claim','food_allowance','overtime','site_completion','money_request','po_request','field_payment','subcon_claim','car_maintenance','payment_validation','dh_dashboard'],
+  SUBCONTRACTOR:    ['site_completion','subcon_claim','payment_validation'],
+  OUTSOURCED:       ['expense_daily','expense_claim','site_completion','payment_validation'],
+  DRIVER:           ['expense_daily','expense_claim','car_maintenance','payment_validation'],
+  FINANCE:          ['expense_daily','expense_claim','food_allowance','overtime','site_completion','money_request','po_request','field_payment','subcon_claim','car_maintenance','payment_validation','dh_dashboard'],
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function QRManager({ entityId, entityCode, isAr }) {
@@ -103,6 +141,15 @@ export default function QRManager({ entityId, entityCode, isAr }) {
   const [showBanner, setShowBanner] = useState(false)
   const [showQR,     setShowQR]     = useState(null)   // token row
   const [revoking,   setRevoking]   = useState(null)   // token id
+
+  // Permissions modal
+  const [showPerms,   setShowPerms]   = useState(null)   // token row
+  const [permDeltas,  setPermDeltas]  = useState([])     // qr_token_forms rows
+  const [permLoading, setPermLoading] = useState(false)
+  const [permSaving,  setPermSaving]  = useState(null)   // form_key being saved
+
+  // Action dropdown per row
+  const [openMenu,    setOpenMenu]    = useState(null)   // token id with open menu
 
   // Generate form state
   const [genEntity, setGenEntity] = useState('')   // entity UUID — resolved after allEnts loads
@@ -180,9 +227,23 @@ export default function QRManager({ entityId, entityCode, isAr }) {
     loadTokens()
   }, [loadEntities, loadDepts, loadEmployees, loadTokens])
 
+  // Close action dropdown when clicking outside
+  useEffect(() => {
+    if (!openMenu) return
+    const close = () => setOpenMenu(null)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [openMenu])
+
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
-  const fieldUrl = (token) => `${window.location.origin}/forms?t=${token}`
+  // Always use the production URL so QR codes work from any device
+  // Falls back to current origin only if explicitly on the production domain
+  const PROD_ORIGIN = import.meta.env.VITE_APP_URL || 'https://ratal-group.vercel.app'
+  const fieldUrl = (token) => {
+    const origin = window.location.hostname === 'localhost' ? PROD_ORIGIN : window.location.origin
+    return `${origin}/forms?t=${token}`
+  }
 
   const copyLink = (token) => {
     navigator.clipboard.writeText(fieldUrl(token))
@@ -214,9 +275,6 @@ export default function QRManager({ entityId, entityCode, isAr }) {
       // Resolve entity UUID — genEntity is set via dropdown or resolved from prop
       const entityUUID = genEntity || emp?.entity_id || null
 
-      // Get current user id for generated_by (required by RLS)
-      const { data: { user } } = await supabase.auth.getUser()
-
       const payload = {
         token,
         employee_id:     genEmp,
@@ -227,7 +285,7 @@ export default function QRManager({ entityId, entityCode, isAr }) {
         notes:           genNotes.trim() || null,
         expires_at:      genExpiry || null,
         generated_at:    new Date().toISOString(),
-        generated_by:    user?.id || null,
+        generated_by:    null,   // admin uses anon key — no employee FK available
       }
 
       const { data, error } = await supabase
@@ -273,6 +331,51 @@ export default function QRManager({ entityId, entityCode, isAr }) {
       .eq('id', tokenId)
     await loadTokens()
     setRevoking(null)
+  }
+
+  // ── Permissions helpers ───────────────────────────────────────────────────────
+
+  const openPerms = async (tk) => {
+    setShowPerms(tk)
+    setPermLoading(true)
+    const { data } = await supabase
+      .from('qr_token_forms')
+      .select('form_key, is_granted')
+      .eq('token_id', tk.id)
+    setPermDeltas(data || [])
+    setPermLoading(false)
+  }
+
+  const savePermOverride = async (formKey, grantedValue) => {
+    // grantedValue: true = force-grant, false = force-deny, null = delete override
+    setPermSaving(formKey)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      await supabase.rpc('upsert_token_form_override', {
+        p_token_id: showPerms.id,
+        p_form_key: formKey,
+        p_granted:  grantedValue,
+        p_admin_id: user?.id || null,
+      })
+      // Refresh deltas
+      const { data } = await supabase
+        .from('qr_token_forms')
+        .select('form_key, is_granted')
+        .eq('token_id', showPerms.id)
+      setPermDeltas(data || [])
+    } finally {
+      setPermSaving(null)
+    }
+  }
+
+  /** Compute effective form set for a token given its role + current deltas */
+  const getEffectiveForms = (role, deltas) => {
+    const base = new Set(ROLE_FORM_ACCESS[role] || [])
+    deltas.forEach(d => {
+      if (d.is_granted) base.add(d.form_key)
+      else              base.delete(d.form_key)
+    })
+    return base
   }
 
   // ── Filtered list ────────────────────────────────────────────────────────────
@@ -370,20 +473,28 @@ export default function QRManager({ entityId, entityCode, isAr }) {
             </thead>
             <tbody>
               {visible.map(tk => {
-                const expired = tk.expires_at && new Date(tk.expires_at) < new Date()
+                const expired  = tk.expires_at && new Date(tk.expires_at) < new Date()
                 const isActive = tk.is_active && !expired
+                const menuOpen = openMenu === tk.id
                 return (
-                  <tr key={tk.id} style={{ opacity: isActive ? 1 : 0.65 }}>
-                    <td style={t.td}>
-                      <div style={{ fontWeight:700 }}>{tk.employee_name || '—'}</div>
-                      <div style={{ fontSize:11, color:'#78909c' }}>{tk.designation}</div>
+                  <tr
+                    key={tk.id}
+                    style={{ opacity: isActive ? 1 : 0.65 }}
+                    onClick={() => menuOpen && setOpenMenu(null)}
+                  >
+                    {/* Employee — single line with designation as sub-text */}
+                    <td style={{ ...t.td, whiteSpace:'nowrap' }}>
+                      <div style={{ fontWeight:700, fontSize:13 }}>{tk.employee_name || '—'}</div>
+                      {tk.designation && <div style={{ fontSize:10, color:'#78909c', marginTop:1 }}>{tk.designation}</div>}
                     </td>
-                    <td style={t.td}>
-                      <span style={t.badge(ROLE_COLORS[tk.role] || '#546e7a')}>
-                        {tk.role}
-                      </span>
+
+                    {/* Role badge */}
+                    <td style={{ ...t.td, whiteSpace:'nowrap' }}>
+                      <span style={t.badge(ROLE_COLORS[tk.role] || '#546e7a')}>{tk.role}</span>
                     </td>
-                    <td style={t.td}>
+
+                    {/* Status badge */}
+                    <td style={{ ...t.td, whiteSpace:'nowrap' }}>
                       {expired ? (
                         <span style={t.badge('#f57f17')}>EXPIRED</span>
                       ) : isActive ? (
@@ -392,62 +503,128 @@ export default function QRManager({ entityId, entityCode, isAr }) {
                         <span style={t.badge('#b71c1c')}>REVOKED</span>
                       )}
                     </td>
-                    <td style={t.td}>
+
+                    {/* Last used */}
+                    <td style={{ ...t.td, whiteSpace:'nowrap', fontSize:12 }}>
                       {tk.last_used_at
                         ? new Date(tk.last_used_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })
                         : <span style={{ color:'#aab2bd' }}>Never</span>}
                     </td>
-                    <td style={t.td}>
-                      <div>{new Date(tk.generated_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })}</div>
-                      <div style={{ fontSize:11, color:'#aab2bd' }}>{tk.generated_by_name}</div>
+
+                    {/* Generated */}
+                    <td style={{ ...t.td, whiteSpace:'nowrap', fontSize:12 }}>
+                      {new Date(tk.generated_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })}
                     </td>
-                    <td style={t.td}>
+
+                    {/* Expires */}
+                    <td style={{ ...t.td, whiteSpace:'nowrap', fontSize:12 }}>
                       {tk.expires_at
                         ? <span style={{ color: expired ? '#b71c1c' : '#546e7a' }}>
-                            {new Date(tk.expires_at).toLocaleDateString('en-GB',{ day:'2-digit', month:'short', year:'numeric' })}
+                            {new Date(tk.expires_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })}
                           </span>
                         : <span style={{ color:'#aab2bd' }}>—</span>}
                     </td>
-                    <td style={t.td}>
-                      <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-                        {/* QR / Link */}
-                        <button
-                          onClick={() => setShowQR(tk)}
-                          style={t.btn('#1a2540')}
-                          title="Show QR code & link"
-                        >📱 QR</button>
 
-                        {/* Share WhatsApp */}
-                        <button
-                          onClick={() => shareWhatsApp(tk.token, tk.employee_name)}
-                          style={t.btn('#25d366')}
-                          title="Share via WhatsApp"
-                        >💬</button>
+                    {/* Actions — single ⋯ button with dropdown */}
+                    <td style={{ ...t.td, textAlign:'center', position:'relative' }}>
+                      <button
+                        onClick={e => { e.stopPropagation(); setOpenMenu(menuOpen ? null : tk.id) }}
+                        style={{
+                          background: menuOpen ? '#454D9B' : '#fff',
+                          color: menuOpen ? '#fff' : '#454D9B',
+                          border: '2px solid #454D9B',
+                          borderRadius: 8,
+                          padding: '6px 12px',
+                          fontSize: 12, fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', gap: 5,
+                          whiteSpace: 'nowrap',
+                          transition: 'all .15s',
+                          fontFamily: 'Arial,sans-serif',
+                        }}
+                        title="Actions"
+                      >
+                        Actions <span style={{ fontSize: 10 }}>{menuOpen ? '▲' : '▼'}</span>
+                      </button>
 
-                        {/* Share Telegram */}
-                        <button
-                          onClick={() => shareTelegram(tk.token, tk.employee_name)}
-                          style={t.btn('#229ed9')}
-                          title="Share via Telegram"
-                        >✈️</button>
+                      {menuOpen && (
+                        <div
+                          onClick={e => e.stopPropagation()}
+                          style={{
+                            position:'absolute', right:0, top:'calc(100% + 6px)', zIndex:300,
+                            background:'#fff', borderRadius:12,
+                            boxShadow:'0 12px 40px rgba(0,0,0,0.22)',
+                            border:'1.5px solid #dde0f5',
+                            minWidth:210, overflow:'hidden',
+                          }}
+                        >
+                          {/* Header */}
+                          <div style={{ padding:'8px 18px 6px', fontSize:10, fontWeight:800, color:'#9198c7', letterSpacing:1, textTransform:'uppercase', borderBottom:'1px solid #f0f1fa' }}>
+                            {tk.employee_name}
+                          </div>
 
-                        {/* Revoke / Reactivate */}
-                        {isActive ? (
+                          {/* QR Code */}
                           <button
-                            onClick={() => { if (window.confirm(`Revoke token for ${tk.employee_name}?`)) handleRevoke(tk.id) }}
-                            disabled={revoking === tk.id}
-                            style={t.btn('#b71c1c')}
-                            title="Revoke access"
-                          >{revoking === tk.id ? '…' : '🚫'}</button>
-                        ) : (
+                            onClick={() => { setShowQR(tk); setOpenMenu(null) }}
+                            style={menuItem}
+                            onMouseEnter={e => e.currentTarget.style.background='#f0f1fa'}
+                            onMouseLeave={e => e.currentTarget.style.background='none'}
+                          >📱 &nbsp;Show QR Code</button>
+
+                          {/* Permissions */}
                           <button
-                            onClick={() => handleReactivate(tk.id)}
-                            disabled={revoking === tk.id}
-                            style={t.btn('#2e7d32')}
-                            title="Reactivate"
-                          >{revoking === tk.id ? '…' : '✅'}</button>
-                        )}
-                      </div>
+                            onClick={() => { openPerms(tk); setOpenMenu(null) }}
+                            style={menuItem}
+                            onMouseEnter={e => e.currentTarget.style.background='#f0f1fa'}
+                            onMouseLeave={e => e.currentTarget.style.background='none'}
+                          >🛡️ &nbsp;Manage Permissions</button>
+
+                          <div style={{ borderTop:'1px solid #f0f1fa', margin:'4px 0' }} />
+
+                          {/* Share WhatsApp */}
+                          <button
+                            onClick={() => { shareWhatsApp(tk.token, tk.employee_name); setOpenMenu(null) }}
+                            style={menuItem}
+                            onMouseEnter={e => e.currentTarget.style.background='#f0f1fa'}
+                            onMouseLeave={e => e.currentTarget.style.background='none'}
+                          >💬 &nbsp;Share via WhatsApp</button>
+
+                          {/* Share Telegram */}
+                          <button
+                            onClick={() => { shareTelegram(tk.token, tk.employee_name); setOpenMenu(null) }}
+                            style={menuItem}
+                            onMouseEnter={e => e.currentTarget.style.background='#f0f1fa'}
+                            onMouseLeave={e => e.currentTarget.style.background='none'}
+                          >✈️ &nbsp;Share via Telegram</button>
+
+                          <div style={{ borderTop:'1px solid #f0f1fa', margin:'4px 0' }} />
+
+                          {/* Revoke / Reactivate */}
+                          {isActive ? (
+                            <button
+                              onClick={() => {
+                                setOpenMenu(null)
+                                if (window.confirm(`Revoke token for ${tk.employee_name}?`)) handleRevoke(tk.id)
+                              }}
+                              disabled={revoking === tk.id}
+                              style={{ ...menuItem, color:'#b71c1c' }}
+                              onMouseEnter={e => e.currentTarget.style.background='#fff5f5'}
+                              onMouseLeave={e => e.currentTarget.style.background='none'}
+                            >{revoking === tk.id ? '…' : '🚫  Revoke Access'}</button>
+                          ) : (
+                            <button
+                              onClick={() => { handleReactivate(tk.id); setOpenMenu(null) }}
+                              disabled={revoking === tk.id}
+                              style={{ ...menuItem, color:'#2e7d32' }}
+                              onMouseEnter={e => e.currentTarget.style.background='#f0fff4'}
+                              onMouseLeave={e => e.currentTarget.style.background='none'}
+                            >{revoking === tk.id ? '…' : '✅  Reactivate'}</button>
+                          )}
+
+                          {/* bottom padding */}
+                          <div style={{ height: 4 }} />
+                        </div>
+                      )}
                     </td>
                   </tr>
                 )
@@ -735,6 +912,159 @@ export default function QRManager({ entityId, entityCode, isAr }) {
                 ? `Last used: ${new Date(showQR.last_used_at).toLocaleString('en-GB')}`
                 : 'This token has not been used yet.'}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── PERMISSIONS MODAL ──────────────────────────────────────────────── */}
+      {showPerms && (
+        <div style={t.modal} onClick={e => { if (e.target === e.currentTarget) setShowPerms(null) }}>
+          <div style={{ ...t.mbox, maxWidth:560 }}>
+            {/* Header */}
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:4 }}>
+              <div>
+                <div style={{ ...t.mhead, marginBottom:4 }}>🛡️ Form Permissions</div>
+                <div style={{ fontSize:13, color:'#546e7a', marginBottom:4 }}>
+                  <strong>{showPerms.employee_name}</strong>
+                  &nbsp;·&nbsp;
+                  <span style={{ color: ROLE_COLORS[showPerms.role] || '#546e7a', fontWeight:700 }}>{showPerms.role}</span>
+                </div>
+                <div style={{ fontSize:11, color:'#aab2bd' }}>
+                  Green checkbox = accessible &nbsp;·&nbsp; Role defaults shown in grey &nbsp;·&nbsp; Overrides shown in purple
+                </div>
+              </div>
+              <button onClick={() => setShowPerms(null)} style={{ background:'none', border:'none', fontSize:22, cursor:'pointer', color:'#546e7a', flexShrink:0 }}>×</button>
+            </div>
+
+            {permLoading ? (
+              <div style={{ padding:30, textAlign:'center', color:'#78909c' }}>Loading permissions…</div>
+            ) : (() => {
+              const roleDefault  = new Set(ROLE_FORM_ACCESS[showPerms.role] || [])
+              const effectiveForms = getEffectiveForms(showPerms.role, permDeltas)
+              const deltaMap     = {}
+              permDeltas.forEach(d => { deltaMap[d.form_key] = d.is_granted })
+
+              return (
+                <div>
+                  {/* Legend */}
+                  <div style={{ display:'flex', gap:12, marginBottom:14, flexWrap:'wrap' }}>
+                    {[
+                      { color:'#2e7d32', bg:'#e8f5e9', label:'Granted by role (default)' },
+                      { color:'#6a1b9a', bg:'#f3e5f5', label:'Override: force-granted' },
+                      { color:'#b71c1c', bg:'#ffebee', label:'Override: force-denied' },
+                      { color:'#aab2bd', bg:'#f5f5f5', label:'Not accessible' },
+                    ].map(l => (
+                      <div key={l.label} style={{ display:'flex', alignItems:'center', gap:5 }}>
+                        <div style={{ width:12, height:12, borderRadius:3, background:l.bg, border:`2px solid ${l.color}` }} />
+                        <span style={{ fontSize:10, color:'#546e7a' }}>{l.label}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Form grid */}
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:20 }}>
+                    {ALL_FORMS.map(f => {
+                      const inRole     = roleDefault.has(f.key)
+                      const hasOverride = f.key in deltaMap
+                      const overrideVal = deltaMap[f.key]    // true=granted, false=denied
+                      const isEffective = effectiveForms.has(f.key)
+                      const isSaving   = permSaving === f.key
+
+                      // Visual state
+                      let borderColor = '#e0e0e0'
+                      let bg          = '#f9f9f9'
+                      let labelColor  = '#aab2bd'
+                      let checkIcon   = '○'
+                      if (hasOverride && overrideVal === true)  { borderColor = '#6a1b9a'; bg = '#f3e5f5'; labelColor = '#6a1b9a'; checkIcon = '✓' }
+                      else if (hasOverride && overrideVal === false) { borderColor = '#b71c1c'; bg = '#ffebee'; labelColor = '#b71c1c'; checkIcon = '✗' }
+                      else if (inRole)  { borderColor = '#2e7d32'; bg = '#e8f5e9'; labelColor = '#2e7d32'; checkIcon = '✓' }
+
+                      return (
+                        <div key={f.key} style={{ border:`1.5px solid ${borderColor}`, borderRadius:10, padding:'10px 12px', background:bg, display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:8, flex:1, minWidth:0 }}>
+                            <span style={{ fontSize:16, flexShrink:0 }}>{f.icon}</span>
+                            <div style={{ minWidth:0 }}>
+                              <div style={{ fontSize:12, fontWeight:700, color:labelColor, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{f.label}</div>
+                              {hasOverride && (
+                                <div style={{ fontSize:10, color: overrideVal ? '#6a1b9a' : '#b71c1c' }}>
+                                  {overrideVal ? 'Forced ON' : 'Forced OFF'} · override
+                                </div>
+                              )}
+                              {!hasOverride && inRole && (
+                                <div style={{ fontSize:10, color:'#78909c' }}>Role default</div>
+                              )}
+                            </div>
+                          </div>
+                          <div style={{ display:'flex', flexDirection:'column', gap:4, flexShrink:0 }}>
+                            {/* Grant button */}
+                            <button
+                              disabled={isSaving}
+                              onClick={() => {
+                                if (hasOverride && overrideVal === true) savePermOverride(f.key, null)   // revert
+                                else if (!inRole) savePermOverride(f.key, true)                          // force-grant
+                                else savePermOverride(f.key, null)                                       // already default
+                              }}
+                              title={
+                                hasOverride && overrideVal === true ? 'Remove override (revert to role default)' :
+                                !inRole ? 'Force-grant this form' :
+                                'Already in role default (click to keep as default)'
+                              }
+                              style={{
+                                padding:'3px 8px', fontSize:10, fontWeight:700, border:'none', borderRadius:5, cursor:'pointer',
+                                background: hasOverride && overrideVal === true ? '#e8f5e9' : !inRole ? '#e8f5e9' : '#f0f4f8',
+                                color:      hasOverride && overrideVal === true ? '#2e7d32' : !inRole ? '#2e7d32' : '#aab2bd',
+                                opacity: isSaving ? 0.5 : 1,
+                              }}
+                            >
+                              {hasOverride && overrideVal === true ? '↩ Revert' : '✓ Grant'}
+                            </button>
+                            {/* Deny button */}
+                            <button
+                              disabled={isSaving}
+                              onClick={() => {
+                                if (hasOverride && overrideVal === false) savePermOverride(f.key, null)  // revert
+                                else if (inRole) savePermOverride(f.key, false)                          // force-deny
+                              }}
+                              title={
+                                hasOverride && overrideVal === false ? 'Remove override (revert to role default)' :
+                                inRole ? 'Force-deny this form' :
+                                'Already denied by role (no action needed)'
+                              }
+                              style={{
+                                padding:'3px 8px', fontSize:10, fontWeight:700, border:'none', borderRadius:5, cursor:'pointer',
+                                background: hasOverride && overrideVal === false ? '#ffebee' : inRole ? '#ffebee' : '#f0f4f8',
+                                color:      hasOverride && overrideVal === false ? '#b71c1c' : inRole ? '#b71c1c' : '#aab2bd',
+                                opacity: isSaving || (!inRole && !(hasOverride && overrideVal === false)) ? 0.4 : 1,
+                              }}
+                            >
+                              {hasOverride && overrideVal === false ? '↩ Revert' : '✗ Deny'}
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* Summary */}
+                  <div style={{ background:'#f8fafc', borderRadius:10, padding:12, fontSize:12, color:'#546e7a' }}>
+                    <strong>Effective access:</strong>&nbsp;
+                    {[...effectiveForms].length > 0
+                      ? [...effectiveForms].map(k => ALL_FORMS.find(f=>f.key===k)?.label || k).join(', ')
+                      : 'No forms accessible'}
+                    {permDeltas.length > 0 && (
+                      <div style={{ marginTop:6, color:'#6a1b9a', fontSize:11 }}>
+                        {permDeltas.length} override{permDeltas.length>1?'s':''} active on this token.
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => setShowPerms(null)}
+                    style={{ ...t.btn('#f0f4f8','#546e7a'), width:'100%', marginTop:14 }}
+                  >Close</button>
+                </div>
+              )
+            })()}
           </div>
         </div>
       )}

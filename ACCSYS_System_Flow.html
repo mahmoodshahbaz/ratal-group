@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACCSYS Field Operations Platform — Complete System Flow</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f1117; color: #e0e0e0; }
+
+  /* ── TOP HEADER ── */
+  .hdr { background: linear-gradient(135deg,#1a237e,#0d47a1); padding:18px 24px; }
+  .hdr h1 { font-size:20px; font-weight:700; color:#fff; letter-spacing:.5px; }
+  .hdr p  { font-size:12px; color:#90caf9; margin-top:4px; }
+
+  /* ── LEGEND ── */
+  .legend { display:flex; flex-wrap:wrap; gap:10px; padding:10px 24px; background:#161b27; border-bottom:1px solid #2a3042; }
+  .leg { display:flex; align-items:center; gap:5px; font-size:11px; }
+  .leg-dot { width:12px; height:12px; border-radius:3px; flex-shrink:0; }
+  .tpl-ok   { background:#2e7d32; }
+  .tpl-warn { background:#e65100; }
+  .tpl-miss { background:#b71c1c; }
+  .gate-dot { background:#c62828; border:2px solid #ff5252; }
+  .notif-tg { background:#0288d1; }
+  .notif-em { background:#6a1b9a; }
+  .notif-ap { background:#00695c; }
+
+  /* ── MASTERS STRIP ── */
+  .masters { background:#1a1f2e; border-bottom:2px solid #2a3550; padding:10px 16px; }
+  .masters-title { font-size:10px; font-weight:700; color:#78909c; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+  .masters-row { display:flex; flex-wrap:wrap; gap:8px; }
+  .master-chip {
+    background:#1e2d40; border:1px solid #2e4060; border-radius:20px;
+    padding:4px 12px; font-size:11px; color:#81d4fa; display:flex; align-items:center; gap:5px;
+  }
+  .master-chip .ico { font-size:13px; }
+
+  /* ── MAIN GRID ── */
+  .main-grid {
+    display:grid;
+    grid-template-columns: 200px 230px 280px 220px 200px;
+    gap:0;
+    min-height:calc(100vh - 160px);
+  }
+
+  /* ── SWIMLANE ── */
+  .lane {
+    border-right:1px solid #1e2535;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+  }
+  .lane-header {
+    padding:10px 12px;
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.8px;
+    text-align:center;
+    position:sticky; top:0; z-index:10;
+  }
+  .lane-body { padding:8px 8px; flex:1; }
+
+  /* Lane colours */
+  .lane-subcon   { background:#0d1b12; }
+  .lane-subcon   .lane-header { background:#1b5e20; color:#a5d6a7; }
+  .lane-employee { background:#0e1420; }
+  .lane-employee .lane-header { background:#1a237e; color:#bbdefb; }
+  .lane-dh       { background:#1a1100; }
+  .lane-dh       .lane-header { background:#e65100; color:#ffe0b2; }
+  .lane-accounts { background:#0d1520; }
+  .lane-accounts .lane-header { background:#1565c0; color:#bbdefb; }
+  .lane-mgmt     { background:#120d1a; }
+  .lane-mgmt     .lane-header { background:#4a148c; color:#e1bee7; }
+
+  /* ── CARD ── */
+  .card {
+    border-radius:6px;
+    padding:8px 10px;
+    margin-bottom:7px;
+    font-size:11px;
+    position:relative;
+    cursor:default;
+  }
+  .card-title { font-weight:700; font-size:11.5px; margin-bottom:3px; }
+  .card-sub   { font-size:10px; opacity:.75; line-height:1.4; }
+  .card-tags  { display:flex; flex-wrap:wrap; gap:3px; margin-top:5px; }
+
+  /* Card types */
+  .c-form  { background:#1a2744; border-left:3px solid #42a5f5; }
+  .c-form  .card-title { color:#90caf9; }
+  .c-tpl   { border-left:3px solid #66bb6a; background:#0a2010; }
+  .c-tpl   .card-title { color:#a5d6a7; }
+  .c-tpl-w { border-left:3px solid #ffa726; background:#1a1000; }
+  .c-tpl-w .card-title { color:#ffcc80; }
+  .c-tpl-x { border-left:3px solid #ef5350; background:#1a0808; }
+  .c-tpl-x .card-title { color:#ef9a9a; }
+  .c-gate  { background:#1a0404; border:1.5px dashed #ef5350; border-radius:6px; }
+  .c-gate  .card-title { color:#ef5350; }
+  .c-notif { background:#0a1520; border-left:3px solid #29b6f6; }
+  .c-notif .card-title { color:#81d4fa; }
+  .c-page  { background:#1a1030; border-left:3px solid #ab47bc; }
+  .c-page  .card-title { color:#ce93d8; }
+  .c-section { background:#1e2535; border-radius:4px; padding:5px 8px; margin-bottom:6px; font-size:10px; font-weight:700; color:#78909c; text-transform:uppercase; letter-spacing:.8px; }
+
+  /* Tags / badges */
+  .tag { border-radius:10px; padding:1px 6px; font-size:9.5px; font-weight:600; display:inline-block; }
+  .tag-qr   { background:#1b5e20; color:#a5d6a7; }
+  .tag-tg   { background:#0277bd; color:#b3e5fc; }
+  .tag-em   { background:#4a148c; color:#e1bee7; }
+  .tag-app  { background:#004d40; color:#b2dfdb; }
+  .tag-gate { background:#b71c1c; color:#ffcdd2; }
+  .tag-auto { background:#1a237e; color:#bbdefb; }
+  .tag-xls  { background:#1b5e20; color:#a5d6a7; }
+  .tag-ok   { background:#1b5e20; color:#a5d6a7; }
+  .tag-warn { background:#e65100; color:#ffe0b2; }
+  .tag-miss { background:#b71c1c; color:#ffcdd2; }
+  .tag-je   { background:#1a237e; color:#bbdefb; }
+
+  /* ── CONNECTOR arrows between lanes ── */
+  .connector {
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; color:#37474f; margin:0; padding:0; writing-mode:horizontal-tb;
+  }
+  .arrow-row {
+    display:flex; align-items:center; gap:3px; margin:4px 0;
+    font-size:10px; color:#546e7a;
+  }
+  .arrow-lbl { font-size:9.5px; color:#607d8b; font-style:italic; }
+
+  /* Flow lines within lane */
+  .flow-arrow { text-align:center; font-size:14px; color:#37474f; margin:0 0 4px 0; }
+
+  /* Cross-lane ref */
+  .xref {
+    font-size:9.5px; padding:2px 6px; border-radius:3px;
+    background:#1c2535; border:1px solid #2e3d50; color:#607d8b;
+    display:inline-block; margin-top:3px;
+  }
+
+  /* Scrollable wrapper */
+  .scroll-wrap { overflow-x:auto; min-width:1100px; }
+
+  /* Section dividers within lanes */
+  hr.lane-div { border:none; border-top:1px dashed #2a3550; margin:8px 0; }
+
+  /* ── KEY FLOW SECTION ── */
+  .key-flows {
+    background:#161b27; padding:14px 20px; border-top:2px solid #2a3042;
+  }
+  .key-flows h2 { font-size:13px; color:#78909c; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; }
+  .flow-steps { display:flex; flex-wrap:wrap; gap:8px; }
+  .flow-step {
+    background:#1e2535; border-radius:6px; padding:8px 12px;
+    font-size:11px; flex:1; min-width:160px; max-width:250px;
+  }
+  .flow-step h3 { font-size:11px; font-weight:700; color:#90caf9; margin-bottom:4px; }
+  .flow-step ol { padding-left:14px; font-size:10.5px; color:#90a4ae; line-height:1.6; }
+
+  /* ── GATES TABLE ── */
+  .gates-section { background:#12090a; padding:14px 20px; border-top:1px solid #2a1010; }
+  .gates-section h2 { font-size:13px; color:#ef5350; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; }
+  .gates-grid { display:flex; flex-wrap:wrap; gap:8px; }
+  .gate-card {
+    background:#1a0808; border:1px dashed #c62828; border-radius:6px;
+    padding:8px 12px; font-size:11px; flex:1; min-width:180px;
+  }
+  .gate-card .g-title { font-weight:700; color:#ef5350; margin-bottom:3px; }
+  .gate-card .g-body  { color:#ef9a9a; font-size:10.5px; line-height:1.5; }
+
+  /* ── TEMPLATE STATUS ── */
+  .tpl-section { background:#0a1200; padding:14px 20px; border-top:1px solid #1a3010; }
+  .tpl-section h2 { font-size:13px; color:#66bb6a; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; }
+  .tpl-grid { display:flex; flex-wrap:wrap; gap:8px; }
+  .tpl-card {
+    border-radius:6px; padding:8px 12px; font-size:11px; flex:1; min-width:160px;
+  }
+  .tpl-card.ok   { background:#0a2010; border-left:3px solid #2e7d32; }
+  .tpl-card.warn { background:#1a1000; border-left:3px solid #e65100; }
+  .tpl-card.miss { background:#1a0808; border-left:3px solid #b71c1c; }
+  .tpl-card .t-title { font-weight:700; margin-bottom:2px; }
+  .tpl-card.ok   .t-title { color:#a5d6a7; }
+  .tpl-card.warn .t-title { color:#ffcc80; }
+  .tpl-card.miss .t-title { color:#ef9a9a; }
+  .tpl-card .t-body { font-size:10px; color:#78909c; line-height:1.4; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <h1>ACCSYS Field Operations Platform — Complete System Flow</h1>
+  <p>All Forms · All Templates · All Notifications · All Gates · Master Data · Ratal Group</p>
+</div>
+
+<!-- LEGEND -->
+<div class="legend">
+  <div class="leg"><div class="leg-dot tpl-ok"></div> Template Built ✅</div>
+  <div class="leg"><div class="leg-dot tpl-warn"></div> Template Needs Rebuild ⚠️</div>
+  <div class="leg"><div class="leg-dot tpl-miss"></div> Template Missing ❌</div>
+  <div class="leg"><div class="leg-dot gate-dot"></div> System Gate 🔒</div>
+  <div class="leg"><div class="leg-dot notif-tg"></div> Telegram Notification</div>
+  <div class="leg"><div class="leg-dot notif-em"></div> Email Notification</div>
+  <div class="leg"><div class="leg-dot notif-ap"></div> In-App Notification</div>
+</div>
+
+<!-- MASTERS STRIP -->
+<div class="masters">
+  <div class="masters-title">📦 Master Tables (Setup — Desktop Only)</div>
+  <div class="masters-row">
+    <div class="master-chip"><span class="ico">👷</span> Employees (Own + Outsourced)</div>
+    <div class="master-chip"><span class="ico">📍</span> Site Master (SiteMaster)</div>
+    <div class="master-chip"><span class="ico">🏗️</span> Projects (Project No.)</div>
+    <div class="master-chip"><span class="ico">🏢</span> Departments (TISU / NISU / CISU / ITSU)</div>
+    <div class="master-chip"><span class="ico">🤝</span> Parties (Contractors / SubCons / Suppliers / Vendors)</div>
+    <div class="master-chip"><span class="ico">🚗</span> Vehicles (Car Maintenance)</div>
+    <div class="master-chip"><span class="ico">🏦</span> Bank Accounts (ANB-77 · ANB-39 · ANB-15 · ANB-18 · ANB-11)</div>
+    <div class="master-chip"><span class="ico">📊</span> Chart of Accounts (CoA)</div>
+    <div class="master-chip"><span class="ico">📋</span> Site Assignment (links Employee ↔ Site)</div>
+    <div class="master-chip"><span class="ico">🔑</span> QR Tokens (QR Manager — per employee/SubCon)</div>
+  </div>
+</div>
+
+<!-- MAIN SWIMLANE GRID -->
+<div class="scroll-wrap">
+<div class="main-grid">
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- LANE 1 : SUB-CONTRACTORS -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="lane lane-subcon">
+    <div class="lane-header">🔨 Sub-Contractors<br><span style="font-size:9px;font-weight:400">App Only · Mobile</span></div>
+    <div class="lane-body">
+
+      <div class="c-section">Onboarding</div>
+
+      <div class="card c-notif">
+        <div class="card-title">📱 PO Issued Notification</div>
+        <div class="card-sub">SubCon receives: "New PO issued. Tap to acknowledge."</div>
+        <div class="card-tags"><span class="tag tag-app">In-App</span><span class="tag tag-tg">Telegram</span></div>
+      </div>
+
+      <div class="card c-gate">
+        <div class="card-title">🔒 GATE: Acknowledge PO</div>
+        <div class="card-sub">SubCon must tap Acknowledge before payment request is unlocked. PO details shown in-app.</div>
+      </div>
+
+      <div class="flow-arrow">↓</div>
+      <div class="c-section">Field Operations</div>
+
+      <div class="card c-gate">
+        <div class="card-title">🔒 GATE: PO Must Be Open</div>
+        <div class="card-sub">PO balance &gt; 0. If exhausted → force invoice submission. Payment request blocked.</div>
+        <div class="card-tags"><span class="tag tag-gate">BLOCKS REQUEST</span></div>
+      </div>
+
+      <div class="card c-form">
+        <div class="card-title">📱 SubCon Payment Request</div>
+        <div class="card-sub">3 taps only:<br>① Select Site<br>② Enter Amount (SAR)<br>③ Attach Photo (evidence)<br>→ Submit to DH</div>
+        <div class="card-tags"><span class="tag tag-qr">QR Auth</span><span class="tag tag-app">App Only</span></div>
+      </div>
+
+      <div class="flow-arrow">↓</div>
+
+      <div class="card c-notif">
+        <div class="card-title">📱 Payment Received Alert</div>
+        <div class="card-sub">After Accounts pays: "SAR 20,000 credited. PO balance: SAR 130,000"</div>
+        <div class="card-tags"><span class="tag tag-app">In-App</span><span class="tag tag-tg">Telegram</span></div>
+      </div>
+
+      <hr class="lane-div">
+      <div class="c-section">Invoice Cycle</div>
+
+      <div class="card c-gate">
+        <div class="card-title">🔒 GATE: PO Exhausted → Invoice</div>
+        <div class="card-sub">When cumulative payments reach PO value, system blocks next request and forces invoice upload. DH can attach on SubCon's behalf.</div>
+        <div class="card-tags"><span class="tag tag-gate">FORCED</span></div>
+      </div>
+
+      <div class="card c-form">
+        <div class="card-title">📎 Invoice Submission</div>
+        <div class="card-sub">SubCon uploads invoice PDF via App or DH attaches on behalf. Triggers ZATCA validation.</div>
+        <div class="card-tags"><span class="tag tag-app">App</span><span class="tag tag-em">Email</span></div>
+      </div>
+
+      <div class="card c-notif">
+        <div class="card-title">📱 Invoice Confirmed Alert</div>
+        <div class="card-sub">Invoice accepted / new PO can be issued</div>
+        <div class="card-tags"><span class="tag tag-app">In-App</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- LANE 2 : EMPLOYEES / FIELD WORKERS -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="lane lane-employee">
+    <div class="lane-header">👷 Employees · Field Workers<br><span style="font-size:9px;font-weight:400">App + QR Auth · Own &amp; Outsourced</span></div>
+    <div class="lane-body">
+
+      <div class="c-section">Daily Field Forms</div>
+
+      <div class="card c-form">
+        <div class="card-title">🍽️ Food Allowance</div>
+        <div class="card-sub">SAR 30/day remote sites<br>No. Persons × Daily Rate × No. Days<br>→ Accumulates monthly</div>
+        <div class="card-tags"><span class="tag tag-qr">QR Auth</span><span class="tag tag-app">App</span></div>
+      </div>
+
+      <div class="card c-form">
+        <div class="card-title">💰 Daily Expense</div>
+        <div class="card-sub">Per-day field expenses (food, transport, misc). Accumulates until month-end cut-off. Rolls into Expense Claim.</div>
+        <div class="card-tags"><span class="tag tag-qr">QR Auth</span><span class="tag tag-app">App</span></div>
+      </div>
+
+      <div class="card c-form">
+        <div class="card-title">⏰ Overtime Request</div>
+        <div class="card-sub">NORMAL / FRIDAY / HOLIDAY → 1.5×<br>TRAVEL → 1.0×<br>Requires DH approval → Payroll</div>
+        <div class="card-tags"><span class="tag tag-qr">QR Auth</span><span class="tag tag-app">App</span></div>
+      </div>
+
+      <div class="card c-form">
+        <div class="card-title">🚗 Car Maintenance Log</div>
+        <div class="card-sub">FUEL / MAINTENANCE / INCIDENT / INSPECTION<br>Saves to vehicle_maintenance table<br>Photo attachment supported</div>
+        <div class="card-tags"><span class="tag tag-qr">QR Auth</span><span class="tag tag-app">App</span></div>
+      </div>
+
+      <div class="card c-form">
+        <div class="card-title">🏗️ Site Completion / Progress</div>
+        <div class="card-sub">Milestone completion %, site progress recording. Feeds DH dashboard + SubCon payment certification basis.</div>
+        <div class="card-tags"><span class="tag tag-qr">QR Auth</span><span class="tag tag-app">App</span></div>
+      </div>
+
+      <hr class="lane-div">
+      <div class="c-section">Monthly Claims</div>
+
+      <div class="card c-form">
+        <div class="card-title">📋 Expense Claim (Monthly)</div>
+        <div class="card-sub">Shareable form. Bilingual. GPS + photo. Month-end cut-off. Auto JE on approval. Telegram notification fired.</div>
+        <div class="card-tags"><span class="tag tag-qr">QR Auth</span><span class="tag tag-tg">Telegram</span><span class="tag tag-em">Email</span></div>
+      </div>
+
+      <div class="card c-tpl">
+        <div class="card-title">📄 Expense Claim Template ✅</div>
+        <div class="card-sub">Built. Placeholders: employee, period, lines, totals, approvals.</div>
+        <div class="card-tags"><span class="tag tag-ok">BUILT</span></div>
+      </div>
+
+      <hr class="lane-div">
+      <div class="c-section">Payment Confirmation</div>
+
+      <div class="card c-notif">
+        <div class="card-title">📱 Advance Issued Alert</div>
+        <div class="card-sub">"SAR X cash advance issued. Please confirm receipt."</div>
+        <div class="card-tags"><span class="tag tag-app">In-App</span></div>
+      </div>
+
+      <div class="card c-form">
+        <div class="card-title">✅ Payment Validation</div>
+        <div class="card-sub">Employee confirms receiving cash advance. Photo of signed voucher uploaded. Links to employee_advances record.</div>
+        <div class="card-tags"><span class="tag tag-qr">QR Auth</span><span class="tag tag-app">App</span></div>
+      </div>
+
+      <div class="card c-gate">
+        <div class="card-title">🔒 GATE: Validation Required</div>
+        <div class="card-sub">Payment record only fully reconciled after recipient confirms. Unconfirmed advances flagged in DH dashboard.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- LANE 3 : DH / PM / SUPERVISOR -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="lane lane-dh">
+    <div class="lane-header">🎯 DH · PM · Supervisor<br><span style="font-size:9px;font-weight:400">App + Excel + Desktop · Command Centre</span></div>
+    <div class="lane-body">
+
+      <div class="c-section">Setup &amp; Assignment</div>
+
+      <div class="card c-page">
+        <div class="card-title">🗺️ Site Assignment (Desktop)</div>
+        <div class="card-sub">Links employees ↔ sites ↔ projects. Triggers email to assigned staff. Gate for field forms.</div>
+        <div class="card-tags"><span class="tag tag-em">Email Notification</span></div>
+      </div>
+
+      <div class="card c-page">
+        <div class="card-title">📋 PO Request Form</div>
+        <div class="card-sub">Dept → Project → Site → Supplier → Type → Items cascade. Sends to Accounts for approval.</div>
+        <div class="card-tags"><span class="tag tag-em">Email</span><span class="tag tag-app">In-App</span></div>
+      </div>
+
+      <div class="card c-tpl">
+        <div class="card-title">📄 Outgoing PO Template ✅</div>
+        <div class="card-sub">Built. Sent to SubCon on PO issuance. Triggers acknowledge gate.</div>
+        <div class="card-tags"><span class="tag tag-ok">BUILT</span></div>
+      </div>
+
+      <div class="card c-tpl-x">
+        <div class="card-title">📄 Incoming PO Template ❌</div>
+        <div class="card-sub">Client PO received by Ratal Group. Triggers AR + billing cycle. Not built yet.</div>
+        <div class="card-tags"><span class="tag tag-miss">MISSING</span></div>
+      </div>
+
+      <hr class="lane-div">
+      <div class="c-section">DH Dashboard</div>
+
+      <div class="card c-page">
+        <div class="card-title">📊 DH Dashboard (Command Centre)</div>
+        <div class="card-sub">Site progress overview, pending SubCon requests, unconfirmed advances, OT approvals pending, expense claims queue, PO balances by site.</div>
+        <div class="card-tags"><span class="tag tag-app">App + Desktop</span></div>
+      </div>
+
+      <hr class="lane-div">
+      <div class="c-section">SubCon Payment Certification</div>
+
+      <div class="card c-form">
+        <div class="card-title">📝 Payment Certificate (Certify Progress)</div>
+        <div class="card-sub">DH certifies work progress %. System calculates earned amount (PO value × %). Shows: PO Total / Previously Paid / This Certification / Balance. DH approves amount to pay.</div>
+        <div class="card-tags"><span class="tag tag-app">App + Desktop</span></div>
+      </div>
+
+      <div class="card c-tpl-w">
+        <div class="card-title">📄 SubCon Payment Certificate ⚠️</div>
+        <div class="card-sub">Needs rebuild: add work progress %, PO status block (Total / Prev Paid / This Payment / Balance After), earned amount calc.</div>
+        <div class="card-tags"><span class="tag tag-warn">REBUILD NEEDED</span></div>
+      </div>
+
+      <div class="card c-gate">
+        <div class="card-title">🔒 GATE: Certificate Before MR</div>
+        <div class="card-sub">Payment Certificate (DH-certified amount) must exist before SubCon money request can be submitted. FIFO selects which PO; Certificate caps amount.</div>
+        <div class="card-tags"><span class="tag tag-gate">HARD GATE</span></div>
+      </div>
+
+      <hr class="lane-div">
+      <div class="c-section">Money Request Engine</div>
+
+      <div class="card c-form" style="border-color:#f9a825;">
+        <div class="card-title" style="color:#ffe082;">⚙️ Money Request Form [MAIN ENGINE]</div>
+        <div class="card-sub">
+          App OR Excel UserForm interface — same Supabase backend.<br><br>
+          <b>Payee Types:</b><br>
+          • Employee (advance)<br>
+          • Sub-Contractor (requires Certificate)<br>
+          • Contractor / Supplier<br>
+          • Vendor / Local Supplier<br>
+          • Petty Cash (TISU→ANB-77 / others→ANB-39)<br><br>
+          Multi-line. Site# → PO lookup. Project + Site per line.
+        </div>
+        <div class="card-tags">
+          <span class="tag tag-qr">QR Auth</span>
+          <span class="tag tag-xls">Excel UserForm</span>
+          <span class="tag tag-em">Email to Accounts</span>
+          <span class="tag tag-tg">Telegram</span>
+        </div>
+      </div>
+
+      <div class="card c-tpl-x">
+        <div class="card-title">📄 Money Request Template ❌</div>
+        <div class="card-sub">Printable MR document for Accounts approval workflow. Not built yet.</div>
+        <div class="card-tags"><span class="tag tag-miss">MISSING</span></div>
+      </div>
+
+      <hr class="lane-div">
+      <div class="c-section">Field Cash Payments</div>
+
+      <div class="card c-form">
+        <div class="card-title">💸 Field Payment (Issue Advance)</div>
+        <div class="card-sub">DH issues cash advance to employee on-site. Saves to employee_advances (ADVANCE_IN). Auto-posts JE: Dr 1310 / Cr ANB petty cash. Triggers Payment Validation gate for employee.</div>
+        <div class="card-tags"><span class="tag tag-app">App</span><span class="tag tag-auto">Auto JE</span></div>
+      </div>
+
+      <div class="card c-form">
+        <div class="card-title">✈️ Travel / Field Distribution (Shareable)</div>
+        <div class="card-sub">FormPayment — entity-aware. RAT/GWT: travel per diem, hotel, visa. ACCSYS: field distribution to employees / subcons / suppliers. Shareable link, QR auth.</div>
+        <div class="card-tags"><span class="tag tag-qr">QR Auth</span><span class="tag tag-app">Shareable</span></div>
+      </div>
+
+      <hr class="lane-div">
+      <div class="c-section">Approvals</div>
+
+      <div class="card c-gate">
+        <div class="card-title">🔒 OT Approval Gate</div>
+        <div class="card-sub">DH must approve OT records before they are passed to Payroll. Unapproved OT excluded from payroll run.</div>
+      </div>
+
+      <div class="card c-gate">
+        <div class="card-title">🔒 Expense Claim Approval Gate</div>
+        <div class="card-sub">DH reviews and approves monthly expense claim. Only then does Accounts see it for payment. Auto JE posted on approval.</div>
+      </div>
+
+      <div class="card c-gate">
+        <div class="card-title">🔒 Food Allowance Approval</div>
+        <div class="card-sub">DH approves Food Allowance submissions before they post to payroll / expense ledger.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- LANE 4 : ACCOUNTS / FINANCE -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="lane lane-accounts">
+    <div class="lane-header">🏦 Accounts · Finance<br><span style="font-size:9px;font-weight:400">Desktop · Payment Processing</span></div>
+    <div class="lane-body">
+
+      <div class="c-section">Incoming Work</div>
+
+      <div class="card c-notif">
+        <div class="card-title">📧 Money Request Received</div>
+        <div class="card-sub">Email + in-app alert: new MR from DH. Amount, payee, site, bank account routing (ANB-77/39/15/18).</div>
+        <div class="card-tags"><span class="tag tag-em">Email</span><span class="tag tag-app">In-App</span></div>
+      </div>
+
+      <div class="card c-page">
+        <div class="card-title">💼 Money Requests (Desktop)</div>
+        <div class="card-sub">Queue of all pending MRs. Review → Approve → Release payment. Bank auto-routing by dept/entity.</div>
+      </div>
+
+      <div class="card c-page">
+        <div class="card-title">🧾 Payment Processing</div>
+        <div class="card-sub">Pay via ANB-77 (TISU), ANB-39 (NISU/CISU/ITSU), ANB-15/18 (main/corporate). Receipt recorded. Ledger updated. SubCon AP reduced.</div>
+        <div class="card-tags"><span class="tag tag-auto">Auto Ledger</span><span class="tag tag-tg">Telegram to SubCon</span></div>
+      </div>
+
+      <div class="card c-notif">
+        <div class="card-title">📧 Payment Made Notification</div>
+        <div class="card-sub">To DH: "Payment of SAR X processed for [SubCon/Employee]". To SubCon/Employee: in-app credit alert.</div>
+        <div class="card-tags"><span class="tag tag-em">Email</span><span class="tag tag-app">In-App</span></div>
+      </div>
+
+      <hr class="lane-div">
+      <div class="c-section">Invoicing (AR)</div>
+
+      <div class="card c-form">
+        <div class="card-title">📑 Invoice to Client</div>
+        <div class="card-sub">Bill client against Incoming PO. ZATCA-compliant. 6 invoice type variants needed.</div>
+      </div>
+
+      <div class="card c-tpl-x">
+        <div class="card-title">📄 Invoice / ZATCA Templates ❌</div>
+        <div class="card-sub">6 variants needed:<br>• Standard Tax Invoice<br>• Simplified Tax Invoice<br>• Credit Note<br>• Debit Note<br>• Proforma Invoice<br>• Receipt Voucher</div>
+        <div class="card-tags"><span class="tag tag-miss">6 MISSING</span></div>
+      </div>
+
+      <div class="card c-page">
+        <div class="card-title">📥 Payment Receipts (AR)</div>
+        <div class="card-sub">Client payments received. Matched to invoices. AR aging updated.</div>
+      </div>
+
+      <hr class="lane-div">
+      <div class="c-section">Reconciliation &amp; Ledger</div>
+
+      <div class="card c-page">
+        <div class="card-title">🔄 Bank Reconciliation</div>
+        <div class="card-sub">Monthly. Unmatched transactions = red flags. Catches ATM-bypass payments by DH. Shows SubCon overpayments. ANB-77 / ANB-39 / ANB-15 / ANB-18 / ANB-11.</div>
+        <div class="card-tags"><span class="tag tag-auto">Auto-match</span></div>
+      </div>
+
+      <div class="card c-page">
+        <div class="card-title">📒 Ledger / Journal Entries</div>
+        <div class="card-sub">Auto-posted JEs: OT → payroll accrual, Field Payment → Dr 1310/Cr cash, SubCon payment → Dr AP/Cr bank, Expense Claim → Dr expense/Cr payable.</div>
+        <div class="card-tags"><span class="tag tag-auto">Auto JE</span><span class="tag tag-je">JE</span></div>
+      </div>
+
+      <div class="card c-page">
+        <div class="card-title">📊 AR Aging · AP Aging</div>
+        <div class="card-sub">SubCon ledger: PO value / paid / balance / invoices submitted / pending. Client AR: invoice / paid / overdue.</div>
+      </div>
+
+      <hr class="lane-div">
+      <div class="c-section">VAT &amp; Compliance</div>
+
+      <div class="card c-page">
+        <div class="card-title">🧮 VAT Return · VAT Payment</div>
+        <div class="card-sub">15% VAT on all SubCon payments and client invoices. Quarterly ZATCA filing. System auto-calculates VAT amount per transaction.</div>
+        <div class="card-tags"><span class="tag tag-auto">Auto-calc</span></div>
+      </div>
+
+      <div class="card c-page">
+        <div class="card-title">💰 Payroll Processing</div>
+        <div class="card-sub">OT (approved) + Food Allowance (approved) + Base Salary + Deductions. Monthly run after DH approvals received.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- LANE 5 : MANAGEMENT / REPORTS -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="lane lane-mgmt">
+    <div class="lane-header">📈 Management · Reports<br><span style="font-size:9px;font-weight:400">Desktop · Read-Only</span></div>
+    <div class="lane-body">
+
+      <div class="c-section">Financial Statements</div>
+
+      <div class="card c-page">
+        <div class="card-title">📊 Trial Balance</div>
+        <div class="card-sub">All CoA balances. Debit = Credit check. Export to Excel.</div>
+      </div>
+
+      <div class="card c-page">
+        <div class="card-title">📈 P&amp;L Statement</div>
+        <div class="card-sub">Revenue vs Expenses by project / entity / period.</div>
+      </div>
+
+      <div class="card c-page">
+        <div class="card-title">📋 Balance Sheet</div>
+        <div class="card-sub">Assets (1310 advances, AR) vs Liabilities (AP SubCon) vs Equity.</div>
+      </div>
+
+      <div class="card c-page">
+        <div class="card-title">💧 Cash Flow</div>
+        <div class="card-sub">Operating / Investing / Financing. ANB account movements.</div>
+      </div>
+
+      <hr class="lane-div">
+      <div class="c-section">Operations Reports</div>
+
+      <div class="card c-page">
+        <div class="card-title">🏗️ Site Progress Report</div>
+        <div class="card-sub">Milestone completion % per site. Feeds SubCon payment certification basis.</div>
+      </div>
+
+      <div class="card c-page">
+        <div class="card-title">🤝 SubCon Payment History</div>
+        <div class="card-sub">All payments per SubCon per PO. Invoice submitted/pending. Over/under payment flags.</div>
+      </div>
+
+      <div class="card c-page">
+        <div class="card-title">💳 Employee Advances Report</div>
+        <div class="card-sub">All advances issued, confirmed, unconfirmed. Outstanding advance balances.</div>
+      </div>
+
+      <div class="card c-page">
+        <div class="card-title">🍽️ Food Allowance Summary</div>
+        <div class="card-sub">By site / employee / period. Approved vs pending.</div>
+      </div>
+
+      <div class="card c-page">
+        <div class="card-title">⏰ OT Summary</div>
+        <div class="card-sub">Hours by type, by employee, by site. Payroll impact calculation.</div>
+      </div>
+
+      <div class="card c-page">
+        <div class="card-title">🚗 Vehicle Expense Report</div>
+        <div class="card-sub">Fuel / Maintenance cost per vehicle per period. Incident log.</div>
+      </div>
+
+      <hr class="lane-div">
+      <div class="c-section">Audit &amp; Access</div>
+
+      <div class="card c-page">
+        <div class="card-title">🔍 Audit Log</div>
+        <div class="card-sub">All form submissions, approvals, payments, template generations with timestamps and user IDs.</div>
+      </div>
+
+      <div class="card c-page">
+        <div class="card-title">🔐 Document Vault</div>
+        <div class="card-sub">Attached photos, invoices, signed vouchers, PO documents. Linked to records.</div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /main-grid -->
+</div><!-- /scroll-wrap -->
+
+<!-- ── KEY FLOWS ── -->
+<div class="key-flows">
+  <h2>⚡ Key Transaction Flows</h2>
+  <div class="flow-steps">
+
+    <div class="flow-step">
+      <h3>SubCon Payment Cycle</h3>
+      <ol>
+        <li>Accounts issues Outgoing PO → Template generated</li>
+        <li>SubCon gets in-app + Telegram notification</li>
+        <li>SubCon acknowledges PO (Gate 1)</li>
+        <li>SubCon submits Payment Request (amount + photo)</li>
+        <li>DH reviews site progress (Site Completion form)</li>
+        <li>DH creates Payment Certificate (certifies % done)</li>
+        <li>DH submits Money Request referencing Certificate (Gate 2)</li>
+        <li>Accounts pays via ANB → SubCon alert sent</li>
+        <li>When PO exhausted → Invoice gate forced (Gate 3)</li>
+        <li>SubCon submits invoice → ZATCA validated</li>
+      </ol>
+    </div>
+
+    <div class="flow-step">
+      <h3>Employee Expense Cycle</h3>
+      <ol>
+        <li>Site Assignment links employee to site</li>
+        <li>Employee submits Daily Expenses (QR auth)</li>
+        <li>Employee submits Food Allowance + OT daily</li>
+        <li>Month-end: Expense Claim auto-compiled from dailies</li>
+        <li>DH reviews + approves Expense Claim (Gate)</li>
+        <li>DH approves OT records (Gate)</li>
+        <li>Accounts runs Payroll: base + OT + food allowance</li>
+        <li>Auto-JE posts to ledger</li>
+      </ol>
+    </div>
+
+    <div class="flow-step">
+      <h3>Cash Advance Cycle</h3>
+      <ol>
+        <li>DH issues Field Payment to employee (on-site)</li>
+        <li>Auto-JE: Dr 1310 Employee Advance / Cr Petty Cash</li>
+        <li>Employee receives in-app notification</li>
+        <li>Employee confirms via Payment Validation form (photo of signed voucher)</li>
+        <li>Advance marked confirmed in records</li>
+        <li>Unconfirmed advances flagged in DH dashboard</li>
+        <li>Cleared against Expense Claim at month-end</li>
+      </ol>
+    </div>
+
+    <div class="flow-step">
+      <h3>Client Billing Cycle</h3>
+      <ol>
+        <li>Client issues Incoming PO to Ratal Group</li>
+        <li>Recorded in system → Accounts notified</li>
+        <li>Field work performed → Site Completion records</li>
+        <li>Invoice raised against Incoming PO (ZATCA)</li>
+        <li>Invoice sent to client (Email + Template)</li>
+        <li>Payment received → matched to invoice</li>
+        <li>AR updated, cash flow updated</li>
+        <li>Revenue recognized in P&amp;L</li>
+      </ol>
+    </div>
+
+    <div class="flow-step">
+      <h3>Excel UserForm Flow</h3>
+      <ol>
+        <li>DH opens Excel file on desktop</li>
+        <li>UserForm pulls Project No. / Site# from Supabase</li>
+        <li>DH selects Site → SubCon list auto-populates</li>
+        <li>DH enters payment amounts per payee</li>
+        <li>VBA submits to money_requests table (same as App)</li>
+        <li>Accounts sees identical MR in queue</li>
+        <li>App and Excel = same backend, different interface</li>
+      </ol>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── GATES SUMMARY ── -->
+<div class="gates-section">
+  <h2>🔒 System Gates (Hard Blocks)</h2>
+  <div class="gates-grid">
+    <div class="gate-card">
+      <div class="g-title">G1 — PO Acknowledgement</div>
+      <div class="g-body">SubCon cannot submit payment request until they acknowledge the issued PO in-app. One-time per PO.</div>
+    </div>
+    <div class="gate-card">
+      <div class="g-title">G2 — PO Balance Check</div>
+      <div class="g-body">SubCon payment request blocked if no open PO or PO balance is zero. System shows current balance.</div>
+    </div>
+    <div class="gate-card">
+      <div class="g-title">G3 — Payment Certificate</div>
+      <div class="g-body">DH must create Payment Certificate (certified work %) before Money Request for SubCon can be submitted. MR screen shows certificate reference.</div>
+    </div>
+    <div class="gate-card">
+      <div class="g-title">G4 — Invoice on PO Exhaustion</div>
+      <div class="g-body">When cumulative payments = PO value, next payment request is blocked until formal invoice is attached. DH can attach on SubCon behalf.</div>
+    </div>
+    <div class="gate-card">
+      <div class="g-title">G5 — QR Authentication</div>
+      <div class="g-body">All field forms require QR scan for auth. No QR token = no form submission. Tokens managed via QR Manager (desktop).</div>
+    </div>
+    <div class="gate-card">
+      <div class="g-title">G6 — Payment Validation</div>
+      <div class="g-body">Cash advance not fully reconciled until employee confirms via Payment Validation form (photo of signed voucher).</div>
+    </div>
+    <div class="gate-card">
+      <div class="g-title">G7 — OT Approval</div>
+      <div class="g-body">OT submissions not included in payroll until DH approves. Unapproved OT shown as pending on DH dashboard.</div>
+    </div>
+    <div class="gate-card">
+      <div class="g-title">G8 — Expense Claim Approval</div>
+      <div class="g-body">Monthly expense claim not visible to Accounts until DH approves. Accounts cannot pay unapproved claims.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TEMPLATE STATUS ── -->
+<div class="tpl-section">
+  <h2>📄 Template Status</h2>
+  <div class="tpl-grid">
+    <div class="tpl-card ok">
+      <div class="t-title">✅ Outgoing PO</div>
+      <div class="t-body">Built. Sent to SubCon on PO issuance. All placeholders defined.</div>
+    </div>
+    <div class="tpl-card ok">
+      <div class="t-title">✅ Expense Claim</div>
+      <div class="t-body">Built. Employee monthly claim with lines, totals, DH approval block.</div>
+    </div>
+    <div class="tpl-card ok">
+      <div class="t-title">✅ SubCon Invoice (current)</div>
+      <div class="t-body">Built (this session). Single-page A4. 5 line items, VAT, signatures.</div>
+    </div>
+    <div class="tpl-card warn">
+      <div class="t-title">⚠️ SubCon Payment Certificate</div>
+      <div class="t-body">Needs rebuild: add work progress %, PO status block (Total / Prev Paid / This / Balance), earned amount vs certified amount.</div>
+    </div>
+    <div class="tpl-card miss">
+      <div class="t-title">❌ Incoming PO</div>
+      <div class="t-body">Client PO acknowledgement + receipt confirmation. Not started.</div>
+    </div>
+    <div class="tpl-card miss">
+      <div class="t-title">❌ Money Request</div>
+      <div class="t-body">Printable MR form for Accounts physical records. Not started.</div>
+    </div>
+    <div class="tpl-card miss">
+      <div class="t-title">❌ Standard Tax Invoice (ZATCA)</div>
+      <div class="t-body">Client billing — ZATCA compliant. QR code required. Not started.</div>
+    </div>
+    <div class="tpl-card miss">
+      <div class="t-title">❌ Simplified Tax Invoice</div>
+      <div class="t-body">B2C / small transactions. ZATCA simplified. Not started.</div>
+    </div>
+    <div class="tpl-card miss">
+      <div class="t-title">❌ Credit Note / Debit Note</div>
+      <div class="t-body">Adjustments to issued invoices. ZATCA required. Not started.</div>
+    </div>
+    <div class="tpl-card miss">
+      <div class="t-title">❌ Proforma Invoice</div>
+      <div class="t-body">Pre-billing estimate for client approval. Not started.</div>
+    </div>
+    <div class="tpl-card miss">
+      <div class="t-title">❌ Email: Site Assignment</div>
+      <div class="t-body">Notify employee/SubCon of site assignment. Template body missing.</div>
+    </div>
+    <div class="tpl-card miss">
+      <div class="t-title">❌ Email: PO Issued to SubCon</div>
+      <div class="t-body">Formal PO issuance email with PDF attachment. Template body missing.</div>
+    </div>
+    <div class="tpl-card miss">
+      <div class="t-title">❌ Email: MR Submitted</div>
+      <div class="t-body">Notify Accounts of new Money Request from DH. Template body missing.</div>
+    </div>
+    <div class="tpl-card miss">
+      <div class="t-title">❌ Email: Payment Made</div>
+      <div class="t-body">Confirm payment to DH + SubCon/Employee. Amount, reference, date. Missing.</div>
+    </div>
+    <div class="tpl-card miss">
+      <div class="t-title">❌ Email: Expense Claim Approved</div>
+      <div class="t-body">DH approval confirmation to employee. Template body missing.</div>
+    </div>
+    <div class="tpl-card miss">
+      <div class="t-title">❌ Email: Invoice Sent to Client</div>
+      <div class="t-body">Cover email for client invoice submission. Template body missing.</div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div style="background:#0d1117; padding:12px 20px; font-size:10px; color:#37474f; border-top:1px solid #1e2535;">
+  ACCSYS Field Operations Platform · Ratal Group · Generated by ACCSYS AI · September 2026
+  · Supabase backend · React frontend · Google Docs compatible templates ({{placeholder}} pattern)
+</div>
+
+</body>
+</html>

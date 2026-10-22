@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ratal ERP — Unified Component Style Guide</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#e8ecf0;color:#1a2e3d;font-size:14px}
+
+/* ══════════ TOP NAV ══════════ */
+.top-nav{background:#1e1b4b;display:flex;align-items:stretch;position:sticky;top:0;z-index:200;box-shadow:0 2px 10px rgba(0,0,0,0.3);height:50px}
+.nav-logo{padding:0 20px;font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center;border-right:1px solid rgba(255,255,255,0.1);white-space:nowrap;gap:8px}
+.nav-tabs{display:flex;overflow-x:auto;scrollbar-width:none}
+.nav-tab{padding:0 18px;font-size:12px;font-weight:600;color:rgba(255,255,255,0.5);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;display:flex;align-items:center;transition:all 0.15s}
+.nav-tab:hover{color:rgba(255,255,255,0.85)}
+.nav-tab.on{color:#fff;border-bottom-color:#818cf8;font-weight:800}
+
+/* ══════════ SECTIONS ══════════ */
+.sec{display:none;padding:28px 32px;max-width:1200px;margin:0 auto}
+.sec.on{display:block}
+
+.sec-title{font-size:18px;font-weight:900;color:#1e293b;margin-bottom:4px}
+.sec-sub{font-size:12px;color:#64748b;margin-bottom:24px;line-height:1.6}
+
+/* ══════════ SHOWCASE CARD ══════════ */
+.showcase{background:#fff;border-radius:16px;padding:24px 28px;box-shadow:0 2px 12px rgba(0,0,0,0.07);margin-bottom:24px}
+.showcase-title{font-size:13px;font-weight:900;color:#1e293b;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.showcase-sub{font-size:11px;color:#94a3b8;margin-bottom:18px}
+.rule-chip{background:#f1f5f9;color:#475569;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;font-family:monospace}
+.canvas{background:#f8fafc;border-radius:10px;padding:20px;border:1px solid #e2e8f0;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.canvas.col{flex-direction:column;align-items:stretch}
+.canvas-label{font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+.spec{margin-top:12px;background:#1e293b;border-radius:8px;padding:10px 14px;font-size:10px;font-family:monospace;color:#94a3b8;line-height:1.8}
+.spec span{color:#7dd3fc}
+.spec em{color:#86efac}
+
+/* ══════════ COLORS ══════════ */
+.swatch-row{display:flex;gap:8px;flex-wrap:wrap}
+.sw{border-radius:10px;padding:12px 14px;color:#fff;min-width:110px;flex:1}
+.sw-name{font-size:10px;font-weight:800;letter-spacing:0.3px}
+.sw-hex{font-size:9px;opacity:0.65;font-family:monospace;margin-top:2px}
+
+/* ══════════ TYPOGRAPHY ══════════ */
+.type-row{padding:10px 0;border-bottom:1px solid #f1f5f9;display:flex;align-items:baseline;gap:16px}
+.type-row:last-child{border-bottom:none}
+.type-meta{font-size:9px;color:#94a3b8;width:160px;flex-shrink:0;font-family:monospace}
+
+/* ══════════ BUTTONS ══════════ */
+/* Primary */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;border:none;font-family:inherit;font-weight:700;transition:all 0.15s;white-space:nowrap}
+.btn-primary{background:#0277bd;color:#fff;padding:8px 18px;border-radius:8px;font-size:12px}
+.btn-primary:hover{background:#01579b}
+.btn-secondary{background:#fff;color:#0277bd;padding:8px 18px;border-radius:8px;font-size:12px;border:1.5px solid #0277bd}
+.btn-secondary:hover{background:#e0f2fe}
+.btn-ghost{background:transparent;color:#64748b;padding:8px 14px;border-radius:8px;font-size:12px;border:1.5px solid #e2e8f0}
+.btn-ghost:hover{background:#f8fafc;color:#1e293b}
+.btn-danger{background:#ef4444;color:#fff;padding:8px 18px;border-radius:8px;font-size:12px}
+.btn-danger:hover{background:#dc2626}
+.btn-icon{background:#f1f5f9;color:#475569;width:32px;height:32px;border-radius:8px;font-size:14px;border:1.5px solid #e2e8f0;padding:0}
+.btn-icon:hover{background:#e2e8f0}
+.btn-sm{padding:5px 12px;font-size:11px;border-radius:6px}
+.btn-lg{padding:11px 24px;font-size:13px;border-radius:9px}
+/* Module variants */
+.btn-hr{background:#e65100;color:#fff;padding:8px 18px;border-radius:8px;font-size:12px}
+.btn-ops{background:#5A32D4;color:#fff;padding:8px 18px;border-radius:8px;font-size:12px}
+.btn-acc{background:#00838f;color:#fff;padding:8px 18px;border-radius:8px;font-size:12px}
+
+/* ══════════ BADGES ══════════ */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:10px;font-size:10px;font-weight:800}
+.bdg-green{background:#dcfce7;color:#166534}
+.bdg-blue{background:#dbeafe;color:#1d4ed8}
+.bdg-amber{background:#fef3c7;color:#92400e}
+.bdg-red{background:#fee2e2;color:#b91c1c}
+.bdg-purple{background:#f3e8ff;color:#6d28d9}
+.bdg-gray{background:#f1f5f9;color:#475569}
+.bdg-teal{background:#ccfbf1;color:#0f766e}
+.bdg-dot{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:0.7}
+
+/* ══════════ FORM INPUTS ══════════ */
+.form-field{display:flex;flex-direction:column;gap:5px;flex:1;min-width:180px}
+.form-label{font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.5px}
+.form-label .req{color:#ef4444;margin-left:2px}
+.form-input{height:36px;background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;padding:0 12px;font-size:12px;color:#1e293b;font-family:inherit;outline:none;transition:border-color 0.15s}
+.form-input:focus{border-color:#0277bd;box-shadow:0 0 0 3px rgba(2,119,189,0.1)}
+.form-input::placeholder{color:#94a3b8}
+.form-input.error{border-color:#ef4444}
+.form-input.success{border-color:#16a34a}
+.form-select{height:36px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E") no-repeat right 12px center;border:1.5px solid #e2e8f0;border-radius:8px;padding:0 32px 0 12px;font-size:12px;color:#1e293b;font-family:inherit;outline:none;appearance:none;cursor:pointer}
+.form-select:focus{border-color:#0277bd;box-shadow:0 0 0 3px rgba(2,119,189,0.1)}
+.form-textarea{background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;padding:10px 12px;font-size:12px;color:#1e293b;font-family:inherit;outline:none;resize:vertical;min-height:80px;transition:border-color 0.15s}
+.form-textarea:focus{border-color:#0277bd;box-shadow:0 0 0 3px rgba(2,119,189,0.1)}
+.form-hint{font-size:10px;color:#94a3b8}
+.form-error-msg{font-size:10px;color:#ef4444;font-weight:600}
+.form-row{display:flex;gap:14px;flex-wrap:wrap}
+/* fieldset */
+.fieldset{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:16px 18px;margin-bottom:12px}
+.fieldset-legend{font-size:10px;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #e2e8f0}
+
+/* ══════════ SIDEBAR STANDARD ══════════ */
+.sidebar-demo{background:#1e1b4b;border-radius:12px;padding:16px 0;width:220px;flex-shrink:0}
+.sd-logo{padding:0 16px 14px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.sd-logo-icon{width:30px;height:30px;background:linear-gradient(135deg,#818cf8,#6366f1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.sd-logo-text{font-size:12px;font-weight:900;color:#fff}
+.sd-logo-sub{font-size:9px;color:rgba(255,255,255,0.4);margin-top:1px}
+.sd-section{padding:0 12px;margin-bottom:4px}
+.sd-section-label{font-size:9px;font-weight:800;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:1px;padding:10px 4px 4px}
+.sd-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:all 0.15s;margin-bottom:2px}
+.sd-item:hover{background:rgba(255,255,255,0.07)}
+.sd-item.active{background:rgba(129,140,248,0.2);border-left:3px solid #818cf8;padding-left:7px}
+.sd-item-icon{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.sd-item-text{font-size:12px;font-weight:600;color:rgba(255,255,255,0.75)}
+.sd-item.active .sd-item-text{color:#c7d2fe;font-weight:700}
+.sd-item-badge{margin-left:auto;background:#ef4444;color:#fff;font-size:9px;font-weight:800;padding:1px 6px;border-radius:8px}
+
+/* ══════════ PAGE HEADER ══════════ */
+.page-hdr{background:#fff;border-radius:12px;padding:18px 22px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.page-hdr-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.page-hdr-left{}
+.breadcrumb{font-size:10px;color:#94a3b8;margin-bottom:4px;display:flex;align-items:center;gap:5px}
+.breadcrumb span{color:#0277bd;font-weight:700}
+.page-hdr-title{font-size:20px;font-weight:900;color:#1e293b;line-height:1.2}
+.page-hdr-subtitle{font-size:12px;color:#64748b;margin-top:3px}
+.page-hdr-actions{display:flex;gap:8px;align-items:center;flex-shrink:0}
+.page-hdr-kpis{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+
+/* ══════════ KPI CARD ══════════ */
+.kpi{border-radius:12px;padding:12px 16px;color:#fff;position:relative;overflow:hidden;flex:1;min-width:140px;max-width:220px}
+.kpi::after{content:'';position:absolute;right:-12px;top:-12px;width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,0.1)}
+.kpi-icon{font-size:18px;margin-bottom:4px;position:relative;z-index:1}
+.kpi-value{font-size:20px;font-weight:900;line-height:1.1;position:relative;z-index:1}
+.kpi-label{font-size:9px;font-weight:700;opacity:0.7;text-transform:uppercase;letter-spacing:0.5px;margin-top:3px;position:relative;z-index:1}
+.kpi-sub{font-size:9px;opacity:0.55;margin-top:2px;position:relative;z-index:1}
+
+/* ══════════ FILTER STRIP ══════════ */
+.filter-strip{background:#fff;border-radius:10px 10px 0 0;padding:10px 16px;border:1px solid #e2e8f0;border-bottom:none;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.fs-search{height:30px;background:#f8faff;border:1.5px solid #e2e8f0;border-radius:7px;padding:0 10px;font-size:11px;color:#1e293b;font-family:inherit;outline:none;min-width:180px}
+.fs-search::placeholder{color:#94a3b8}
+.fs-search:focus{border-color:#0277bd}
+.fs-select{height:30px;background:#f8faff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%2394a3b8'/%3E%3C/svg%3E") no-repeat right 9px center;border:1.5px solid #e2e8f0;border-radius:7px;padding:0 26px 0 10px;font-size:11px;color:#1e293b;font-family:inherit;outline:none;appearance:none;cursor:pointer}
+.fs-select:focus{border-color:#0277bd}
+.chip-group{display:flex;gap:4px}
+.chip{height:26px;padding:0 10px;border-radius:13px;font-size:10px;font-weight:700;border:1.5px solid #e2e8f0;color:#64748b;background:#fff;cursor:pointer;display:flex;align-items:center;gap:4px;transition:all 0.1s}
+.chip:hover{border-color:#cbd5e1;color:#1e293b}
+.chip.on{border-color:var(--mc,#0277bd);color:var(--mc,#0277bd);background:rgba(2,119,189,0.06)}
+.fs-clear{margin-left:auto;font-size:10px;color:#94a3b8;font-weight:700;cursor:pointer;white-space:nowrap}
+.fs-clear:hover{color:#ef4444}
+.fs-count{margin-left:8px;font-size:10px;color:#64748b;font-weight:600;white-space:nowrap}
+
+/* ══════════ TABLE ══════════ */
+.tbl-wrap{background:#fff;border-radius:0 0 12px 12px;border:1px solid #e2e8f0;overflow:hidden}
+.tbl-scroll{overflow-x:auto;max-height:340px;overflow-y:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl thead{position:sticky;top:0;z-index:10}
+.tbl th{background:#f8faff;padding:9px 14px;font-size:9px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;text-align:left;border-bottom:2px solid #dbeafe;white-space:nowrap}
+.tbl td{padding:10px 14px;border-bottom:1px solid #f1f5f9;color:#475569;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:#f8faff}
+.tbl td.name{font-weight:700;color:#1e293b}
+.tbl td.code{font-family:monospace;font-size:11px;color:#0277bd;font-weight:700}
+.tbl td.sar{font-weight:800;color:#1e293b;font-family:monospace;text-align:right}
+.tbl-pagination{background:#fff;border-top:1px solid #f1f5f9;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-radius:0 0 12px 12px}
+.pg-info{font-size:11px;color:#64748b}
+.pg-btns{display:flex;gap:4px}
+.pg-btn{width:30px;height:30px;border-radius:7px;border:1.5px solid #e2e8f0;background:#fff;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.pg-btn.on{background:#0277bd;color:#fff;border-color:#0277bd}
+.pg-btn:hover:not(.on){background:#f8fafc}
+/* expand */
+.tbl-expand{cursor:pointer}
+.tbl-expand td{padding-left:40px;background:#f8faff;font-size:11px;color:#64748b;border-top:none}
+.tbl td .expand-btn{width:20px;height:20px;border-radius:4px;background:#f1f5f9;border:1px solid #e2e8f0;font-size:10px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+
+/* ══════════ FULL PAGE DEMO ══════════ */
+.app-shell{display:flex;height:580px;background:#e8ecf0;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.15)}
+.app-sidebar{background:#1e1b4b;width:220px;flex-shrink:0;overflow-y:auto;scrollbar-width:none}
+.app-main{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#e2e8f0 transparent}
+.app-main-inner{padding:16px 20px}
+.app-top-bar{background:#fff;padding:0 20px;height:46px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e2e8f0;flex-shrink:0}
+.app-entity-pills{display:flex;gap:5px}
+.entity-pill{padding:4px 11px;border-radius:14px;font-size:10px;font-weight:700;border:1.5px solid #e2e8f0;color:#64748b;background:#fff;cursor:pointer}
+.entity-pill.on{background:#0277bd;color:#fff;border-color:#0277bd}
+.app-user{display:flex;align-items:center;gap:7px;font-size:11px;color:#64748b}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#818cf8,#6366f1);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff}
+
+/* Grid helpers */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px}
+
+/* Problem/Fix compare */
+.cmp{display:grid;grid-template-columns:1fr 1fr;border-radius:10px;overflow:hidden;border:1.5px solid #e2e8f0;margin-bottom:12px}
+.cmp-bad{background:#fff7ed;padding:14px 16px}
+.cmp-good{background:#f0fdf4;padding:14px 16px}
+.cmp-lbl{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.cmp-bad .cmp-lbl{color:#ea580c}
+.cmp-good .cmp-lbl{color:#16a34a}
+</style>
+</head>
+<body>
+
+<div class="top-nav">
+  <div class="nav-logo">🎨 Ratal ERP — Unified Style Guide</div>
+  <div class="nav-tabs">
+    <div class="nav-tab on" onclick="show('page-layout')">Page Layout</div>
+    <div class="nav-tab" onclick="show('sidebar')">Sidebar</div>
+    <div class="nav-tab" onclick="show('buttons')">Buttons</div>
+    <div class="nav-tab" onclick="show('kpi-cards')">KPI Cards</div>
+    <div class="nav-tab" onclick="show('forms')">Forms</div>
+    <div class="nav-tab" onclick="show('tables')">Tables + Filters</div>
+    <div class="nav-tab" onclick="show('badges')">Badges</div>
+    <div class="nav-tab" onclick="show('fullpage')">Full Page Demo</div>
+  </div>
+</div>
+
+<!-- ════════ PAGE LAYOUT ════════ -->
+<div class="sec on" id="page-layout">
+  <div class="sec-title">Page Layout — The Anatomy of Every Page</div>
+  <div class="sec-sub">Every page in the application follows this exact structure. Nothing more, nothing less.</div>
+
+  <div class="showcase">
+    <div class="showcase-title">Structure — top to bottom, always in this order</div>
+    <div class="canvas col" style="gap:0;padding:0;background:transparent;border:none">
+      <div style="background:#f0f4ff;border:2px dashed #818cf8;border-radius:10px;padding:10px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:10px;font-weight:900;color:#4338ca">① PAGE HEADER</div><div style="font-size:11px;color:#64748b;margin-top:2px">Breadcrumb · Page title · Subtitle · Action buttons (+ New, Export)</div></div>
+        <div style="font-size:9px;font-family:monospace;color:#94a3b8">always white card, 18px title</div>
+      </div>
+      <div style="background:#fff3e0;border:2px dashed #e65100;border-radius:10px;padding:10px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:10px;font-weight:900;color:#e65100">② KPI CARDS ROW</div><div style="font-size:11px;color:#64748b;margin-top:2px">4–6 cards, all same height, module color gradient</div></div>
+        <div style="font-size:9px;font-family:monospace;color:#94a3b8">padding 12px 16px, icon 18px, value 20px</div>
+      </div>
+      <div style="background:#f0fdf4;border:2px dashed #16a34a;border-radius:10px;padding:10px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:10px;font-weight:900;color:#166534">③ FILTER STRIP</div><div style="font-size:11px;color:#64748b;margin-top:2px">Search · Dropdowns · Status chips — ABOVE the column header. Always.</div></div>
+        <div style="font-size:9px;font-family:monospace;color:#94a3b8">background #fff, height 50px</div>
+      </div>
+      <div style="background:#eff6ff;border:2px dashed #0277bd;border-radius:10px;padding:10px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:10px;font-weight:900;color:#0277bd">④ STICKY COLUMN HEADER</div><div style="font-size:11px;color:#64748b;margin-top:2px">position: sticky; top: 0 — NEVER scrolls away. Ever.</div></div>
+        <div style="font-size:9px;font-family:monospace;color:#94a3b8">bg #f8faff, border-bottom 2px module-color</div>
+      </div>
+      <div style="background:#f8fafc;border:2px dashed #e2e8f0;border-radius:10px;padding:10px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:10px;font-weight:900;color:#64748b">⑤ DATA ROWS</div><div style="font-size:11px;color:#64748b;margin-top:2px">12px text, 10px 14px padding, collapsible if row has overflow content</div></div>
+        <div style="font-size:9px;font-family:monospace;color:#94a3b8">hover: bg #f8faff</div>
+      </div>
+      <div style="background:#f8fafc;border:2px dashed #e2e8f0;border-radius:10px;padding:10px 16px;display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:10px;font-weight:900;color:#64748b">⑥ PAGINATION</div><div style="font-size:11px;color:#64748b;margin-top:2px">Records count · Page buttons</div></div>
+        <div style="font-size:9px;font-family:monospace;color:#94a3b8">bg #fff, border-top</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="showcase">
+    <div class="showcase-title">Page Header — Clean & Consistent</div>
+    <div class="showcase-sub">One standard for ALL pages. The title size never changes. The action buttons are always on the right. Always.</div>
+    <div class="cmp">
+      <div class="cmp-bad"><div class="cmp-lbl">❌ Problems seen across pages</div>
+        <div style="font-size:11px;color:#92400e;line-height:1.9">• Some pages have 30px title, some 18px<br>• Some buttons are rounded pills, some are square<br>• Some pages have no subtitle at all<br>• Some pages put buttons on the left<br>• Some pages have no breadcrumb</div>
+      </div>
+      <div class="cmp-good"><div class="cmp-lbl">✓ The one standard</div>
+        <div style="font-size:11px;color:#166534;line-height:1.9">• Title always 20px font-weight 900<br>• Subtitle always 12px #64748b<br>• Action buttons always top-right<br>• Primary action: filled module color<br>• Breadcrumb: module → page name</div>
+      </div>
+    </div>
+    <div class="canvas col" style="padding:0;background:transparent;border:none">
+      <div class="page-hdr">
+        <div class="page-hdr-top">
+          <div class="page-hdr-left">
+            <div class="breadcrumb">Finance <span>›</span> <span>Purchase Orders</span></div>
+            <div class="page-hdr-title">Purchase Orders</div>
+            <div class="page-hdr-subtitle">Incoming (Receivable) · Outgoing (Payable) · 1 active record</div>
+          </div>
+          <div class="page-hdr-actions">
+            <button class="btn btn-ghost btn-sm">⬇ Export</button>
+            <button class="btn btn-secondary btn-sm">Import PDF</button>
+            <button class="btn btn-primary btn-sm" style="background:#0277bd">+ New Incoming PO</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ SIDEBAR ════════ -->
+<div class="sec" id="sidebar">
+  <div class="sec-title">Sidebar Navigation — Readability Fix</div>
+  <div class="sec-sub">The current sidebar has text that's too dark and hard to read. The fix: use rgba white at different opacities for hierarchy. Section labels are faint, inactive items are medium, active item is bright white.</div>
+
+  <div class="cmp" style="margin-bottom:20px">
+    <div class="cmp-bad"><div class="cmp-lbl">❌ Current problem</div><div style="font-size:11px;color:#92400e;line-height:1.9">• Menu items use colors that blend into the dark bg<br>• Section labels barely visible<br>• Active item not obvious enough<br>• Some text uses black/dark gray on dark bg<br>• Badge numbers hard to see</div></div>
+    <div class="cmp-good"><div class="cmp-lbl">✓ Fix</div><div style="font-size:11px;color:#166534;line-height:1.9">• Section labels: rgba(255,255,255,0.35) — very faint<br>• Inactive items: rgba(255,255,255,0.65) — readable<br>• Hover: rgba(255,255,255,0.85)<br>• Active item: #c7d2fe + left border #818cf8 + bg rgba<br>• Never use opacity below 0.35 for any visible text</div></div>
+  </div>
+
+  <div class="showcase">
+    <div class="showcase-title">Sidebar — Standard Design</div>
+    <div class="canvas" style="background:#e8ecf0;align-items:flex-start;gap:20px;padding:20px">
+      <div class="sidebar-demo">
+        <div class="sd-logo">
+          <div class="sd-logo-icon">🏢</div>
+          <div><div class="sd-logo-text">Ratal ERP</div><div class="sd-logo-sub">ACCSYS · Mahmood</div></div>
+        </div>
+        <div class="sd-section">
+          <div class="sd-section-label">Operations</div>
+          <div class="sd-item active"><div class="sd-item-icon">📋</div><div class="sd-item-text">Projects</div></div>
+          <div class="sd-item"><div class="sd-item-icon">🚗</div><div class="sd-item-text">Fleet / Vehicles</div></div>
+          <div class="sd-item"><div class="sd-item-icon">📝</div><div class="sd-item-text">LOI Register</div></div>
+        </div>
+        <div class="sd-section">
+          <div class="sd-section-label">Finance</div>
+          <div class="sd-item"><div class="sd-item-icon">🧾</div><div class="sd-item-text">Purchase Orders</div></div>
+          <div class="sd-item"><div class="sd-item-icon">💰</div><div class="sd-item-text">Money Requests</div><div class="sd-item-badge">8</div></div>
+          <div class="sd-item"><div class="sd-item-icon">💳</div><div class="sd-item-text">Field Payments</div></div>
+          <div class="sd-item"><div class="sd-item-icon">📄</div><div class="sd-item-text">Invoices</div></div>
+        </div>
+        <div class="sd-section">
+          <div class="sd-section-label">Human Resources</div>
+          <div class="sd-item"><div class="sd-item-icon">👥</div><div class="sd-item-text">Employees</div></div>
+          <div class="sd-item"><div class="sd-item-icon">💵</div><div class="sd-item-text">Payroll</div></div>
+          <div class="sd-item"><div class="sd-item-icon">🏖️</div><div class="sd-item-text">Vacations</div><div class="sd-item-badge">3</div></div>
+        </div>
+        <div class="sd-section">
+          <div class="sd-section-label">Accounting</div>
+          <div class="sd-item"><div class="sd-item-icon">📒</div><div class="sd-item-text">Journals</div></div>
+          <div class="sd-item"><div class="sd-item-icon">🏦</div><div class="sd-item-text">Cheques</div></div>
+        </div>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:800;color:#475569;margin-bottom:12px">Color rules for every element:</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:10px;background:#1e1b4b;border-radius:8px;padding:10px 14px">
+            <div style="width:12px;height:12px;border-radius:3px;background:rgba(255,255,255,0.35)"></div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.55);">Section labels — rgba(255,255,255,0.35) text</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;background:#1e1b4b;border-radius:8px;padding:10px 14px">
+            <div style="width:12px;height:12px;border-radius:3px;background:rgba(255,255,255,0.65)"></div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.75);">Inactive menu item — rgba(255,255,255,0.75) text</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;background:rgba(129,140,248,0.2);border-radius:8px;padding:10px 14px;border-left:3px solid #818cf8">
+            <div style="width:12px;height:12px;border-radius:3px;background:#c7d2fe"></div>
+            <div style="font-size:11px;color:#c7d2fe;font-weight:700">Active item — #c7d2fe text + bg rgba(129,140,248,0.2) + left border</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;background:#ef4444;border-radius:8px;padding:6px 14px;width:fit-content">
+            <div style="font-size:10px;color:#fff;font-weight:800">Notification badges — red #ef4444 bg, white text</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="spec"><span>// Sidebar item — base</span><br>
+color: <em>rgba(255,255,255,0.75)</em>; font-size: <em>12px</em>; font-weight: <em>600</em>;<br>
+padding: <em>8px 10px</em>; border-radius: <em>8px</em>;<br><br>
+<span>// Active item</span><br>
+background: <em>rgba(129,140,248,0.2)</em>; border-left: <em>3px solid #818cf8</em>;<br>
+color: <em>#c7d2fe</em>; font-weight: <em>700</em>;<br><br>
+<span>// Section label</span><br>
+font-size: <em>9px</em>; font-weight: <em>800</em>; text-transform: <em>uppercase</em>;<br>
+letter-spacing: <em>1px</em>; color: <em>rgba(255,255,255,0.35)</em>;
+    </div>
+  </div>
+</div>
+
+<!-- ════════ BUTTONS ════════ -->
+<div class="sec" id="buttons">
+  <div class="sec-title">Buttons — One System, Applied Everywhere</div>
+  <div class="sec-sub">Every button in the app uses one of these 5 types. The only variable is the module color for primary buttons.</div>
+
+  <div class="cmp" style="margin-bottom:20px">
+    <div class="cmp-bad"><div class="cmp-lbl">❌ Current problems</div><div style="font-size:11px;color:#92400e;line-height:1.9">• Some buttons are pill-shaped, some square, some have no radius<br>• Sizes vary wildly — some tiny, some huge<br>• Some buttons use emoji, some use text only, some use icons<br>• Hover states missing on many buttons<br>• No consistent spacing between multiple buttons</div></div>
+    <div class="cmp-good"><div class="cmp-lbl">✓ The standard</div><div style="font-size:11px;color:#166534;line-height:1.9">• All buttons: border-radius 8px (not pill, not square)<br>• 3 sizes: sm (28px), default (36px), lg (42px)<br>• Primary = module color fill; Secondary = outline; Ghost = light<br>• All buttons: font-weight 700, gap 6px icon+text<br>• Spacing between buttons: always gap:8px</div></div>
+  </div>
+
+  <div class="showcase">
+    <div class="showcase-title">Button Types</div>
+    <div class="canvas">
+      <button class="btn btn-primary">+ New Invoice</button>
+      <button class="btn btn-secondary">⬇ Export</button>
+      <button class="btn btn-ghost">Cancel</button>
+      <button class="btn btn-danger">Delete</button>
+      <button class="btn btn-icon">👁</button>
+      <button class="btn btn-icon">✏</button>
+      <button class="btn btn-icon">⋮</button>
+    </div>
+    <div class="canvas" style="margin-top:10px">
+      <button class="btn btn-primary btn-sm">+ New</button>
+      <button class="btn btn-secondary btn-sm">Import PDF</button>
+      <button class="btn btn-ghost btn-sm">⬇ Export</button>
+      <span style="font-size:10px;color:#94a3b8">← Small (sm) variants — used in table action cells</span>
+    </div>
+    <div class="canvas" style="margin-top:10px">
+      <button class="btn btn-primary btn-lg" style="background:#0277bd">Save Invoice</button>
+      <button class="btn btn-secondary btn-lg" style="border-color:#0277bd;color:#0277bd">Save as Draft</button>
+      <button class="btn btn-ghost btn-lg">Cancel</button>
+      <span style="font-size:10px;color:#94a3b8">← Large (lg) variants — used in form submit rows</span>
+    </div>
+    <div class="canvas" style="margin-top:10px">
+      <button class="btn btn-hr btn-sm">+ New Employee</button>
+      <button class="btn btn-ops btn-sm">+ New Project</button>
+      <button class="btn btn-acc btn-sm">+ New Journal</button>
+      <span style="font-size:10px;color:#94a3b8">← Module-colored primary buttons (HR orange, Ops purple, Accounting teal)</span>
+    </div>
+    <div class="spec"><span>// Primary button</span><br>
+background: <em>[module color]</em>; color: <em>#fff</em>; padding: <em>8px 18px</em>;<br>
+border-radius: <em>8px</em>; font-weight: <em>700</em>; font-size: <em>12px</em>; gap: <em>6px</em>;<br><br>
+<span>// Secondary button</span><br>
+background: <em>#fff</em>; color: <em>[module color]</em>; border: <em>1.5px solid [module color]</em>;<br><br>
+<span>// Ghost button</span><br>
+background: <em>transparent</em>; color: <em>#64748b</em>; border: <em>1.5px solid #e2e8f0</em>;<br><br>
+<span>// Icon button</span><br>
+width: <em>32px</em>; height: <em>32px</em>; background: <em>#f1f5f9</em>; border: <em>1.5px solid #e2e8f0</em>;
+    </div>
+  </div>
+
+  <div class="showcase">
+    <div class="showcase-title">Navigation Tab Buttons — Inside Pages</div>
+    <div class="showcase-sub">When a page has multiple sub-views (Incoming POs / Outgoing POs, Registered Vehicles / Assignments), use this tab style — NOT pill buttons.</div>
+    <div class="canvas col" style="gap:16px;padding:16px;background:#f8fafc">
+      <!-- Tab style 1: underline tabs (for inside page content) -->
+      <div style="border-bottom:2px solid #e2e8f0;display:flex;gap:0">
+        <div style="padding:9px 18px;font-size:12px;font-weight:800;color:#0277bd;border-bottom:2px solid #0277bd;margin-bottom:-2px;cursor:pointer">Incoming POs</div>
+        <div style="padding:9px 18px;font-size:12px;font-weight:600;color:#94a3b8;cursor:pointer">Outgoing POs</div>
+      </div>
+      <div style="font-size:10px;color:#64748b">↑ Use underline tabs for 2–4 sub-views within a page</div>
+      <!-- Tab style 2: pill tabs (for small inline toggles) -->
+      <div style="display:flex;background:#f1f5f9;border-radius:8px;padding:3px;gap:2px;width:fit-content">
+        <div style="padding:5px 14px;background:#fff;border-radius:6px;font-size:11px;font-weight:700;color:#1e293b;box-shadow:0 1px 3px rgba(0,0,0,0.1);cursor:pointer">Pending</div>
+        <div style="padding:5px 14px;border-radius:6px;font-size:11px;font-weight:600;color:#94a3b8;cursor:pointer">History</div>
+      </div>
+      <div style="font-size:10px;color:#64748b">↑ Use segmented control for 2-option toggle (Pending/History)</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ KPI CARDS ════════ -->
+<div class="sec" id="kpi-cards">
+  <div class="sec-title">KPI Cards — One Template, Different Colors</div>
+  <div class="sec-sub">All KPI cards are identical in structure. Only the gradient color changes (= module color). Padding, font, icon size, spacing — all fixed.</div>
+
+  <div class="showcase">
+    <div class="showcase-title">The Standard KPI Card</div>
+    <div class="canvas col">
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <!-- Finance module - 4 cards -->
+        <div class="kpi" style="background:linear-gradient(135deg,#0277bd,#01579b)"><div class="kpi-icon">🧾</div><div class="kpi-value">SAR 7,390</div><div class="kpi-label">Total Value</div></div>
+        <div class="kpi" style="background:linear-gradient(135deg,#0288d1,#0277bd)"><div class="kpi-icon">📂</div><div class="kpi-value">1</div><div class="kpi-label">POs in View</div></div>
+        <div class="kpi" style="background:linear-gradient(135deg,#0277bd,#006064)"><div class="kpi-icon">🔄</div><div class="kpi-value">0</div><div class="kpi-label">Change Orders</div></div>
+        <div class="kpi" style="background:linear-gradient(135deg,#01579b,#0277bd)"><div class="kpi-icon">📊</div><div class="kpi-value">SAR 7,390</div><div class="kpi-label">Avg PO Value</div></div>
+      </div>
+      <div style="font-size:10px;color:#64748b;margin-top:4px">↑ Finance module (#0277bd) — Purchase Orders page. 4 cards, all same height.</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+        <!-- HR module - 4 cards -->
+        <div class="kpi" style="background:linear-gradient(135deg,#e65100,#bf360c)"><div class="kpi-icon">👥</div><div class="kpi-value">214</div><div class="kpi-label">Active Employees</div></div>
+        <div class="kpi" style="background:linear-gradient(135deg,#f4511e,#e65100)"><div class="kpi-icon">🏖️</div><div class="kpi-value">8</div><div class="kpi-label">On Leave Today</div></div>
+        <div class="kpi" style="background:linear-gradient(135deg,#e65100,#d84315)"><div class="kpi-icon">⏰</div><div class="kpi-value">12</div><div class="kpi-label">Pending Overtime</div></div>
+        <div class="kpi" style="background:linear-gradient(135deg,#bf360c,#e65100)"><div class="kpi-icon">⚠️</div><div class="kpi-value">3</div><div class="kpi-label">Expiring Docs</div></div>
+      </div>
+      <div style="font-size:10px;color:#64748b;margin-top:4px">↑ HR module (#e65100) — Employees page. Same structure, different color.</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+        <!-- Operations module - 4 cards -->
+        <div class="kpi" style="background:linear-gradient(135deg,#5A32D4,#4527a0)"><div class="kpi-icon">🏗️</div><div class="kpi-value">10</div><div class="kpi-label">Active Projects</div></div>
+        <div class="kpi" style="background:linear-gradient(135deg,#6d3de0,#5A32D4)"><div class="kpi-icon">↩️</div><div class="kpi-value">0</div><div class="kpi-label">Carry Forward</div></div>
+        <div class="kpi" style="background:linear-gradient(135deg,#5A32D4,#3b1f9e)"><div class="kpi-icon">💼</div><div class="kpi-value">SAR 6.08M</div><div class="kpi-label">Portfolio Value</div></div>
+        <div class="kpi" style="background:linear-gradient(135deg,#4527a0,#5A32D4)"><div class="kpi-icon">📉</div><div class="kpi-value">SAR 6.08M</div><div class="kpi-label">Remaining</div></div>
+      </div>
+      <div style="font-size:10px;color:#64748b;margin-top:4px">↑ Operations module (#5A32D4) — Projects page. Same structure, different color.</div>
+    </div>
+    <div class="spec"><span>// Every KPI card — fixed values</span><br>
+padding: <em>12px 16px</em>; border-radius: <em>12px</em>; color: <em>#fff</em>;<br>
+<span>// Icon</span> font-size: <em>18px</em>; margin-bottom: <em>4px</em>;<br>
+<span>// Value</span> font-size: <em>20px</em>; font-weight: <em>900</em>;<br>
+<span>// Label</span> font-size: <em>9px</em>; font-weight: <em>700</em>; opacity: <em>0.7</em>; text-transform: <em>uppercase</em>;<br>
+<span>// ::after circle</span> right: <em>-12px</em>; top: <em>-12px</em>; width: <em>64px</em>; height: <em>64px</em>; background: <em>rgba(255,255,255,0.1)</em>;
+    </div>
+  </div>
+</div>
+
+<!-- ════════ FORMS ════════ -->
+<div class="sec" id="forms">
+  <div class="sec-title">Form Inputs — Clean & Consistent</div>
+  <div class="sec-sub">All input fields, selects, and textareas follow one standard. Heights, borders, focus states, labels — all identical.</div>
+
+  <div class="cmp" style="margin-bottom:20px">
+    <div class="cmp-bad"><div class="cmp-lbl">❌ Current problems</div><div style="font-size:11px;color:#92400e;line-height:1.9">• Some inputs have no border, some have thick borders<br>• Heights inconsistent (some 28px, some 44px)<br>• Labels: some bold caps, some lowercase, some missing<br>• Focus state missing on most inputs<br>• Required field (*) marking inconsistent</div></div>
+    <div class="cmp-good"><div class="cmp-lbl">✓ The standard</div><div style="font-size:11px;color:#166534;line-height:1.9">• All inputs: height 36px, border 1.5px #e2e8f0, radius 8px<br>• All labels: 10px UPPERCASE 800 weight #64748b<br>• Focus: border-color module-color + 3px ring rgba<br>• Required: red * after label<br>• Error state: red border + error message below</div></div>
+  </div>
+
+  <div class="showcase">
+    <div class="showcase-title">Input Fields</div>
+    <div class="canvas col" style="gap:14px">
+      <div class="form-row">
+        <div class="form-field">
+          <label class="form-label">Invoice Number <span class="req">*</span></label>
+          <input class="form-input" placeholder="Auto-generated" disabled style="background:#f8fafc;color:#94a3b8">
+          <div class="form-hint">System-assigned, cannot be edited</div>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Invoice Date <span class="req">*</span></label>
+          <input class="form-input" type="date" value="2026-10-01">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Project <span class="req">*</span></label>
+          <select class="form-select"><option>P-26005 — HUWEVEEE</option><option>P-26004 — Zain Networks</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label class="form-label">Amount (SAR) <span class="req">*</span></label>
+          <input class="form-input" value="7,390.00" style="font-family:monospace;text-align:right">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Status</label>
+          <select class="form-select"><option>Draft</option><option>Issued</option><option>Paid</option></select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Payment Terms <span class="req">*</span></label>
+          <select class="form-select"><option>Net 30</option><option>Net 60</option><option>Net 90</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field" style="flex:2">
+          <label class="form-label">Notes</label>
+          <textarea class="form-textarea" placeholder="Any special instructions or notes for the client..."></textarea>
+          <div class="form-hint">Optional — printed on the invoice</div>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Client Name <span class="req">*</span></label>
+          <input class="form-input error" value="Saudi Aramco Ltd">
+          <div class="form-error-msg">⚠ This party does not exist in Party List</div>
+        </div>
+      </div>
+    </div>
+    <div class="spec"><span>// Input</span><br>
+height: <em>36px</em>; border: <em>1.5px solid #e2e8f0</em>; border-radius: <em>8px</em>;<br>
+padding: <em>0 12px</em>; font-size: <em>12px</em>; color: <em>#1e293b</em>;<br>
+<span>:focus</span> → border-color: <em>[module color]</em>; box-shadow: <em>0 0 0 3px rgba([mc],0.1)</em>;<br>
+<span>.error</span> → border-color: <em>#ef4444</em>;<br>
+<span>// Label</span><br>
+font-size: <em>10px</em>; font-weight: <em>800</em>; text-transform: <em>uppercase</em>;<br>
+letter-spacing: <em>0.5px</em>; color: <em>#64748b</em>;
+    </div>
+  </div>
+
+  <div class="showcase">
+    <div class="showcase-title">Fieldset Groups — For Organizing Form Sections</div>
+    <div class="canvas col">
+      <div class="fieldset">
+        <div class="fieldset-legend">Employee Personal Information</div>
+        <div class="form-row">
+          <div class="form-field"><label class="form-label">Full Name (English) <span class="req">*</span></label><input class="form-input" placeholder="As on Iqama / Passport"></div>
+          <div class="form-field"><label class="form-label">Full Name (Arabic)</label><input class="form-input" placeholder="الاسم الكامل" dir="rtl"></div>
+          <div class="form-field"><label class="form-label">Nationality <span class="req">*</span></label><select class="form-select"><option>Saudi</option><option>Indian</option><option>Pakistani</option></select></div>
+        </div>
+      </div>
+      <div class="fieldset">
+        <div class="fieldset-legend">Employment Details</div>
+        <div class="form-row">
+          <div class="form-field"><label class="form-label">Department <span class="req">*</span></label><select class="form-select"><option>TISU</option><option>NFSU</option><option>Finance</option></select></div>
+          <div class="form-field"><label class="form-label">Category <span class="req">*</span></label><select class="form-select"><option>Staff</option><option>Labour</option><option>Management</option></select></div>
+          <div class="form-field"><label class="form-label">Join Date <span class="req">*</span></label><input class="form-input" type="date"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ TABLES + FILTERS ════════ -->
+<div class="sec" id="tables">
+  <div class="sec-title">Tables + Filters — The Unified Standard</div>
+  <div class="sec-sub">Filter ALWAYS above column header. Column header ALWAYS sticky. Long text ALWAYS collapsible. These three rules apply to ALL 40+ tables.</div>
+
+  <div class="showcase">
+    <div class="showcase-title">Filter Strip + Sticky Header + Collapsible Rows</div>
+    <div style="border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
+      <!-- Filter strip ABOVE -->
+      <div class="filter-strip">
+        <input class="fs-search" placeholder="🔍  Search contractor, PO#, project...">
+        <select class="fs-select"><option>All Departments</option><option>TISU</option><option>NFSU</option></select>
+        <select class="fs-select"><option>📅 Any date</option><option>This month</option></select>
+        <div class="chip-group">
+          <div class="chip on" style="--mc:#0277bd">All</div>
+          <div class="chip">Active</div>
+          <div class="chip">Invoiced</div>
+          <div class="chip">Closed</div>
+          <div class="chip">Cancelled</div>
+        </div>
+        <div class="fs-clear">Clear ✕</div>
+        <div class="fs-count">1 record</div>
+      </div>
+      <!-- Table -->
+      <div class="tbl-wrap">
+        <div class="tbl-scroll">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th style="width:30px"></th>
+                <th>Date</th>
+                <th>Dept</th>
+                <th>Contractor</th>
+                <th>PO #</th>
+                <th>Project</th>
+                <th style="text-align:right">Value (SAR)</th>
+                <th style="text-align:right">Invoiced</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr onclick="toggleRow(this)" style="cursor:pointer">
+                <td><div class="expand-btn" id="ebtn1">▶</div></td>
+                <td>2026-05-03</td>
+                <td><span class="badge bdg-blue">TISU</span></td>
+                <td class="name">Mobiserve-KSA محدود…</td>
+                <td class="code">11207</td>
+                <td class="code" style="color:#5A32D4">P-26001</td>
+                <td class="sar">7,390</td>
+                <td><div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:4px;background:#f1f5f9;border-radius:2px"><div style="width:100%;height:100%;background:#16a34a;border-radius:2px"></div></div><span style="font-size:10px;color:#16a34a;font-weight:700">100%</span></div></td>
+                <td><span class="badge bdg-gray">Closed</span></td>
+                <td><div style="display:flex;gap:4px"><button class="btn btn-icon" style="width:28px;height:28px;font-size:12px">👁</button><button class="btn btn-icon" style="width:28px;height:28px;font-size:12px">✏</button></div></td>
+              </tr>
+              <tr id="detail-row-1" style="display:none">
+                <td colspan="10" style="padding:12px 16px 12px 44px;background:#f8faff;font-size:11px;color:#64748b">
+                  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+                    <div><div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;margin-bottom:2px">Full Contractor Name</div><div>Mobiserve-KSA, محدود شركة الخدمات المحمولة</div></div>
+                    <div><div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;margin-bottom:2px">PO Amount</div><div>SAR 7,390.00</div></div>
+                    <div><div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;margin-bottom:2px">Total Invoiced</div><div style="color:#166534;font-weight:700">SAR 7,390 (100%)</div></div>
+                    <div><div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;margin-bottom:2px">Closed On</div><div>2026-06-10</div></div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><div class="expand-btn">▶</div></td>
+                <td>2026-04-15</td>
+                <td><span class="badge bdg-blue">TISU</span></td>
+                <td class="name">Nokia Arabia Limited</td>
+                <td class="code">NO-2026-447</td>
+                <td class="code" style="color:#5A32D4">P-26004</td>
+                <td class="sar">145,000</td>
+                <td><div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:4px;background:#f1f5f9;border-radius:2px"><div style="width:40%;height:100%;background:#0277bd;border-radius:2px"></div></div><span style="font-size:10px;color:#0277bd;font-weight:700">40%</span></div></td>
+                <td><span class="badge bdg-blue">Active</span></td>
+                <td><div style="display:flex;gap:4px"><button class="btn btn-icon" style="width:28px;height:28px;font-size:12px">👁</button><button class="btn btn-icon" style="width:28px;height:28px;font-size:12px">✏</button></div></td>
+              </tr>
+              <tr>
+                <td><div class="expand-btn">▶</div></td>
+                <td>2026-03-01</td>
+                <td><span class="badge" style="background:#fce7f3;color:#9d174d">NFSU</span></td>
+                <td class="name">ACWA Power International</td>
+                <td class="code">ACP-26-0091</td>
+                <td class="code" style="color:#5A32D4">P-26003</td>
+                <td class="sar">280,500</td>
+                <td><div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:4px;background:#f1f5f9;border-radius:2px"><div style="width:75%;height:100%;background:#f59e0b;border-radius:2px"></div></div><span style="font-size:10px;color:#d97706;font-weight:700">75%</span></div></td>
+                <td><span class="badge bdg-amber">Invoiced</span></td>
+                <td><div style="display:flex;gap:4px"><button class="btn btn-icon" style="width:28px;height:28px;font-size:12px">👁</button><button class="btn btn-icon" style="width:28px;height:28px;font-size:12px">✏</button></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="tbl-pagination">
+          <div class="pg-info">Showing 3 of 3 records · Total: <strong style="color:#166534">SAR 432,890</strong></div>
+          <div class="pg-btns">
+            <div class="pg-btn">«</div>
+            <div class="pg-btn on">1</div>
+            <div class="pg-btn">»</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="spec" style="margin-top:12px"><span>// Filter ABOVE header — always</span><br>
+.filter-strip { background: <em>#fff</em>; border-radius: <em>10px 10px 0 0</em>; padding: <em>10px 16px</em>; }<br><br>
+<span>// Sticky column header</span><br>
+thead { position: <em>sticky</em>; top: <em>0</em>; z-index: <em>10</em>; }<br>
+th { background: <em>#f8faff</em>; border-bottom: <em>2px solid [module-color at 30%]</em>; }<br><br>
+<span>// Expand toggle</span><br>
+onClick → toggle display of detail row below · animate ▶ → ▼
+    </div>
+  </div>
+</div>
+
+<!-- ════════ BADGES ════════ -->
+<div class="sec" id="badges">
+  <div class="sec-title">Status Badges — Universal Color Code</div>
+  <div class="sec-sub">Same color = same meaning, on every table, on every page. Never use dark backgrounds for badges — always soft pastels with dark text.</div>
+  <div class="showcase">
+    <div class="showcase-title">All Badge Types</div>
+    <div class="canvas" style="gap:10px;flex-direction:column;align-items:flex-start">
+      <div style="display:flex;gap:10px;align-items:center">
+        <span class="badge bdg-green"><span class="bdg-dot"></span>Paid</span>
+        <span class="badge bdg-green"><span class="bdg-dot"></span>Active</span>
+        <span class="badge bdg-green"><span class="bdg-dot"></span>Approved</span>
+        <span class="badge bdg-green"><span class="bdg-dot"></span>Closed</span>
+        <span style="font-size:10px;color:#64748b">→ Green: positive, completed, healthy</span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span class="badge bdg-blue"><span class="bdg-dot"></span>Issued</span>
+        <span class="badge bdg-blue"><span class="bdg-dot"></span>Open</span>
+        <span class="badge bdg-blue"><span class="bdg-dot"></span>In Progress</span>
+        <span class="badge bdg-blue"><span class="bdg-dot"></span>Funds Sent</span>
+        <span style="font-size:10px;color:#64748b">→ Blue: in progress, active, moving</span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span class="badge bdg-amber"><span class="bdg-dot"></span>Pending</span>
+        <span class="badge bdg-amber"><span class="bdg-dot"></span>Draft</span>
+        <span class="badge bdg-amber"><span class="bdg-dot"></span>Accts Pending</span>
+        <span class="badge bdg-amber"><span class="bdg-dot"></span>Expiring ≤30d</span>
+        <span style="font-size:10px;color:#64748b">→ Amber: waiting, needs attention</span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span class="badge bdg-red"><span class="bdg-dot"></span>Overdue</span>
+        <span class="badge bdg-red"><span class="bdg-dot"></span>Expired</span>
+        <span class="badge bdg-red"><span class="bdg-dot"></span>Rejected</span>
+        <span class="badge bdg-red"><span class="bdg-dot"></span>Sent Back</span>
+        <span style="font-size:10px;color:#64748b">→ Red: urgent, overdue, failed</span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span class="badge bdg-purple"><span class="bdg-dot"></span>Part. Issued</span>
+        <span class="badge bdg-purple"><span class="bdg-dot"></span>Distributing</span>
+        <span style="font-size:10px;color:#64748b">→ Purple: partial, in-between states</span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span class="badge bdg-gray">Cancelled</span>
+        <span class="badge bdg-gray">Inactive</span>
+        <span class="badge bdg-gray">On Hold</span>
+        <span style="font-size:10px;color:#64748b">→ Gray: inactive, neutral, ended</span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span class="badge bdg-teal"><span class="bdg-dot"></span>TISU</span>
+        <span class="badge" style="background:#e0e7ff;color:#3730a3"><span class="bdg-dot" style="background:#3730a3"></span>NFSU</span>
+        <span class="badge" style="background:#fce7f3;color:#9d174d"><span class="bdg-dot" style="background:#9d174d"></span>FINANCE</span>
+        <span style="font-size:10px;color:#64748b">→ Department badges: unique color per dept</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ FULL PAGE DEMO ════════ -->
+<div class="sec" id="fullpage">
+  <div class="sec-title">Full Page Demo — Purchase Orders (Finance Module)</div>
+  <div class="sec-sub">This is how the entire page looks when all the rules are applied together. Sidebar · Page header · KPI cards · Filter strip · Sticky table · Pagination.</div>
+
+  <div class="showcase" style="padding:0;overflow:hidden">
+    <div class="app-shell">
+      <!-- Sidebar -->
+      <div class="app-sidebar">
+        <div style="padding:12px 0 0">
+          <div class="sd-logo">
+            <div class="sd-logo-icon">🏢</div>
+            <div><div class="sd-logo-text">Ratal ERP</div><div class="sd-logo-sub">ACCSYS</div></div>
+          </div>
+          <div class="sd-section">
+            <div class="sd-section-label">Operations</div>
+            <div class="sd-item"><div class="sd-item-icon">📊</div><div class="sd-item-text">Dashboard</div></div>
+            <div class="sd-item"><div class="sd-item-icon">🏗️</div><div class="sd-item-text">Projects</div></div>
+            <div class="sd-item"><div class="sd-item-icon">🚗</div><div class="sd-item-text">Fleet</div></div>
+          </div>
+          <div class="sd-section">
+            <div class="sd-section-label">Finance</div>
+            <div class="sd-item active"><div class="sd-item-icon">🧾</div><div class="sd-item-text">Purchase Orders</div></div>
+            <div class="sd-item"><div class="sd-item-icon">💰</div><div class="sd-item-text">Money Requests</div><div class="sd-item-badge">8</div></div>
+            <div class="sd-item"><div class="sd-item-icon">📄</div><div class="sd-item-text">Invoices</div></div>
+            <div class="sd-item"><div class="sd-item-icon">💳</div><div class="sd-item-text">Field Payments</div></div>
+          </div>
+          <div class="sd-section">
+            <div class="sd-section-label">Human Resources</div>
+            <div class="sd-item"><div class="sd-item-icon">👥</div><div class="sd-item-text">Employees</div></div>
+            <div class="sd-item"><div class="sd-item-icon">💵</div><div class="sd-item-text">Payroll</div></div>
+            <div class="sd-item"><div class="sd-item-icon">🏖️</div><div class="sd-item-text">Vacations</div></div>
+          </div>
+          <div class="sd-section">
+            <div class="sd-section-label">Accounting</div>
+            <div class="sd-item"><div class="sd-item-icon">📒</div><div class="sd-item-text">Journals</div></div>
+            <div class="sd-item"><div class="sd-item-icon">🏦</div><div class="sd-item-text">Cheques</div></div>
+          </div>
+        </div>
+      </div>
+      <!-- Main content -->
+      <div class="app-main">
+        <!-- Top bar -->
+        <div class="app-top-bar">
+          <div class="app-entity-pills">
+            <div class="entity-pill on">ACCSYS</div>
+            <div class="entity-pill">RAT</div>
+            <div class="entity-pill">GWT</div>
+            <div class="entity-pill">ALL</div>
+          </div>
+          <div class="app-user">
+            <div class="user-avatar">M</div>
+            <span>Mahmood Shahbaz</span>
+          </div>
+        </div>
+        <div class="app-main-inner">
+          <!-- Page header -->
+          <div class="page-hdr" style="margin-bottom:12px">
+            <div class="page-hdr-top">
+              <div>
+                <div class="breadcrumb">Finance <span>›</span> <span>Purchase Orders</span></div>
+                <div class="page-hdr-title">Purchase Orders</div>
+                <div class="page-hdr-subtitle">Incoming (Receivable) · Outgoing (Payable)</div>
+              </div>
+              <div class="page-hdr-actions">
+                <button class="btn btn-ghost btn-sm">⬇ Export</button>
+                <button class="btn btn-secondary btn-sm" style="border-color:#0277bd;color:#0277bd">Import PDF</button>
+                <button class="btn btn-primary btn-sm" style="background:#0277bd">+ New Incoming PO</button>
+              </div>
+            </div>
+            <!-- Sub-tabs -->
+            <div style="border-bottom:2px solid #f1f5f9;display:flex;gap:0;margin-top:12px;margin-bottom:-18px">
+              <div style="padding:8px 16px;font-size:12px;font-weight:800;color:#0277bd;border-bottom:2px solid #0277bd;margin-bottom:-2px">Incoming POs</div>
+              <div style="padding:8px 16px;font-size:12px;font-weight:600;color:#94a3b8">Outgoing POs</div>
+            </div>
+          </div>
+          <!-- KPI cards -->
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <div class="kpi" style="background:linear-gradient(135deg,#0277bd,#01579b)"><div class="kpi-icon">💰</div><div class="kpi-value">SAR 7,390</div><div class="kpi-label">Total Value</div></div>
+            <div class="kpi" style="background:linear-gradient(135deg,#0288d1,#0277bd)"><div class="kpi-icon">📂</div><div class="kpi-value">1</div><div class="kpi-label">POs in View</div></div>
+            <div class="kpi" style="background:linear-gradient(135deg,#0277bd,#006064)"><div class="kpi-icon">🔄</div><div class="kpi-value">0</div><div class="kpi-label">Change Orders</div></div>
+            <div class="kpi" style="background:linear-gradient(135deg,#01579b,#0277bd)"><div class="kpi-icon">📊</div><div class="kpi-value">SAR 7,390</div><div class="kpi-label">Avg PO Value</div></div>
+          </div>
+          <!-- Filter + Table -->
+          <div style="border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.07)">
+            <div class="filter-strip" style="border-radius:0">
+              <input class="fs-search" placeholder="🔍  Search contractor, PO#...">
+              <select class="fs-select"><option>All Depts</option></select>
+              <div class="chip-group">
+                <div class="chip on" style="--mc:#0277bd">All</div>
+                <div class="chip">Active</div>
+                <div class="chip">Closed</div>
+              </div>
+              <div class="fs-clear">Clear ✕</div>
+              <div class="fs-count">1 record · SAR 7,390</div>
+            </div>
+            <div class="tbl-wrap" style="border-radius:0;border-top:none">
+              <div class="tbl-scroll" style="max-height:200px">
+                <table class="tbl">
+                  <thead><tr>
+                    <th style="width:30px"></th>
+                    <th>Date</th><th>Dept</th><th>Contractor</th><th>PO #</th><th>Project</th>
+                    <th style="text-align:right">Value (SAR)</th><th>Status</th><th>Actions</th>
+                  </tr></thead>
+                  <tbody>
+                    <tr><td><div class="expand-btn">▶</div></td><td>2026-05-03</td><td><span class="badge bdg-blue" style="font-size:9px">TISU</span></td><td class="name">Mobiserve-KSA…</td><td class="code">11207</td><td class="code" style="color:#5A32D4">P-26001</td><td class="sar">7,390</td><td><span class="badge bdg-gray">Closed</span></td><td><div style="display:flex;gap:3px"><button class="btn btn-icon" style="width:26px;height:26px;font-size:11px">👁</button><button class="btn btn-icon" style="width:26px;height:26px;font-size:11px">✏</button></div></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="tbl-pagination" style="border-radius:0">
+                <div class="pg-info">1 of 1 records</div>
+                <div class="pg-btns"><div class="pg-btn on">1</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:#fff;border-radius:12px;padding:16px 20px;margin-top:16px;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
+    <div style="font-size:12px;font-weight:900;color:#1e293b;margin-bottom:10px">What's different from the current app (same data, different grammar):</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11px;color:#475569;line-height:1.9">
+      <div>✓ Sidebar text is readable — rgba whites, not dark colors<br>✓ Active menu item is obvious — left border + highlight<br>✓ KPI cards are same height, same color family<br>✓ Filter strip is ABOVE the column header</div>
+      <div>✓ Column header has clean #f8faff background<br>✓ All buttons are same shape (radius 8px)<br>✓ Primary button uses Finance blue consistently<br>✓ Tabs use underline style, not pill buttons</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function show(id){
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  event.target.classList.add('on');
+}
+function toggleRow(tr){
+  const detailRow = tr.nextElementSibling;
+  const btn = tr.querySelector('.expand-btn');
+  if(detailRow && detailRow.id && detailRow.id.startsWith('detail-row')){
+    const open = detailRow.style.display==='table-row';
+    detailRow.style.display = open?'none':'table-row';
+    btn.textContent = open?'▶':'▼';
+  }
+}
+</script>
+</body>
+</html>

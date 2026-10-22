@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ratal ERP — Real Dashboard Layout Visual</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #e2e8f0; }
+
+/* ══ PAGE WRAPPER ══ */
+.page { max-width: 1100px; margin: 0 auto; padding: 20px 16px 40px; }
+
+h1 { font-size: 14px; font-weight: 900; color: #1e293b; margin-bottom: 4px; }
+.intro { font-size: 12px; color: #64748b; margin-bottom: 20px; line-height: 1.6; }
+
+/* ══ LEGEND ══ */
+.legend { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+.leg { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700; }
+.leg-dot { width: 12px; height: 12px; border-radius: 4px; }
+
+/* ══ COMPARE PANELS ══ */
+.compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.panel { border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+.panel-label { padding: 9px 14px; font-size: 11px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
+.panel-label.now { background: #fef3c7; color: #92400e; }
+.panel-label.proposed { background: #dcfce7; color: #166534; }
+
+/* ══ MOCK DASHBOARD SHELL ══ */
+.db { font-family: 'Segoe UI', system-ui, sans-serif; }
+
+/* Header */
+.db-hdr { padding: 12px 18px 0; }
+.db-entity-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.db-entity-btn { padding: 5px 13px; border-radius: 20px; font-size: 11px; font-weight: 700; border: 1.5px solid; cursor: default; }
+.db-month { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.db-tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+.db-tab { padding: 9px 14px; font-size: 12px; font-weight: 600; cursor: default; white-space: nowrap; border-bottom: 3px solid transparent; background: transparent; border: none; }
+
+/* Quick access */
+.db-qa { padding: 9px 18px; background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+.db-qa-btn { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 7px 12px; border-radius: 12px; cursor: default; min-width: 60px; }
+.db-qa-icon { font-size: 18px; line-height: 1; }
+.db-qa-lbl { font-size: 9px; font-weight: 700; }
+
+/* Content */
+.db-content { padding: 14px 18px; background: #f8fafc; }
+
+/* KPI cards */
+.db-kpis { display: flex; gap: 10px; margin-bottom: 14px; }
+.db-kpi { border-radius: 14px; flex: 1; position: relative; overflow: hidden; }
+.db-kpi-icon { position: relative; z-index: 1; }
+.db-kpi-val { position: relative; z-index: 1; font-weight: 900; color: #fff; line-height: 1.1; }
+.db-kpi-lbl { position: relative; z-index: 1; color: rgba(255,255,255,0.72); font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+.db-kpi::after { content: ''; position: absolute; right: -14px; top: -14px; width: 70px; height: 70px; border-radius: 50%; background: rgba(255,255,255,0.1); }
+
+/* Charts */
+.db-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.db-chart-card { background: #fff; border-radius: 12px; padding: 14px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+.db-chart-title { font-size: 11px; font-weight: 700; color: #1e293b; margin-bottom: 10px; }
+
+/* Bottom row */
+.db-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.db-table-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+.db-tbl-hdr { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; font-size: 11px; font-weight: 700; color: #1e293b; }
+.db-tbl-th { background: #f8fafc; padding: 7px 12px; font-size: 9px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+.db-tbl-td { padding: 8px 12px; font-size: 11px; color: #475569; border-bottom: 1px solid #f8fafc; }
+.db-bars-card { background: #fff; border-radius: 12px; padding: 14px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+.db-bar-item { margin-bottom: 12px; }
+.db-bar-label-row { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 4px; }
+.db-bar-track { height: 7px; background: #f1f5f9; border-radius: 99px; overflow: hidden; }
+.db-bar-fill { height: 100%; border-radius: 99px; }
+
+/* donut placeholder */
+.donut-ph { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.donut-svg { flex-shrink: 0; }
+.donut-leg { display: flex; flex-direction: column; gap: 5px; }
+.donut-leg-item { display: flex; align-items: center; gap: 6px; font-size: 9px; color: #64748b; }
+.donut-leg-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+/* bar chart placeholder */
+.bar-ph { display: flex; align-items: flex-end; gap: 5px; height: 90px; padding-bottom: 16px; position: relative; }
+.bar-ph::after { content: ''; position: absolute; bottom: 16px; left: 0; right: 0; height: 1px; background: #f1f5f9; }
+.bar-ph-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; height: 100%; justify-content: flex-end; }
+.bar-ph-bar { width: 100%; border-radius: 3px 3px 0 0; }
+.bar-ph-lbl { font-size: 7px; color: #94a3b8; }
+
+/* ══ ANNOTATION OVERLAYS ══ */
+.ann-wrap { position: relative; }
+.ann-box { position: absolute; border-radius: 6px; pointer-events: none; z-index: 10; }
+.ann-tag { position: absolute; font-size: 9px; font-weight: 900; padding: 2px 7px; border-radius: 5px; white-space: nowrap; pointer-events: none; z-index: 11; }
+.stays { background: rgba(22,163,74,0.12); border: 2px solid #16a34a; }
+.stays-tag { background: #16a34a; color: #fff; }
+.changes { background: rgba(234,88,12,0.1); border: 2px dashed #ea580c; }
+.changes-tag { background: #ea580c; color: #fff; }
+
+/* ══ CHANGE CALLOUTS BELOW ══ */
+.callout-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+.callout { background: #fff; border-radius: 10px; padding: 13px 15px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+.callout-badge { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 9px; font-weight: 900; margin-bottom: 7px; }
+.callout-t { font-size: 12px; font-weight: 800; color: #1e293b; margin-bottom: 5px; }
+.callout-d { font-size: 11px; color: #64748b; line-height: 1.6; }
+
+/* before/after mini blocks */
+.ba-wrap { display: flex; gap: 8px; margin-top: 10px; }
+.ba { flex: 1; border-radius: 7px; padding: 8px 10px; font-size: 10px; }
+.ba-now { background: #fef3c7; border: 1px solid #fde68a; }
+.ba-new { background: #dcfce7; border: 1px solid #bbf7d0; }
+.ba-lbl { font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+.ba-now .ba-lbl { color: #92400e; }
+.ba-new .ba-lbl { color: #166534; }
+.ba-val { color: #1e293b; font-weight: 600; line-height: 1.4; }
+
+/* ══ TABLES SECTION ══ */
+.section-title { font-size: 13px; font-weight: 900; color: #1e293b; margin: 24px 0 6px; border-left: 4px solid #0277bd; padding-left: 10px; }
+.section-sub { font-size: 11px; color: #64748b; margin-bottom: 14px; }
+
+.tbl-mock-wrap { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08); margin-bottom: 16px; }
+.tbl-mock-hdr { background: #fff; padding: 12px 18px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
+.tbl-mock-title { font-size: 14px; font-weight: 900; color: #1e293b; }
+.tbl-mock-btns { display: flex; gap: 8px; }
+.tbl-mock-btn { padding: 6px 13px; border-radius: 7px; font-size: 11px; font-weight: 700; border: 1px solid #e2e8f0; background: #f8fafc; color: #64748b; cursor: default; }
+.tbl-mock-btn.primary { background: #0277bd; color: #fff; border-color: #0277bd; }
+
+/* NOW — filter BELOW header (the problem) */
+.filter-below { background: #fff; padding: 8px 18px; border-bottom: 1px solid #f1f5f9; }
+.tbl-sticky-hdr { background: #f8faff; border-bottom: 2px solid #e2e8f0; display: flex; }
+.tbl-th { padding: 9px 14px; font-size: 9px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; flex: 1; }
+.tbl-th:first-child { flex: 0.6; }
+
+/* NEW — filter ABOVE header */
+.filter-above { background: #fff; padding: 8px 18px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 8px; }
+.f-search { height: 30px; background: #f8faff; border: 1.5px solid #e2e8f0; border-radius: 7px; padding: 0 10px; font-size: 11px; color: #94a3b8; min-width: 180px; display: flex; align-items: center; }
+.f-select { height: 30px; background: #f8faff; border: 1.5px solid #e2e8f0; border-radius: 7px; padding: 0 10px; font-size: 11px; color: #94a3b8; display: flex; align-items: center; }
+.f-chip { height: 26px; padding: 0 10px; border-radius: 13px; font-size: 9px; font-weight: 700; border: 1.5px solid #e2e8f0; color: #94a3b8; display: flex; align-items: center; gap: 4px; background: #f8faff; }
+.f-chip.active { border-color: #0277bd; color: #0277bd; font-weight: 900; }
+.f-chip-dot { width: 5px; height: 5px; border-radius: 50%; background: #0277bd; }
+.tbl-row { display: flex; border-bottom: 1px solid #f8fafc; }
+.tbl-td { padding: 9px 14px; font-size: 11px; color: #475569; flex: 1; }
+.tbl-td:first-child { flex: 0.6; color: #94a3b8; font-size: 10px; font-family: monospace; }
+.badge-sm { padding: 2px 8px; border-radius: 9px; font-size: 9px; font-weight: 800; }
+
+.diff-label { font-size: 10px; font-weight: 800; padding: 4px 12px; border-radius: 0; display: block; text-align: center; }
+.diff-now { background: #fef3c7; color: #92400e; }
+.diff-proposed { background: #dcfce7; color: #166534; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Real Dashboard Layout — What Changes vs What Stays</h1>
+  <p class="intro">This shows your <strong>actual current layout</strong> with clear markings. Green = stays exactly the same. Orange dashed = the only things being proposed to change.</p>
+
+  <!-- LEGEND -->
+  <div class="legend">
+    <div class="leg"><div class="leg-dot" style="background:#16a34a"></div> STAYS EXACTLY THE SAME — not touched</div>
+    <div class="leg"><div class="leg-dot" style="background:#ea580c;border:2px dashed #ea580c"></div> PROPOSED CHANGE — only these 2 things</div>
+  </div>
+
+  <!-- DASHBOARD MOCK: CURRENT -->
+  <div style="margin-bottom:8px;font-size:11px;font-weight:900;color:#92400e;background:#fef3c7;padding:6px 12px;border-radius:7px;display:inline-block">CURRENT — how it looks right now</div>
+
+  <div class="panel" style="margin-bottom:6px">
+    <div class="db">
+
+      <!-- HEADER (dark purple — stays) -->
+      <div style="background:linear-gradient(135deg,#1e1b4b,#312e81,#1e1b4b);padding:12px 18px 0;position:relative">
+        <div style="position:absolute;top:4px;right:8px;background:#16a34a;color:#fff;font-size:8px;font-weight:900;padding:2px 8px;border-radius:4px;letter-spacing:1px">✓ STAYS THE SAME</div>
+        <!-- entity + month -->
+        <div class="db-entity-row">
+          <div style="display:flex;gap:6px">
+            <div class="db-entity-btn" style="background:rgba(129,140,248,0.25);border-color:#818cf8;color:#e0e7ff">All</div>
+            <div class="db-entity-btn" style="background:transparent;border-color:rgba(255,255,255,0.25);color:rgba(255,255,255,0.6)">ACCSYS</div>
+            <div class="db-entity-btn" style="background:transparent;border-color:rgba(255,255,255,0.25);color:rgba(255,255,255,0.6)">RAT</div>
+            <div class="db-entity-btn" style="background:transparent;border-color:rgba(255,255,255,0.25);color:rgba(255,255,255,0.6)">GWT</div>
+          </div>
+          <div class="db-month" style="background:rgba(255,255,255,0.12);border:1.5px solid rgba(255,255,255,0.25);color:#e0e7ff">October 2026 ▾</div>
+        </div>
+        <!-- tabs -->
+        <div class="db-tabs">
+          <div class="db-tab" style="color:#c7d2fe;border-bottom:3px solid #818cf8;font-weight:700">Overview</div>
+          <div class="db-tab" style="color:rgba(255,255,255,0.5)">Payroll</div>
+          <div class="db-tab" style="color:rgba(255,255,255,0.5)">Employees</div>
+          <div class="db-tab" style="color:rgba(255,255,255,0.5)">Expenses</div>
+          <div class="db-tab" style="color:rgba(255,255,255,0.5)">Projects</div>
+          <div class="db-tab" style="color:rgba(255,255,255,0.5)">Invoices</div>
+          <div class="db-tab" style="color:rgba(255,255,255,0.5)">Accounts</div>
+        </div>
+      </div>
+
+      <!-- QUICK ACCESS (stays) -->
+      <div class="db-qa" style="position:relative">
+        <div style="position:absolute;top:4px;right:8px;background:#16a34a;color:#fff;font-size:8px;font-weight:900;padding:2px 8px;border-radius:4px;letter-spacing:1px">✓ STAYS THE SAME</div>
+        <div class="db-qa-btn" style="background:linear-gradient(135deg,#e0e7ff,#c7d2fe)"><div class="db-qa-icon">👥</div><div class="db-qa-lbl" style="color:#4338ca">Employees</div></div>
+        <div class="db-qa-btn" style="background:linear-gradient(135deg,#d1fae5,#a7f3d0)"><div class="db-qa-icon">💰</div><div class="db-qa-lbl" style="color:#059669">Payroll</div></div>
+        <div class="db-qa-btn" style="background:linear-gradient(135deg,#fef3c7,#fde68a)"><div class="db-qa-icon">🏗️</div><div class="db-qa-lbl" style="color:#d97706">Projects</div></div>
+        <div class="db-qa-btn" style="background:linear-gradient(135deg,#fee2e2,#fecaca)"><div class="db-qa-icon">💸</div><div class="db-qa-lbl" style="color:#dc2626">Expenses</div></div>
+        <div class="db-qa-btn" style="background:linear-gradient(135deg,#ede9fe,#ddd6fe)"><div class="db-qa-icon">📄</div><div class="db-qa-lbl" style="color:#7c3aed">Invoices</div></div>
+        <div class="db-qa-btn" style="background:linear-gradient(135deg,#e0f2fe,#bae6fd)"><div class="db-qa-icon">🚗</div><div class="db-qa-lbl" style="color:#0284c7">Vehicles</div></div>
+        <div class="db-qa-btn" style="background:linear-gradient(135deg,#fce7f3,#fbcfe8)"><div class="db-qa-icon">🏖️</div><div class="db-qa-lbl" style="color:#db2777">HR & Leave</div></div>
+        <div class="db-qa-btn" style="background:linear-gradient(135deg,#f0fdf4,#bbf7d0)"><div class="db-qa-icon">🏦</div><div class="db-qa-lbl" style="color:#16a34a">Accounts</div></div>
+        <div class="db-qa-btn" style="background:linear-gradient(135deg,#fff7ed,#fed7aa)"><div class="db-qa-icon">📋</div><div class="db-qa-lbl" style="color:#ea580c">Compliance</div></div>
+        <div class="db-qa-btn" style="background:linear-gradient(135deg,#f8fafc,#e2e8f0)"><div class="db-qa-icon">📊</div><div class="db-qa-lbl" style="color:#475569">Reports</div></div>
+      </div>
+
+      <!-- CONTENT -->
+      <div class="db-content">
+
+        <!-- KPI CARDS — CURRENT (big, tall) — THIS IS WHAT CHANGES -->
+        <div style="position:relative;margin-bottom:14px">
+          <div style="position:absolute;top:-8px;left:0;right:0;background:#ea580c;color:#fff;font-size:8px;font-weight:900;padding:2px 10px;border-radius:5px;text-align:center;z-index:5;letter-spacing:1px">⚠ PROPOSED CHANGE — Cards are currently too tall, taking up too much space</div>
+          <div class="db-kpis" style="margin-top:14px">
+            <div class="db-kpi" style="background:linear-gradient(135deg,#1d4ed8,#1d4ed8cc);padding:20px 22px">
+              <div class="db-kpi-icon" style="font-size:26px;margin-bottom:6px">💰</div>
+              <div class="db-kpi-val" style="font-size:26px">SAR 485K</div>
+              <div class="db-kpi-lbl" style="font-size:11px;margin-top:4px">Total Payroll</div>
+              <div style="color:rgba(255,255,255,0.5);font-size:10px;margin-top:3px">2 run(s) this month</div>
+            </div>
+            <div class="db-kpi" style="background:linear-gradient(135deg,#0891b2,#0891b2cc);padding:20px 22px">
+              <div class="db-kpi-icon" style="font-size:26px;margin-bottom:6px">👥</div>
+              <div class="db-kpi-val" style="font-size:26px">214</div>
+              <div class="db-kpi-lbl" style="font-size:11px;margin-top:4px">Active Employees</div>
+              <div style="color:rgba(255,255,255,0.5);font-size:10px;margin-top:3px">6 inactive</div>
+            </div>
+            <div class="db-kpi" style="background:linear-gradient(135deg,#7c3aed,#7c3aedcc);padding:20px 22px">
+              <div class="db-kpi-icon" style="font-size:26px;margin-bottom:6px">📊</div>
+              <div class="db-kpi-val" style="font-size:26px">SAR 640K</div>
+              <div class="db-kpi-lbl" style="font-size:11px;margin-top:4px">AR Outstanding</div>
+              <div style="color:rgba(255,255,255,0.5);font-size:10px;margin-top:3px">of 2.4M invoiced</div>
+            </div>
+            <div class="db-kpi" style="background:linear-gradient(135deg,#be185d,#be185dcc);padding:20px 22px">
+              <div class="db-kpi-icon" style="font-size:26px;margin-bottom:6px">📈</div>
+              <div class="db-kpi-val" style="font-size:26px">SAR 1.7M</div>
+              <div class="db-kpi-lbl" style="font-size:11px;margin-top:4px">Total Receipts</div>
+              <div style="color:rgba(255,255,255,0.5);font-size:10px;margin-top:3px">collected</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CHARTS + BOTTOM ROW — currently require scrolling -->
+        <div style="position:relative">
+          <div style="position:absolute;top:-8px;left:0;right:0;background:#ea580c;color:#fff;font-size:8px;font-weight:900;padding:2px 10px;border-radius:5px;text-align:center;z-index:5;letter-spacing:1px">⚠ PROPOSED CHANGE — Charts below require scrolling because KPI cards take too much height</div>
+          <div style="margin-top:14px">
+            <div class="db-charts">
+              <div class="db-chart-card">
+                <div class="db-chart-title">Employees by Category</div>
+                <div class="donut-ph">
+                  <svg viewBox="0 0 80 80" width="70" height="70" class="donut-svg">
+                    <circle cx="40" cy="40" r="28" fill="none" stroke="#e2e8f0" stroke-width="10"/>
+                    <circle cx="40" cy="40" r="28" fill="none" stroke="#6366f1" stroke-width="10" stroke-dasharray="60 116" stroke-dashoffset="0" transform="rotate(-90 40 40)"/>
+                    <circle cx="40" cy="40" r="28" fill="none" stroke="#06b6d4" stroke-width="10" stroke-dasharray="45 131" stroke-dashoffset="-60" transform="rotate(-90 40 40)"/>
+                    <circle cx="40" cy="40" r="28" fill="none" stroke="#f59e0b" stroke-width="10" stroke-dasharray="30 146" stroke-dashoffset="-105" transform="rotate(-90 40 40)"/>
+                    <text x="40" y="43" text-anchor="middle" font-size="11" font-weight="900" fill="#1e293b">214</text>
+                  </svg>
+                  <div class="donut-leg">
+                    <div class="donut-leg-item"><div class="donut-leg-dot" style="background:#6366f1"></div>Staff · 87</div>
+                    <div class="donut-leg-item"><div class="donut-leg-dot" style="background:#06b6d4"></div>Labour · 107</div>
+                    <div class="donut-leg-item"><div class="donut-leg-dot" style="background:#f59e0b"></div>Mgmt · 20</div>
+                  </div>
+                </div>
+              </div>
+              <div class="db-chart-card">
+                <div class="db-chart-title">Monthly Payroll (SAR)</div>
+                <div class="bar-ph">
+                  <div class="bar-ph-col"><div class="bar-ph-bar" style="height:55%;background:#6366f1"></div><div class="bar-ph-lbl">Jan</div></div>
+                  <div class="bar-ph-col"><div class="bar-ph-bar" style="height:62%;background:#6366f1"></div><div class="bar-ph-lbl">Feb</div></div>
+                  <div class="bar-ph-col"><div class="bar-ph-bar" style="height:58%;background:#6366f1"></div><div class="bar-ph-lbl">Mar</div></div>
+                  <div class="bar-ph-col"><div class="bar-ph-bar" style="height:70%;background:#6366f1"></div><div class="bar-ph-lbl">Apr</div></div>
+                  <div class="bar-ph-col"><div class="bar-ph-bar" style="height:75%;background:#6366f1"></div><div class="bar-ph-lbl">May</div></div>
+                  <div class="bar-ph-col"><div class="bar-ph-bar" style="height:68%;background:#6366f1"></div><div class="bar-ph-lbl">Jun</div></div>
+                  <div class="bar-ph-col"><div class="bar-ph-bar" style="height:80%;background:#6366f1"></div><div class="bar-ph-lbl">Jul</div></div>
+                  <div class="bar-ph-col"><div class="bar-ph-bar" style="height:77%;background:#6366f1"></div><div class="bar-ph-lbl">Aug</div></div>
+                  <div class="bar-ph-col"><div class="bar-ph-bar" style="height:85%;background:#6366f1"></div><div class="bar-ph-lbl">Sep</div></div>
+                  <div class="bar-ph-col"><div class="bar-ph-bar" style="height:90%;background:#818cf8"></div><div class="bar-ph-lbl" style="color:#4f46e5;font-weight:700">Oct</div></div>
+                </div>
+              </div>
+            </div>
+            <div class="db-bottom" style="margin-top:10px">
+              <div class="db-table-card">
+                <div class="db-tbl-hdr">Payroll Runs</div>
+                <div style="display:flex" class="db-tbl-th"><div class="db-tbl-th" style="flex:1">Period</div><div class="db-tbl-th" style="flex:1">Amount</div><div class="db-tbl-th" style="flex:1">Status</div></div>
+                <div style="display:flex"><div class="db-tbl-td">10/2026</div><div class="db-tbl-td">SAR 285K</div><div class="db-tbl-td"><span class="badge-sm" style="background:#d1fae5;color:#065f46">paid</span></div></div>
+                <div style="display:flex"><div class="db-tbl-td">9/2026</div><div class="db-tbl-td">SAR 280K</div><div class="db-tbl-td"><span class="badge-sm" style="background:#fef3c7;color:#92400e">pending</span></div></div>
+              </div>
+              <div class="db-bars-card">
+                <div class="db-chart-title">Key Metrics</div>
+                <div class="db-bar-item">
+                  <div class="db-bar-label-row"><span style="color:#475569;font-size:10px">Approved Expenses</span><span style="color:#1e293b;font-size:10px;font-weight:700">SAR 95K (42%)</span></div>
+                  <div class="db-bar-track"><div class="db-bar-fill" style="width:42%;background:#10b981"></div></div>
+                </div>
+                <div class="db-bar-item">
+                  <div class="db-bar-label-row"><span style="color:#475569;font-size:10px">AR Outstanding</span><span style="color:#1e293b;font-size:10px;font-weight:700">SAR 640K (27%)</span></div>
+                  <div class="db-bar-track"><div class="db-bar-fill" style="width:27%;background:#6366f1"></div></div>
+                </div>
+                <div class="db-bar-item">
+                  <div class="db-bar-label-row"><span style="color:#475569;font-size:10px">Collected</span><span style="color:#1e293b;font-size:10px;font-weight:700">SAR 1.7M (73%)</span></div>
+                  <div class="db-bar-track"><div class="db-bar-fill" style="width:73%;background:#0891b2"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- PROPOSED VERSION -->
+  <div style="margin-top:24px;margin-bottom:8px;font-size:11px;font-weight:900;color:#166534;background:#dcfce7;padding:6px 12px;border-radius:7px;display:inline-block">PROPOSED — only the 2 dashed orange areas change</div>
+
+  <div class="panel" style="margin-bottom:24px">
+    <div class="db">
+
+      <!-- HEADER STAYS IDENTICAL -->
+      <div style="background:linear-gradient(135deg,#1e1b4b,#312e81,#1e1b4b);padding:12px 18px 0;position:relative">
+        <div style="position:absolute;top:4px;right:8px;background:#16a34a;color:#fff;font-size:8px;font-weight:900;padding:2px 8px;border-radius:4px;letter-spacing:1px">✓ UNCHANGED</div>
+        <div class="db-entity-row">
+          <div style="display:flex;gap:6px">
+            <div class="db-entity-btn" style="background:rgba(129,140,248,0.25);border-color:#818cf8;color:#e0e7ff">All</div>
+            <div class="db-entity-btn" style="background:transparent;border-color:rgba(255,255,255,0.25);color:rgba(255,255,255,0.6)">ACCSYS</div>
+            <div class="db-entity-btn" style="background:transparent;border-color:rgba(255,255,255,0.25);color:rgba(255,255,255,0.6)">RAT</div>
+            <div class="db-entity-btn" style="background:transparent;border-color:rgba(255,255,255,0.25);color:rgba(255,255,255,0.6)">GWT</div>
+          </div>
+          <div class="db-month" style="background:rgba(255,255,255,0.12);border:1.5px solid rgba(255,255,255,0.25);color:#e0e7ff">October 2026 ▾</div>
+        </div>
+        <div class="db-tabs">
+          <div class="db-tab" style="color:#c7d2fe;border-bottom:3px solid #818cf8;font-weight:700">Overview</div>
+          <div class="db-tab" style="color:rgba(255,255,255,0.5)">Payroll</div>
+          <div class="db-tab" style="color:rgba(255,255,255,0.5)">Employees</div>
+          <div class="db-tab" style="color:rgba(255,255,255,0.5)">Expenses</div>
+          <div class="db-tab" style="color:rgba(255,255,255,0.5)">Projects</div>
+          <div class="db-tab" style="color:rgba(255,255,255,0.5)">Invoices</div>
+          <div class="db-tab" style="color:rgba(255,255,255,0.5)">Accounts</div>
+        </div>
+      </div>
+
+      <!-- QUICK ACCESS STAYS IDENTICAL -->
+      <div class="db-qa" style="position:relative">
+        <div style="position:absolute;top:4px;right:8px;background:#16a34a;color:#fff;font-size:8px;font-weight:900;padding:2px 8px;border-radius:4px;letter-spacing:1px">✓ UNCHANGED</div>
+        <div class="db-qa-btn" style="background:linear-gradient(135deg,#e0e7ff,#c7d2fe)"><div class="db-qa-icon">👥</div><div class="db-qa-lbl" style="color:#4338ca">Employees</div></div>
+        <div class="db-qa-btn" style="background:linear-gradient(135deg,#d1fae5,#a7f3d0)"><div class="db-qa-icon">💰</div><div class="db-qa-lbl" style="color:#059669">Payroll</div></div>
+        <div class="db-qa-btn" style="background:linear-gradient(135deg,#fef3c7,#fde68a)"><div class="db-qa-icon">🏗️</div><div class="db-qa-lbl" style="color:#d97706">Projects</div></div>
+        <div class="db-qa-btn" style="background:linear-gradient(135deg,#fee2e2,#fecaca)"><div class="db-qa-icon">💸</div><div class="db-qa-lbl" style="color:#dc2626">Expenses</div></div>
+        <div class="db-qa-btn" style="background:linear-gradient(135deg,#ede9fe,#ddd6fe)"><div class="db-qa-icon">📄</div><div class="db-qa-lbl" style="color:#7c3aed">Invoices</div></div>
+        <div class="db-qa-btn" style="background:linear-gradient(135deg,#e0f2fe,#bae6fd)"><div class="db-qa-icon">🚗</div><div class="db-qa-lbl" style="color:#0284c7">Vehicles</div></div>
+        <div class="db-qa-btn" style="background:linear-gradient(135deg,#fce7f3,#fbcfe8)"><div class="db-qa-icon">🏖️</div><div class="db-qa-lbl" style="color:#db2777">HR & Leave</div></div>
+        <div class="db-qa-btn" style="background:linear-gradient(135deg,#f0fdf4,#bbf7d0)"><div class="db-qa-icon">🏦</div><div class="db-qa-lbl" style="color:#16a34a">Accounts</div></div>
+        <div class="db-qa-btn" style="background:linear-gradient(135deg,#fff7ed,#fed7aa)"><div class="db-qa-icon">📋</div><div class="db-qa-lbl" style="color:#ea580c">Compliance</div></div>
+        <div class="db-qa-btn" style="background:linear-gradient(135deg,#f8fafc,#e2e8f0)"><div class="db-qa-icon">📊</div><div class="db-qa-lbl" style="color:#475569">Reports</div></div>
+      </div>
+
+      <!-- CONTENT -->
+      <div class="db-content">
+
+        <!-- KPI CARDS SMALLER -->
+        <div style="position:relative;margin-bottom:12px">
+          <div style="position:absolute;top:-8px;left:0;right:0;background:#166534;color:#fff;font-size:8px;font-weight:900;padding:2px 10px;border-radius:5px;text-align:center;z-index:5;letter-spacing:1px">✓ CHANGE 1 — Same 4 cards, same colors, same data — just smaller padding so they don't eat the screen</div>
+          <div class="db-kpis" style="margin-top:14px">
+            <div class="db-kpi" style="background:linear-gradient(135deg,#1d4ed8,#1d4ed8cc);padding:12px 14px">
+              <div class="db-kpi-icon" style="font-size:18px;margin-bottom:4px">💰</div>
+              <div class="db-kpi-val" style="font-size:20px">SAR 485K</div>
+              <div class="db-kpi-lbl" style="font-size:9px;margin-top:3px">Total Payroll</div>
+            </div>
+            <div class="db-kpi" style="background:linear-gradient(135deg,#0891b2,#0891b2cc);padding:12px 14px">
+              <div class="db-kpi-icon" style="font-size:18px;margin-bottom:4px">👥</div>
+              <div class="db-kpi-val" style="font-size:20px">214</div>
+              <div class="db-kpi-lbl" style="font-size:9px;margin-top:3px">Active Employees</div>
+            </div>
+            <div class="db-kpi" style="background:linear-gradient(135deg,#7c3aed,#7c3aedcc);padding:12px 14px">
+              <div class="db-kpi-icon" style="font-size:18px;margin-bottom:4px">📊</div>
+              <div class="db-kpi-val" style="font-size:20px">SAR 640K</div>
+              <div class="db-kpi-lbl" style="font-size:9px;margin-top:3px">AR Outstanding</div>
+            </div>
+            <div class="db-kpi" style="background:linear-gradient(135deg,#be185d,#be185dcc);padding:12px 14px">
+              <div class="db-kpi-icon" style="font-size:18px;margin-bottom:4px">📈</div>
+              <div class="db-kpi-val" style="font-size:20px">SAR 1.7M</div>
+              <div class="db-kpi-lbl" style="font-size:9px;margin-top:3px">Total Receipts</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CHARTS — now fit without scrolling -->
+        <div style="position:relative">
+          <div style="position:absolute;top:-8px;left:0;right:0;background:#166534;color:#fff;font-size:8px;font-weight:900;padding:2px 10px;border-radius:5px;text-align:center;z-index:5;letter-spacing:1px">✓ CHANGE 2 — Same charts, same data — just reduced height so all 4 fit on screen without scrolling</div>
+          <div style="margin-top:14px">
+            <div class="db-charts">
+              <div class="db-chart-card" style="padding:10px 12px">
+                <div class="db-chart-title">Employees by Category</div>
+                <div class="donut-ph">
+                  <svg viewBox="0 0 80 80" width="60" height="60" class="donut-svg">
+                    <circle cx="40" cy="40" r="28" fill="none" stroke="#e2e8f0" stroke-width="10"/>
+                    <circle cx="40" cy="40" r="28" fill="none" stroke="#6366f1" stroke-width="10" stroke-dasharray="60 116" stroke-dashoffset="0" transform="rotate(-90 40 40)"/>
+                    <circle cx="40" cy="40" r="28" fill="none" stroke="#06b6d4" stroke-width="10" stroke-dasharray="45 131" stroke-dashoffset="-60" transform="rotate(-90 40 40)"/>
+                    <circle cx="40" cy="40" r="28" fill="none" stroke="#f59e0b" stroke-width="10" stroke-dasharray="30 146" stroke-dashoffset="-105" transform="rotate(-90 40 40)"/>
+                    <text x="40" y="43" text-anchor="middle" font-size="11" font-weight="900" fill="#1e293b">214</text>
+                  </svg>
+                  <div class="donut-leg">
+                    <div class="donut-leg-item"><div class="donut-leg-dot" style="background:#6366f1"></div>Staff · 87</div>
+                    <div class="donut-leg-item"><div class="donut-leg-dot" style="background:#06b6d4"></div>Labour · 107</div>
+                    <div class="donut-leg-item"><div class="donut-leg-dot" style="background:#f59e0b"></div>Mgmt · 20</div>
+                  </div>
+                </div>
+              </div>
+              <div class="db-chart-card" style="padding:10px 12px">
+                <div class="db-chart-title">Monthly Payroll (SAR)</div>
+                <div class="bar-ph" style="height:70px">
+                  <div class="bar-ph-col"><div class="bar-ph-bar" style="height:55%;background:#6366f1"></div><div class="bar-ph-lbl">Jan</div></div>
+                  <div class="bar-ph-col"><div class="bar-ph-bar" style="height:62%;background:#6366f1"></div><div class="bar-ph-lbl">Feb</div></div>
+                  <div class="bar-ph-col"><div class="bar-ph-bar" style="height:58%;background:#6366f1"></div><div class="bar-ph-lbl">Mar</div></div>
+                  <div class="bar-ph-col"><div class="bar-ph-bar" style="height:70%;background:#6366f1"></div><div class="bar-ph-lbl">Apr</div></div>
+                  <div class="bar-ph-col"><div class="bar-ph-bar" style="height:75%;background:#6366f1"></div><div class="bar-ph-lbl">May</div></div>
+                  <div class="bar-ph-col"><div class="bar-ph-bar" style="height:68%;background:#6366f1"></div><div class="bar-ph-lbl">Jun</div></div>
+                  <div class="bar-ph-col"><div class="bar-ph-bar" style="height:80%;background:#6366f1"></div><div class="bar-ph-lbl">Jul</div></div>
+                  <div class="bar-ph-col"><div class="bar-ph-bar" style="height:77%;background:#6366f1"></div><div class="bar-ph-lbl">Aug</div></div>
+                  <div class="bar-ph-col"><div class="bar-ph-bar" style="height:85%;background:#6366f1"></div><div class="bar-ph-lbl">Sep</div></div>
+                  <div class="bar-ph-col"><div class="bar-ph-bar" style="height:90%;background:#818cf8"></div><div class="bar-ph-lbl" style="color:#4f46e5;font-weight:700">Oct</div></div>
+                </div>
+              </div>
+            </div>
+            <div class="db-bottom" style="margin-top:8px">
+              <div class="db-table-card">
+                <div class="db-tbl-hdr" style="padding:8px 14px;font-size:10px">Payroll Runs</div>
+                <div style="display:flex"><div class="db-tbl-th" style="flex:1">Period</div><div class="db-tbl-th" style="flex:1">Amount</div><div class="db-tbl-th" style="flex:1">Status</div></div>
+                <div style="display:flex"><div class="db-tbl-td" style="padding:7px 12px;font-size:10px">10/2026</div><div class="db-tbl-td" style="padding:7px 12px;font-size:10px">SAR 285K</div><div class="db-tbl-td" style="padding:7px 12px"><span class="badge-sm" style="background:#d1fae5;color:#065f46">paid</span></div></div>
+                <div style="display:flex"><div class="db-tbl-td" style="padding:7px 12px;font-size:10px">9/2026</div><div class="db-tbl-td" style="padding:7px 12px;font-size:10px">SAR 280K</div><div class="db-tbl-td" style="padding:7px 12px"><span class="badge-sm" style="background:#fef3c7;color:#92400e">pending</span></div></div>
+              </div>
+              <div class="db-bars-card" style="padding:10px 12px">
+                <div class="db-chart-title">Key Metrics</div>
+                <div class="db-bar-item" style="margin-bottom:8px">
+                  <div class="db-bar-label-row" style="margin-bottom:3px"><span style="color:#475569;font-size:9px">Approved Expenses</span><span style="color:#1e293b;font-size:9px;font-weight:700">SAR 95K</span></div>
+                  <div class="db-bar-track"><div class="db-bar-fill" style="width:42%;background:#10b981"></div></div>
+                </div>
+                <div class="db-bar-item" style="margin-bottom:8px">
+                  <div class="db-bar-label-row" style="margin-bottom:3px"><span style="color:#475569;font-size:9px">AR Outstanding</span><span style="color:#1e293b;font-size:9px;font-weight:700">SAR 640K</span></div>
+                  <div class="db-bar-track"><div class="db-bar-fill" style="width:27%;background:#6366f1"></div></div>
+                </div>
+                <div class="db-bar-item">
+                  <div class="db-bar-label-row" style="margin-bottom:3px"><span style="color:#475569;font-size:9px">Collected</span><span style="color:#1e293b;font-size:9px;font-weight:700">SAR 1.7M</span></div>
+                  <div class="db-bar-track"><div class="db-bar-fill" style="width:73%;background:#0891b2"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- CHANGE SUMMARY CARDS -->
+  <div class="callout-grid">
+    <div class="callout">
+      <div class="callout-badge" style="background:#fef3c7;color:#92400e">CHANGE 1 of 2</div>
+      <div class="callout-t">KPI Card Size</div>
+      <div class="callout-d">Same 4 cards. Same colors. Same data. Same gradient. Just smaller padding and font so they take less vertical space.</div>
+      <div class="ba-wrap">
+        <div class="ba ba-now"><div class="ba-lbl">Now</div><div class="ba-val">padding: 20px 22px<br>icon: 26px, value: 26px</div></div>
+        <div class="ba ba-new"><div class="ba-lbl">Proposed</div><div class="ba-val">padding: 12px 14px<br>icon: 18px, value: 20px</div></div>
+      </div>
+    </div>
+    <div class="callout">
+      <div class="callout-badge" style="background:#fef3c7;color:#92400e">CHANGE 2 of 2</div>
+      <div class="callout-t">Chart Card Heights</div>
+      <div class="callout-d">Same 4 chart panels. Same charts. Same data. Slightly less padding so all 4 fit in the viewport at once.</div>
+      <div class="ba-wrap">
+        <div class="ba ba-now"><div class="ba-lbl">Now</div><div class="ba-val">Chart padding: 20px<br>Bar chart height: 200px<br>→ requires scrolling</div></div>
+        <div class="ba ba-new"><div class="ba-lbl">Proposed</div><div class="ba-val">Chart padding: 10px<br>Bar chart height: 140px<br>→ fits in viewport</div></div>
+      </div>
+    </div>
+    <div class="callout">
+      <div class="callout-badge" style="background:#dcfce7;color:#166534">NOT CHANGING</div>
+      <div class="callout-t">Everything Else Stays</div>
+      <div class="callout-d">Header colors, tabs (Overview/Payroll/Employees…), entity filter (All/ACCSYS/RAT/GWT), month picker, Quick Access strip, all 10 shortcut buttons, all data — completely untouched.</div>
+    </div>
+  </div>
+
+  <!-- ═══ TABLE SECTION ═══ -->
+  <div class="section-title">Data Tables — Sticky Header + Filter Position</div>
+  <p class="section-sub">This applies to all your list pages (Invoices, Employees, Overtime, etc.). Only 2 things change: filters move above the header, and the header sticks.</p>
+
+  <!-- NOW -->
+  <div style="margin-bottom:6px;font-size:11px;font-weight:900;color:#92400e;background:#fef3c7;padding:5px 12px;border-radius:6px;display:inline-block">CURRENT — some pages have no filter at all, some have filters below the table header</div>
+  <div class="tbl-mock-wrap" style="margin-bottom:18px">
+    <div class="tbl-mock-hdr">
+      <div>
+        <div class="tbl-mock-title">Invoices</div>
+        <div style="font-size:10px;color:#94a3b8;margin-top:2px">247 records</div>
+      </div>
+      <div class="tbl-mock-btns">
+        <div class="tbl-mock-btn">⬇ Export</div>
+        <div class="tbl-mock-btn primary">+ New Invoice</div>
+      </div>
+    </div>
+    <!-- TABLE HEADER (no filter above it — header scrolls away) -->
+    <div style="background:#fef3c7;padding:5px 18px;font-size:10px;font-weight:800;color:#92400e">⚠ Header row scrolls away when you scroll down — no filter above it</div>
+    <div class="tbl-sticky-hdr">
+      <div class="tbl-th" style="flex:0.5">#</div>
+      <div class="tbl-th" style="flex:1.5">Client</div>
+      <div class="tbl-th">Project</div>
+      <div class="tbl-th">Date</div>
+      <div class="tbl-th">Amount</div>
+      <div class="tbl-th">Status</div>
+      <div class="tbl-th">Actions</div>
+    </div>
+    <div class="tbl-row"><div class="tbl-td" style="flex:0.5;color:#94a3b8;font-size:10px">INV-0247</div><div class="tbl-td" style="flex:1.5;font-weight:700;color:#1e293b">Saudi Aramco</div><div class="tbl-td">NEOM-Site-4</div><div class="tbl-td" style="color:#94a3b8;font-size:10px">01/10/26</div><div class="tbl-td" style="font-weight:800;color:#166534">55,200</div><div class="tbl-td"><span class="badge-sm" style="background:#dbeafe;color:#1d4ed8">Issued</span></div><div class="tbl-td">👁 ✏</div></div>
+    <div class="tbl-row"><div class="tbl-td" style="flex:0.5;color:#94a3b8;font-size:10px">INV-0246</div><div class="tbl-td" style="flex:1.5;font-weight:700;color:#1e293b">ACWA Power</div><div class="tbl-td">PP-Riyadh-2</div><div class="tbl-td" style="color:#94a3b8;font-size:10px">30/09/26</div><div class="tbl-td" style="font-weight:800;color:#166534">143,750</div><div class="tbl-td"><span class="badge-sm" style="background:#fee2e2;color:#b91c1c">Overdue</span></div><div class="tbl-td">👁 ✏</div></div>
+    <div style="padding:8px 18px;font-size:10px;color:#94a3b8;background:#f8fafc">↓ scroll to see more rows → header disappears, can't tell what column you're reading</div>
+  </div>
+
+  <!-- PROPOSED -->
+  <div style="margin-bottom:6px;font-size:11px;font-weight:900;color:#166534;background:#dcfce7;padding:5px 12px;border-radius:6px;display:inline-block">PROPOSED — filter strip above the sticky header, header never scrolls away</div>
+  <div class="tbl-mock-wrap">
+    <div class="tbl-mock-hdr">
+      <div>
+        <div class="tbl-mock-title">Invoices</div>
+        <div style="font-size:10px;color:#94a3b8;margin-top:2px">247 records · Total SAR 2,418,650</div>
+      </div>
+      <div class="tbl-mock-btns">
+        <div class="tbl-mock-btn">⬇ Export</div>
+        <div class="tbl-mock-btn primary" style="background:#0277bd;border-color:#0277bd">+ New Invoice</div>
+      </div>
+    </div>
+    <!-- FILTER STRIP (ABOVE header) -->
+    <div style="background:#dcfce7;padding:4px 18px;font-size:10px;font-weight:800;color:#166534">✓ Filter strip sits here — above the column header, always accessible</div>
+    <div class="filter-above">
+      <div class="f-search">🔍&nbsp; Search client or invoice #</div>
+      <div class="f-select">📅 Period ▾</div>
+      <div class="f-select">🏗 Project ▾</div>
+      <div style="width:1px;height:20px;background:#e2e8f0;flex-shrink:0"></div>
+      <div class="f-chip active"><div class="f-chip-dot"></div>All</div>
+      <div class="f-chip">Draft</div>
+      <div class="f-chip">Issued</div>
+      <div class="f-chip">Paid</div>
+      <div class="f-chip">Overdue</div>
+      <div style="margin-left:auto;font-size:10px;color:#94a3b8;font-weight:700;cursor:pointer">Clear ✕</div>
+    </div>
+    <!-- STICKY HEADER (stays when scrolling) -->
+    <div style="background:#dcfce7;padding:4px 18px;font-size:10px;font-weight:800;color:#166534">✓ Column header is sticky — stays visible as you scroll through rows</div>
+    <div class="tbl-sticky-hdr" style="background:#f8faff;border-bottom:1.5px solid #c7d2fe">
+      <div class="tbl-th" style="flex:0.5">#  ↕</div>
+      <div class="tbl-th" style="flex:1.5">Client  ↕</div>
+      <div class="tbl-th">Project  ↕</div>
+      <div class="tbl-th">Date  ↕</div>
+      <div class="tbl-th">Amount  ↕</div>
+      <div class="tbl-th">Status  ↕</div>
+      <div class="tbl-th">Actions</div>
+    </div>
+    <div class="tbl-row"><div class="tbl-td" style="flex:0.5;color:#94a3b8;font-size:10px">INV-0247</div><div class="tbl-td" style="flex:1.5;font-weight:700;color:#1e293b">Saudi Aramco</div><div class="tbl-td">NEOM-Site-4</div><div class="tbl-td" style="color:#94a3b8;font-size:10px">01/10/26</div><div class="tbl-td" style="font-weight:800;color:#166534">55,200</div><div class="tbl-td"><span class="badge-sm" style="background:#dbeafe;color:#1d4ed8">Issued</span></div><div class="tbl-td" style="display:flex;gap:5px"><button style="width:26px;height:26px;border-radius:7px;background:#f1f5f9;border:1px solid #e2e8f0;font-size:12px;cursor:default">👁</button><button style="width:26px;height:26px;border-radius:7px;background:#f1f5f9;border:1px solid #e2e8f0;font-size:12px;cursor:default">✏</button></div></div>
+    <div class="tbl-row"><div class="tbl-td" style="flex:0.5;color:#94a3b8;font-size:10px">INV-0246</div><div class="tbl-td" style="flex:1.5;font-weight:700;color:#1e293b">ACWA Power</div><div class="tbl-td">PP-Riyadh-2</div><div class="tbl-td" style="color:#94a3b8;font-size:10px">30/09/26</div><div class="tbl-td" style="font-weight:800;color:#166534">143,750</div><div class="tbl-td"><span class="badge-sm" style="background:#fee2e2;color:#b91c1c">Overdue</span></div><div class="tbl-td" style="display:flex;gap:5px"><button style="width:26px;height:26px;border-radius:7px;background:#f1f5f9;border:1px solid #e2e8f0;font-size:12px;cursor:default">👁</button><button style="width:26px;height:26px;border-radius:7px;background:#f1f5f9;border:1px solid #e2e8f0;font-size:12px;cursor:default">✏</button></div></div>
+    <div class="tbl-row"><div class="tbl-td" style="flex:0.5;color:#94a3b8;font-size:10px">INV-0245</div><div class="tbl-td" style="flex:1.5;font-weight:700;color:#1e293b">Mobiserve KSA</div><div class="tbl-td">KSA-Maint-7</div><div class="tbl-td" style="color:#94a3b8;font-size:10px">28/09/26</div><div class="tbl-td" style="font-weight:800;color:#166534">37,375</div><div class="tbl-td"><span class="badge-sm" style="background:#dcfce7;color:#166534">Paid</span></div><div class="tbl-td" style="display:flex;gap:5px"><button style="width:26px;height:26px;border-radius:7px;background:#f1f5f9;border:1px solid #e2e8f0;font-size:12px;cursor:default">👁</button><button style="width:26px;height:26px;border-radius:7px;background:#f1f5f9;border:1px solid #e2e8f0;font-size:12px;cursor:default">✏</button></div></div>
+    <div style="padding:8px 18px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:10px;color:#94a3b8">Showing 3 of 247 · Total: <strong style="color:#166534">SAR 2,418,650</strong></div>
+      <div style="display:flex;gap:5px">
+        <div style="width:28px;height:28px;border-radius:7px;background:#f1f5f9;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#64748b">«</div>
+        <div style="width:28px;height:28px;border-radius:7px;background:#0277bd;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff">1</div>
+        <div style="width:28px;height:28px;border-radius:7px;background:#f1f5f9;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#64748b">2</div>
+        <div style="width:28px;height:28px;border-radius:7px;background:#f1f5f9;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#64748b">»</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FINAL SUMMARY -->
+  <div style="background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 2px 10px rgba(0,0,0,0.07);margin-top:10px">
+    <div style="font-size:13px;font-weight:900;color:#1e293b;margin-bottom:12px">Complete Summary — What Changes, What Doesn't</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div>
+        <div style="font-size:10px;font-weight:900;color:#166534;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">✓ STAYS EXACTLY THE SAME</div>
+        <div style="font-size:11px;color:#475569;line-height:2">
+          ✓ Dark purple header bar<br>
+          ✓ Entity filter: All / ACCSYS / RAT / GWT<br>
+          ✓ Month picker dropdown<br>
+          ✓ All 7 tabs: Overview, Payroll, Employees, Expenses, Projects, Invoices, Accounts<br>
+          ✓ Sticky Quick Access strip<br>
+          ✓ All 10 shortcut buttons (Employees, Payroll, Projects…)<br>
+          ✓ All KPI colors, gradients, data<br>
+          ✓ All 4 chart types (donut, bar, table, breakdown)<br>
+          ✓ All table columns, buttons, actions, forms<br>
+          ✓ All navigation and routing
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:900;color:#ea580c;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">⚠ ONLY 4 SMALL CHANGES PROPOSED</div>
+        <div style="font-size:11px;color:#475569;line-height:2">
+          1. KPI card padding reduced (20px→12px) — less tall<br>
+          2. Chart card padding reduced — fits in window, no scroll<br>
+          3. Tables: filter strip added ABOVE column header<br>
+          4. Tables: column header made sticky (CSS <code>position:sticky</code>)
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

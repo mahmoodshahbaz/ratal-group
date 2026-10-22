@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ratal ERP — UI Design System & Field Reference</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1a2e3d}
+/* NAV */
+.top-nav{background:#1e1b4b;padding:0;display:flex;align-items:stretch;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,0.3)}
+.nav-logo{padding:14px 20px;font-size:13px;font-weight:900;color:#fff;border-right:1px solid rgba(255,255,255,0.1);white-space:nowrap}
+.nav-tabs{display:flex;overflow-x:auto;scrollbar-width:none}
+.nav-tab{padding:14px 18px;font-size:12px;font-weight:600;color:rgba(255,255,255,0.55);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:all 0.15s}
+.nav-tab:hover{color:rgba(255,255,255,0.8)}
+.nav-tab.active{color:#fff;border-bottom-color:#818cf8;font-weight:800}
+/* SECTIONS */
+.section{display:none;padding:24px;max-width:1200px;margin:0 auto}
+.section.active{display:block}
+/* CARDS */
+.card{background:#fff;border-radius:14px;padding:20px 24px;box-shadow:0 2px 12px rgba(0,0,0,0.07);margin-bottom:20px}
+.card-title{font-size:15px;font-weight:900;color:#1e293b;margin-bottom:4px}
+.card-sub{font-size:12px;color:#64748b;margin-bottom:16px}
+/* SECTION HEADERS */
+.sec-hdr{font-size:13px;font-weight:900;color:#1e293b;border-left:4px solid var(--c,#546e7a);padding-left:10px;margin:24px 0 12px}
+/* GRID */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+/* MODULE COLOR SWATCHES */
+.swatch{border-radius:10px;padding:14px 16px;color:#fff}
+.swatch-name{font-size:11px;font-weight:900;margin-bottom:2px}
+.swatch-hex{font-size:10px;opacity:0.75;font-family:monospace}
+.swatch-pages{font-size:9px;opacity:0.65;margin-top:6px;line-height:1.7}
+/* KPI CARD EXAMPLES */
+.kpi-demo{border-radius:12px;padding:14px 16px;color:#fff;position:relative;overflow:hidden}
+.kpi-demo::after{content:'';position:absolute;right:-10px;top:-10px;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,0.1)}
+.kpi-icon{font-size:18px;margin-bottom:4px}
+.kpi-val{font-size:20px;font-weight:900;line-height:1.1}
+.kpi-lbl{font-size:9px;font-weight:700;opacity:0.7;text-transform:uppercase;letter-spacing:0.5px;margin-top:3px}
+/* TABLE PREVIEW */
+.tbl-prev{border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.07)}
+.tbl-filter-strip{background:#fff;padding:8px 14px;border-bottom:1px solid #e2e8f0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.f-search{height:28px;background:#f8faff;border:1.5px solid #e2e8f0;border-radius:7px;padding:0 10px;font-size:10px;color:#94a3b8;min-width:140px;display:flex;align-items:center}
+.f-sel{height:28px;background:#f8faff;border:1.5px solid #e2e8f0;border-radius:7px;padding:0 10px;font-size:10px;color:#94a3b8;display:flex;align-items:center;gap:4px}
+.f-chip{height:24px;padding:0 9px;border-radius:12px;font-size:9px;font-weight:700;border:1.5px solid #e2e8f0;color:#94a3b8;display:flex;align-items:center}
+.f-chip.on{background:#0277bd;color:#fff;border-color:#0277bd}
+.tbl-hdr{background:#f8faff;display:flex;border-bottom:2px solid #dbeafe}
+.tbl-th{padding:8px 12px;font-size:9px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;flex:1}
+.tbl-row{display:flex;border-bottom:1px solid #f8fafc}
+.tbl-row:hover{background:#f8faff}
+.tbl-td{padding:8px 12px;font-size:10px;color:#475569;flex:1}
+.badge{padding:2px 7px;border-radius:8px;font-size:9px;font-weight:800;display:inline-block}
+/* RULE BLOCKS */
+.rule{background:#f8faff;border:1.5px solid #dbeafe;border-radius:9px;padding:12px 14px;margin-bottom:10px}
+.rule-title{font-size:11px;font-weight:800;color:#1d4ed8;margin-bottom:5px}
+.rule-body{font-size:11px;color:#475569;line-height:1.7}
+.rule-code{background:#1e293b;color:#e2e8f0;border-radius:6px;padding:8px 12px;font-size:10px;font-family:monospace;margin-top:6px;line-height:1.6}
+/* PROBLEM BOXES */
+.problem{background:#fff7ed;border:1.5px solid #fed7aa;border-radius:9px;padding:12px 14px;margin-bottom:8px}
+.fix{background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:9px;padding:12px 14px;margin-bottom:8px}
+.problem-t{font-size:10px;font-weight:900;color:#ea580c;margin-bottom:4px}
+.fix-t{font-size:10px;font-weight:900;color:#16a34a;margin-bottom:4px}
+/* PAGE DOCS */
+.page-doc{background:#fff;border-radius:12px;margin-bottom:16px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.07)}
+.page-doc-hdr{padding:14px 18px;color:#fff;display:flex;align-items:center;gap:10px}
+.page-doc-hdr-icon{font-size:22px}
+.page-doc-hdr-title{font-size:14px;font-weight:900}
+.page-doc-hdr-sub{font-size:11px;opacity:0.8;margin-top:2px}
+.page-doc-body{padding:16px 18px}
+.field-table{width:100%;border-collapse:collapse;font-size:11px}
+.field-table th{background:#f8fafc;padding:8px 12px;font-size:9px;font-weight:800;color:#64748b;text-transform:uppercase;text-align:left;border-bottom:2px solid #e2e8f0}
+.field-table td{padding:9px 12px;border-bottom:1px solid #f1f5f9;vertical-align:top;color:#475569}
+.field-table td:first-child{font-weight:700;color:#1e293b;white-space:nowrap}
+.field-table td:nth-child(2){color:#0277bd;font-size:10px;font-weight:600}
+.field-table tr:last-child td{border-bottom:none}
+.sub-section{font-size:10px;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid #f1f5f9}
+/* INCONSISTENCY AUDIT */
+.audit-row{display:flex;gap:0;border-bottom:1px solid #f1f5f9}
+.audit-row:last-child{border-bottom:none}
+.audit-page{padding:10px 14px;font-size:11px;font-weight:700;color:#1e293b;width:160px;flex-shrink:0;display:flex;align-items:center}
+.audit-col{padding:10px 12px;font-size:10px;color:#475569;flex:1;border-left:1px solid #f1f5f9;display:flex;align-items:center}
+.audit-bad{color:#dc2626;font-weight:700}
+.audit-ok{color:#16a34a;font-weight:700}
+.audit-hdr{background:#f8fafc;font-weight:800;color:#64748b;font-size:9px;text-transform:uppercase;letter-spacing:0.5px}
+/* BEFORE/AFTER COMPARE */
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:10px;overflow:hidden;border:1.5px solid #e2e8f0}
+.cmp-now{background:#fff7ed;padding:12px 14px}
+.cmp-new{background:#f0fdf4;padding:12px 14px}
+.cmp-lbl{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.cmp-now .cmp-lbl{color:#ea580c}
+.cmp-new .cmp-lbl{color:#16a34a}
+.cmp-body{font-size:10px;color:#1e293b;line-height:1.8}
+/* NOTE BOX */
+.note{background:#ede9fe;border:1.5px solid #c4b5fd;border-radius:9px;padding:10px 14px;font-size:11px;color:#5b21b6;margin-bottom:12px}
+/* STEP TRACKER PREVIEW */
+.step-sidebar{width:180px;padding:14px;background:#f8faff;border-right:1px solid #e2e8f0;flex-shrink:0}
+.step-item{display:flex;align-items:flex-start;gap:8px;margin-bottom:14px}
+.step-bar{width:3px;height:36px;border-radius:2px;flex-shrink:0;margin-top:3px}
+.step-content{}
+.step-num{font-size:9px;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px}
+.step-name{font-size:11px;font-weight:700;color:#1e293b}
+/* FORM FIELD ROW DEMO */
+.form-row{display:flex;gap:12px;margin-bottom:10px}
+.form-field{flex:1}
+.form-label{font-size:9px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+.form-input{height:32px;background:#fff;border:1.5px solid #e2e8f0;border-radius:7px;padding:0 10px;font-size:11px;color:#94a3b8;display:flex;align-items:center}
+.form-input.req::before{content:'*';color:#ef4444;font-size:10px;margin-right:3px}
+/* LINE ITEM TABLE */
+.li-table{width:100%;border-collapse:collapse;font-size:11px}
+.li-table th{background:#f8faff;padding:7px 10px;font-size:9px;font-weight:800;color:#64748b;text-transform:uppercase;border-bottom:2px solid #e2e8f0;text-align:left}
+.li-table td{padding:7px 10px;border-bottom:1px solid #f1f5f9;color:#475569}
+.li-table tr:last-child td{border-bottom:none}
+.li-add-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:7px;font-size:10px;font-weight:700;margin-top:8px;cursor:default}
+/* COLLAPSIBLE ROW DEMO */
+.exp-row{border-bottom:1px solid #f1f5f9}
+.exp-main{display:flex;padding:9px 14px;cursor:pointer;align-items:center;gap:8px}
+.exp-toggle{width:18px;height:18px;border-radius:4px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
+.exp-detail{background:#f8faff;padding:10px 40px;border-top:1px solid #e2e8f0;display:none}
+.exp-detail.open{display:block}
+</style>
+</head>
+<body>
+
+<div class="top-nav">
+  <div class="nav-logo">Ratal ERP — Design System & Reference</div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" onclick="show('audit')">1. Inconsistency Audit</div>
+    <div class="nav-tab" onclick="show('design')">2. Design System Rules</div>
+    <div class="nav-tab" onclick="show('components')">3. Component Standards</div>
+    <div class="nav-tab" onclick="show('pages')">4. Page Field Reference</div>
+    <div class="nav-tab" onclick="show('forms')">5. Form Field Reference</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- TAB 1: INCONSISTENCY AUDIT -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="section active" id="audit">
+  <div class="card">
+    <div class="card-title">Current Inconsistency Audit</div>
+    <div class="card-sub">The same application currently speaks 7 different visual languages across pages. Every column below should read "✓ Same" — none of them do.</div>
+
+    <div class="tbl-prev">
+      <div class="audit-row audit-hdr">
+        <div class="audit-page">Page</div>
+        <div class="audit-col">KPI Card Style</div>
+        <div class="audit-col">Card Colors</div>
+        <div class="audit-col">Filter Position</div>
+        <div class="audit-col">Table Header</div>
+        <div class="audit-col">Filter Present?</div>
+      </div>
+      <div class="audit-row">
+        <div class="audit-page">📋 LOI Register</div>
+        <div class="audit-col"><span class="audit-bad">White, no gradient</span></div>
+        <div class="audit-col"><span class="audit-bad">None — plain white</span></div>
+        <div class="audit-col"><span class="audit-ok">Below cards</span></div>
+        <div class="audit-col"><span class="audit-bad">Dark black #212</span></div>
+        <div class="audit-col"><span class="audit-ok">Yes</span></div>
+      </div>
+      <div class="audit-row">
+        <div class="audit-page">🚗 Fleet / Vehicles</div>
+        <div class="audit-col"><span class="audit-bad">Small, tab-style</span></div>
+        <div class="audit-col"><span class="audit-bad">Teal highlight only</span></div>
+        <div class="audit-col"><span class="audit-ok">Below KPIs</span></div>
+        <div class="audit-col"><span class="audit-bad">Dark black #212</span></div>
+        <div class="audit-ok">Yes</div>
+      </div>
+      <div class="audit-row">
+        <div class="audit-page">🧾 Purchase Orders</div>
+        <div class="audit-col"><span class="audit-bad">Large dark gradients</span></div>
+        <div class="audit-col"><span class="audit-bad">Dark teal/gold/blue — too heavy</span></div>
+        <div class="audit-col"><span class="audit-ok">Above table</span></div>
+        <div class="audit-col"><span class="audit-bad">Dark black #212</span></div>
+        <div class="audit-ok">Yes</div>
+      </div>
+      <div class="audit-row">
+        <div class="audit-page">💰 Money Requests</div>
+        <div class="audit-col"><span class="audit-bad">Light pastel bg, colored text</span></div>
+        <div class="audit-col"><span class="audit-bad">Peach/lavender/green pastel</span></div>
+        <div class="audit-col"><span class="audit-ok">Above table</span></div>
+        <div class="audit-col"><span class="audit-bad">Dark navy</span></div>
+        <div class="audit-ok">Yes</div>
+      </div>
+      <div class="audit-row">
+        <div class="audit-page">💳 Field Payments</div>
+        <div class="audit-col"><span class="audit-bad">White, border only</span></div>
+        <div class="audit-col"><span class="audit-bad">None — all white</span></div>
+        <div class="audit-col"><span class="audit-bad">Below KPIs, no sticky</span></div>
+        <div class="audit-col"><span class="audit-bad">No visible header</span></div>
+        <div class="audit-ok">Yes</div>
+      </div>
+      <div class="audit-row">
+        <div class="audit-page">🏗 Projects</div>
+        <div class="audit-col"><span class="audit-bad">White, colored number only</span></div>
+        <div class="audit-col"><span class="audit-bad">Numbers only, no bg color</span></div>
+        <div class="audit-col"><span class="audit-bad">In page header row</span></div>
+        <div class="audit-col"><span class="audit-bad">White, thin border</span></div>
+        <div class="audit-ok">Yes</div>
+      </div>
+      <div class="audit-row">
+        <div class="audit-page">📒 Party List</div>
+        <div class="audit-col"><span class="audit-bad">Chips (no cards)</span></div>
+        <div class="audit-col"><span class="audit-bad">Text-only count chips</span></div>
+        <div class="audit-col"><span class="audit-ok">Above table</span></div>
+        <div class="audit-col"><span class="audit-bad">White, thin border</span></div>
+        <div class="audit-ok">Yes</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Root Causes</div>
+    <div class="grid-3" style="margin-top:4px">
+      <div class="problem">
+        <div class="problem-t">Problem 1 — No KPI Card Standard</div>
+        <div style="font-size:11px;color:#92400e;line-height:1.6">Each page invented its own card style. Some use dark gradients, some use pastel, some use white, some use chips. Result: no visual consistency.</div>
+      </div>
+      <div class="problem">
+        <div class="problem-t">Problem 2 — No Color System Per Module</div>
+        <div style="font-size:11px;color:#92400e;line-height:1.6">Colors were assigned page-by-page with no module grouping. Finance pages look nothing like each other.</div>
+      </div>
+      <div class="problem">
+        <div class="problem-t">Problem 3 — Table Headers Vary Wildly</div>
+        <div style="font-size:11px;color:#92400e;line-height:1.6">Dark black, dark navy, white with border — each page chose a different table header background, making the data feel unrelated.</div>
+      </div>
+      <div class="fix">
+        <div class="fix-t">Fix 1 — One KPI Card Template</div>
+        <div style="font-size:11px;color:#166534;line-height:1.6">All KPI cards use the same gradient template (module color), same size (padding 12px 16px), same font sizes. Only the color changes per module.</div>
+      </div>
+      <div class="fix">
+        <div class="fix-t">Fix 2 — Module Color System</div>
+        <div style="font-size:11px;color:#166534;line-height:1.6">9 modules, 9 defined colors. Every page belonging to Operations uses #5A32D4. Every Finance page uses #0277bd. Consistent, calm, purposeful.</div>
+      </div>
+      <div class="fix">
+        <div class="fix-t">Fix 3 — One Table Header Style</div>
+        <div style="font-size:11px;color:#166534;line-height:1.6">All table headers use background #f8faff with a bottom border in the module color. Light, clean, and consistent across all 40+ tables.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- TAB 2: DESIGN SYSTEM RULES -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="section" id="design">
+
+  <div class="card">
+    <div class="card-title">Module Color Palette</div>
+    <div class="card-sub">Every page belongs to exactly one module. The module color is used for: KPI card gradient, table header bottom border, filter chip active state, form accent, section titles. Never mix module colors within one page.</div>
+    <div class="grid-4" style="gap:10px;margin-top:8px">
+      <div class="swatch" style="background:#546e7a"><div class="swatch-name">Main / General</div><div class="swatch-hex">#546e7a</div><div class="swatch-pages">Dashboard, Settings, Profile</div></div>
+      <div class="swatch" style="background:#1565C0"><div class="swatch-name">Travel</div><div class="swatch-hex">#1565C0</div><div class="swatch-pages">Travel Requests, Tickets, Accommodation</div></div>
+      <div class="swatch" style="background:#5A32D4"><div class="swatch-name">Operations</div><div class="swatch-hex">#5A32D4</div><div class="swatch-pages">Projects, LOI Register, Vehicles, Party List</div></div>
+      <div class="swatch" style="background:#00695c"><div class="swatch-name">Masters</div><div class="swatch-hex">#00695c</div><div class="swatch-pages">Chart of Accounts, Employees Master, Departments</div></div>
+      <div class="swatch" style="background:#0277bd"><div class="swatch-name">Finance</div><div class="swatch-hex">#0277bd</div><div class="swatch-pages">Invoices, Purchase Orders, Money Requests, Field Payments</div></div>
+      <div class="swatch" style="background:#00838f"><div class="swatch-name">Accounting</div><div class="swatch-hex">#00838f</div><div class="swatch-pages">Journals, Cheques, Bank Accounts, AR/AP</div></div>
+      <div class="swatch" style="background:#558b2f"><div class="swatch-name">Reports</div><div class="swatch-hex">#558b2f</div><div class="swatch-pages">Payroll Summary, Expense Reports, Project Reports</div></div>
+      <div class="swatch" style="background:#6a1b9a"><div class="swatch-name">Planning</div><div class="swatch-hex">#6a1b9a</div><div class="swatch-pages">Budgets, Forecasts, Allocations</div></div>
+      <div class="swatch" style="background:#e65100"><div class="swatch-name">Human Resources</div><div class="swatch-hex">#e65100</div><div class="swatch-pages">Employees, Payroll, Vacations, Overtime</div></div>
+      <div class="swatch" style="background:#37474f"><div class="swatch-name">Administration</div><div class="swatch-hex">#37474f</div><div class="swatch-pages">Users, Roles, Templates, Compliance</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">KPI Card — The One Standard</div>
+    <div class="card-sub">All KPI cards across the entire application follow this single template. The ONLY variable is the module color gradient. Size, font, padding, structure — all identical.</div>
+    <div class="cmp" style="margin-bottom:16px">
+      <div class="cmp-now">
+        <div class="cmp-lbl">❌ Current (Purchase Orders — too heavy)</div>
+        <div class="cmp-body">padding: 20px 22px<br>icon: 26px emoji<br>value: 26px bold<br>background: dark teal/gold/blue gradients<br>→ Heavy, dense, inconsistent between pages</div>
+      </div>
+      <div class="cmp-new">
+        <div class="cmp-lbl">✓ Standard (applies everywhere)</div>
+        <div class="cmp-body">padding: 12px 16px<br>icon: 18px<br>value: 20px bold<br>label: 9px uppercase<br>background: module color gradient<br>→ Compact, colorful but not overwhelming</div>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:800;color:#64748b;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">Live Examples — Finance module (#0277bd)</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <div class="kpi-demo" style="background:linear-gradient(135deg,#0277bd,#01579b);flex:1;min-width:130px">
+        <div class="kpi-icon">📄</div><div class="kpi-val">1</div><div class="kpi-lbl">POs in View</div>
+      </div>
+      <div class="kpi-demo" style="background:linear-gradient(135deg,#0288d1,#0277bd);flex:1;min-width:130px">
+        <div class="kpi-icon">💰</div><div class="kpi-val">SAR 7,390</div><div class="kpi-lbl">Total Value</div>
+      </div>
+      <div class="kpi-demo" style="background:linear-gradient(135deg,#0277bd,#006064);flex:1;min-width:130px">
+        <div class="kpi-icon">🔄</div><div class="kpi-val">0</div><div class="kpi-lbl">With Change Orders</div>
+      </div>
+      <div class="kpi-demo" style="background:linear-gradient(135deg,#01579b,#0277bd);flex:1;min-width:130px">
+        <div class="kpi-icon">📊</div><div class="kpi-val">SAR 7,390</div><div class="kpi-lbl">Avg PO Value</div>
+      </div>
+    </div>
+    <div style="margin-top:12px;font-size:11px;font-weight:800;color:#64748b;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">HR module (#e65100)</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <div class="kpi-demo" style="background:linear-gradient(135deg,#e65100,#bf360c);flex:1;min-width:130px">
+        <div class="kpi-icon">👥</div><div class="kpi-val">214</div><div class="kpi-lbl">Active Employees</div>
+      </div>
+      <div class="kpi-demo" style="background:linear-gradient(135deg,#f4511e,#e65100);flex:1;min-width:130px">
+        <div class="kpi-icon">🏖️</div><div class="kpi-val">8</div><div class="kpi-lbl">On Leave Today</div>
+      </div>
+      <div class="kpi-demo" style="background:linear-gradient(135deg,#e65100,#d84315);flex:1;min-width:130px">
+        <div class="kpi-icon">⏰</div><div class="kpi-val">12</div><div class="kpi-lbl">Pending Overtime</div>
+      </div>
+      <div class="kpi-demo" style="background:linear-gradient(135deg,#bf360c,#e65100);flex:1;min-width:130px">
+        <div class="kpi-icon">⚠️</div><div class="kpi-val">3</div><div class="kpi-lbl">Doc Expiring ≤30d</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Table Layout Standard — Applied to ALL 40+ Tables</div>
+    <div class="card-sub">Every single data table in the application follows this exact structure top-to-bottom: page header → filter strip → sticky column header → data rows → pagination.</div>
+    <div class="rule"><div class="rule-title">Rule: Structure Order (never deviate)</div><div class="rule-body">1. Page title + action button (+ New, + Add, Export)<br>2. Filter strip (search box + dropdowns + status chips) — <strong>always ABOVE column headers</strong><br>3. Column header row — <strong>sticky, never scrolls away</strong> (CSS: position:sticky; top:0)<br>4. Data rows (collapsible if row has detail fields)<br>5. Pagination row (records count + page buttons)</div></div>
+    <div class="rule"><div class="rule-title">Rule: Filter Strip Contents</div><div class="rule-body">Always include: Search box (leftmost), then dropdown filters, then status chip filters. "Clear" link on the right. The filter strip background is #fff, bottom border 1px #e2e8f0.</div></div>
+    <div class="rule"><div class="rule-title">Rule: Column Header Styling</div><div class="rule-body">background: #f8faff | bottom border: 2px solid [module color at 30% opacity] | font: 9px, uppercase, 700 weight, #64748b | padding: 8px 12px | position: sticky, top: [filter height]</div></div>
+    <div class="rule"><div class="rule-title">Rule: Long Text / Overflow in Cells</div><div class="rule-body">Any cell with potentially long content (description, name, purpose) shows max 1 line truncated with "…". Clicking that row expands a collapsible detail row below it showing the full content. Never let text overflow or wrap awkwardly in the table.</div></div>
+
+    <div style="margin-top:14px">
+      <div class="tbl-prev">
+        <div style="background:#fff;padding:10px 14px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:13px;font-weight:900;color:#1e293b">Purchase Orders</div>
+          <div style="display:flex;gap:8px"><div style="padding:6px 12px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:10px;font-weight:700;color:#64748b">⬇ Export</div><div style="padding:6px 12px;border-radius:7px;background:#0277bd;font-size:10px;font-weight:700;color:#fff">+ New Incoming PO</div></div>
+        </div>
+        <div class="tbl-filter-strip">
+          <div class="f-search">🔍 Search contractor, PO#…</div>
+          <div class="f-sel">📁 All Depts ▾</div>
+          <div class="f-sel">📅 From ▾</div>
+          <div class="f-sel">📅 To ▾</div>
+          <div style="margin-left:8px;display:flex;gap:5px">
+            <div class="f-chip on">All</div><div class="f-chip">Active</div><div class="f-chip">Invoiced</div><div class="f-chip">Closed</div><div class="f-chip">Cancelled</div>
+          </div>
+          <div style="margin-left:auto;font-size:9px;color:#94a3b8;font-weight:700">Clear ✕</div>
+        </div>
+        <div class="tbl-hdr" style="border-bottom-color:#0277bd44">
+          <div class="tbl-th" style="flex:0.6">Date ↕</div><div class="tbl-th" style="flex:0.6">Dept</div><div class="tbl-th">Contractor</div><div class="tbl-th">PO #</div><div class="tbl-th">Project</div><div class="tbl-th">Value (SAR) ↕</div><div class="tbl-th">Status</div>
+        </div>
+        <div class="exp-row">
+          <div class="exp-main"><div class="exp-toggle" onclick="this.closest('.exp-row').querySelector('.exp-detail').classList.toggle('open');this.textContent=this.textContent==='▶'?'▼':'▶'">▶</div><div class="tbl-td" style="flex:0.6;padding:0">2026-05-03</div><div class="tbl-td" style="flex:0.6;padding:0"><span class="badge" style="background:#e0e7ff;color:#3730a3">TISU</span></div><div class="tbl-td" style="padding:0;flex:1;font-weight:700;color:#1e293b">Mobiserve-KSA محدود…</div><div class="tbl-td" style="padding:0">11207</div><div class="tbl-td" style="padding:0">P-26001</div><div class="tbl-td" style="padding:0;font-weight:800;color:#166534">7,390</div><div class="tbl-td" style="padding:0"><span class="badge" style="background:#f3f4f6;color:#374151">Closed</span></div></div>
+          <div class="exp-detail"><div style="font-size:11px;color:#475569"><strong>Full Contractor:</strong> Mobiserve-KSA, محدود شركة الخدمات المحمولة | <strong>Invoiced:</strong> SAR 7,390 (100%) | <strong>Notes:</strong> Final invoice settled. PO closed on 2026-06-10.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- TAB 3: COMPONENT STANDARDS -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="section" id="components">
+
+  <div class="card">
+    <div class="card-title">Status Badge Colors — Universal Standard</div>
+    <div class="card-sub">All status badges across all tables use the same color code regardless of module. The badge meaning (not module color) drives the badge color.</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+      <div><div class="badge" style="background:#dcfce7;color:#166534">Paid / Active / Approved / Closed</div><div style="font-size:9px;color:#64748b;margin-top:3px">bg:#dcfce7 · text:#166534</div></div>
+      <div><div class="badge" style="background:#dbeafe;color:#1d4ed8">Issued / Open / In Progress</div><div style="font-size:9px;color:#64748b;margin-top:3px">bg:#dbeafe · text:#1d4ed8</div></div>
+      <div><div class="badge" style="background:#fef3c7;color:#92400e">Pending / Draft / In Review</div><div style="font-size:9px;color:#64748b;margin-top:3px">bg:#fef3c7 · text:#92400e</div></div>
+      <div><div class="badge" style="background:#fee2e2;color:#b91c1c">Overdue / Expired / Rejected</div><div style="font-size:9px;color:#64748b;margin-top:3px">bg:#fee2e2 · text:#b91c1c</div></div>
+      <div><div class="badge" style="background:#f3e8ff;color:#6d28d9">Partial / Part. Issued</div><div style="font-size:9px;color:#64748b;margin-top:3px">bg:#f3e8ff · text:#6d28d9</div></div>
+      <div><div class="badge" style="background:#f1f5f9;color:#475569">Cancelled / Inactive / Closed</div><div style="font-size:9px;color:#64748b;margin-top:3px">bg:#f1f5f9 · text:#475569</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Forms — Multi-Step Wizard Standard</div>
+    <div class="card-sub">All forms use the banner+wizard pattern. Forms with many fields are split into numbered steps. The step sidebar never scrolls — only the right content area scrolls.</div>
+    <div class="note">Forms like Invoices and Purchase Orders that have repeating line items use a special Line Item Table component inside one of the steps. This section is flexible in height — it grows as lines are added.</div>
+    <div style="display:flex;border:1.5px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-top:8px">
+      <div class="step-sidebar">
+        <div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Steps</div>
+        <div class="step-item"><div class="step-bar" style="background:#0277bd"></div><div class="step-content"><div class="step-num">Step 1 · Active</div><div class="step-name">Header Info</div></div></div>
+        <div class="step-item"><div class="step-bar" style="background:rgba(0,0,0,0.1)"></div><div class="step-content"><div class="step-num">Step 2</div><div class="step-name">Line Items</div></div></div>
+        <div class="step-item"><div class="step-bar" style="background:rgba(0,0,0,0.1)"></div><div class="step-content"><div class="step-num">Step 3</div><div class="step-name">Taxes & Totals</div></div></div>
+        <div class="step-item"><div class="step-bar" style="background:rgba(0,0,0,0.1)"></div><div class="step-content"><div class="step-num">Step 4</div><div class="step-name">Attachments</div></div></div>
+      </div>
+      <div style="flex:1;padding:16px;background:#fff">
+        <div style="font-size:12px;font-weight:900;color:#1e293b;margin-bottom:12px">Step 2 — Line Items <span style="font-size:10px;color:#64748b;font-weight:500">(flexible height, grows with rows)</span></div>
+        <table class="li-table">
+          <thead><tr><th style="width:40px">#</th><th>Description</th><th style="width:90px">Qty</th><th style="width:90px">Unit Price</th><th style="width:100px">Total (SAR)</th><th style="width:40px"></th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td><div class="form-input" style="height:26px">Telecommunications installation…</div></td><td><div class="form-input" style="height:26px">50</div></td><td><div class="form-input" style="height:26px">147.80</div></td><td style="font-weight:700;color:#166534">7,390.00</td><td style="color:#ef4444;font-size:14px;cursor:default">✕</td></tr>
+            <tr><td>2</td><td><div class="form-input" style="height:26px">Site survey and documentation…</div></td><td><div class="form-input" style="height:26px">1</div></td><td><div class="form-input" style="height:26px">500.00</div></td><td style="font-weight:700;color:#166534">500.00</td><td style="color:#ef4444;font-size:14px;cursor:default">✕</td></tr>
+          </tbody>
+        </table>
+        <div class="li-add-btn" style="background:#dbeafe;color:#1d4ed8;border:1.5px dashed #93c5fd">+ Add Line Item</div>
+      </div>
+    </div>
+    <div class="rule" style="margin-top:12px"><div class="rule-title">Rule: Line Item Tables</div><div class="rule-body">The line item section (Step 2) has no fixed height. It grows naturally as rows are added. The wizard container itself is min-height 60vh and scrolls internally so the step sidebar stays fixed. The "Add Line Item" button is always visible at the bottom of the rows. Each row has a delete (✕) button. The running total updates live.</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Collapsible Table Rows — Overflow Standard</div>
+    <div class="card-sub">When a table row has content that would overflow (long names, notes, multi-field details), the main row shows a truncated preview with an expand arrow. Clicking expands a detail row below it.</div>
+    <div class="rule"><div class="rule-title">When to Use Collapsible Rows</div><div class="rule-body">Use when: (a) a text field exceeds 30 characters, (b) a row has sub-items (invoice has line items), (c) a record has status history, (d) a record has attached files or notes. Never show all detail inline — it destroys table readability.</div></div>
+    <div class="tbl-prev" style="margin-top:10px">
+      <div class="tbl-hdr" style="border-bottom-color:#e65100aa">
+        <div class="tbl-th" style="width:30px"></div><div class="tbl-th">Employee</div><div class="tbl-th">Department</div><div class="tbl-th">Request</div><div class="tbl-th">Days</div><div class="tbl-th">Status</div>
+      </div>
+      <div class="exp-row">
+        <div class="exp-main" onclick="this.closest('.exp-row').querySelector('.exp-detail').classList.toggle('open')">
+          <div class="exp-toggle">▶</div>
+          <div class="tbl-td" style="padding:0;flex:1;font-weight:700;color:#1e293b">Mohammed Al-Rashid</div>
+          <div class="tbl-td" style="padding:0">TISU</div>
+          <div class="tbl-td" style="padding:0">Annual Leave — Family visit…</div>
+          <div class="tbl-td" style="padding:0">14</div>
+          <div class="tbl-td" style="padding:0"><span class="badge" style="background:#fef3c7;color:#92400e">Pending DH</span></div>
+        </div>
+        <div class="exp-detail open"><div style="font-size:11px;color:#475569;line-height:1.9"><strong>Full Purpose:</strong> Annual Leave — Family visit to Riyadh during Eid holidays | <strong>Period:</strong> 01 Apr 2026 – 14 Apr 2026 | <strong>Travel:</strong> Domestic | <strong>Submitted:</strong> 15 Mar 2026 | <strong>DH:</strong> Not yet reviewed</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- TAB 4: PAGE FIELD REFERENCE -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="section" id="pages">
+  <div class="note" style="margin-bottom:0">This section documents every list/table page: what the page is for, what each KPI card means, what each filter does, and what each table column means.</div>
+
+  <!-- LOI REGISTER -->
+  <div class="page-doc" style="margin-top:16px">
+    <div class="page-doc-hdr" style="background:linear-gradient(135deg,#5A32D4,#3b1f9e)">
+      <div class="page-doc-hdr-icon">📋</div>
+      <div><div class="page-doc-hdr-title">LOI Register — Letters of Intent</div><div class="page-doc-hdr-sub">Operations Module · Pre-project pipeline tracker</div></div>
+    </div>
+    <div class="page-doc-body">
+      <div style="font-size:12px;color:#475569;margin-bottom:12px;line-height:1.7"><strong>Purpose:</strong> Tracks all Letters of Intent received from clients before a formal project starts. An LOI is a document where a client declares their intention to hire Ratal for a project. It is not a signed contract yet. When the LOI is confirmed and a contract signed, it is "Converted" into a full Project in the Projects module.</div>
+      <div class="sub-section">KPI Cards</div>
+      <table class="field-table"><thead><tr><th>Card</th><th>Type</th><th>Meaning</th></tr></thead><tbody>
+        <tr><td>Total LOIs</td><td>Count</td><td>Total number of LOI records ever created, all statuses</td></tr>
+        <tr><td>Active Pipeline (SAR)</td><td>SAR Value</td><td>Sum of estimated value of all LOIs that are currently in active status (received but not yet converted or rejected). Sub-labels show count of received vs responded.</td></tr>
+        <tr><td>Converted</td><td>Count</td><td>Number of LOIs that have been converted into real Projects. This is your win-rate indicator.</td></tr>
+        <tr><td>Total Est. Value</td><td>SAR Value</td><td>Total estimated contract value across ALL LOIs regardless of status. Gives a picture of total business opportunity that came through the door.</td></tr>
+      </tbody></table>
+      <div class="sub-section">Filters</div>
+      <table class="field-table"><thead><tr><th>Filter</th><th>Type</th><th>What it filters</th></tr></thead><tbody>
+        <tr><td>Search LOI#, client, scope…</td><td>Text search</td><td>Searches across LOI number, client name, and scope/description fields simultaneously</td></tr>
+        <tr><td>All Units</td><td>Dropdown</td><td>Filter by business unit (TISU, NFSU, ACCSYS etc.) — which Ratal division received the LOI</td></tr>
+        <tr><td>All Statuses</td><td>Dropdown</td><td>Filter by status: Received, Responded, Won/Converted, Lost, Cancelled</td></tr>
+      </tbody></table>
+      <div class="sub-section">Table Columns</div>
+      <table class="field-table"><thead><tr><th>Column</th><th>Type</th><th>Meaning</th></tr></thead><tbody>
+        <tr><td>LOI #</td><td>Auto ID</td><td>System-generated unique reference number for this LOI (e.g. LOI-2026-001)</td></tr>
+        <tr><td>Client / Contractor</td><td>Text</td><td>The client company who sent the LOI to Ratal</td></tr>
+        <tr><td>Unit</td><td>Code</td><td>Which Ratal business unit this LOI is assigned to (e.g. TISU = Telecom Installation Services Unit)</td></tr>
+        <tr><td>Est. Value</td><td>SAR</td><td>The estimated contract value as stated in the LOI. May not be the final project value.</td></tr>
+        <tr><td>Deadline</td><td>Date</td><td>The deadline by which Ratal must respond to the LOI or submit a proposal</td></tr>
+        <tr><td>Status</td><td>Badge</td><td>Current stage: Received (new) → Responded → Won (converted) or Lost/Cancelled</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+
+  <!-- PURCHASE ORDERS -->
+  <div class="page-doc">
+    <div class="page-doc-hdr" style="background:linear-gradient(135deg,#0277bd,#01579b)">
+      <div class="page-doc-hdr-icon">🧾</div>
+      <div><div class="page-doc-hdr-title">Purchase Orders</div><div class="page-doc-hdr-sub">Finance Module · Incoming (Receivable) & Outgoing (Payable)</div></div>
+    </div>
+    <div class="page-doc-body">
+      <div style="font-size:12px;color:#475569;margin-bottom:12px;line-height:1.7"><strong>Purpose:</strong> Manages all purchase orders in both directions. <strong>Incoming POs</strong> are POs that Ratal receives FROM clients — meaning clients are ordering Ratal's services and will pay Ratal (Receivable). <strong>Outgoing POs</strong> are POs that Ratal issues TO suppliers/subcontractors — meaning Ratal is buying from them and will pay them (Payable).</div>
+      <div class="sub-section">KPI Cards (apply to active tab — Incoming or Outgoing)</div>
+      <table class="field-table"><thead><tr><th>Card</th><th>Type</th><th>Meaning</th></tr></thead><tbody>
+        <tr><td>Total Value</td><td>SAR</td><td>Sum of all PO values currently shown (based on active filters). If you filter to Incoming + Active, this shows your active receivables pipeline value.</td></tr>
+        <tr><td>POs in View</td><td>Count</td><td>How many PO records match the current filter. Changes when you apply filters.</td></tr>
+        <tr><td>With Change Orders</td><td>Count</td><td>How many POs have had their original value modified by a Change Order (CO). COs adjust scope or price after PO is signed.</td></tr>
+        <tr><td>Avg PO Value</td><td>SAR</td><td>Average value of POs currently in view (Total Value ÷ POs in View). Helps gauge typical contract size.</td></tr>
+      </tbody></table>
+      <div class="sub-section">Filters</div>
+      <table class="field-table"><thead><tr><th>Filter</th><th>Type</th><th>What it filters</th></tr></thead><tbody>
+        <tr><td>Tab: Incoming / Outgoing</td><td>Tab switch</td><td>Incoming = POs received from clients (receivable). Outgoing = POs issued to suppliers (payable). Switches the entire table view.</td></tr>
+        <tr><td>Status chips: All / Active / Invoiced / Closed / Cancelled</td><td>Status filter</td><td>Active = PO in progress; Invoiced = invoice submitted against PO; Closed = fully settled; Cancelled = voided</td></tr>
+        <tr><td>Search contractor, PO#…</td><td>Text search</td><td>Searches contractor name, PO number, and project code</td></tr>
+        <tr><td>All Departments</td><td>Dropdown</td><td>Filter by Ratal internal department responsible for this PO</td></tr>
+        <tr><td>From / To dates</td><td>Date range</td><td>Filter by PO date range</td></tr>
+      </tbody></table>
+      <div class="sub-section">Table Columns</div>
+      <table class="field-table"><thead><tr><th>Column</th><th>Type</th><th>Meaning</th></tr></thead><tbody>
+        <tr><td>DATE</td><td>Date</td><td>Date the PO was signed or issued</td></tr>
+        <tr><td>DEPT</td><td>Badge</td><td>Ratal internal department responsible (TISU, NFSU, FINANCE etc.)</td></tr>
+        <tr><td>CONTRACTOR</td><td>Text</td><td>For Incoming: the client company. For Outgoing: the supplier/subcontractor being paid.</td></tr>
+        <tr><td>CONTRACTOR PO #</td><td>Text</td><td>The PO number as it appears in the contractor's system (not Ratal's internal number)</td></tr>
+        <tr><td>PROJECT</td><td>Link</td><td>Ratal project code this PO is linked to (e.g. P-26001). Clickable to go to that project.</td></tr>
+        <tr><td>VALUE (SAR)</td><td>SAR</td><td>Original PO value. If changed orders exist, the original + change order total is shown separately.</td></tr>
+        <tr><td>INVOICED</td><td>SAR + %</td><td>How much has been invoiced against this PO so far. Progress bar shows % invoiced vs total PO value.</td></tr>
+        <tr><td>STATUS</td><td>Badge</td><td>Current PO lifecycle status</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+
+  <!-- MONEY REQUESTS -->
+  <div class="page-doc">
+    <div class="page-doc-hdr" style="background:linear-gradient(135deg,#0277bd,#006064)">
+      <div class="page-doc-hdr-icon">💰</div>
+      <div><div class="page-doc-hdr-title">Money Requests</div><div class="page-doc-hdr-sub">Finance Module · Internal fund request workflow</div></div>
+    </div>
+    <div class="page-doc-body">
+      <div style="font-size:12px;color:#475569;margin-bottom:12px;line-height:1.7"><strong>Purpose:</strong> Manages the internal process for staff requesting cash/funds to cover project or operational expenses in the field. A staff member submits a Money Request (MR) stating how much they need and why. It goes through approval stages: Department Head → Accounts → Finance → funds are issued and the staff member acknowledges receipt. This replaces informal cash requests and creates a full audit trail.</div>
+      <div class="sub-section">KPI Cards</div>
+      <table class="field-table"><thead><tr><th>Card</th><th>Type</th><th>Meaning</th></tr></thead><tbody>
+        <tr><td>Total Open (SAR)</td><td>SAR</td><td>Total value of all money requests that are still open (not yet settled). This is real cash the company has committed or is being asked to commit.</td></tr>
+        <tr><td>Pending DH</td><td>Count</td><td>Requests waiting for Department Head approval. These are the newest and have not started the approval chain yet.</td></tr>
+        <tr><td>Accts / Finance</td><td>Count</td><td>Requests that have passed DH approval and are now waiting for the Accounts or Finance team to process and issue the funds.</td></tr>
+        <tr><td>Funds in Field</td><td>Count</td><td>Requests where cash has been issued and is currently held by the requestor in the field. These need to be settled (receipts submitted) to close.</td></tr>
+      </tbody></table>
+      <div class="sub-section">Status Stages (in order)</div>
+      <table class="field-table"><thead><tr><th>Status</th><th>Meaning</th></tr></thead><tbody>
+        <tr><td>Pending</td><td>Just submitted. Waiting for DH to review.</td></tr>
+        <tr><td>DH Approved</td><td>Department Head has approved. Now waiting for Accounts.</td></tr>
+        <tr><td>Accts Pending</td><td>Accounts team is reviewing the request before funds are issued.</td></tr>
+        <tr><td>Finance Pending</td><td>Finance team review (for larger amounts requiring CFO/Finance Manager sign-off).</td></tr>
+        <tr><td>Funds Sent</td><td>Money has been sent (bank transfer or prepared for cash issue).</td></tr>
+        <tr><td>Issued</td><td>Cash/transfer received and acknowledged by requestor.</td></tr>
+        <tr><td>Part. Issued</td><td>Only part of the requested amount was issued (partial approval).</td></tr>
+        <tr><td>DH Acknowledged</td><td>Department Head has seen and acknowledged the issuance.</td></tr>
+        <tr><td>Distributing</td><td>Funds are being distributed to multiple field workers (splitting one MR).</td></tr>
+        <tr><td>Sent Back by Accts</td><td>Accounts returned the request — needs correction or more info from submitter.</td></tr>
+      </tbody></table>
+      <div class="sub-section">Table Columns</div>
+      <table class="field-table"><thead><tr><th>Column</th><th>Type</th><th>Meaning</th></tr></thead><tbody>
+        <tr><td>MR #</td><td>Auto ID</td><td>Unique reference number (e.g. MR-2026-0023). Use this to track the request in all communications.</td></tr>
+        <tr><td>DATE</td><td>Date</td><td>Date the request was submitted</td></tr>
+        <tr><td>DEPT</td><td>Badge</td><td>The department the requestor belongs to</td></tr>
+        <tr><td>PURPOSE</td><td>Text</td><td>Short description of what the money is for (e.g. "PETTY_CASH_EXP — ANB-77"). Collapsible for full details.</td></tr>
+        <tr><td>REQUESTED</td><td>SAR</td><td>The amount of money requested</td></tr>
+        <tr><td>STAGE</td><td>Badge</td><td>Current stage in the approval workflow (see status stages above)</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+
+  <!-- FLEET/VEHICLES -->
+  <div class="page-doc">
+    <div class="page-doc-hdr" style="background:linear-gradient(135deg,#5A32D4,#4527a0)">
+      <div class="page-doc-hdr-icon">🚗</div>
+      <div><div class="page-doc-hdr-title">Fleet / Vehicles</div><div class="page-doc-hdr-sub">Operations Module · Vehicle register, assignments, maintenance</div></div>
+    </div>
+    <div class="page-doc-body">
+      <div style="font-size:12px;color:#475569;margin-bottom:12px;line-height:1.7"><strong>Purpose:</strong> Manages Ratal's entire vehicle fleet — owned and rented. Tracks vehicle documents (registration, insurance, Istimara), driver assignments, and maintenance logs. The critical function is the expiry tracker — it alerts you when any vehicle document is about to expire, preventing fines from driving with expired documents.</div>
+      <div class="sub-section">KPI Cards</div>
+      <table class="field-table"><thead><tr><th>Card</th><th>Type</th><th>Meaning</th></tr></thead><tbody>
+        <tr><td>Total Fleet</td><td>Count</td><td>All vehicles in the system (own + rentals)</td></tr>
+        <tr><td>Own Fleet</td><td>Count</td><td>Vehicles owned by Ratal (not rented)</td></tr>
+        <tr><td>Rentals</td><td>Count</td><td>Rented vehicles currently active in the fleet</td></tr>
+        <tr><td>Active</td><td>Count</td><td>Vehicles currently active and in use (not decommissioned or returned)</td></tr>
+        <tr><td>Expiring ≤30d</td><td>Count (⚠)</td><td>Vehicles where any document (Istimara, insurance, etc.) expires within 30 days. ACTION REQUIRED — renew before expiry.</td></tr>
+        <tr><td>Expired Docs</td><td>Count (🔴)</td><td>Vehicles with at least one document already expired. URGENT — vehicle should not be driven until renewed.</td></tr>
+      </tbody></table>
+      <div class="sub-section">Table Tabs</div>
+      <table class="field-table"><thead><tr><th>Tab</th><th>What it shows</th></tr></thead><tbody>
+        <tr><td>Registered Vehicles</td><td>Main vehicle list with document expiry status</td></tr>
+        <tr><td>Register Vehicle</td><td>Opens the Add New Vehicle form inline</td></tr>
+        <tr><td>Assignments</td><td>Which vehicle is assigned to which driver/project</td></tr>
+        <tr><td>Maintenance Log</td><td>History of services, repairs, and scheduled maintenance for each vehicle</td></tr>
+      </tbody></table>
+      <div class="sub-section">Table Columns (Registered Vehicles)</div>
+      <table class="field-table"><thead><tr><th>Column</th><th>Type</th><th>Meaning</th></tr></thead><tbody>
+        <tr><td>Plate No.</td><td>Text</td><td>Saudi license plate number (e.g. ARR 3029)</td></tr>
+        <tr><td>Type / Make</td><td>Text</td><td>Vehicle type (SUV, Pickup, Van) and manufacturer/model (Volkswagen Touareg)</td></tr>
+        <tr><td>Year</td><td>Number</td><td>Manufacturing year of the vehicle</td></tr>
+        <tr><td>Assigned To</td><td>Text/Badge</td><td>Driver name or project the vehicle is currently assigned to. "Unassigned" means available.</td></tr>
+        <tr><td>Worst Expiry</td><td>Date+Badge</td><td>The soonest expiry date among ALL documents for this vehicle. Red = already expired. Yellow = expiring ≤30d.</td></tr>
+        <tr><td>Status</td><td>Badge</td><td>ACTIVE (in use) or INACTIVE (decommissioned/returned)</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+
+  <!-- FIELD PAYMENT NOTIFICATIONS -->
+  <div class="page-doc">
+    <div class="page-doc-hdr" style="background:linear-gradient(135deg,#0277bd,#0288d1)">
+      <div class="page-doc-hdr-icon">💳</div>
+      <div><div class="page-doc-hdr-title">Field Payment Notifications</div><div class="page-doc-hdr-sub">Finance Module · ATM card distribution tracker</div></div>
+    </div>
+    <div class="page-doc-body">
+      <div style="font-size:12px;color:#475569;margin-bottom:12px;line-height:1.7"><strong>Purpose:</strong> Tracks the distribution of cash/funds to field workers using ATM cards. When a Money Request is approved, the funds are loaded onto assigned ATM cards and distributed to workers. This module records those sessions, monitors that the right amounts were given to the right workers, and flags any over-distribution (giving more than authorized) or proxy distributions (someone receiving funds on behalf of another person).</div>
+      <div class="sub-section">KPI Cards</div>
+      <table class="field-table"><thead><tr><th>Card</th><th>Type</th><th>Meaning</th></tr></thead><tbody>
+        <tr><td>Sessions</td><td>Count</td><td>Number of distribution sessions in the selected month. One session = one batch of fund distributions (could cover multiple workers).</td></tr>
+        <tr><td>Pending Review</td><td>Count (⚠)</td><td>Sessions that need a Finance/Accounts officer to review and confirm the distributions were correct</td></tr>
+        <tr><td>Proxy Alerts</td><td>Count (⚠)</td><td>Cases where a person received funds on behalf of someone else. These need verification that the proxy was authorized.</td></tr>
+        <tr><td>Over-Dist</td><td>Count (🔴)</td><td>Cases where a worker was given more funds than their approved Money Request authorized. Requires immediate investigation.</td></tr>
+      </tbody></table>
+      <div class="sub-section">Tabs</div>
+      <table class="field-table"><thead><tr><th>Tab</th><th>What it shows</th></tr></thead><tbody>
+        <tr><td>Sessions</td><td>List of all distribution sessions with date, amount, and status</td></tr>
+        <tr><td>Individual Ledger</td><td>Per-worker view: how much each person received, from which MR, on which date</td></tr>
+        <tr><td>Card Balance</td><td>Current balance on each ATM card. Used to check if any card has unspent funds that should be returned.</td></tr>
+      </tbody></table>
+      <div class="sub-section">Filters</div>
+      <table class="field-table"><thead><tr><th>Filter</th><th>What it filters</th></tr></thead><tbody>
+        <tr><td>Month (date picker)</td><td>Show only sessions for this calendar month</td></tr>
+        <tr><td>All Statuses</td><td>Filter by session status: Pending Review, Reviewed, Flagged</td></tr>
+        <tr><td>All Cards</td><td>Filter to show distributions for one specific ATM card number</td></tr>
+        <tr><td>All Depts</td><td>Filter by department of the workers who received funds</td></tr>
+        <tr><td>Search submitter / MR #</td><td>Search by person who submitted the distribution or by Money Request number</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+
+  <!-- PROJECTS -->
+  <div class="page-doc">
+    <div class="page-doc-hdr" style="background:linear-gradient(135deg,#5A32D4,#4a148c)">
+      <div class="page-doc-hdr-icon">🏗️</div>
+      <div><div class="page-doc-hdr-title">Projects</div><div class="page-doc-hdr-sub">Operations Module · Project register and portfolio tracker</div></div>
+    </div>
+    <div class="page-doc-body">
+      <div style="font-size:12px;color:#475569;margin-bottom:12px;line-height:1.7"><strong>Purpose:</strong> The central register of all Ratal projects. Every project has a unique code (P-YYYY-NNN) and is linked to a client, department, POs, invoices, expenses, and employees. The Projects page gives a portfolio-level view of all active and carry-forward work, with financial summaries showing portfolio value and remaining budget.</div>
+      <div class="sub-section">KPI Cards</div>
+      <table class="field-table"><thead><tr><th>Card</th><th>Type</th><th>Meaning</th></tr></thead><tbody>
+        <tr><td>Active</td><td>Count</td><td>Projects currently in progress (not closed or cancelled)</td></tr>
+        <tr><td>Carry-fwd</td><td>Count</td><td>Projects that were started in a previous year but are still ongoing</td></tr>
+        <tr><td>Portfolio (SAR)</td><td>SAR</td><td>Total contract value of all active projects combined. This is Ratal's total revenue under active contracts.</td></tr>
+        <tr><td>Remaining (SAR)</td><td>SAR</td><td>Portfolio value minus what has already been invoiced. This is the remaining billable work left in current contracts.</td></tr>
+      </tbody></table>
+      <div class="sub-section">Filters</div>
+      <table class="field-table"><thead><tr><th>Filter</th><th>What it filters</th></tr></thead><tbody>
+        <tr><td>All Status</td><td>Open, Closed, On Hold, Cancelled</td></tr>
+        <tr><td>All Projects / New / Carry-forward</td><td>Toggle between all projects, only new ones this year, only carry-forward</td></tr>
+        <tr><td>All Departments</td><td>Filter by Ratal department responsible for the project</td></tr>
+        <tr><td>Rollover</td><td>Action button — moves selected projects to the new financial year as carry-forward</td></tr>
+      </tbody></table>
+      <div class="sub-section">Table Columns</div>
+      <table class="field-table"><thead><tr><th>Column</th><th>Type</th><th>Meaning</th></tr></thead><tbody>
+        <tr><td>PROJ #</td><td>Code</td><td>Unique project code. Format: P-YYNNN (e.g. P-26005 = project 5 of year 2026). Red = active, gray = closed.</td></tr>
+        <tr><td>PROJECT NAME</td><td>Text</td><td>Project name and sub-label showing project type (Installation, Maintenance, Supply etc.)</td></tr>
+        <tr><td>CONTRACTOR</td><td>Text</td><td>The client/contractor who awarded this project to Ratal</td></tr>
+        <tr><td>DEPT</td><td>Badge</td><td>Ratal's internal department responsible for executing this project</td></tr>
+        <tr><td>STATUS</td><td>Badge</td><td>Open / On Hold / Closed / Cancelled</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+
+  <!-- PARTY LIST -->
+  <div class="page-doc">
+    <div class="page-doc-hdr" style="background:linear-gradient(135deg,#00695c,#004d40)">
+      <div class="page-doc-hdr-icon">📒</div>
+      <div><div class="page-doc-hdr-title">Party List</div><div class="page-doc-hdr-sub">Masters Module · All business parties (clients, vendors, suppliers)</div></div>
+    </div>
+    <div class="page-doc-body">
+      <div style="font-size:12px;color:#475569;margin-bottom:12px;line-height:1.7"><strong>Purpose:</strong> The master database of every external organization Ratal does business with. Each party is assigned a unique code (CONT-001, SUP-001, etc.) and type. This master record is referenced by POs, Invoices, Projects, and Accounts entries. You must create a party here before you can reference them anywhere else in the system.</div>
+      <div class="sub-section">Party Types</div>
+      <table class="field-table"><thead><tr><th>Type</th><th>Meaning</th></tr></thead><tbody>
+        <tr><td>Contractor</td><td>Main clients who award Ratal projects — the companies Ratal bills. Code prefix: CONT-</td></tr>
+        <tr><td>Vendor</td><td>Companies Ratal buys equipment or goods from. Code prefix: VEN-</td></tr>
+        <tr><td>Supplier</td><td>Companies that supply materials or consumables. Code prefix: SUP-</td></tr>
+        <tr><td>Sub-Con</td><td>Sub-contractors hired by Ratal to do part of a project. Code prefix: SUB-CON-</td></tr>
+        <tr><td>Local</td><td>Local service providers (transport, accommodation etc.). Code prefix: LOC-</td></tr>
+        <tr><td>Rentals</td><td>Companies Ratal rents vehicles or equipment from. Code prefix: REN-</td></tr>
+      </tbody></table>
+      <div class="sub-section">Table Columns</div>
+      <table class="field-table"><thead><tr><th>Column</th><th>Type</th><th>Meaning</th></tr></thead><tbody>
+        <tr><td>CODE</td><td>Auto ID</td><td>System-generated unique party code. Color-coded by type (blue=Contractor, orange=Sub-Con etc.)</td></tr>
+        <tr><td>PARTY NAME</td><td>Text</td><td>Official company name (may include Arabic name)</td></tr>
+        <tr><td>TYPE</td><td>Badge</td><td>Party classification (Contractor, Vendor, Supplier etc.)</td></tr>
+        <tr><td>VAT</td><td>Badge</td><td>Whether this party is VAT-registered. ✓ VAT = registered (15% VAT applies to their invoices). ? = unknown / not confirmed.</td></tr>
+        <tr><td>STATUS</td><td>Badge</td><td>ACTIVE (can be used in transactions) or INACTIVE (archived, cannot be used)</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- TAB 5: FORM FIELD REFERENCE -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="section" id="forms">
+
+  <div class="page-doc">
+    <div class="page-doc-hdr" style="background:linear-gradient(135deg,#0277bd,#01579b)">
+      <div class="page-doc-hdr-icon">🧾</div>
+      <div><div class="page-doc-hdr-title">New Invoice Form</div><div class="page-doc-hdr-sub">Finance Module · 4 steps · Creates a sales invoice from Ratal to a client</div></div>
+    </div>
+    <div class="page-doc-body">
+      <div style="font-size:12px;color:#475569;margin-bottom:12px;line-height:1.7"><strong>Purpose:</strong> Creates an official invoice that Ratal sends to a client to request payment for services rendered. The invoice must be linked to a Project and an Incoming PO. The line items describe exactly what work was done and how much it costs. After creation, the invoice goes through an approval workflow before being sent to the client.</div>
+      <div class="sub-section">Step 1 — Invoice Header</div>
+      <table class="field-table"><thead><tr><th>Field</th><th>Required?</th><th>Explanation</th></tr></thead><tbody>
+        <tr><td>Entity</td><td>Required</td><td>Which Ratal legal entity is issuing this invoice (ACCSYS, RAT, GWT). This determines the letterhead, bank account, and VAT number on the invoice.</td></tr>
+        <tr><td>Invoice Date</td><td>Required</td><td>The official date of the invoice. Usually today. This date is what clients use for payment terms (e.g. Net 30 = pay within 30 days of this date).</td></tr>
+        <tr><td>Project</td><td>Required</td><td>Which project this invoice is billing for. Pulls the client name automatically.</td></tr>
+        <tr><td>Purchase Order</td><td>Required</td><td>The client's PO number that authorizes this invoice. Clients will reject invoices not matching their PO.</td></tr>
+        <tr><td>Invoice Reference</td><td>Auto</td><td>System-generated unique invoice number (e.g. INV-2026-0247). Cannot be manually changed.</td></tr>
+        <tr><td>Payment Terms</td><td>Required</td><td>How many days the client has to pay (Net 30, Net 60, etc.). Affects the due date calculation.</td></tr>
+        <tr><td>Currency</td><td>Required</td><td>Invoice currency (default SAR). Some international clients use USD.</td></tr>
+        <tr><td>Notes</td><td>Optional</td><td>Any special notes to print on the invoice (e.g. "Payment via bank transfer only")</td></tr>
+      </tbody></table>
+      <div class="sub-section">Step 2 — Line Items (flexible, grows as you add rows)</div>
+      <table class="field-table"><thead><tr><th>Field</th><th>Required?</th><th>Explanation</th></tr></thead><tbody>
+        <tr><td>Description</td><td>Required</td><td>What service or work was performed. Be specific — clients will review this against their PO scope.</td></tr>
+        <tr><td>Quantity</td><td>Required</td><td>Number of units (could be days, hours, pieces, lump sum=1)</td></tr>
+        <tr><td>Unit</td><td>Required</td><td>Unit of measure: Day, Hour, Each, Lump Sum, Month, Meter, etc.</td></tr>
+        <tr><td>Unit Price (SAR)</td><td>Required</td><td>Price per one unit</td></tr>
+        <tr><td>Total</td><td>Auto-calc</td><td>Quantity × Unit Price. Calculated automatically — cannot be typed directly.</td></tr>
+      </tbody></table>
+      <div class="sub-section">Step 3 — Taxes & Totals</div>
+      <table class="field-table"><thead><tr><th>Field</th><th>Required?</th><th>Explanation</th></tr></thead><tbody>
+        <tr><td>Subtotal</td><td>Auto-calc</td><td>Sum of all line item totals before tax</td></tr>
+        <tr><td>VAT (15%)</td><td>Auto-calc</td><td>15% VAT applied to the subtotal (mandatory in Saudi Arabia for VAT-registered entities)</td></tr>
+        <tr><td>Discount</td><td>Optional</td><td>Any discount agreed with the client. Enter as SAR amount or percentage.</td></tr>
+        <tr><td>Grand Total</td><td>Auto-calc</td><td>Subtotal + VAT − Discount. This is the amount the client must pay.</td></tr>
+        <tr><td>Retention (%)</td><td>Optional</td><td>Some contracts hold back a % of payment (retention) until project completion. If applicable, enter % here.</td></tr>
+        <tr><td>Net Payable</td><td>Auto-calc</td><td>Grand Total − Retention amount. The actual amount expected to be paid now.</td></tr>
+      </tbody></table>
+      <div class="sub-section">Step 4 — Attachments</div>
+      <table class="field-table"><thead><tr><th>Field</th><th>Required?</th><th>Explanation</th></tr></thead><tbody>
+        <tr><td>Supporting Documents</td><td>Optional</td><td>Attach delivery notes, completion certificates, timesheets, or any documents the client requires with the invoice. All files go to Google Drive (not Supabase).</td></tr>
+        <tr><td>Internal Notes</td><td>Optional</td><td>Internal notes for Accounts team only — not printed on the invoice. E.g. "Client requested invoice PDF by email, not portal."</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+
+  <!-- OUTGOING PO FORM -->
+  <div class="page-doc">
+    <div class="page-doc-hdr" style="background:linear-gradient(135deg,#0277bd,#006064)">
+      <div class="page-doc-hdr-icon">📤</div>
+      <div><div class="page-doc-hdr-title">New Outgoing Purchase Order Form</div><div class="page-doc-hdr-sub">Finance Module · 3 steps · Creates a PO from Ratal to a supplier/subcontractor</div></div>
+    </div>
+    <div class="page-doc-body">
+      <div style="font-size:12px;color:#475569;margin-bottom:12px;line-height:1.7"><strong>Purpose:</strong> An Outgoing PO is Ratal's official purchase order issued to a supplier or subcontractor. It authorizes them to provide goods or services and commits Ratal to pay the stated amount. All supplier payments must be linked to an approved Outgoing PO.</div>
+      <div class="sub-section">Step 1 — PO Header</div>
+      <table class="field-table"><thead><tr><th>Field</th><th>Required?</th><th>Explanation</th></tr></thead><tbody>
+        <tr><td>Entity</td><td>Required</td><td>Which Ratal entity is issuing this PO (ACCSYS, RAT, GWT)</td></tr>
+        <tr><td>Supplier / Sub-Con</td><td>Required</td><td>Select from Party List. The company Ratal is buying from or sub-contracting to.</td></tr>
+        <tr><td>PO Date</td><td>Required</td><td>Date the PO is officially issued</td></tr>
+        <tr><td>Project</td><td>Optional</td><td>If this PO is for a specific project, link it. Non-project POs (e.g. office supplies) can be left unlinked.</td></tr>
+        <tr><td>Department</td><td>Required</td><td>Ratal department authorizing and responsible for this PO</td></tr>
+        <tr><td>Delivery Date</td><td>Optional</td><td>Expected date for goods delivery or service completion</td></tr>
+        <tr><td>Payment Terms</td><td>Required</td><td>How many days Ratal has to pay after receiving goods/invoice</td></tr>
+      </tbody></table>
+      <div class="sub-section">Step 2 — Line Items (flexible)</div>
+      <table class="field-table"><thead><tr><th>Field</th><th>Required?</th><th>Explanation</th></tr></thead><tbody>
+        <tr><td>Item / Service</td><td>Required</td><td>Description of what is being purchased</td></tr>
+        <tr><td>Quantity</td><td>Required</td><td>How many units</td></tr>
+        <tr><td>Unit</td><td>Required</td><td>Unit of measure</td></tr>
+        <tr><td>Unit Price</td><td>Required</td><td>Agreed price per unit</td></tr>
+        <tr><td>Total</td><td>Auto-calc</td><td>Auto-calculated from Qty × Price</td></tr>
+      </tbody></table>
+      <div class="sub-section">Step 3 — Review & Submit</div>
+      <table class="field-table"><thead><tr><th>Field</th><th>Required?</th><th>Explanation</th></tr></thead><tbody>
+        <tr><td>Subtotal / VAT / Total</td><td>Auto-calc</td><td>Auto-calculated totals including 15% VAT if supplier is VAT-registered</td></tr>
+        <tr><td>Authorization</td><td>Required</td><td>DH must approve POs above SAR 5,000. Finance Manager approval for above SAR 50,000.</td></tr>
+        <tr><td>Attachments</td><td>Optional</td><td>Supplier quotation, scope document, or any approval documents. Stored in Google Drive.</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+
+  <!-- MONEY REQUEST FORM -->
+  <div class="page-doc">
+    <div class="page-doc-hdr" style="background:linear-gradient(135deg,#0277bd,#0288d1)">
+      <div class="page-doc-hdr-icon">💵</div>
+      <div><div class="page-doc-hdr-title">New Money Request Form</div><div class="page-doc-hdr-sub">Finance Module · 2 steps · Request cash funds for field operations</div></div>
+    </div>
+    <div class="page-doc-body">
+      <div class="sub-section">Step 1 — Request Details</div>
+      <table class="field-table"><thead><tr><th>Field</th><th>Required?</th><th>Explanation</th></tr></thead><tbody>
+        <tr><td>Department</td><td>Required</td><td>Your department. DH of this department will be the first approver.</td></tr>
+        <tr><td>Project (optional)</td><td>Optional</td><td>If this money is for a specific project, link it for expense tracking. Leave blank for general expenses.</td></tr>
+        <tr><td>Purpose</td><td>Required</td><td>Clear explanation of what the money will be used for. Be specific — vague requests get rejected. E.g. "Petty cash for site workers ANB-77 for week of 26 Sep 2026".</td></tr>
+        <tr><td>Amount Requested</td><td>Required</td><td>The SAR amount needed. Round up slightly to cover unexpected small costs.</td></tr>
+        <tr><td>Required By Date</td><td>Required</td><td>When you need the money by. Allows Accounts to prioritize urgent requests.</td></tr>
+        <tr><td>Expense Type</td><td>Required</td><td>Category: Petty Cash, Travel, Materials, Subcontractor, Equipment, Other</td></tr>
+        <tr><td>Bank Account / Card</td><td>Optional</td><td>If you have a preferred ATM card to receive funds, specify here</td></tr>
+      </tbody></table>
+      <div class="sub-section">Step 2 — Attachments & Confirmation</div>
+      <table class="field-table"><thead><tr><th>Field</th><th>Required?</th><th>Explanation</th></tr></thead><tbody>
+        <tr><td>Supporting Docs</td><td>Optional</td><td>Attach any quotations, scope documents, or previous expense receipts that justify the request</td></tr>
+        <tr><td>Acknowledgement</td><td>Required</td><td>Submitter must tick: "I confirm this request is for legitimate business purposes and I will provide receipts within 7 days of receiving funds."</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+
+  <!-- NEW EMPLOYEE FORM -->
+  <div class="page-doc">
+    <div class="page-doc-hdr" style="background:linear-gradient(135deg,#e65100,#bf360c)">
+      <div class="page-doc-hdr-icon">👤</div>
+      <div><div class="page-doc-hdr-title">New Employee Form</div><div class="page-doc-hdr-sub">Human Resources Module · 5 steps · Full employee onboarding record</div></div>
+    </div>
+    <div class="page-doc-body">
+      <div class="sub-section">Step 1 — Personal Info</div>
+      <table class="field-table"><thead><tr><th>Field</th><th>Required?</th><th>Explanation</th></tr></thead><tbody>
+        <tr><td>Full Name (English)</td><td>Required</td><td>Official name as on Iqama/Passport. Used on all official documents.</td></tr>
+        <tr><td>Full Name (Arabic)</td><td>Optional</td><td>Arabic name for government documents and contracts</td></tr>
+        <tr><td>Nationality</td><td>Required</td><td>Determines GOSI contribution rate (Saudi vs non-Saudi) and visa requirements</td></tr>
+        <tr><td>Date of Birth</td><td>Required</td><td>Used for age verification and benefits calculations</td></tr>
+        <tr><td>Gender</td><td>Required</td><td>Required for HR and government reporting</td></tr>
+        <tr><td>Iqama / National ID</td><td>Required</td><td>Iqama number for expats, National ID for Saudis. Must be unique — no duplicates allowed.</td></tr>
+        <tr><td>Iqama Expiry Date</td><td>Required</td><td>The system will alert 60 days before expiry. Expired Iqama = employee cannot legally work.</td></tr>
+        <tr><td>Passport Number</td><td>Optional</td><td>Required for travel booking and visa applications</td></tr>
+        <tr><td>Passport Expiry</td><td>Optional</td><td>Alert triggered before expiry for timely renewal</td></tr>
+        <tr><td>Phone Number</td><td>Required</td><td>Mobile number for emergency contact and WhatsApp communications</td></tr>
+        <tr><td>Email</td><td>Optional</td><td>Work email if assigned</td></tr>
+      </tbody></table>
+      <div class="sub-section">Step 2 — Employment Details</div>
+      <table class="field-table"><thead><tr><th>Field</th><th>Required?</th><th>Explanation</th></tr></thead><tbody>
+        <tr><td>Employee ID</td><td>Auto</td><td>System-generated unique ID (e.g. EMP-0214)</td></tr>
+        <tr><td>Department</td><td>Required</td><td>Which Ratal department this employee belongs to</td></tr>
+        <tr><td>Job Title</td><td>Required</td><td>Official job title as per employment contract</td></tr>
+        <tr><td>Category</td><td>Required</td><td>Staff (salaried office), Labour (daily/site worker), Management (manager/director). Affects payroll calculation method.</td></tr>
+        <tr><td>Join Date</td><td>Required</td><td>Official employment start date. Used to calculate service years, annual leave entitlement, and end-of-service benefits.</td></tr>
+        <tr><td>Contract Type</td><td>Required</td><td>Fixed Term (defined end date) or Open Ended (permanent). Affects end-of-service calculation.</td></tr>
+        <tr><td>Contract End Date</td><td>Conditional</td><td>Required if Fixed Term contract. Alert triggered 30 days before expiry.</td></tr>
+        <tr><td>Entity</td><td>Required</td><td>Which Ratal legal entity employs this person (ACCSYS, RAT, GWT)</td></tr>
+        <tr><td>Work Location</td><td>Required</td><td>Primary work location (Riyadh, Jeddah, site name etc.)</td></tr>
+      </tbody></table>
+      <div class="sub-section">Step 3 — Salary & Benefits</div>
+      <table class="field-table"><thead><tr><th>Field</th><th>Required?</th><th>Explanation</th></tr></thead><tbody>
+        <tr><td>Basic Salary</td><td>Required</td><td>Monthly basic salary in SAR. This is the base for GOSI, overtime, annual leave, and EOS calculations.</td></tr>
+        <tr><td>Housing Allowance</td><td>Optional</td><td>Monthly housing allowance (HRA). Usually 25% of basic for Staff category.</td></tr>
+        <tr><td>Transport Allowance</td><td>Optional</td><td>Monthly transport allowance</td></tr>
+        <tr><td>Food Allowance</td><td>Optional</td><td>Monthly food allowance (common for Labour category)</td></tr>
+        <tr><td>Other Allowances</td><td>Optional</td><td>Any other fixed monthly allowances</td></tr>
+        <tr><td>Payment Mode</td><td>Required</td><td>Bank Transfer (WPS/MUDAD compliant) or Cash. Bank transfer required for WPS compliance.</td></tr>
+        <tr><td>IBAN</td><td>Conditional</td><td>Required if Payment Mode = Bank Transfer. Saudi IBAN format (SA + 22 digits)</td></tr>
+        <tr><td>GOSI Registration</td><td>Required</td><td>Is this employee registered with GOSI (General Organization for Social Insurance)? Mandatory for Saudis and eligible expats.</td></tr>
+        <tr><td>GOSI Number</td><td>Conditional</td><td>Required if GOSI = Yes. Used for monthly GOSI submission.</td></tr>
+      </tbody></table>
+      <div class="sub-section">Step 4 — Documents</div>
+      <table class="field-table"><thead><tr><th>Field</th><th>Required?</th><th>Explanation</th></tr></thead><tbody>
+        <tr><td>Profile Photo</td><td>Optional</td><td>Employee photo for ID badge and profile. Stored in Google Drive.</td></tr>
+        <tr><td>Iqama / ID Copy</td><td>Required</td><td>Scan of Iqama or National ID. Required for official records.</td></tr>
+        <tr><td>Passport Copy</td><td>Optional</td><td>Scan of passport photo page</td></tr>
+        <tr><td>Employment Contract</td><td>Required</td><td>Signed employment contract PDF</td></tr>
+        <tr><td>Medical Insurance Card</td><td>Optional</td><td>Insurance card details if provided</td></tr>
+        <tr><td>SCE Card</td><td>Optional</td><td>Saudi Council of Engineers registration card (for engineers)</td></tr>
+      </tbody></table>
+      <div class="sub-section">Step 5 — Review & Activate</div>
+      <table class="field-table"><thead><tr><th>Field</th><th>Required?</th><th>Explanation</th></tr></thead><tbody>
+        <tr><td>Active From Date</td><td>Required</td><td>Date when employee becomes active in payroll. Usually same as Join Date.</td></tr>
+        <tr><td>Probation Period</td><td>Optional</td><td>Duration of probation in months (90 days standard in KSA). During probation, different leave and termination rules apply.</td></tr>
+        <tr><td>Notes</td><td>Optional</td><td>Any internal notes for HR team</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+
+  <!-- NEW VEHICLE FORM -->
+  <div class="page-doc">
+    <div class="page-doc-hdr" style="background:linear-gradient(135deg,#5A32D4,#4527a0)">
+      <div class="page-doc-hdr-icon">🚗</div>
+      <div><div class="page-doc-hdr-title">Register Vehicle Form</div><div class="page-doc-hdr-sub">Operations Module · 3 steps · Add a vehicle to the fleet</div></div>
+    </div>
+    <div class="page-doc-body">
+      <div class="sub-section">Step 1 — Vehicle Details</div>
+      <table class="field-table"><thead><tr><th>Field</th><th>Required?</th><th>Explanation</th></tr></thead><tbody>
+        <tr><td>Plate Number</td><td>Required</td><td>Saudi license plate in the correct format (e.g. ARR 3029). Must be unique — no two vehicles can have the same plate.</td></tr>
+        <tr><td>Vehicle Type</td><td>Required</td><td>SUV, Pickup, Sedan, Van, Bus, Truck, Heavy Equipment</td></tr>
+        <tr><td>Make / Brand</td><td>Required</td><td>Manufacturer (Toyota, Ford, Volkswagen etc.)</td></tr>
+        <tr><td>Model</td><td>Required</td><td>Model name (Land Cruiser, F-150, Touareg etc.)</td></tr>
+        <tr><td>Year</td><td>Required</td><td>Manufacturing year</td></tr>
+        <tr><td>Color</td><td>Optional</td><td>Vehicle color for identification</td></tr>
+        <tr><td>Chassis Number (VIN)</td><td>Required</td><td>17-digit unique vehicle identification number. Used for insurance and registration.</td></tr>
+        <tr><td>Ownership Type</td><td>Required</td><td>Own (Ratal-owned) or Rental. Rental vehicles require additional fields (rental company, monthly cost, return date).</td></tr>
+      </tbody></table>
+      <div class="sub-section">Step 2 — Documents & Expiry Dates</div>
+      <table class="field-table"><thead><tr><th>Field</th><th>Required?</th><th>Explanation</th></tr></thead><tbody>
+        <tr><td>Istimara (Registration) Expiry</td><td>Required</td><td>Saudi vehicle registration certificate expiry date. Renew annually at traffic department.</td></tr>
+        <tr><td>Insurance Expiry</td><td>Required</td><td>Comprehensive or third-party insurance expiry. Vehicle cannot legally operate without valid insurance.</td></tr>
+        <tr><td>Mulkiya (Ownership) Doc</td><td>Optional</td><td>Ownership certificate for owned vehicles</td></tr>
+        <tr><td>Annual Inspection Due</td><td>Optional</td><td>Date of next Fahas (vehicle inspection) requirement</td></tr>
+      </tbody></table>
+      <div class="sub-section">Step 3 — Assignment</div>
+      <table class="field-table"><thead><tr><th>Field</th><th>Required?</th><th>Explanation</th></tr></thead><tbody>
+        <tr><td>Assigned Driver</td><td>Optional</td><td>Primary driver assigned to this vehicle. If left blank, vehicle is "Pool" and can be assigned to anyone.</td></tr>
+        <tr><td>Assigned Department</td><td>Optional</td><td>Department responsible for this vehicle</td></tr>
+        <tr><td>Assigned Project</td><td>Optional</td><td>If vehicle is dedicated to a specific project</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function show(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>

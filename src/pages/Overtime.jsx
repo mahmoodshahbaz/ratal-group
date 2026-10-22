@@ -1,7 +1,16 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { exportToExcel } from '../lib/exportExcel'
+import ChapterPage from '../components/ChapterPage'
+import PageBanner from '../components/PageBanner'
+import { CHAPTER_PALETTES, GROUP_COLORS } from '../styles/appStyles'
 
+// ── HR chapter palette ─────────────────────────────────────────────────────
+const MC = GROUP_COLORS.HR           // #795338 — HR chapter accent (L3)
+const L1 = CHAPTER_PALETTES.HR.L1   // #BCA99A
+const L2 = CHAPTER_PALETTES.HR.L2   // #F7F2ED
+
+// ── Modal inline styles ───────────────────────────────────────────────────
 const S = {
   overlay: { position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 },
   modal:   { background:'#fff', borderRadius:16, padding:24, width:640, maxWidth:'100%', maxHeight:'92vh', overflowY:'auto', boxShadow:'0 8px 40px rgba(0,0,0,0.18)' },
@@ -9,13 +18,13 @@ const S = {
   label:   { display:'block', fontSize:11, color:'#6b7c93', fontWeight:700, marginBottom:4 },
   row:     { display:'flex', gap:12, marginBottom:13, flexWrap:'wrap' },
   col:     { flex:1, minWidth:130 },
-  sec:     { fontSize:11, fontWeight:800, color:'#1a237e', marginBottom:8, marginTop:4, paddingBottom:4, borderBottom:'1px solid #e8eaf6', letterSpacing:1, textTransform:'uppercase' },
+  sec:     { fontSize:11, fontWeight:800, color:MC, marginBottom:8, marginTop:4, paddingBottom:4, borderBottom:`1px solid ${L1}`, letterSpacing:1, textTransform:'uppercase' },
 }
 
-const OT_TYPES   = ['NORMAL','FRIDAY','HOLIDAY']
+// ── OT constants ──────────────────────────────────────────────────────────
 const WORK_TYPES = ['FIELD WORK','OFFICE WORK','REMOTE','ON-CALL','TRAVEL DAY']
 const JOB_TYPES  = ['INSTALLATION','COMMISSIONING','MAINTENANCE','SURVEY','TESTING','PROJECT SUPPORT','ADMINISTRATIVE','OTHER']
-// All OT multipliers are flat 1.5x per design. TRAVEL is 1.0x. (No 1.75x or 2.0x)
+// All OT multipliers are flat 1.5×. TRAVEL is 1.0×. (No 1.75× or 2.0×)
 const OT_MULT    = { NORMAL:1.5, FRIDAY:1.5, HOLIDAY:1.5, TRAVEL:1.0 }
 
 const STATUS_COLORS = {
@@ -29,27 +38,35 @@ const GRID = '110px 90px 1fr 60px 110px 80px 60px 90px 90px 80px'
 const cell = { padding:'0 4px', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', fontSize:12, display:'flex', alignItems:'center' }
 const SAR  = n => `SAR ${(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`
 
+// ── Sub-component: OT row list with expandable details ───────────────────
 function OTList({ records, onApprove, onReject }) {
   const [expanded, setExpanded] = useState(null)
   return (
     <div>
       {records.map(r => {
-        const sc   = STATUS_COLORS[r.status] || { bg:'#f5f5f5', color:'#555' }
-        const isEx = expanded === r.id
+        const sc     = STATUS_COLORS[r.status] || { bg:'#f5f5f5', color:'#555' }
+        const isEx   = expanded === r.id
         const canAct = ['SUBMITTED','PENDING'].includes(r.status)
         return (
           <div key={r.id}>
-            {/* Single-line row */}
+            {/* ── Single-line row ── */}
             <div
               onClick={() => setExpanded(isEx ? null : r.id)}
-              style={{ display:'grid', gridTemplateColumns:GRID, gap:0, padding:'9px 12px', borderTop:'1px solid #f0f4f8', cursor:'pointer', background: isEx ? '#f0f4ff' : 'transparent' }}
-              onMouseEnter={e=>{ if(!isEx) e.currentTarget.style.background='#f8fafd' }}
+              style={{
+                display:'grid', gridTemplateColumns:GRID, gap:0,
+                padding:'9px 12px', borderTop:'1px solid #f0f4f8',
+                cursor:'pointer',
+                background: isEx ? L2 : 'transparent',
+                borderLeft: isEx ? `3px solid ${MC}` : '3px solid transparent',
+                transition: 'background 0.1s',
+              }}
+              onMouseEnter={e=>{ if(!isEx) e.currentTarget.style.background='#faf6f2' }}
               onMouseLeave={e=>{ if(!isEx) e.currentTarget.style.background='transparent' }}
             >
-              <div style={{ ...cell, fontWeight:700, color:'#1a237e', fontSize:11 }}>{r.request_number||'—'}</div>
+              <div style={{ ...cell, fontWeight:700, color:MC, fontSize:11 }}>{r.request_number||'—'}</div>
               <div style={{ ...cell, color:'#546e7a' }}>{r.ot_date}</div>
               <div style={{ ...cell, fontWeight:600 }}>{r.employees?.full_name_en || r.requester_name || '—'}</div>
-              <div style={{ ...cell, color:'#0277bd', fontWeight:700 }}>{r.department || r.department_name || '—'}</div>
+              <div style={{ ...cell, color:MC, fontWeight:700, fontSize:11 }}>{r.department || r.department_name || '—'}</div>
               <div style={{ ...cell, color:'#546e7a' }}>{r.project_number || '—'}</div>
               <div style={{ ...cell, fontWeight:700 }}>{r.ot_type}</div>
               <div style={{ ...cell, justifyContent:'flex-end', fontWeight:600 }}>{r.hours}h</div>
@@ -66,26 +83,30 @@ function OTList({ records, onApprove, onReject }) {
               </div>
             </div>
 
-            {/* Expandable detail */}
+            {/* ── Expandable detail panel ── */}
             {isEx && (
-              <div style={{ background:'#f8fafd', borderTop:'1px solid #e8eef4', padding:'12px 16px', display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'10px 20px', fontSize:12 }}>
+              <div style={{
+                background:L2, borderTop:`1px solid ${L1}`, borderLeft:`3px solid ${MC}`,
+                padding:'12px 16px',
+                display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'10px 20px', fontSize:12,
+              }}>
                 {[
-                  ['Employee #',    r.employees?.employee_number || '—'],
-                  ['Contact',       r.contact_number || '—'],
-                  ['Department',    r.department || r.department_name || '—'],
-                  ['Project #',     r.project_number || '—'],
-                  ['Project Name',  r.project_name || '—'],
-                  ['Job #',         r.job_number || '—'],
-                  ['OT Type',       r.ot_type || '—'],
-                  ['Work Type',     r.work_type || '—'],
-                  ['From Time',     r.from_time || '—'],
-                  ['To Time',       r.to_time || '—'],
-                  ['Hours',         `${r.hours}h`],
-                  ['OT Rate/hr',    `SAR ${(r.ot_rate||0).toFixed(2)}`],
-                  ['Multiplier',    `×${r.multiplier||1.5}`],
-                  ['Total Amount',  SAR(r.total_amount)],
-                  ['Status',        r.status],
-                  ['Remarks',       r.remarks || '—'],
+                  ['Employee #',   r.employees?.employee_number || '—'],
+                  ['Contact',      r.contact_number || '—'],
+                  ['Department',   r.department || r.department_name || '—'],
+                  ['Project #',    r.project_number || '—'],
+                  ['Project Name', r.project_name || '—'],
+                  ['Job #',        r.job_number || '—'],
+                  ['OT Type',      r.ot_type || '—'],
+                  ['Work Type',    r.work_type || '—'],
+                  ['From Time',    r.from_time || '—'],
+                  ['To Time',      r.to_time || '—'],
+                  ['Hours',        `${r.hours}h`],
+                  ['OT Rate/hr',   `SAR ${(r.ot_rate||0).toFixed(2)}`],
+                  ['Multiplier',   `×${r.multiplier||1.5}`],
+                  ['Total Amount', SAR(r.total_amount)],
+                  ['Status',       r.status],
+                  ['Remarks',      r.remarks || r.reason || '—'],
                 ].map(([k,v]) => (
                   <div key={k}>
                     <div style={{ fontSize:10, color:'#6b7c93', fontWeight:700, marginBottom:2 }}>{k}</div>
@@ -101,16 +122,24 @@ function OTList({ records, onApprove, onReject }) {
   )
 }
 
-export default function Overtime({ entityId }) {
-  const [records,   setRecords]   = useState([])
-  const [employees, setEmployees] = useState([])
-  const [depts,     setDepts]     = useState([])
-  const [loading,   setLoading]   = useState(true)
-  const [open,      setOpen]      = useState(false)
-  const [saving,    setSaving]    = useState(false)
-  const [filterSt,  setFilterSt]  = useState('ALL')
+// ── Main page ─────────────────────────────────────────────────────────────
+export default function Overtime({ entityId, role }) {
+  const [records,     setRecords]     = useState([])
+  const [employees,   setEmployees]   = useState([])
+  const [depts,       setDepts]       = useState([])
+  const [loading,     setLoading]     = useState(true)
+  const [showBanner,  setShowBanner]  = useState(false)
+  const [open,        setOpen]        = useState(false)
+  const [saving,      setSaving]      = useState(false)
+  const [filterSt,    setFilterSt]    = useState('ALL')
 
-  // form
+  // ── Filter states — declared before the filtered computation ──
+  const thisMonth = new Date().toISOString().slice(0,7)
+  const [filterMon,    setFilterMon]    = useState(thisMonth)
+  const [filterDept,   setFilterDept]   = useState('')
+  const [filterSearch, setFilterSearch] = useState('')
+
+  // ── Form states ──
   const [otDate,    setOtDate]    = useState(new Date().toISOString().split('T')[0])
   const [empId,     setEmpId]     = useState('')
   const [deptId,    setDeptId]    = useState('')
@@ -135,13 +164,19 @@ export default function Overtime({ entityId }) {
       supabase.from('overtime_requests')
         .select('*')                          // flat — no nested join (avoids PGRST201)
         .eq('entity_id', entityId)
-        .order('ot_date',{ascending:false}),
-      supabase.from('employees').select('id,full_name_en,employee_number,basic_salary').eq('entity_id', entityId).eq('is_active', true).order('full_name_en'),
-      supabase.from('departments').select('id,dept_name,dept_code').eq('entity_id', entityId).eq('is_active', true).order('dept_name'),
-      supabase.from('employees').select('id,full_name_en,employee_number,basic_salary').eq('is_active', true),
+        .order('ot_date', { ascending:false }),
+      supabase.from('employees')
+        .select('id,full_name_en,employee_number,basic_salary')
+        .eq('entity_id', entityId).eq('is_active', true).order('full_name_en'),
+      supabase.from('departments')
+        .select('id,dept_name,dept_code')
+        .eq('entity_id', entityId).eq('is_active', true).order('dept_name'),
+      supabase.from('employees')
+        .select('id,full_name_en,employee_number,basic_salary')
+        .eq('is_active', true),
     ])
-    // Build empMap to join employee names in JS (no nested join needed)
-    const empMap = Object.fromEntries([...(e||[]),...(allEmp||[])].map(x=>[x.id, x]))
+    // Build empMap in JS — no nested join needed (avoids PGRST201)
+    const empMap  = Object.fromEntries([...(e||[]),...(allEmp||[])].map(x=>[x.id, x]))
     const enriched = (r||[]).map(row => ({
       ...row,
       employees: empMap[row.employee_id] || {},
@@ -160,10 +195,11 @@ export default function Overtime({ entityId }) {
 
   function onDeptChange(id) {
     setDeptId(id)
-    const d = depts.find(x=>x.id===id)
-    setDeptName(d?d.dept_name:'')
+    const found = depts.find(x=>x.id===id)
+    setDeptName(found ? found.dept_name : '')
   }
 
+  // ── OT rate calculation ──
   const emp        = employees.find(e=>e.id===empId)
   const empBasic   = emp ? (emp.basic_salary || 0) : 0
   const hourlyRate = empBasic / 30 / 8
@@ -171,35 +207,36 @@ export default function Overtime({ entityId }) {
   const totalAmt   = (parseFloat(hours)||0) * hourlyRate * mult
 
   function resetForm() {
-    setOtDate(new Date().toISOString().split('T')[0]); setEmpId(''); setDeptId(''); setDeptName('')
+    setOtDate(new Date().toISOString().split('T')[0])
+    setEmpId(''); setDeptId(''); setDeptName('')
     setProjNum(''); setProjName(''); setJobNum(''); setJobType(''); setWorkType('')
     setOtType('NORMAL'); setFromTime(''); setToTime(''); setHours(''); setReason('')
   }
 
   async function save() {
-    if (!empId) { alert('Please select an employee.'); return }
-    if (!hours) { alert('Hours are required.'); return }
+    if (!empId)  { alert('Please select an employee.'); return }
+    if (!hours)  { alert('Hours are required.'); return }
     setSaving(true)
     const reqNum = `OT-${Date.now().toString().slice(-6)}`
     const { error } = await supabase.from('overtime_requests').insert({
       entity_id:       entityId,
       request_number:  reqNum,
       employee_id:     empId,
-      department_id:   deptId||null,
-      department_name: deptName||null,
-      project_number:  projNum||null,
-      project_name:    projName||null,
-      job_number:      jobNum||null,
-      job_type:        jobType||null,
-      work_type:       workType||null,
+      department_id:   deptId  || null,
+      department_name: deptName || null,
+      project_number:  projNum  || null,
+      project_name:    projName  || null,
+      job_number:      jobNum   || null,
+      job_type:        jobType  || null,
+      work_type:       workType || null,
       ot_date:         otDate,
-      from_time:       fromTime||null,
-      to_time:         toTime||null,
-      hours:           parseFloat(hours)||0,
+      from_time:       fromTime || null,
+      to_time:         toTime   || null,
+      hours:           parseFloat(hours) || 0,
       ot_type:         otType,
       ot_rate:         parseFloat(hourlyRate.toFixed(2)),
       total_amount:    parseFloat(totalAmt.toFixed(2)),
-      reason:          reason||null,
+      reason:          reason || null,
       status:          'PENDING',
     })
     setSaving(false)
@@ -207,49 +244,25 @@ export default function Overtime({ entityId }) {
     setOpen(false); resetForm(); load()
   }
 
-  async function approve(id) { await supabase.from('overtime_requests').update({ status:'APPROVED', approved_date: new Date().toISOString().split('T')[0] }).eq('id',id); load() }
-  async function reject(id)  { await supabase.from('overtime_requests').update({ status:'REJECTED' }).eq('id',id); load() }
-
-  function doExport() {
-    const flat = filtered.map(r => ({
-      ...r,
-      employee_name:   r.employees?.full_name_en    || '',
-      employee_number: r.employees?.employee_number || '',
-    }))
-    const cols = [
-      { key: 'request_number',  label: 'Req #' },
-      { key: 'ot_date',         label: 'Date',            format: 'date'     },
-      { key: 'employee_name',   label: 'Employee' },
-      { key: 'employee_number', label: 'Emp #' },
-      { key: 'department_name', label: 'Department' },
-      { key: 'project_name',    label: 'Project' },
-      { key: 'job_number',      label: 'Job #' },
-      { key: 'job_type',        label: 'Job Type' },
-      { key: 'work_type',       label: 'Work Type' },
-      { key: 'ot_type',         label: 'OT Type' },
-      { key: 'from_time',       label: 'Time In' },
-      { key: 'to_time',         label: 'Time Out' },
-      { key: 'hours',           label: 'Hours' },
-      { key: 'ot_rate',         label: 'Rate/hr (SAR)',   format: 'currency' },
-      { key: 'total_amount',    label: 'Total (SAR)',      format: 'currency' },
-      { key: 'reason',          label: 'Reason' },
-      { key: 'status',          label: 'Status' },
-    ]
-    exportToExcel(flat, cols, 'Overtime_Requests', 'Overtime')
+  async function approve(id) {
+    await supabase.from('overtime_requests')
+      .update({ status:'APPROVED', approved_date: new Date().toISOString().split('T')[0] })
+      .eq('id', id)
+    load()
   }
 
-  // ── Filter states ──
-  const thisMonth = new Date().toISOString().slice(0,7)
-  const [filterMon,    setFilterMon]    = useState(thisMonth)
-  const [filterDept,   setFilterDept]   = useState('')
-  const [filterSearch, setFilterSearch] = useState('')
+  async function reject(id) {
+    await supabase.from('overtime_requests').update({ status:'REJECTED' }).eq('id', id)
+    load()
+  }
 
+  // ── Filtered view ──
   const filtered = records.filter(r => {
-    if (filterMon  && !(r.ot_date||'').startsWith(filterMon))                                          return false
-    if (filterSt !== 'ALL' && r.status !== filterSt)                                                   return false
-    if (filterDept && (r.department||r.department_name||'') !== filterDept)                            return false
+    if (filterMon && !(r.ot_date||'').startsWith(filterMon))              return false
+    if (filterSt !== 'ALL' && r.status !== filterSt)                       return false
+    if (filterDept && (r.department||r.department_name||'') !== filterDept) return false
     if (filterSearch) {
-      const q = filterSearch.toLowerCase()
+      const q    = filterSearch.toLowerCase()
       const name = (r.employees?.full_name_en || r.requester_name || '').toLowerCase()
       const req  = (r.request_number||'').toLowerCase()
       if (!name.includes(q) && !req.includes(q)) return false
@@ -257,88 +270,158 @@ export default function Overtime({ entityId }) {
     return true
   })
 
+  function doExport() {
+    const flat = filtered.map(r => ({
+      ...r,
+      employee_name:   r.employees?.full_name_en    || '',
+      employee_number: r.employees?.employee_number || '',
+    }))
+    exportToExcel(flat, [
+      { key:'request_number',  label:'Req #' },
+      { key:'ot_date',         label:'Date',          format:'date'     },
+      { key:'employee_name',   label:'Employee' },
+      { key:'employee_number', label:'Emp #' },
+      { key:'department_name', label:'Department' },
+      { key:'project_name',    label:'Project' },
+      { key:'job_number',      label:'Job #' },
+      { key:'job_type',        label:'Job Type' },
+      { key:'work_type',       label:'Work Type' },
+      { key:'ot_type',         label:'OT Type' },
+      { key:'from_time',       label:'Time In' },
+      { key:'to_time',         label:'Time Out' },
+      { key:'hours',           label:'Hours' },
+      { key:'ot_rate',         label:'Rate/hr (SAR)', format:'currency' },
+      { key:'total_amount',    label:'Total (SAR)',   format:'currency' },
+      { key:'reason',          label:'Reason' },
+      { key:'status',          label:'Status' },
+    ], 'Overtime_Requests', 'Overtime')
+  }
+
+  // ── KPI summary ──
   const SAR2 = n => `SAR ${(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`
-  const cards = [
-    { label:'Total',    value:SAR2(filtered.reduce((s,r)=>s+(r.total_amount||0),0)),                              color:'#1a237e' },
-    { label:'Submitted',value:SAR2(filtered.filter(r=>r.status==='SUBMITTED').reduce((s,r)=>s+(r.total_amount||0),0)), color:'#0277bd' },
-    { label:'Pending',  value:SAR2(filtered.filter(r=>r.status==='PENDING').reduce((s,r)=>s+(r.total_amount||0),0)),  color:'#e65100' },
-    { label:'Approved', value:SAR2(filtered.filter(r=>r.status==='APPROVED').reduce((s,r)=>s+(r.total_amount||0),0)), color:'#2e7d32' },
+  const kpis = [
+    { label:'Total OT Cost', value:SAR2(filtered.reduce((s,r)=>s+(r.total_amount||0),0)),                                   icon:'⏱' },
+    { label:'Submitted',     value:SAR2(filtered.filter(r=>r.status==='SUBMITTED').reduce((s,r)=>s+(r.total_amount||0),0)), icon:'📤' },
+    { label:'Pending',       value:SAR2(filtered.filter(r=>r.status==='PENDING').reduce((s,r)=>s+(r.total_amount||0),0)),   icon:'⏳' },
+    { label:'Approved',      value:SAR2(filtered.filter(r=>r.status==='APPROVED').reduce((s,r)=>s+(r.total_amount||0),0)),  icon:'✅' },
   ]
 
-  const deptOptions = [...new Set(records.map(r => r.department || r.department_name).filter(Boolean))].sort()
-
+  const deptOptions = [...new Set(records.map(r=>r.department||r.department_name).filter(Boolean))].sort()
   const inp2 = { padding:'8px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:12, outline:'none', fontFamily:'inherit', background:'#fff' }
 
   return (
-    <div>
-      {/* ── Top action bar ── */}
-      <div style={{ display:'flex', gap:10, marginBottom:12, alignItems:'center', flexWrap:'wrap' }}>
-        <button onClick={()=>{ resetForm(); setOpen(true) }}
-          style={{ background:'linear-gradient(135deg,#1a237e,#3949ab)', color:'#fff', border:'none', borderRadius:10, padding:'10px 22px', cursor:'pointer', fontSize:14, fontWeight:700 }}>
-          ⏱️ + New OT Request
-        </button>
-        <button onClick={doExport}
-          style={{ background:'linear-gradient(135deg,#2e7d32,#43a047)', color:'#fff', border:'none', borderRadius:10, padding:'10px 18px', cursor:'pointer', fontSize:13, fontWeight:700, whiteSpace:'nowrap' }}>
-          📥 Export Excel
-        </button>
-      </div>
+    <>
+      {/* ── Step 0 entry banner ── */}
+      <PageBanner
+        isOpen={showBanner}
+        onClose={() => setShowBanner(false)}
+        onStart={() => { setShowBanner(false); setOpen(true) }}
+        chapterL1={L1}
+        chapterL2={L2}
+        moduleColor={MC}
+        chapterLabel="Chapter 08 · Human Resources"
+        formTitle={['Overtime', 'Request', 'Form']}
+        steps={['Request Details', 'Project Info', 'Time & Hours']}
+        icon="⏱️"
+        description="Record overtime hours for calculation, approval and payroll integration."
+      />
 
-      {/* ── Summary cards ── */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:12 }}>
-        {cards.map(c => (
-          <div key={c.label} style={{ background:'#fff', borderRadius:10, padding:'12px 16px', boxShadow:'0 1px 4px rgba(0,0,0,0.07)', borderLeft:`4px solid ${c.color}` }}>
-            <div style={{ fontSize:10, color:'#6b7c93', fontWeight:700, marginBottom:4 }}>{c.label.toUpperCase()}</div>
-            <div style={{ fontSize:14, fontWeight:800, color:c.color }}>{c.value}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Filters ── */}
-      <div style={{ display:'flex', gap:8, marginBottom:12, flexWrap:'wrap', alignItems:'center' }}>
-        <input type="month" value={filterMon} onChange={e=>setFilterMon(e.target.value)} style={inp2} />
-        <select value={filterSt} onChange={e=>setFilterSt(e.target.value)} style={inp2}>
-          <option value="ALL">All Status</option>
-          {['SUBMITTED','PENDING','APPROVED','REJECTED'].map(s=><option key={s} value={s}>{s}</option>)}
-        </select>
-        <select value={filterDept} onChange={e=>setFilterDept(e.target.value)} style={inp2}>
-          <option value="">All Depts</option>
-          {deptOptions.map(d=><option key={d} value={d}>{d}</option>)}
-        </select>
-        <input placeholder="🔍 Search employee / req #" value={filterSearch} onChange={e=>setFilterSearch(e.target.value)}
-          style={{ ...inp2, minWidth:200, flex:1 }} />
-        {(filterMon!==thisMonth||filterSt!=='ALL'||filterDept||filterSearch) &&
-          <button onClick={()=>{ setFilterMon(thisMonth); setFilterSt('ALL'); setFilterDept(''); setFilterSearch('') }}
-            style={{ ...inp2, background:'#ffebee', color:'#c62828', border:'1px solid #ffcdd2', cursor:'pointer', fontWeight:700 }}>✕ Clear</button>
-        }
-        <span style={{ marginLeft:'auto', fontSize:12, color:'#6b7c93' }}>{filtered.length} record{filtered.length!==1?'s':''}</span>
-      </div>
-
-      {/* ── List ── */}
-      <div style={{ background:'#fff', borderRadius:14, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', overflow:'hidden' }}>
-        {/* Header row */}
-        <div style={{ display:'grid', gridTemplateColumns:'110px 90px 1fr 60px 110px 80px 60px 90px 90px 80px', gap:0, background:'#f8fafd', padding:'8px 12px', borderBottom:'1px solid #e8eef4' }}>
-          {['Req #','Date','Employee','Dept','Project #','Type','Hours','Amount','Status',''].map(h=>(
-            <div key={h} style={{ fontSize:10, fontWeight:700, color:'#6b7c93', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', padding:'0 4px' }}>{h}</div>
-          ))}
+      {/* ── Chapter page wrapper ── */}
+      <ChapterPage
+        chapterName="Human Resources"
+        chapterIcon="⏱️"
+        chapterColor={MC}
+        chapterSubtitle="Overtime requests, approvals and OT cost tracking"
+        sectionTitle="Overtime Register"
+        onNew={() => setShowBanner(true)}
+        newLabel="+ New OT Request"
+        kpis={kpis}
+      >
+        {/* ── Filter bar ── */}
+        <div style={{ display:'flex', gap:8, marginBottom:12, flexWrap:'wrap', alignItems:'center' }}>
+          <input type="month" value={filterMon} onChange={e=>setFilterMon(e.target.value)} style={inp2} />
+          <select value={filterSt} onChange={e=>setFilterSt(e.target.value)} style={inp2}>
+            <option value="ALL">All Status</option>
+            {['SUBMITTED','PENDING','APPROVED','REJECTED'].map(s=><option key={s} value={s}>{s}</option>)}
+          </select>
+          <select value={filterDept} onChange={e=>setFilterDept(e.target.value)} style={inp2}>
+            <option value="">All Depts</option>
+            {deptOptions.map(d=><option key={d} value={d}>{d}</option>)}
+          </select>
+          <input
+            placeholder="🔍 Search employee / req #"
+            value={filterSearch}
+            onChange={e=>setFilterSearch(e.target.value)}
+            style={{ ...inp2, minWidth:200, flex:1 }}
+          />
+          {(filterMon!==thisMonth || filterSt!=='ALL' || filterDept || filterSearch) && (
+            <button
+              onClick={()=>{ setFilterMon(thisMonth); setFilterSt('ALL'); setFilterDept(''); setFilterSearch('') }}
+              style={{ ...inp2, background:'#ffebee', color:'#c62828', border:'1px solid #ffcdd2', cursor:'pointer', fontWeight:700 }}
+            >✕ Clear</button>
+          )}
+          <button
+            onClick={doExport}
+            style={{ background:'#2e7d32', color:'#fff', border:'none', borderRadius:8, padding:'8px 16px', cursor:'pointer', fontSize:12, fontWeight:700, whiteSpace:'nowrap' }}
+          >📥 Export Excel</button>
+          <span style={{ fontSize:12, color:'#6b7c93' }}>{filtered.length} record{filtered.length!==1?'s':''}</span>
         </div>
 
-        {loading
-          ? <div style={{ textAlign:'center', padding:40, color:'#aab2bd' }}>Loading…</div>
-          : filtered.length===0
-            ? <div style={{ textAlign:'center', padding:40, color:'#aab2bd' }}>No OT records</div>
-            : <OTList records={filtered} onApprove={approve} onReject={reject} />
-        }
-      </div>
+        {/* ── Table ── */}
+        <div style={{ background:'#fff', borderRadius:12, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', overflow:'hidden', flex:1 }}>
+          {/* Header row — HR accent color */}
+          <div style={{
+            display:'grid', gridTemplateColumns:GRID, gap:0,
+            background:MC, padding:'9px 12px',
+          }}>
+            {['Req #','Date','Employee','Dept','Project #','OT Type','Hours','Amount','Status',''].map(h=>(
+              <div key={h} style={{
+                fontSize:10, fontWeight:700, color:'#fff',
+                letterSpacing:0.8, textTransform:'uppercase',
+                whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', padding:'0 4px',
+              }}>{h}</div>
+            ))}
+          </div>
 
-      {/* Modal */}
+          {loading
+            ? <div style={{ textAlign:'center', padding:40, color:'#aab2bd' }}>Loading…</div>
+            : filtered.length===0
+              ? <div style={{ textAlign:'center', padding:40, color:'#aab2bd' }}>No OT records for this period</div>
+              : <OTList records={filtered} onApprove={approve} onReject={reject} />
+          }
+        </div>
+      </ChapterPage>
+
+      {/* ── New OT Request Modal ── */}
       {open && (
         <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&setOpen(false)}>
           <div style={S.modal}>
-            <h3 style={{ margin:'0 0 16px', fontSize:16, fontWeight:800 }}>⏱️ New Overtime Request</h3>
+            {/* Modal header — HR gradient */}
+            <div style={{
+              background:`linear-gradient(135deg,${MC} 0%,${L1} 100%)`,
+              borderRadius:'12px 12px 0 0',
+              margin:'-24px -24px 20px',
+              padding:'18px 24px',
+              display:'flex', alignItems:'center', justifyContent:'space-between',
+            }}>
+              <div>
+                <div style={{ fontSize:9, fontWeight:800, color:'rgba(255,255,255,0.65)', letterSpacing:1.5, textTransform:'uppercase', marginBottom:2 }}>
+                  Chapter 08 · Human Resources
+                </div>
+                <div style={{ fontSize:18, fontWeight:800, color:'#fff' }}>⏱️ New Overtime Request</div>
+              </div>
+              <button
+                onClick={()=>{ setOpen(false); resetForm() }}
+                style={{ background:'rgba(255,255,255,0.18)', border:'none', borderRadius:8, color:'#fff', fontSize:16, cursor:'pointer', padding:'4px 10px', fontWeight:700 }}
+              >✕</button>
+            </div>
 
             <div style={S.sec}>Request Info</div>
             <div style={S.row}>
-              <div style={S.col}><label style={S.label}>OT Date *</label><input type="date" style={S.inp} value={otDate} onChange={e=>setOtDate(e.target.value)} /></div>
+              <div style={S.col}>
+                <label style={S.label}>OT Date *</label>
+                <input type="date" style={S.inp} value={otDate} onChange={e=>setOtDate(e.target.value)} />
+              </div>
               <div style={S.col}>
                 <label style={S.label}>OT Type *</label>
                 <select style={S.inp} value={otType} onChange={e=>setOtType(e.target.value)}>
@@ -368,11 +451,20 @@ export default function Overtime({ entityId }) {
 
             <div style={S.sec}>Project / Job Details</div>
             <div style={S.row}>
-              <div style={S.col}><label style={S.label}>Project #</label><input style={S.inp} value={projNum} onChange={e=>setProjNum(e.target.value)} placeholder="PROJ-001" /></div>
-              <div style={S.col}><label style={S.label}>Project Name</label><input style={S.inp} value={projName} onChange={e=>setProjName(e.target.value)} /></div>
+              <div style={S.col}>
+                <label style={S.label}>Project #</label>
+                <input style={S.inp} value={projNum} onChange={e=>setProjNum(e.target.value)} placeholder="PROJ-001" />
+              </div>
+              <div style={S.col}>
+                <label style={S.label}>Project Name</label>
+                <input style={S.inp} value={projName} onChange={e=>setProjName(e.target.value)} />
+              </div>
             </div>
             <div style={S.row}>
-              <div style={S.col}><label style={S.label}>Job #</label><input style={S.inp} value={jobNum} onChange={e=>setJobNum(e.target.value)} /></div>
+              <div style={S.col}>
+                <label style={S.label}>Job #</label>
+                <input style={S.inp} value={jobNum} onChange={e=>setJobNum(e.target.value)} />
+              </div>
               <div style={S.col}>
                 <label style={S.label}>Job Type</label>
                 <select style={S.inp} value={jobType} onChange={e=>setJobType(e.target.value)}>
@@ -405,27 +497,43 @@ export default function Overtime({ entityId }) {
               </div>
             </div>
 
-            {/* Calculation summary */}
+            {/* ── OT rate calculation preview ── */}
             {empId && (
-              <div style={{ background:'#e8eaf6', borderRadius:10, padding:'10px 16px', marginBottom:13, display:'flex', gap:16, flexWrap:'wrap' }}>
+              <div style={{
+                background:L2, border:`1px solid ${L1}`, borderRadius:10,
+                padding:'10px 16px', marginBottom:13,
+                display:'flex', gap:16, flexWrap:'wrap', alignItems:'center',
+              }}>
                 <span style={{ fontSize:13 }}>Hourly Rate: <strong>SAR {hourlyRate.toFixed(2)}</strong></span>
                 <span style={{ fontSize:13 }}>Multiplier: <strong>×{mult}</strong></span>
                 <span style={{ fontSize:13 }}>Hours: <strong>{parseFloat(hours)||0}h</strong></span>
-                <span style={{ fontSize:14, marginLeft:'auto', fontWeight:800, color:'#1a237e' }}>Total: SAR {totalAmt.toFixed(2)}</span>
+                <span style={{ fontSize:14, marginLeft:'auto', fontWeight:800, color:MC }}>
+                  Total: SAR {totalAmt.toFixed(2)}
+                </span>
               </div>
             )}
 
-            <div style={{ marginBottom:16 }}><label style={S.label}>Reason / Work Done</label><textarea style={{ ...S.inp, minHeight:60, resize:'vertical' }} value={reason} onChange={e=>setReason(e.target.value)} /></div>
+            <div style={{ marginBottom:16 }}>
+              <label style={S.label}>Reason / Work Done</label>
+              <textarea style={{ ...S.inp, minHeight:60, resize:'vertical' }} value={reason} onChange={e=>setReason(e.target.value)} />
+            </div>
 
             <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
-              <button onClick={()=>{ setOpen(false); resetForm() }} style={{ background:'#f0f4f8', color:'#555', border:'none', borderRadius:9, padding:'10px 20px', cursor:'pointer', fontSize:13 }}>Cancel</button>
-              <button onClick={save} disabled={saving} style={{ background:'linear-gradient(135deg,#1a237e,#3949ab)', color:'#fff', border:'none', borderRadius:9, padding:'10px 24px', cursor:'pointer', fontSize:13, fontWeight:700 }}>
-                {saving?'Submitting…':'Submit OT Request'}
+              <button
+                onClick={()=>{ setOpen(false); resetForm() }}
+                style={{ background:'#f0f4f8', color:'#555', border:'none', borderRadius:9, padding:'10px 20px', cursor:'pointer', fontSize:13 }}
+              >Cancel</button>
+              <button
+                onClick={save}
+                disabled={saving}
+                style={{ background:MC, color:'#fff', border:'none', borderRadius:9, padding:'10px 24px', cursor:'pointer', fontSize:13, fontWeight:700, opacity:saving?0.7:1 }}
+              >
+                {saving ? 'Submitting…' : 'Submit OT Request'}
               </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }

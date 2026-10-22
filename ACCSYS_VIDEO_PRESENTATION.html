@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ACCSYS Field Operations — Overview Video</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0d1117; font-family:Arial,sans-serif; overflow:hidden; width:100vw; height:100vh; }
+
+/* ── SLIDE CONTAINER ── */
+#presentation { width:100vw; height:100vh; position:relative; }
+
+.slide {
+  display:none; position:absolute; inset:0;
+  flex-direction:column;
+}
+.slide.active { display:flex; }
+
+/* ── LAYOUTS ── */
+.layout-split { flex-direction:row; }
+.layout-full  { flex-direction:column; }
+
+/* Left panel — app mockup */
+.mockup-panel {
+  flex:1.1; background:#1a1f2e; display:flex;
+  align-items:center; justify-content:center;
+  padding:30px; position:relative; overflow:hidden;
+}
+.mockup-panel::before {
+  content:''; position:absolute; inset:0;
+  background:radial-gradient(ellipse at 30% 30%, rgba(45,58,107,0.4) 0%, transparent 70%);
+}
+
+/* Right panel — narration */
+.info-panel {
+  width:380px; background:#111827; display:flex;
+  flex-direction:column; justify-content:center;
+  padding:40px 36px; position:relative;
+}
+.scene-tag {
+  font-size:11px; font-weight:800; letter-spacing:2px;
+  color:#4fc3f7; text-transform:uppercase; margin-bottom:16px;
+}
+.scene-title {
+  font-size:26px; font-weight:900; color:#fff;
+  line-height:1.25; margin-bottom:20px;
+}
+.scene-body {
+  font-size:14px; color:rgba(255,255,255,0.65);
+  line-height:1.8; margin-bottom:28px;
+}
+.caption-box {
+  background:rgba(79,195,247,0.08); border:1px solid rgba(79,195,247,0.2);
+  border-radius:10px; padding:14px 16px;
+}
+.caption-label { font-size:10px; color:#4fc3f7; font-weight:800; letter-spacing:1px; margin-bottom:6px; }
+.caption-text  { font-size:13px; color:rgba(255,255,255,0.8); line-height:1.7; }
+
+/* ── BOTTOM BAR ── */
+#bottom-bar {
+  position:fixed; bottom:0; left:0; right:0; height:64px;
+  background:#0d1117; border-top:1px solid #1e293b;
+  display:flex; align-items:center; padding:0 28px; gap:16px; z-index:1000;
+}
+#progress-track {
+  flex:1; height:4px; background:#1e293b; border-radius:2px; cursor:pointer;
+}
+#progress-fill { height:4px; background:#4fc3f7; border-radius:2px; width:0%; transition:width 0.3s; }
+#scene-label { font-size:12px; color:#4fc3f7; font-weight:700; min-width:120px; }
+#timer-label  { font-size:13px; color:#64748b; min-width:50px; font-variant-numeric:tabular-nums; }
+
+.ctrl-btn {
+  background:#1e293b; color:#e2e8f0; border:none;
+  border-radius:8px; padding:8px 16px; font-size:13px;
+  font-weight:700; cursor:pointer; transition:background 0.2s;
+}
+.ctrl-btn:hover { background:#2d3a6b; }
+.ctrl-btn.primary { background:#2d3a6b; color:#4fc3f7; }
+
+/* ── START SCREEN ── */
+#start-screen {
+  position:fixed; inset:0; background:#0d1117; z-index:2000;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:24px;
+}
+#start-screen h1 { font-size:36px; font-weight:900; color:#fff; text-align:center; }
+#start-screen p  { font-size:16px; color:#64748b; text-align:center; max-width:480px; line-height:1.7; }
+#start-btn {
+  margin-top:8px; padding:18px 48px; background:#2d3a6b; color:#4fc3f7;
+  border:2px solid #4fc3f7; border-radius:14px; font-size:18px;
+  font-weight:900; cursor:pointer; letter-spacing:1px;
+}
+#start-btn:hover { background:#4fc3f7; color:#0d1117; }
+.logo-badge {
+  background:#1a2540; border:1px solid #2d3a6b; border-radius:14px;
+  padding:14px 28px; font-size:22px; font-weight:900; color:#4fc3f7;
+  letter-spacing:4px; margin-bottom:8px;
+}
+.voice-note {
+  font-size:13px; color:#4fc3f7; background:rgba(79,195,247,0.08);
+  border:1px solid rgba(79,195,247,0.2); border-radius:8px;
+  padding:10px 18px; max-width:440px; text-align:center;
+}
+
+/* ── MOCKUP STYLES ── */
+.phone-frame {
+  width:260px; height:480px; background:#1e2d3d;
+  border-radius:32px; border:3px solid #2d4a6b;
+  overflow:hidden; position:relative; box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+.phone-status { height:28px; background:#0d1421; display:flex; align-items:center; justify-content:center; }
+.phone-status span { font-size:10px; color:#4fc3f7; }
+.phone-header {
+  background:linear-gradient(135deg,#1a2540,#2d3a6b);
+  padding:14px 16px 18px;
+}
+.phone-header-title { font-size:13px; font-weight:900; color:#fff; }
+.phone-header-sub   { font-size:10px; color:rgba(255,255,255,0.6); margin-top:2px; }
+.phone-body { padding:10px 12px; overflow:hidden; }
+
+.form-card {
+  background:#fff; border-radius:10px; padding:10px 12px; margin-bottom:8px;
+  display:flex; align-items:center; gap:10px;
+}
+.form-card-icon { font-size:20px; }
+.form-card-title { font-size:11px; font-weight:800; color:#1a2e3d; }
+.form-card-desc  { font-size:9px;  color:#78909c; }
+
+.desktop-frame {
+  width:520px; background:#1e2a3d; border-radius:14px;
+  border:2px solid #2d4a6b; overflow:hidden;
+  box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+.desktop-titlebar {
+  height:32px; background:#0d1421; display:flex; align-items:center;
+  padding:0 14px; gap:6px;
+}
+.dot { width:10px; height:10px; border-radius:50%; }
+.dot-r{background:#ff5f57;} .dot-y{background:#febc2e;} .dot-g{background:#28c840;}
+.desktop-url { margin-left:10px; font-size:10px; color:#4fc3f7; opacity:0.6; }
+.desktop-body { padding:16px; }
+
+.nav-sidebar {
+  width:180px; background:#1a2540; border-radius:10px; padding:10px;
+  margin-right:14px; display:inline-block; vertical-align:top;
+}
+.nav-item {
+  padding:7px 10px; border-radius:6px; font-size:10px; color:rgba(255,255,255,0.6);
+  margin-bottom:2px; cursor:default;
+}
+.nav-item.active { background:#2d3a6b; color:#4fc3f7; font-weight:700; }
+
+.kpi-row { display:flex; gap:8px; margin-bottom:10px; }
+.kpi-box {
+  flex:1; background:#1a2540; border-radius:8px; padding:10px;
+  text-align:center;
+}
+.kpi-val { font-size:18px; font-weight:900; color:#4fc3f7; }
+.kpi-lbl { font-size:9px;  color:rgba(255,255,255,0.5); margin-top:2px; }
+
+.table-row {
+  display:flex; align-items:center; gap:8px; padding:7px 10px;
+  background:#1e2a3d; border-radius:6px; margin-bottom:4px;
+}
+.badge {
+  padding:2px 8px; border-radius:10px; font-size:9px; font-weight:800;
+}
+.badge-green  { background:#1b5e2022; color:#4caf50; border:1px solid #4caf5044; }
+.badge-blue   { background:#1565c022; color:#42a5f5; border:1px solid #42a5f544; }
+.badge-orange { background:#e65100aa; color:#ffcc80; border:1px solid #ff8f0044; }
+.badge-red    { background:#b71c1c22; color:#ef9a9a; border:1px solid #ef9a9a44; }
+.badge-purple { background:#6a1b9a22; color:#ce93d8; border:1px solid #ce93d844; }
+
+.progress-bar-mini { height:6px; background:#1a2540; border-radius:3px; margin-top:4px; }
+.progress-fill-mini { height:6px; border-radius:3px; background:linear-gradient(90deg,#1565c0,#4fc3f7); }
+
+.qr-box {
+  width:120px; height:120px; background:#fff; border-radius:8px;
+  display:flex; align-items:center; justify-content:center; font-size:60px;
+}
+
+.form-field {
+  background:#1a2540; border-radius:6px; padding:7px 10px;
+  margin-bottom:6px; font-size:10px; color:rgba(255,255,255,0.5);
+}
+.form-field-val { color:#e2e8f0; font-weight:700; margin-top:1px; font-size:11px; }
+
+.submit-btn {
+  width:100%; background:#2d3a6b; color:#4fc3f7;
+  border:none; border-radius:8px; padding:10px;
+  font-size:11px; font-weight:800; text-align:center;
+  margin-top:8px; cursor:default;
+}
+
+/* ── SLIDE TRANSITIONS ── */
+.slide { animation:none; }
+.slide.active { animation:fadeIn 0.5s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+</style>
+</head>
+<body>
+
+<!-- START SCREEN -->
+<div id="start-screen">
+  <div class="logo-badge">ACCSYS</div>
+  <h1>Field Operations Platform</h1>
+  <p>A complete walkthrough of the system — from generating a QR token to approving a claim in the Command Centre.</p>
+  <div class="voice-note">🔊 This presentation will speak the narration automatically using your browser's built-in voice. Use Chrome or Edge for the best male voice.</div>
+  <button id="start-btn" onclick="startPresentation()">▶ Start Presentation</button>
+</div>
+
+<!-- SLIDES -->
+<div id="presentation">
+
+  <!-- SLIDE 1: INTRO -->
+  <div class="slide active layout-split" id="slide-0">
+    <div class="mockup-panel">
+      <div class="desktop-frame">
+        <div class="desktop-titlebar">
+          <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+          <span class="desktop-url">accsys.app/dashboard</span>
+        </div>
+        <div class="desktop-body" style="display:flex;gap:0">
+          <div class="nav-sidebar">
+            <div style="font-size:9px;color:#4fc3f7;font-weight:800;margin-bottom:8px;letter-spacing:1px">ACCSYS</div>
+            <div class="nav-item active">📊 Dashboard</div>
+            <div class="nav-item">✅ Approvals</div>
+            <div class="nav-item">👥 Employees</div>
+            <div class="nav-item">📁 Projects</div>
+            <div class="nav-item">🏗️ Sites</div>
+            <div class="nav-item">💰 Finance</div>
+            <div class="nav-item">📲 QR Manager</div>
+            <div class="nav-item">🔔 Notifications</div>
+          </div>
+          <div style="flex:1">
+            <div class="kpi-row">
+              <div class="kpi-box"><div class="kpi-val">12</div><div class="kpi-lbl">Active Sites</div></div>
+              <div class="kpi-box"><div class="kpi-val" style="color:#4caf50">SAR 48K</div><div class="kpi-lbl">Collected</div></div>
+            </div>
+            <div class="kpi-row">
+              <div class="kpi-box"><div class="kpi-val" style="color:#ffcc80">7</div><div class="kpi-lbl">Pending Claims</div></div>
+              <div class="kpi-box"><div class="kpi-val" style="color:#ef9a9a">SAR 12K</div><div class="kpi-lbl">Advances Out</div></div>
+            </div>
+            <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:6px">Recent Activity</div>
+            <div class="table-row" style="margin-top:6px"><span style="font-size:10px;color:#e2e8f0">Ahmed submitted expense claim</span><span class="badge badge-orange" style="margin-left:auto">PENDING</span></div>
+            <div class="table-row"><span style="font-size:10px;color:#e2e8f0">Site Alpha — 75% complete</span><span class="badge badge-blue" style="margin-left:auto">UPDATED</span></div>
+            <div class="table-row"><span style="font-size:10px;color:#e2e8f0">Vehicle incident reported</span><span class="badge badge-red" style="margin-left:auto">URGENT</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="info-panel">
+      <div class="scene-tag">Scene 1 of 11 — Introduction</div>
+      <div class="scene-title">ACCSYS Field Operations Platform</div>
+      <div class="scene-body">One unified system connecting office administration with field teams — no paper, no manual follow-up.</div>
+      <div class="caption-box">
+        <div class="caption-label">🎙 Now Speaking</div>
+        <div class="caption-text" id="caption-0">Welcome to ACCSYS — the Field Operations Platform built for Ratal Group...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 2: QR MANAGER -->
+  <div class="slide layout-split" id="slide-1">
+    <div class="mockup-panel">
+      <div class="desktop-frame">
+        <div class="desktop-titlebar">
+          <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+          <span class="desktop-url">accsys.app — QR Code Manager</span>
+        </div>
+        <div class="desktop-body">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <div style="font-size:13px;font-weight:900;color:#fff">🔑 QR Code Manager</div>
+            <div style="background:#2d3a6b;color:#4fc3f7;padding:5px 12px;border-radius:6px;font-size:10px;font-weight:800">＋ Generate Token</div>
+          </div>
+          <div class="kpi-row">
+            <div class="kpi-box"><div class="kpi-val">24</div><div class="kpi-lbl">Total</div></div>
+            <div class="kpi-box"><div class="kpi-val" style="color:#4caf50">19</div><div class="kpi-lbl">Active</div></div>
+            <div class="kpi-box"><div class="kpi-val" style="color:#ef9a9a">5</div><div class="kpi-lbl">Revoked</div></div>
+          </div>
+          <div class="table-row"><span style="font-size:10px;color:#e2e8f0;flex:1">Ahmed Al-Rashidi</span><span class="badge badge-blue">STAFF_TECH</span><span class="badge badge-green" style="margin-left:4px">ACTIVE</span></div>
+          <div class="table-row"><span style="font-size:10px;color:#e2e8f0;flex:1">Mohammed Al-Otaibi</span><span class="badge badge-purple">STAFF_DH</span><span class="badge badge-green" style="margin-left:4px">ACTIVE</span></div>
+          <div class="table-row"><span style="font-size:10px;color:#e2e8f0;flex:1">Khalid Subcon LLC</span><span class="badge badge-orange">SUBCONTRACTOR</span><span class="badge badge-green" style="margin-left:4px">ACTIVE</span></div>
+          <div style="margin-top:10px;background:#1a2540;border-radius:8px;padding:12px;display:flex;gap:14px;align-items:center">
+            <div class="qr-box">⬛</div>
+            <div>
+              <div style="font-size:9px;color:#4fc3f7;margin-bottom:4px">Generated for Ahmed</div>
+              <div style="font-size:9px;color:rgba(255,255,255,0.5);word-break:break-all">accsys.app/forms?t=a3f9...</div>
+              <div style="display:flex;gap:6px;margin-top:8px">
+                <div style="background:#25d366;color:#fff;padding:4px 8px;border-radius:5px;font-size:9px;font-weight:800">💬 WhatsApp</div>
+                <div style="background:#229ed9;color:#fff;padding:4px 8px;border-radius:5px;font-size:9px;font-weight:800">✈️ Telegram</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="info-panel">
+      <div class="scene-tag">Scene 2 of 11 — Administration</div>
+      <div class="scene-title">Generate QR Token for Field Staff</div>
+      <div class="scene-body">Each employee gets a unique secure link. Share it via WhatsApp or Telegram. No username or password required.</div>
+      <div class="caption-box">
+        <div class="caption-label">🎙 Now Speaking</div>
+        <div class="caption-text" id="caption-1">Everything starts in the Administration panel. Before a field employee can use any form, the admin generates a personal QR token...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 3: FIELD LANDING -->
+  <div class="slide layout-split" id="slide-2">
+    <div class="mockup-panel">
+      <div style="display:flex;gap:20px;align-items:center">
+        <div class="phone-frame">
+          <div class="phone-status"><span>9:41 ▐▐▐▐▐ 100%</span></div>
+          <div class="phone-header">
+            <div class="phone-header-title">👋 Ahmed Al-Rashidi</div>
+            <div class="phone-header-sub">Staff Technician · ACCSYS</div>
+            <div style="margin-top:8px;display:inline-block;background:rgba(255,255,255,0.15);padding:3px 10px;border-radius:10px;font-size:9px;color:#fff">STAFF_TECH</div>
+          </div>
+          <div class="phone-body">
+            <div class="form-card"><div class="form-card-icon">📝</div><div><div class="form-card-title">Daily Expense</div><div class="form-card-desc">Record fuel, hotel, materials</div></div></div>
+            <div class="form-card"><div class="form-card-icon">🧾</div><div><div class="form-card-title">Expense Claim</div><div class="form-card-desc">Monthly claim submission</div></div></div>
+            <div class="form-card"><div class="form-card-icon">🏗️</div><div><div class="form-card-title">Site Completion</div><div class="form-card-desc">Milestone progress update</div></div></div>
+            <div class="form-card"><div class="form-card-icon">💳</div><div><div class="form-card-title">Payment Confirm</div><div class="form-card-desc">Confirm advance receipt</div></div></div>
+            <div class="form-card"><div class="form-card-icon">🚗</div><div><div class="form-card-title">Vehicle Report</div><div class="form-card-desc">Fuel · Maintenance · Incident</div></div></div>
+          </div>
+        </div>
+        <div style="color:rgba(255,255,255,0.4);font-size:13px;text-align:center;max-width:140px;line-height:1.8">
+          <div style="font-size:32px;margin-bottom:8px">📱</div>
+          No username<br>No password<br><br>
+          <div style="color:#4fc3f7;font-weight:700">QR token handles<br>authentication</div>
+        </div>
+      </div>
+    </div>
+    <div class="info-panel">
+      <div class="scene-tag">Scene 3 of 11 — Field Employee View</div>
+      <div class="scene-title">Personal Field Dashboard</div>
+      <div class="scene-body">The employee sees only the forms they are authorised to use. Large, touch-friendly cards designed for outdoor mobile use.</div>
+      <div class="caption-box">
+        <div class="caption-label">🎙 Now Speaking</div>
+        <div class="caption-text" id="caption-2">When Ahmed opens the link on his phone, the system reads his token, identifies him, and shows his personal dashboard...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 4: DAILY EXPENSE -->
+  <div class="slide layout-split" id="slide-3">
+    <div class="mockup-panel">
+      <div class="phone-frame">
+        <div class="phone-status"><span>9:41 ▐▐▐▐▐ 100%</span></div>
+        <div class="phone-header" style="background:linear-gradient(135deg,#1565c0,#0277bd)">
+          <div class="phone-header-title">📝 Daily Expense</div>
+          <div class="phone-header-sub">Ahmed Al-Rashidi</div>
+        </div>
+        <div class="phone-body">
+          <div class="form-field"><div>Date</div><div class="form-field-val">24 Aug 2026</div></div>
+          <div class="form-field"><div>Category</div><div class="form-field-val">⛽ Fuel</div></div>
+          <div class="form-field"><div>Amount (SAR)</div><div class="form-field-val">250.00</div></div>
+          <div class="form-field"><div>Description</div><div class="form-field-val">Fuel fill-up Riyadh–Dammam</div></div>
+          <div style="border:2px dashed #2d4a6b;border-radius:8px;padding:10px;text-align:center;margin-bottom:6px">
+            <div style="font-size:18px">📷</div>
+            <div style="font-size:9px;color:#4fc3f7;margin-top:3px">Receipt photo attached ✓</div>
+          </div>
+          <div class="submit-btn">✓ Submit Expense</div>
+        </div>
+      </div>
+    </div>
+    <div class="info-panel">
+      <div class="scene-tag">Scene 4 of 11 — Daily Expense</div>
+      <div class="scene-title">Record Field Costs in Seconds</div>
+      <div class="scene-body">Fuel, accommodation, materials, meals — each entry takes less than a minute. Photo receipt attached on the spot.</div>
+      <div class="caption-box">
+        <div class="caption-label">🎙 Now Speaking</div>
+        <div class="caption-text" id="caption-3">Ahmed taps Daily Expense to record today's field costs. He selects the date, picks the expense type, enters the amount, attaches a photo of the receipt...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 5: EXPENSE CLAIM -->
+  <div class="slide layout-split" id="slide-4">
+    <div class="mockup-panel">
+      <div class="phone-frame">
+        <div class="phone-status"><span>9:41 ▐▐▐▐▐ 100%</span></div>
+        <div class="phone-header" style="background:linear-gradient(135deg,#0277bd,#01579b)">
+          <div class="phone-header-title">🧾 Expense Claim</div>
+          <div class="phone-header-sub">August 2026</div>
+        </div>
+        <div class="phone-body">
+          <div style="font-size:9px;color:#4fc3f7;margin-bottom:6px;font-weight:800">AUTO-LOADED FROM DAILY RECORDS</div>
+          <div class="table-row" style="background:#162032"><span style="font-size:9px;color:#e2e8f0;flex:1">⛽ Fuel × 8</span><span style="font-size:10px;color:#4fc3f7;font-weight:700">SAR 1,840</span></div>
+          <div class="table-row" style="background:#162032"><span style="font-size:9px;color:#e2e8f0;flex:1">🏨 Hotel × 12</span><span style="font-size:10px;color:#4fc3f7;font-weight:700">SAR 4,200</span></div>
+          <div class="table-row" style="background:#162032"><span style="font-size:9px;color:#e2e8f0;flex:1">🍽️ Meals × 22</span><span style="font-size:10px;color:#4fc3f7;font-weight:700">SAR 660</span></div>
+          <div style="background:#1a2540;border-radius:6px;padding:8px;margin:8px 0;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:10px;color:rgba(255,255,255,0.6)">Total Claim</span>
+            <span style="font-size:14px;font-weight:900;color:#4caf50">SAR 6,700</span>
+          </div>
+          <div class="form-field"><div>Notes</div><div class="form-field-val">Monthly claim August 2026</div></div>
+          <div class="submit-btn" style="background:#1b5e20;color:#a5d6a7">✓ Submit Claim</div>
+        </div>
+      </div>
+    </div>
+    <div class="info-panel">
+      <div class="scene-tag">Scene 5 of 11 — Expense Claim</div>
+      <div class="scene-title">Monthly Claim — Auto-Calculated</div>
+      <div class="scene-body">All daily expenses for the month are pulled in automatically. Ahmed reviews the total and submits — one tap sends it for DH approval.</div>
+      <div class="caption-box">
+        <div class="caption-label">🎙 Now Speaking</div>
+        <div class="caption-text" id="caption-4">At the end of the month, Ahmed submits his Expense Claim. The system automatically pulls in all his recorded daily expenses, calculates the total...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 6: SITE COMPLETION -->
+  <div class="slide layout-split" id="slide-5">
+    <div class="mockup-panel">
+      <div class="phone-frame">
+        <div class="phone-status"><span>9:41 ▐▐▐▐▐ 100%</span></div>
+        <div class="phone-header" style="background:linear-gradient(135deg,#bf360c,#e64a19)">
+          <div class="phone-header-title">🏗️ Site Completion</div>
+          <div class="phone-header-sub">SITE-001 · Tower Installation</div>
+        </div>
+        <div class="phone-body">
+          <div style="font-size:9px;color:#4fc3f7;margin-bottom:6px;font-weight:800">MILESTONE CHECKLIST</div>
+          <div style="background:#1b3a1b;border:1px solid #2e7d32;border-radius:6px;padding:7px 10px;margin-bottom:4px;display:flex;gap:8px;align-items:center">
+            <div style="width:16px;height:16px;background:#2e7d32;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff">✓</div>
+            <span style="font-size:10px;color:#a5d6a7;font-weight:700">Foundation / base install</span>
+          </div>
+          <div style="background:#1b3a1b;border:1px solid #2e7d32;border-radius:6px;padding:7px 10px;margin-bottom:4px;display:flex;gap:8px;align-items:center">
+            <div style="width:16px;height:16px;background:#2e7d32;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff">✓</div>
+            <span style="font-size:10px;color:#a5d6a7;font-weight:700">Tower erection — section 1</span>
+          </div>
+          <div style="background:#162032;border:1px solid #2d4a6b;border-radius:6px;padding:7px 10px;margin-bottom:4px;display:flex;gap:8px;align-items:center">
+            <div style="width:16px;height:16px;background:#1a2540;border-radius:4px"></div>
+            <span style="font-size:10px;color:rgba(255,255,255,0.4)">Tower erection — section 2</span>
+          </div>
+          <div style="margin:8px 0">
+            <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-bottom:3px">Overall Progress</div>
+            <div class="progress-bar-mini"><div class="progress-fill-mini" style="width:42%"></div></div>
+            <div style="font-size:10px;color:#4fc3f7;margin-top:3px;font-weight:700">42% Complete</div>
+          </div>
+          <div class="submit-btn" style="background:#bf360c;color:#ffccbc">✓ Submit Update</div>
+        </div>
+      </div>
+    </div>
+    <div class="info-panel">
+      <div class="scene-tag">Scene 6 of 11 — Site Completion</div>
+      <div class="scene-title">Milestone Tracking in the Field</div>
+      <div class="scene-body">Scope-specific checklists for Tower, Civil, Fibre, Active, and more. Completion percentage updates automatically with each submission.</div>
+      <div class="caption-box">
+        <div class="caption-label">🎙 Now Speaking</div>
+        <div class="caption-text" id="caption-5">Ahmed taps Site Completion and selects his assigned site. The system shows the full milestone checklist for that site's scope...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 7: PAYMENT CONFIRMATION -->
+  <div class="slide layout-split" id="slide-6">
+    <div class="mockup-panel">
+      <div class="phone-frame">
+        <div class="phone-status"><span>9:41 ▐▐▐▐▐ 100%</span></div>
+        <div class="phone-header" style="background:linear-gradient(135deg,#1b5e20,#2e7d32)">
+          <div class="phone-header-title">💳 Payment Confirmation</div>
+          <div class="phone-header-sub">Confirm advance receipt</div>
+        </div>
+        <div class="phone-body">
+          <div style="font-size:9px;color:#4fc3f7;margin-bottom:6px;font-weight:800">PENDING CONFIRMATION</div>
+          <div style="background:#1a2540;border:1px solid #ffcc80;border-radius:8px;padding:10px;margin-bottom:8px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:10px;color:#ffcc80;font-weight:800">💸 Cash Advance</span>
+              <span style="font-size:13px;font-weight:900;color:#fff">SAR 2,500</span>
+            </div>
+            <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:4px">Issued by: Mohammed Al-Otaibi · 22 Aug 2026</div>
+          </div>
+          <div style="border:2px dashed #2d4a6b;border-radius:8px;padding:10px;text-align:center;margin-bottom:6px">
+            <div style="font-size:16px">📷</div>
+            <div style="font-size:9px;color:#4fc3f7;margin-top:3px">Voucher photo attached ✓</div>
+          </div>
+          <div class="form-field"><div>Notes</div><div class="form-field-val">Received in hand — signed</div></div>
+          <div class="submit-btn" style="background:#1b5e20;color:#a5d6a7">✓ Confirm Receipt</div>
+        </div>
+      </div>
+    </div>
+    <div class="info-panel">
+      <div class="scene-tag">Scene 7 of 11 — Payment Confirmation</div>
+      <div class="scene-title">Full Advance Lifecycle — Digital</div>
+      <div class="scene-body">Cash issued by DH → employee uploads signed voucher photo → confirmed. Complete audit trail. No paper forms.</div>
+      <div class="caption-box">
+        <div class="caption-label">🎙 Now Speaking</div>
+        <div class="caption-text" id="caption-6">When a Department Head issues a cash advance, the employee confirms receipt by uploading a photo of the signed voucher...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 8: VEHICLE REPORT -->
+  <div class="slide layout-split" id="slide-7">
+    <div class="mockup-panel">
+      <div class="phone-frame">
+        <div class="phone-status"><span>9:41 ▐▐▐▐▐ 100%</span></div>
+        <div class="phone-header" style="background:linear-gradient(135deg,#37474f,#455a64)">
+          <div class="phone-header-title">🚗 Vehicle Report</div>
+          <div class="phone-header-sub">Fleet — ABC-1234</div>
+        </div>
+        <div class="phone-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+            <div style="background:#1565c0;border-radius:8px;padding:10px;text-align:center">
+              <div style="font-size:18px">⛽</div>
+              <div style="font-size:9px;color:#fff;font-weight:800;margin-top:3px">Fuel Log</div>
+            </div>
+            <div style="background:#162032;border:1px solid #2d4a6b;border-radius:8px;padding:10px;text-align:center">
+              <div style="font-size:18px">🔧</div>
+              <div style="font-size:9px;color:rgba(255,255,255,0.5);font-weight:800;margin-top:3px">Maintenance</div>
+            </div>
+            <div style="background:#162032;border:1px solid #2d4a6b;border-radius:8px;padding:10px;text-align:center">
+              <div style="font-size:18px">🚨</div>
+              <div style="font-size:9px;color:rgba(255,255,255,0.5);font-weight:800;margin-top:3px">Incident</div>
+            </div>
+            <div style="background:#162032;border:1px solid #2d4a6b;border-radius:8px;padding:10px;text-align:center">
+              <div style="font-size:18px">📋</div>
+              <div style="font-size:9px;color:rgba(255,255,255,0.5);font-weight:800;margin-top:3px">Inspection</div>
+            </div>
+          </div>
+          <div class="form-field"><div>Litres</div><div class="form-field-val">60 L</div></div>
+          <div class="form-field"><div>Cost (SAR)</div><div class="form-field-val">204.00</div></div>
+          <div class="form-field"><div>Station</div><div class="form-field-val">ARAMCO – Exit 7</div></div>
+          <div class="submit-btn" style="background:#37474f;color:#b0bec5">✓ Submit Log</div>
+        </div>
+      </div>
+    </div>
+    <div class="info-panel">
+      <div class="scene-tag">Scene 8 of 11 — Vehicle Report</div>
+      <div class="scene-title">Fleet Management from the Field</div>
+      <div class="scene-body">4 log types: Fuel, Maintenance, Incident, and Inspection checklist. DH notified instantly for incidents and urgent maintenance.</div>
+      <div class="caption-box">
+        <div class="caption-label">🎙 Now Speaking</div>
+        <div class="caption-text" id="caption-7">For drivers and supervisors managing fleet vehicles, there is the Vehicle Report form. Fuel, maintenance, incidents, and inspections...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 9: DH COMMAND CENTRE -->
+  <div class="slide layout-split" id="slide-8">
+    <div class="mockup-panel">
+      <div class="desktop-frame" style="width:520px">
+        <div class="desktop-titlebar">
+          <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+          <span class="desktop-url">DH Command Centre</span>
+        </div>
+        <div class="desktop-body">
+          <div style="display:flex;gap:6px;margin-bottom:12px">
+            <div style="background:#2d3a6b;color:#4fc3f7;padding:5px 12px;border-radius:6px;font-size:9px;font-weight:800">💵 Cash</div>
+            <div style="background:#162032;color:rgba(255,255,255,0.4);padding:5px 12px;border-radius:6px;font-size:9px;font-weight:800">📍 Sites</div>
+            <div style="background:#162032;color:rgba(255,255,255,0.4);padding:5px 12px;border-radius:6px;font-size:9px;font-weight:800">🧾 Claims</div>
+            <div style="background:#162032;color:rgba(255,255,255,0.4);padding:5px 12px;border-radius:6px;font-size:9px;font-weight:800">👥 Team</div>
+            <div style="background:#162032;color:rgba(255,255,255,0.4);padding:5px 12px;border-radius:6px;font-size:9px;font-weight:800">🔔 Alerts</div>
+          </div>
+          <div class="kpi-row">
+            <div class="kpi-box"><div class="kpi-val" style="color:#ef9a9a">SAR 12,400</div><div class="kpi-lbl">Outstanding</div></div>
+            <div class="kpi-box"><div class="kpi-val" style="color:#ffcc80">3</div><div class="kpi-lbl">Overdue 30d+</div></div>
+            <div class="kpi-box"><div class="kpi-val" style="color:#ef5350">1</div><div class="kpi-lbl">Overdue 60d+</div></div>
+          </div>
+          <div style="font-size:9px;color:rgba(255,255,255,0.4);margin:8px 0 4px">CASH ADVANCE LEDGER</div>
+          <div class="table-row"><span style="font-size:10px;color:#e2e8f0;flex:1">Ahmed Al-Rashidi</span><span style="font-size:10px;color:#4fc3f7;font-weight:700">SAR 2,500</span><span class="badge badge-green" style="margin-left:6px">12d</span></div>
+          <div class="table-row"><span style="font-size:10px;color:#e2e8f0;flex:1">Faisal Al-Ghamdi</span><span style="font-size:10px;color:#ffcc80;font-weight:700">SAR 5,000</span><span class="badge badge-orange" style="margin-left:6px">38d</span></div>
+          <div class="table-row"><span style="font-size:10px;color:#e2e8f0;flex:1">Omar Al-Zahrani</span><span style="font-size:10px;color:#ef9a9a;font-weight:700">SAR 4,900</span><span class="badge badge-red" style="margin-left:6px">67d</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="info-panel">
+      <div class="scene-tag">Scene 9 of 11 — DH Command Centre</div>
+      <div class="scene-title">Live Dashboard for Department Heads</div>
+      <div class="scene-body">5 panels: Cash advances with age colours · Site progress · Claims to approve · Team directory · Field notifications.</div>
+      <div class="caption-box">
+        <div class="caption-label">🎙 Now Speaking</div>
+        <div class="caption-text" id="caption-8">The DH opens the Command Centre — a live dashboard with five panels. Cash advances colour-coded by age. Sites with completion percentage. Claims to approve...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 10: NOTIFICATIONS & REVOKE -->
+  <div class="slide layout-split" id="slide-9">
+    <div class="mockup-panel">
+      <div class="desktop-frame" style="width:520px">
+        <div class="desktop-titlebar">
+          <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+          <span class="desktop-url">Field Notifications</span>
+        </div>
+        <div class="desktop-body">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div style="font-size:12px;font-weight:900;color:#fff">🔔 Field Notifications</div>
+            <div style="background:#2d3a6b;color:#4fc3f7;padding:4px 10px;border-radius:6px;font-size:9px;font-weight:800">✓ Mark All Read</div>
+          </div>
+          <div class="kpi-row">
+            <div class="kpi-box"><div class="kpi-val">14</div><div class="kpi-lbl">Today</div></div>
+            <div class="kpi-box"><div class="kpi-val" style="color:#ce93d8">5</div><div class="kpi-lbl">Unread</div></div>
+            <div class="kpi-box"><div class="kpi-val" style="color:#4caf50">9</div><div class="kpi-lbl">TG Delivered</div></div>
+            <div class="kpi-box"><div class="kpi-val" style="color:#ffcc80">5</div><div class="kpi-lbl">TG Pending</div></div>
+          </div>
+          <div class="table-row" style="background:#1a2540;border:1px solid #2d3a6b">
+            <span style="font-size:16px">🧾</span>
+            <div style="flex:1">
+              <div style="font-size:10px;font-weight:800;color:#fff">Claim Submitted</div>
+              <div style="font-size:9px;color:rgba(255,255,255,0.5)">Ahmed Al-Rashidi · SAR 6,700</div>
+            </div>
+            <span style="font-size:10px;color:#4caf50">✅ Sent</span>
+          </div>
+          <div class="table-row">
+            <span style="font-size:16px">🚨</span>
+            <div style="flex:1">
+              <div style="font-size:10px;font-weight:800;color:#fff">Vehicle Incident</div>
+              <div style="font-size:9px;color:rgba(255,255,255,0.5)">Khalid Hassan · ABC-1234</div>
+            </div>
+            <span style="font-size:10px;color:#ffcc80">⏳ No TG ID</span>
+          </div>
+          <div class="table-row">
+            <span style="font-size:16px">📍</span>
+            <div style="flex:1">
+              <div style="font-size:10px;font-weight:800;color:#fff">Site Update — 75%</div>
+              <div style="font-size:9px;color:rgba(255,255,255,0.5)">SITE-001 · Tower Installation</div>
+            </div>
+            <span style="font-size:10px;color:#4caf50">✅ Sent</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="info-panel">
+      <div class="scene-tag">Scene 10 of 11 — Admin View</div>
+      <div class="scene-title">System-Wide Notifications & Access Control</div>
+      <div class="scene-body">Every field alert in one inbox. Telegram delivery status per notification. Revoke any token instantly from QR Manager.</div>
+      <div class="caption-box">
+        <div class="caption-label">🎙 Now Speaking</div>
+        <div class="caption-text" id="caption-9">The Field Notifications page gives a system-wide view of every notification sent — with Telegram delivery status for each one...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 11: CLOSING -->
+  <div class="slide layout-full" id="slide-10" style="align-items:center;justify-content:center;background:linear-gradient(160deg,#0d1117,#1a2540)">
+    <div style="text-align:center;max-width:700px;padding:40px">
+      <div style="font-size:14px;font-weight:800;letter-spacing:3px;color:#4fc3f7;margin-bottom:16px">ACCSYS FIELD OPERATIONS PLATFORM</div>
+      <div style="font-size:42px;font-weight:900;color:#fff;margin-bottom:24px;line-height:1.2">The Complete Field<br>Operations Cycle</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:36px">
+        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px">
+          <div style="font-size:24px;margin-bottom:8px">💸</div>
+          <div style="font-size:12px;font-weight:800;color:#fff;margin-bottom:4px">Cash Advances</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.5)">Issued & confirmed with full audit trail</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px">
+          <div style="font-size:24px;margin-bottom:8px">🏗️</div>
+          <div style="font-size:12px;font-weight:800;color:#fff;margin-bottom:4px">Site Progress</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.5)">Milestones tracked & approved in real time</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px">
+          <div style="font-size:24px;margin-bottom:8px">🧾</div>
+          <div style="font-size:12px;font-weight:800;color:#fff;margin-bottom:4px">Expense Claims</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.5)">Recorded, submitted & approved digitally</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px">
+          <div style="font-size:24px;margin-bottom:8px">🚗</div>
+          <div style="font-size:12px;font-weight:800;color:#fff;margin-bottom:4px">Fleet Reports</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.5)">Incidents flagged instantly to management</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px">
+          <div style="font-size:24px;margin-bottom:8px">👷</div>
+          <div style="font-size:12px;font-weight:800;color:#fff;margin-bottom:4px">Sub-Con Claims</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.5)">Work documented & submitted for payment</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px">
+          <div style="font-size:24px;margin-bottom:8px">📱</div>
+          <div style="font-size:12px;font-weight:800;color:#fff;margin-bottom:4px">Mobile First</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.5)">No app install · QR access · Works offline</div>
+        </div>
+      </div>
+      <div style="font-size:14px;color:rgba(255,255,255,0.45)">Detailed role-based training videos coming soon</div>
+    </div>
+  </div>
+
+</div><!-- end presentation -->
+
+<!-- BOTTOM BAR -->
+<div id="bottom-bar">
+  <button class="ctrl-btn" onclick="prevSlide()">← Prev</button>
+  <button class="ctrl-btn primary" onclick="nextSlide()">Next →</button>
+  <div id="progress-track"><div id="progress-fill"></div></div>
+  <div id="scene-label">Scene 1 / 11</div>
+  <div id="timer-label">0:00</div>
+  <button class="ctrl-btn" onclick="togglePause()" id="pause-btn">⏸ Pause</button>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+
+const NARRATIONS = [
+  // Scene 1 — Intro
+  "Welcome to ACCSYS — the Field Operations Platform built for Ratal Group. This system connects office administration with field teams in real time. Department Heads, Project Managers, Supervisors, Technicians, Drivers, and Sub-Contractors all work through one unified platform — no paper, no chasing, and no manual follow-up. Let us walk through the complete workflow from start to finish.",
+
+  // Scene 2 — QR Manager
+  "Everything starts in the Administration panel. Before a field employee can use any form, the admin generates a personal QR token for them. Go to Administration, then QR Code Manager. Click Generate QR Token. Select the employee, choose the field role — Staff Technician in this case — add a note, and click Generate. The system instantly creates a unique secure link and displays a QR code. From here, you can share it directly via WhatsApp or Telegram with one click. The employee receives the link on their phone. That is their personal entry point to all their field forms.",
+
+  // Scene 3 — Landing
+  "When the employee opens the link on their phone, the system reads the token, identifies them, and shows their personal dashboard. They can see their name, their role, and all the forms they are authorised to use. No username. No password. The QR token handles authentication securely. The forms are large, touch-friendly cards — designed entirely for mobile use in the field.",
+
+  // Scene 4 — Daily Expense
+  "The employee taps Daily Expense to record today's field costs. They select the date, then pick the expense type — in this case, Fuel. They enter the amount in Saudi Riyals, add a brief description, and attach a photo of the receipt by tapping the camera icon. They hit Submit. The entry is saved instantly. Over the course of the month, they log all field expenses the same way — fuel, accommodation, materials, and meals.",
+
+  // Scene 5 — Expense Claim
+  "At the end of the month, the employee submits their Expense Claim. The system automatically pulls in all recorded daily expenses for the current month, calculates the total, and presents them for review. The employee checks the summary, adds any final notes, and taps Submit Claim. The claim is now waiting for Department Head approval with status Submitted.",
+
+  // Scene 6 — Site Completion
+  "The employee taps Site Completion and selects their assigned site. The system shows the full milestone checklist for that site's scope — in this case, Tower Installation. They tick off the milestones completed today, add a site photo, and submit. The system calculates the updated completion percentage and logs the update with a timestamp. The Project Manager and Department Head are notified immediately.",
+
+  // Scene 7 — Payment Confirmation
+  "When a Department Head issues a cash advance to a field employee, the employee receives a notification to confirm receipt. They tap Payment Confirmation, see the advance issued to them, upload a photo of the signed voucher, add a note, and confirm receipt. This creates a complete auditable trail from cash issuance all the way to signed confirmation — no paper forms required.",
+
+  // Scene 8 — Vehicle Report
+  "For drivers and supervisors managing fleet vehicles, there is the Vehicle Report form. The employee selects the vehicle from the registered fleet, then chooses the log type — Fuel, Maintenance, Incident, or Inspection. For a fuel log, they enter the litres filled, the cost, and the station name. For an incident, they upload photos and describe what happened. The Department Head receives an immediate notification for any incident or high-urgency maintenance report.",
+
+  // Scene 9 — Command Centre
+  "Now let us switch to the Department Head view. The D H opens the Command Centre — a live dashboard with five panels. The first panel is Cash, showing every outstanding advance colour-coded by age. Green for recent advances, orange for over thirty days, red for over sixty days. The second panel shows Sites with completion percentages. The third panel is Claims — pending claims appear at the top and the D H approves them with one tap. The employee is notified instantly. The fourth panel is Team. The fifth is Notifications.",
+
+  // Scene 10 — Notifications & Revoke
+  "The Field Notifications page gives a system-wide view of every notification sent across all employees — with Telegram delivery status shown for each one. Notifications marked with a green tick were successfully delivered to the employee's Telegram. Those marked pending have no Telegram chat ID configured yet. If a token needs to be revoked — for example when an employee leaves the project — the admin goes to QR Manager and clicks Revoke. Access is removed instantly.",
+
+  // Scene 11 — Closing
+  "ACCSYS Field Operations covers the complete cycle. Cash advances issued and confirmed. Daily expenses recorded and claimed. Site milestones tracked and approved. Fleet incidents reported in real time. Sub-contractor work documented and submitted for payment. All of this from a phone, with no paper, and a full audit trail for every action. A detailed training video for each role will follow once the Telegram notification system is fully configured. Thank you for watching.",
+];
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+
+let currentSlide  = 0;
+let totalSlides   = 11;
+let utterance     = null;
+let synth         = window.speechSynthesis;
+let paused        = false;
+let timerInterval = null;
+let elapsed       = 0;
+let started       = false;
+
+// ── VOICE SELECTION ───────────────────────────────────────────────────────────
+
+function getBestVoice() {
+  const voices = synth.getVoices();
+  // Prefer a natural English male voice
+  const preferred = [
+    v => v.name.includes('David'),
+    v => v.name.includes('Guy'),
+    v => v.name.includes('Mark'),
+    v => v.name.includes('James'),
+    v => v.name.includes('Microsoft') && v.lang.startsWith('en'),
+    v => v.lang === 'en-US',
+    v => v.lang.startsWith('en'),
+  ];
+  for (const fn of preferred) {
+    const found = voices.find(fn);
+    if (found) return found;
+  }
+  return voices[0] || null;
+}
+
+// ── SLIDE CONTROL ─────────────────────────────────────────────────────────────
+
+function showSlide(n) {
+  document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+  document.getElementById('slide-' + n).classList.add('active');
+  currentSlide = n;
+  document.getElementById('scene-label').textContent = `Scene ${n + 1} / ${totalSlides}`;
+  document.getElementById('progress-fill').style.width = (((n + 1) / totalSlides) * 100) + '%';
+}
+
+function nextSlide() {
+  if (currentSlide < totalSlides - 1) {
+    speakScene(currentSlide + 1);
+  }
+}
+
+function prevSlide() {
+  if (currentSlide > 0) {
+    speakScene(currentSlide - 1);
+  }
+}
+
+// ── SPEECH ────────────────────────────────────────────────────────────────────
+
+function speakScene(n) {
+  synth.cancel();
+  showSlide(n);
+
+  utterance = new SpeechSynthesisUtterance(NARRATIONS[n]);
+  utterance.rate  = 0.88;
+  utterance.pitch = 0.95;
+  utterance.volume = 1;
+
+  // Try to set voice (voices may not be ready yet)
+  const voice = getBestVoice();
+  if (voice) utterance.voice = voice;
+
+  utterance.onend = () => {
+    if (n < totalSlides - 1 && !paused) {
+      setTimeout(() => speakScene(n + 1), 1200);
+    }
+  };
+
+  synth.speak(utterance);
+}
+
+// ── PAUSE / RESUME ────────────────────────────────────────────────────────────
+
+function togglePause() {
+  if (synth.speaking) {
+    if (synth.paused) {
+      synth.resume();
+      paused = false;
+      document.getElementById('pause-btn').textContent = '⏸ Pause';
+    } else {
+      synth.pause();
+      paused = true;
+      document.getElementById('pause-btn').textContent = '▶ Resume';
+    }
+  }
+}
+
+// ── TIMER ─────────────────────────────────────────────────────────────────────
+
+function startTimer() {
+  timerInterval = setInterval(() => {
+    elapsed++;
+    const m = Math.floor(elapsed / 60);
+    const s = elapsed % 60;
+    document.getElementById('timer-label').textContent = m + ':' + String(s).padStart(2,'0');
+  }, 1000);
+}
+
+// ── START ─────────────────────────────────────────────────────────────────────
+
+function startPresentation() {
+  document.getElementById('start-screen').style.display = 'none';
+
+  // Voices load async — wait briefly
+  setTimeout(() => {
+    speakScene(0);
+    startTimer();
+  }, 500);
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (!started) return;
+  if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+  if (e.key === 'ArrowLeft')  prevSlide();
+  if (e.key === 'p' || e.key === 'P') togglePause();
+});
+
+// Preload voices
+window.speechSynthesis.onvoiceschanged = () => {};
+</script>
+</body>
+</html>

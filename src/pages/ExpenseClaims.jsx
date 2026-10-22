@@ -126,6 +126,8 @@ export default function ExpenseClaims({ entityId, entityName, role, profile }) {
   const [liveFA,  setLiveFA]   = useState([])
   const [liveOT,  setLiveOT]   = useState([])
   const [liveLoading, setLiveLoading] = useState(false)
+  const [selectedRec, setSelectedRec] = useState(null)   // expense_record row selected for print
+  const [printingRec, setPrintingRec] = useState(false)
 
   // Generate modal
   const [genOpen,    setGenOpen]    = useState(false)
@@ -153,6 +155,15 @@ export default function ExpenseClaims({ entityId, entityName, role, profile }) {
   // DH objection modal
   const [dhObjMode,   setDhObjMode]   = useState(false)
   const [dhObjReason, setDhObjReason] = useState('')
+
+  // Grace unblock panel (Admin only)
+  const [graceList,    setGraceList]    = useState([])
+  const [graceLoading, setGraceLoading] = useState(false)
+  const [graceEmpId,   setGraceEmpId]   = useState('')
+  const [gracePeriod,  setGracePeriod]  = useState('')
+  const [graceNote,    setGraceNote]    = useState('')
+  const [graceBusy,    setGraceBusy]    = useState(false)
+  const [graceMsg,     setGraceMsg]     = useState('')
 
   // ── DH department mapping ────────────────────────────────────
   const dhDept = useMemo(() => {
@@ -242,7 +253,7 @@ export default function ExpenseClaims({ entityId, entityName, role, profile }) {
     }
     const [expRes, faRes, otRes] = await Promise.all([
       supabase.from('expense_records')
-        .select('id,employee_id,expense_date,category,expense_type,vendor_name,amount,vat_amount,status,late_days,claim_id')
+        .select('id,employee_id,expense_date,category,expense_type,vendor_name,vendor_vat_number,vat_number,amount,vat_amount,status,late_days,claim_id,invoice_number,invoice_date,receipt_url,remarks,site_number,project_id,submitted_at')
         .eq('entity_id', entityId)
         .gte('expense_date', from).lte('expense_date', to)
         .order('expense_date', { ascending: false }),
@@ -261,9 +272,23 @@ export default function ExpenseClaims({ entityId, entityName, role, profile }) {
     setLiveLoading(false)
   }, [entityId, filterPeriod])
 
+  // ── Load grace unblocks (Admin only) ────────────────────────
+  const loadGraceUnblocks = useCallback(async () => {
+    if (!entityId) return
+    setGraceLoading(true)
+    const { data } = await supabase
+      .from('expense_grace_unblocks')
+      .select('*')
+      .eq('entity_id', entityId)
+      .order('unblocked_at', { ascending: false })
+    setGraceList(data || [])
+    setGraceLoading(false)
+  }, [entityId])
+
   useEffect(() => {
-    if (pageTab !== 'claims') loadLiveRecordings()
-  }, [pageTab, filterPeriod, loadLiveRecordings])
+    if (pageTab === 'grace-unblocks') loadGraceUnblocks()
+    else if (pageTab !== 'claims') loadLiveRecordings()
+  }, [pageTab, filterPeriod, loadLiveRecordings, loadGraceUnblocks])
 
   // ── Load claim detail ────────────────────────────────────────
   async function openClaim(claim) {
@@ -511,9 +536,9 @@ export default function ExpenseClaims({ entityId, entityName, role, profile }) {
       date:       l.expense_date,
       category:   l.category || l.expense_type || '—',
       vendor:     l.vendor_name || '—',
-      net_amount: l.amount,
-      vat_amount: l.vat_amount || 0,
-      total:      (parseFloat(l.amount)||0) + (parseFloat(l.vat_amount)||0),
+      net_amount: (parseFloat(l.amount)||0) - (parseFloat(l.vat_amount)||0), // pre-VAT base
+      vat_amount: parseFloat(l.vat_amount) || 0,
+      total:      parseFloat(l.amount) || 0,  // amount already includes VAT
       status:     l.status,
     }))
 
@@ -614,6 +639,56 @@ export default function ExpenseClaims({ entityId, entityName, role, profile }) {
       driveFileName: `FA-${claim.claim_number || claim.id}.pdf`,
       orientation:   'portrait',
     })
+  }
+
+  // ── Print single expense record voucher ──────────────────────
+  async function printExpenseRecord(rec) {
+    if (!rec) return
+    setPrintingRec(true)
+    try {
+      const emp  = empMap[rec.employee_id] || {}
+      // Resolve project name/number if project_id present
+      let projectName = '', projectNo = ''
+      if (rec.project_id) {
+        const { data: proj } = await supabase
+          .from('projects')
+          .select('project_name_en,project_number')
+          .eq('id', rec.project_id)
+          .maybeSingle()
+        projectName = proj?.project_name_en || ''
+        projectNo   = proj?.project_number  || ''
+      }
+      const data = {
+        record_number:  `EXP-REC-${rec.id?.slice(-8)?.toUpperCase()}`,
+        employee_name:  emp.full_name_en || '—',
+        department:     emp.department   || '',
+        project_no:     projectNo || rec.site_number || '',
+        project_name:   projectName,
+        site_no:        rec.site_number  || '',
+        job_no:         rec.site_number  || '',
+        expense_date:   rec.expense_date || '',
+        invoice_date:   rec.invoice_date || '',
+        submitted_at:   rec.submitted_at || rec.expense_date || '',
+        vendor:         rec.vendor_name  || '',
+        invoice_number: rec.invoice_number || '',
+        vat_number:     rec.vendor_vat_number || rec.vat_number || '',
+        category:       rec.category    || rec.expense_type || '',
+        net_amount:     (parseFloat(rec.amount)||0) - (parseFloat(rec.vat_amount)||0), // pre-VAT
+        vat_amount:     parseFloat(rec.vat_amount) || 0,
+        total:          parseFloat(rec.amount) || 0,  // amount already includes VAT
+        photo_url:      rec.receipt_url  || '',
+        notes:          rec.remarks      || '',
+        entity_name:    'Ratal Advanced Technologies',
+      }
+      const win = openPrintWindow()
+      await printDocument('expense_record_voucher', data, {
+        _preWin:       win,
+        driveFolder:   'expense-vouchers',
+        driveFileName: `${data.record_number}.pdf`,
+      })
+    } finally {
+      setPrintingRec(false)
+    }
   }
 
   // ── Generate claims ───────────────────────────────────────────
@@ -760,6 +835,7 @@ export default function ExpenseClaims({ entityId, entityName, role, profile }) {
           { key:'live-expenses', label:'🧾 Live Expenses',    count: liveExp.length },
           { key:'live-fa',       label:'🍽 Food Allowance',   count: liveFA.length },
           { key:'live-ot',       label:'⏱ Overtime',         count: liveOT.length },
+          ...(isAdmin ? [{ key:'grace-unblocks', label:'🔓 Grace Unblocks', count: graceList.length || null }] : []),
         ].map(t => (
           <button key={t.key} onClick={()=>setPageTab(t.key)} style={{
             padding:'8px 18px', fontFamily:"'Poppins',sans-serif", fontWeight:700, fontSize:12,
@@ -820,6 +896,25 @@ export default function ExpenseClaims({ entityId, entityName, role, profile }) {
           const rows = liveExp.filter(matchEmp)
           return (
             <div>
+              {/* Print toolbar — always visible when on this tab */}
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,padding:'8px 12px',background:'#f7f9fc',border:'1px solid #d8e2ee',borderRadius:7}}>
+                <div style={{flex:1,fontSize:12,color:selectedRec?'#1a2e3d':'#aab2bd'}}>
+                  {selectedRec
+                    ? <>Selected: <strong>{empMap[selectedRec.employee_id]?.full_name_en||'—'}</strong> · {fmtDate(selectedRec.expense_date)} · {selectedRec.category||'—'} · <strong>SAR {fmtSAR(selectedRec.amount)}</strong></>
+                    : 'Click a row to select it, then print its voucher'}
+                </div>
+                {selectedRec && (
+                  <button style={{...S.btn('#6b7c93','#fff'),fontSize:11,padding:'5px 12px'}}
+                    onClick={()=>setSelectedRec(null)}>✕ Clear</button>
+                )}
+                <button
+                  disabled={!selectedRec || printingRec}
+                  onClick={()=>printExpenseRecord(selectedRec)}
+                  style={{...S.btn(selectedRec?'#1a2e3d':'#d0d8e4', selectedRec?'#fff':'#aab2bd'), fontSize:12, padding:'6px 18px', cursor:selectedRec?'pointer':'default', opacity:printingRec?0.6:1}}>
+                  {printingRec ? '⏳ Printing…' : '🖨 Print Voucher'}
+                </button>
+              </div>
+
               {liveLoading && <div style={{textAlign:'center',padding:32,color:'#aab2bd'}}>Loading expense records…</div>}
               {!liveLoading && liveExp.length === 0 && (
                 <div style={S.alert('#e65100','#fff3e0')}>
@@ -833,15 +928,27 @@ export default function ExpenseClaims({ entityId, entityName, role, profile }) {
                   {rows.length > 0 && (
                     <table style={S.tbl}>
                       <thead><tr>
-                        {['Date','Employee','Category','Vendor / Description','Amount (SAR)','VAT','Status','Claim'].map(h=>(
+                        {['','Date','Employee','Category','Vendor / Description','Amount (SAR)','VAT','Status'].map(h=>(
                           <th key={h} style={S.th}>{h}</th>
                         ))}
                       </tr></thead>
                       <tbody>
                         {rows.map((r,i)=>{
                           const emp = empMap[r.employee_id]
+                          const isSelected = selectedRec?.id === r.id
                           return (
-                            <tr key={r.id} style={S.tr(i)}>
+                            <tr key={r.id}
+                              onClick={()=>setSelectedRec(isSelected ? null : r)}
+                              style={{...S.tr(i), cursor:'pointer',
+                                background: isSelected ? '#e3f2fd' : undefined,
+                                outline: isSelected ? '2px solid #1565c0' : undefined,
+                                outlineOffset: '-1px',
+                              }}>
+                              <td style={{...S.td,width:28,textAlign:'center'}}>
+                                <div style={{width:16,height:16,borderRadius:8,border:`2px solid ${isSelected?'#1565c0':'#c0cad8'}`,background:isSelected?'#1565c0':'transparent',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                                  {isSelected && <span style={{color:'#fff',fontSize:10,lineHeight:1}}>✓</span>}
+                                </div>
+                              </td>
                               <td style={S.td}>{fmtDate(r.expense_date)}</td>
                               <td style={S.td}>
                                 <div style={{fontWeight:600,fontSize:12}}>{emp?.full_name_en||'—'}</div>
@@ -857,9 +964,7 @@ export default function ExpenseClaims({ entityId, entityName, role, profile }) {
                                   color:r.claim_id?'#2e7d32':'#f57f17'}}>
                                   {r.claim_id?'Claimed':r.status||'RECORDED'}
                                 </span>
-                                {r.late_days>30 && <span style={{fontSize:10,color:'#c62828',marginLeft:4}}>⚠ Late</span>}
                               </td>
-                              <td style={{...S.td,fontSize:11,color:'#aab2bd'}}>{r.claim_id?'✅':'—'}</td>
                             </tr>
                           )
                         })}
@@ -979,6 +1084,105 @@ export default function ExpenseClaims({ entityId, entityName, role, profile }) {
                     </table>
                   )}
                 </>
+              )}
+            </div>
+          )
+        }
+
+        // ── Grace Unblocks (Admin) ────────────────────────────
+        if (pageTab === 'grace-unblocks') {
+          const unblockGrace = async () => {
+            if (!graceEmpId || !gracePeriod) { setGraceMsg('⚠️ Employee and period are required.'); return }
+            if (!/^\d{4}-\d{2}$/.test(gracePeriod)) { setGraceMsg('⚠️ Period must be YYYY-MM (e.g. 2026-09)'); return }
+            setGraceBusy(true); setGraceMsg('')
+            const adminName = profile?.full_name || profile?.email || 'Admin'
+            const { error } = await supabase.from('expense_grace_unblocks').upsert({
+              entity_id:   entityId,
+              employee_id: graceEmpId,
+              period:      gracePeriod,
+              unblocked_by: adminName,
+              notes:       graceNote || null,
+            }, { onConflict: 'employee_id,period' })
+            if (error) { setGraceMsg(`❌ ${error.message}`); setGraceBusy(false); return }
+            setGraceMsg(`✅ Grace override granted for ${periodLabel(gracePeriod)}`)
+            setGraceEmpId(''); setGracePeriod(''); setGraceNote('')
+            await loadGraceUnblocks()
+            setGraceBusy(false)
+          }
+
+          const revokeGrace = async (id) => {
+            if (!window.confirm('Revoke this grace override? The employee will be blocked again.')) return
+            const { error } = await supabase.from('expense_grace_unblocks').delete().eq('id', id)
+            if (!error) await loadGraceUnblocks()
+          }
+
+          return (
+            <div>
+              {/* Grant form */}
+              <div style={{background:'#fff',borderRadius:12,padding:'20px 22px',border:`1px solid ${MC}22`,marginBottom:20,boxShadow:'0 2px 10px rgba(0,0,0,0.06)'}}>
+                <div style={{fontSize:14,fontWeight:800,color:MC,marginBottom:4}}>🔓 Grant Grace Override</div>
+                <div style={{fontSize:12,color:'#6b7c93',marginBottom:16}}>
+                  Allow an employee to submit an expense claim beyond the 30-day window — use after physical receipts have been collected and verified.
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 160px',gap:12,marginBottom:12}}>
+                  <div>
+                    <label style={S.lbl}>Employee</label>
+                    <select style={{...S.sel,width:'100%',minHeight:36}} value={graceEmpId} onChange={e=>setGraceEmpId(e.target.value)}>
+                      <option value="">— Select employee —</option>
+                      {Object.values(empMap).sort((a,b)=>(a.full_name_en||'').localeCompare(b.full_name_en||'')).map(emp=>(
+                        <option key={emp.id} value={emp.id}>{emp.full_name_en} ({emp.employee_number||'—'})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={S.lbl}>Period (YYYY-MM)</label>
+                    <input style={{...S.sel,width:'100%',minHeight:36,resize:'none'}} placeholder="e.g. 2026-09" value={gracePeriod} onChange={e=>setGracePeriod(e.target.value)} />
+                  </div>
+                </div>
+                <div style={{marginBottom:12}}>
+                  <label style={S.lbl}>Reason / Notes</label>
+                  <textarea style={{...S.sel,width:'100%',minHeight:56,resize:'vertical',boxSizing:'border-box'}} placeholder="e.g. Physical receipts collected and verified on 13 Oct 2026" value={graceNote} onChange={e=>setGraceNote(e.target.value)} />
+                </div>
+                {graceMsg && <div style={{...S.alert(graceMsg.startsWith('✅')?'#2e7d32':'#c62828', graceMsg.startsWith('✅')?'#e8f5e9':'#fce4ec'),marginBottom:10}}>{graceMsg}</div>}
+                <button style={{...S.btn(MC,'#fff'),opacity:graceBusy?.6:1}} onClick={unblockGrace} disabled={graceBusy}>
+                  {graceBusy ? '⏳ Saving…' : '🔓 Grant Grace Override'}
+                </button>
+              </div>
+
+              {/* Existing unblocks list */}
+              <div style={{fontSize:13,fontWeight:800,color:'#1a2e3d',marginBottom:10}}>
+                Existing Overrides ({graceList.length})
+                <button style={{...S.btn('transparent','#6b7c93','1px solid #d0d8e4'),fontSize:11,padding:'4px 12px',marginLeft:12}} onClick={loadGraceUnblocks}>↻ Refresh</button>
+              </div>
+              {graceLoading && <div style={{textAlign:'center',padding:24,color:'#aab2bd'}}>Loading…</div>}
+              {!graceLoading && graceList.length === 0 && (
+                <div style={S.alert('#6b7c93','#f7f9fc')}>No grace overrides have been granted yet.</div>
+              )}
+              {!graceLoading && graceList.length > 0 && (
+                <table style={S.tbl}>
+                  <thead>
+                    <tr>
+                      {['Employee','Period','Granted By','Date','Notes',''].map(h=><th key={h} style={S.th}>{h}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {graceList.map((g,i)=>{
+                      const emp = empMap[g.employee_id]
+                      return (
+                        <tr key={g.id} style={S.tr(i)}>
+                          <td style={S.td}><strong>{emp?.full_name_en||g.employee_id}</strong><br/><span style={{fontSize:10,color:'#6b7c93'}}>{emp?.employee_number||''}</span></td>
+                          <td style={S.td}><strong>{periodLabel(g.period)}</strong><br/><span style={{fontSize:10,color:'#888'}}>{g.period}</span></td>
+                          <td style={S.td}>{g.unblocked_by}</td>
+                          <td style={S.td}>{fmtDate(g.unblocked_at)}</td>
+                          <td style={S.td}><span style={{fontSize:11,color:'#444'}}>{g.notes||'—'}</span></td>
+                          <td style={S.td}>
+                            <button style={{...S.btn('#fce4ec','#c62828','1px solid #e57373'),fontSize:10,padding:'4px 10px'}} onClick={()=>revokeGrace(g.id)}>✕ Revoke</button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
               )}
             </div>
           )

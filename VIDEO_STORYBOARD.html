@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACCSYS Video Storyboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #f0f4f8; color: #1a2e3d; }
+
+  .header {
+    background: linear-gradient(135deg, #1a2540, #2d3a6b);
+    color: white; padding: 24px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .header h1 { font-size: 20px; }
+  .header .sub { font-size: 13px; opacity: 0.7; margin-top: 4px; }
+  .progress-bar { background: rgba(255,255,255,0.2); border-radius: 20px; height: 8px; width: 200px; margin-top: 12px; }
+  .progress-fill { background: #4fc3f7; height: 8px; border-radius: 20px; width: 0%; transition: width 0.3s; }
+
+  .controls {
+    background: #fff; padding: 16px 32px;
+    display: flex; gap: 12px; align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); position: sticky; top: 0; z-index: 100;
+  }
+  .btn { padding: 10px 22px; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .btn-primary { background: #1a2540; color: white; }
+  .btn-secondary { background: #e8f5e9; color: #2e7d32; }
+  .btn-danger { background: #ffebee; color: #b71c1c; }
+  .timer { font-size: 22px; font-weight: 900; color: #1a2540; margin-left: auto; font-variant-numeric: tabular-nums; }
+  .scene-counter { font-size: 13px; color: #78909c; }
+
+  .scenes { padding: 24px 32px; max-width: 1000px; margin: 0 auto; }
+
+  .scene {
+    background: white; border-radius: 16px; margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+    border-left: 6px solid #cfd8dc;
+    overflow: hidden; transition: all 0.3s;
+  }
+  .scene.active {
+    border-left-color: #1a2540;
+    box-shadow: 0 4px 20px rgba(26,37,64,0.2);
+  }
+  .scene.done { border-left-color: #2e7d32; opacity: 0.6; }
+
+  .scene-header {
+    padding: 16px 20px; display: flex; align-items: center; gap: 14px;
+    cursor: pointer;
+  }
+  .scene-num {
+    width: 36px; height: 36px; border-radius: 50%; background: #e8eaf6;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 14px; color: #3949ab; flex-shrink: 0;
+  }
+  .scene.active .scene-num { background: #1a2540; color: white; }
+  .scene.done .scene-num { background: #2e7d32; color: white; }
+
+  .scene-title { font-size: 15px; font-weight: 800; }
+  .scene-time { font-size: 12px; color: #78909c; margin-top: 2px; }
+  .scene-check { margin-left: auto; font-size: 22px; }
+
+  .scene-body { padding: 0 20px 20px; display: none; }
+  .scene.active .scene-body, .scene.expanded .scene-body { display: block; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  .box { border-radius: 10px; padding: 14px 16px; }
+  .box-screen { background: #e3f2fd; border: 1px solid #90caf9; }
+  .box-action { background: #f3e5f5; border: 1px solid #ce93d8; }
+  .box-narration { background: #fff8e1; border: 1px solid #ffe082; grid-column: 1/-1; }
+
+  .box-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .box-screen .box-label { color: #1565c0; }
+  .box-action .box-label { color: #6a1b9a; }
+  .box-narration .box-label { color: #f57f17; }
+
+  .box p { font-size: 13px; line-height: 1.6; color: #37474f; }
+  .box ul { font-size: 13px; line-height: 1.8; color: #37474f; padding-left: 18px; }
+
+  .tip { background: #e8f5e9; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #2e7d32; margin-top: 10px; }
+  .tip strong { font-weight: 700; }
+
+  .url-chip {
+    display: inline-block; background: #1a2540; color: white;
+    padding: 3px 10px; border-radius: 6px; font-size: 11px; font-family: monospace;
+    margin: 2px 0;
+  }
+
+  @media print {
+    .controls { display: none; }
+    .scene-body { display: block !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>🎬 ACCSYS — Video Storyboard</h1>
+    <div class="sub">Keep this open on a second screen while recording · 11 scenes · ~9 minutes</div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="btn btn-danger" onclick="prevScene()">← Prev</button>
+  <button class="btn btn-primary" onclick="nextScene()">Next Scene →</button>
+  <button class="btn btn-secondary" onclick="markDone()">✓ Done</button>
+  <span class="scene-counter" id="sceneCounter">Scene 1 of 11</span>
+  <div class="timer" id="timer">0:00</div>
+</div>
+
+<div class="scenes" id="scenes">
+
+  <!-- SCENE 1 -->
+  <div class="scene active" id="scene-0">
+    <div class="scene-header" onclick="toggleExpand(0)">
+      <div class="scene-num">1</div>
+      <div>
+        <div class="scene-title">Introduction</div>
+        <div class="scene-time">⏱ 0:00 – 0:30 &nbsp;|&nbsp; 30 seconds</div>
+      </div>
+      <div class="scene-check">▼</div>
+    </div>
+    <div class="scene-body">
+      <div class="grid">
+        <div class="box box-screen">
+          <div class="box-label">🖥 Show on Screen</div>
+          <p>ACCSYS Dashboard — ACCSYS entity selected. Show the main navigation on the left and the dashboard KPIs.</p>
+        </div>
+        <div class="box box-action">
+          <div class="box-label">🎯 Actions</div>
+          <ul>
+            <li>Log in to ACCSYS</li>
+            <li>Select ACCSYS entity</li>
+            <li>Let the dashboard load fully</li>
+            <li>Slowly pan across the left nav</li>
+          </ul>
+        </div>
+        <div class="box box-narration">
+          <div class="box-label">🎙 Narration</div>
+          <p>"Welcome to ACCSYS — the Field Operations Platform built for Ratal Group. This system connects office administration with field teams in real time. Department Heads, Project Managers, Supervisors, Technicians, Drivers, and Sub-Contractors all work through one unified platform — no paper, no WhatsApp chasing, and no manual follow-up. Let us walk through the complete workflow from start to finish."</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCENE 2 -->
+  <div class="scene" id="scene-1">
+    <div class="scene-header" onclick="toggleExpand(1)">
+      <div class="scene-num">2</div>
+      <div>
+        <div class="scene-title">Admin — Generate QR Token</div>
+        <div class="scene-time">⏱ 0:30 – 1:30 &nbsp;|&nbsp; 60 seconds</div>
+      </div>
+      <div class="scene-check">▶</div>
+    </div>
+    <div class="scene-body">
+      <div class="grid">
+        <div class="box box-screen">
+          <div class="box-label">🖥 Show on Screen</div>
+          <p>Administration → QR Code Manager. Click "Generate QR Token". Fill in the form (employee, role, notes). Hit Generate. Show the QR code + share buttons.</p>
+        </div>
+        <div class="box box-action">
+          <div class="box-label">🎯 Actions</div>
+          <ul>
+            <li>Click Administration in nav</li>
+            <li>Click QR Code Manager (📲)</li>
+            <li>Click "＋ Generate QR Token"</li>
+            <li>Select an employee from dropdown</li>
+            <li>Select role: Staff Technician</li>
+            <li>Add note: "Project Alpha – Tower Team"</li>
+            <li>Click Generate</li>
+            <li>Show QR image + 3 share buttons</li>
+          </ul>
+        </div>
+        <div class="box box-narration">
+          <div class="box-label">🎙 Narration</div>
+          <p>"Everything starts in the Administration panel. Before a field employee can use any form, the admin generates a personal QR token for them. Go to Administration, then QR Code Manager. Click Generate QR Token. Select the employee, choose his field role, add a note, and click Generate. The system instantly creates a unique secure link and displays a QR code. From here, you can share it directly via WhatsApp or Telegram with one click. Ahmed receives the link on his phone — that is his personal entry point to all his field forms."</p>
+        </div>
+      </div>
+      <div class="tip">💡 <strong>Tip:</strong> Open your phone and show the link arriving via WhatsApp for extra impact.</div>
+    </div>
+  </div>
+
+  <!-- SCENE 3 -->
+  <div class="scene" id="scene-2">
+    <div class="scene-header" onclick="toggleExpand(2)">
+      <div class="scene-num">3</div>
+      <div>
+        <div class="scene-title">Field — Landing Page (Employee View)</div>
+        <div class="scene-time">⏱ 1:30 – 2:15 &nbsp;|&nbsp; 45 seconds</div>
+      </div>
+      <div class="scene-check">▶</div>
+    </div>
+    <div class="scene-body">
+      <div class="grid">
+        <div class="box box-screen">
+          <div class="box-label">🖥 Show on Screen</div>
+          <p>Open a browser (or phone screen mirrored) and go to: <span class="url-chip">localhost:5173/forms?dev=1</span> — show the landing page with role and name. Scroll through the form cards slowly.</p>
+        </div>
+        <div class="box box-action">
+          <div class="box-label">🎯 Actions</div>
+          <ul>
+            <li>Open the /forms?dev=1 URL</li>
+            <li>Show header: name, role badge</li>
+            <li>Scroll slowly through form cards</li>
+            <li>Point out the large touch-friendly design</li>
+          </ul>
+        </div>
+        <div class="box box-narration">
+          <div class="box-label">🎙 Narration</div>
+          <p>"When Ahmed opens the link on his phone, the system reads his token, identifies him, and shows his personal dashboard. He can see his name, his role, and all the forms he is authorised to use. No username. No password. The QR token handles authentication securely. The forms are large, touch-friendly cards — designed entirely for mobile use in the field, even in bright sunlight."</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCENE 4 -->
+  <div class="scene" id="scene-3">
+    <div class="scene-header" onclick="toggleExpand(3)">
+      <div class="scene-num">4</div>
+      <div>
+        <div class="scene-title">Field — Daily Expense</div>
+        <div class="scene-time">⏱ 2:15 – 3:15 &nbsp;|&nbsp; 60 seconds</div>
+      </div>
+      <div class="scene-check">▶</div>
+    </div>
+    <div class="scene-body">
+      <div class="grid">
+        <div class="box box-screen">
+          <div class="box-label">🖥 Show on Screen</div>
+          <p>From landing, tap Daily Expense. Fill in: date (today), category (Fuel), amount (SAR 250), description, tap photo slot. Submit and show success screen.</p>
+        </div>
+        <div class="box box-action">
+          <div class="box-label">🎯 Actions</div>
+          <ul>
+            <li>Tap "Daily Expense" card</li>
+            <li>Select today's date</li>
+            <li>Pick category: Fuel</li>
+            <li>Enter amount: 250</li>
+            <li>Type description: "Fuel fill-up Riyadh–Dammam"</li>
+            <li>Tap photo slot (attach any image)</li>
+            <li>Tap Submit</li>
+            <li>Show green success screen</li>
+          </ul>
+        </div>
+        <div class="box box-narration">
+          <div class="box-label">🎙 Narration</div>
+          <p>"Ahmed taps Daily Expense to record today's field costs. He selects the date, then picks the expense type — in this case, Fuel. He enters the amount in Saudi Riyals, adds a brief description, and attaches a photo of the receipt by tapping the camera icon. He hits Submit. The entry is saved instantly. Over the course of the month, Ahmed logs all his field expenses the same way — fuel, accommodation, materials, and meals."</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCENE 5 -->
+  <div class="scene" id="scene-4">
+    <div class="scene-header" onclick="toggleExpand(4)">
+      <div class="scene-num">5</div>
+      <div>
+        <div class="scene-title">Field — Expense Claim</div>
+        <div class="scene-time">⏱ 3:15 – 4:00 &nbsp;|&nbsp; 45 seconds</div>
+      </div>
+      <div class="scene-check">▶</div>
+    </div>
+    <div class="scene-body">
+      <div class="grid">
+        <div class="box box-screen">
+          <div class="box-label">🖥 Show on Screen</div>
+          <p>Go back to landing → tap Expense Claim. Show the auto-loaded expenses list and total. Add notes, tap Submit Claim. Show submitted confirmation.</p>
+        </div>
+        <div class="box box-action">
+          <div class="box-label">🎯 Actions</div>
+          <ul>
+            <li>Navigate back to /forms</li>
+            <li>Tap "Expense Claim"</li>
+            <li>Show the expense rows loaded</li>
+            <li>Point out the total</li>
+            <li>Add note: "Monthly claim August 2026"</li>
+            <li>Tap Submit Claim</li>
+          </ul>
+        </div>
+        <div class="box box-narration">
+          <div class="box-label">🎙 Narration</div>
+          <p>"At the end of the month, Ahmed submits his Expense Claim. The system automatically pulls in all his recorded daily expenses for the current month, calculates the total, and presents them for review. Ahmed checks the summary, adds any final notes, and taps Submit Claim. The claim is now waiting for Department Head approval."</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCENE 6 -->
+  <div class="scene" id="scene-5">
+    <div class="scene-header" onclick="toggleExpand(5)">
+      <div class="scene-num">6</div>
+      <div>
+        <div class="scene-title">Field — Site Completion</div>
+        <div class="scene-time">⏱ 4:00 – 4:50 &nbsp;|&nbsp; 50 seconds</div>
+      </div>
+      <div class="scene-check">▶</div>
+    </div>
+    <div class="scene-body">
+      <div class="grid">
+        <div class="box box-screen">
+          <div class="box-label">🖥 Show on Screen</div>
+          <p>Tap Site Completion → select a site → show the milestone checklist → tick 3 milestones → attach photo → submit → show completion % bar.</p>
+        </div>
+        <div class="box box-action">
+          <div class="box-label">🎯 Actions</div>
+          <ul>
+            <li>Tap "Site Completion" card</li>
+            <li>Select the test site</li>
+            <li>Show milestone grid</li>
+            <li>Tap to check 3 milestones</li>
+            <li>Tap photo slot</li>
+            <li>Add note: "Tower sections complete"</li>
+            <li>Submit → show % progress bar</li>
+          </ul>
+        </div>
+        <div class="box box-narration">
+          <div class="box-label">🎙 Narration</div>
+          <p>"Ahmed's other key task is updating site progress. He taps Site Completion and selects his assigned site. The system shows the full milestone checklist for that site's scope — in this case, Tower Installation. Ahmed ticks off the milestones completed today, adds a site photo, and submits. The system calculates the updated completion percentage and logs the update with a timestamp. The Project Manager and Department Head are notified immediately."</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCENE 7 -->
+  <div class="scene" id="scene-6">
+    <div class="scene-header" onclick="toggleExpand(6)">
+      <div class="scene-num">7</div>
+      <div>
+        <div class="scene-title">Field — Payment Confirmation</div>
+        <div class="scene-time">⏱ 4:50 – 5:30 &nbsp;|&nbsp; 40 seconds</div>
+      </div>
+      <div class="scene-check">▶</div>
+    </div>
+    <div class="scene-body">
+      <div class="grid">
+        <div class="box box-screen">
+          <div class="box-label">🖥 Show on Screen</div>
+          <p>Tap Payment Confirmation → show a pending advance card → expand it → upload voucher photo → add note → tap Confirm Receipt → show green confirmed card.</p>
+        </div>
+        <div class="box box-action">
+          <div class="box-label">🎯 Actions</div>
+          <ul>
+            <li>Tap "Payment Confirmation"</li>
+            <li>Show pending advance (SAR amount)</li>
+            <li>Expand the card</li>
+            <li>Attach a photo (any image)</li>
+            <li>Add note: "Received in hand"</li>
+            <li>Tap Confirm</li>
+            <li>Show green confirmed history</li>
+          </ul>
+        </div>
+        <div class="box box-narration">
+          <div class="box-label">🎙 Narration</div>
+          <p>"When a Department Head issues a cash advance to a field employee, the employee receives a notification to confirm receipt. Ahmed taps Payment Confirmation, sees the advance issued to him, uploads a photo of the signed voucher, adds a note, and confirms receipt. This creates a complete, auditable trail from cash issuance all the way to signed confirmation — no paper forms required."</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCENE 8 -->
+  <div class="scene" id="scene-7">
+    <div class="scene-header" onclick="toggleExpand(7)">
+      <div class="scene-num">8</div>
+      <div>
+        <div class="scene-title">Field — Vehicle Report</div>
+        <div class="scene-time">⏱ 5:30 – 6:10 &nbsp;|&nbsp; 40 seconds</div>
+      </div>
+      <div class="scene-check">▶</div>
+    </div>
+    <div class="scene-body">
+      <div class="grid">
+        <div class="box box-screen">
+          <div class="box-label">🖥 Show on Screen</div>
+          <p>Tap Vehicle Report → pick a vehicle → show the 4 log type cards (Fuel / Maintenance / Incident / Inspection) → pick Fuel → fill in details → submit. Briefly flash the Inspection checklist too.</p>
+        </div>
+        <div class="box box-action">
+          <div class="box-label">🎯 Actions</div>
+          <ul>
+            <li>Tap "Car Maintenance" card</li>
+            <li>Select a vehicle from list</li>
+            <li>Show the 2×2 type grid</li>
+            <li>Tap Fuel</li>
+            <li>Enter: 60L, SAR 204, station name</li>
+            <li>Submit → show success</li>
+            <li>Go back → show Inspection type briefly</li>
+          </ul>
+        </div>
+        <div class="box box-narration">
+          <div class="box-label">🎙 Narration</div>
+          <p>"For drivers and supervisors managing fleet vehicles, there is the Vehicle Report form. The employee selects the vehicle, then chooses the log type — Fuel, Maintenance, Incident, or Inspection. For a fuel log, he enters the litres filled, the cost, and the station name. For an incident, he uploads photos and describes what happened. The Department Head receives an immediate notification for any incident or high-urgency maintenance report."</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCENE 9 -->
+  <div class="scene" id="scene-8">
+    <div class="scene-header" onclick="toggleExpand(8)">
+      <div class="scene-num">9</div>
+      <div>
+        <div class="scene-title">Admin — DH Command Centre</div>
+        <div class="scene-time">⏱ 6:10 – 7:30 &nbsp;|&nbsp; 80 seconds</div>
+      </div>
+      <div class="scene-check">▶</div>
+    </div>
+    <div class="scene-body">
+      <div class="grid">
+        <div class="box box-screen">
+          <div class="box-label">🖥 Show on Screen</div>
+          <p>Open <span class="url-chip">/forms/dh-dashboard?dev=1</span>. Click through all 5 tabs slowly: Cash → Sites → Claims (approve one) → Team → Notifications.</p>
+        </div>
+        <div class="box box-action">
+          <div class="box-label">🎯 Actions</div>
+          <ul>
+            <li>Navigate to /forms/dh-dashboard?dev=1</li>
+            <li>Show Cash panel — KPI cards + ageing table</li>
+            <li>Click Sites tab — show progress bars</li>
+            <li>Click Claims tab — show pending claim → click ✓ Approve</li>
+            <li>Click Team tab — show employee list + 📞 button</li>
+            <li>Click Notifications tab — show alerts, tap mark read</li>
+          </ul>
+        </div>
+        <div class="box box-narration">
+          <div class="box-label">🎙 Narration</div>
+          <p>"Now let us switch to the Department Head's view. The DH opens the Command Centre — a live dashboard with five panels. The first panel is Cash — showing every outstanding advance, colour-coded by age. The second panel is Sites — all active assignments with completion percentage. The third panel is Claims — this is where the DH approves expenses. Pending claims appear at the top. The DH taps Approve and the employee is notified instantly. The fourth panel is Team — all assigned field personnel with a direct call button. The fifth panel is Notifications — all recent field alerts sorted by newest first."</p>
+        </div>
+      </div>
+      <div class="tip">💡 <strong>Tip:</strong> Pause 2 seconds on each tab before clicking to next — don't rush this scene.</div>
+    </div>
+  </div>
+
+  <!-- SCENE 10 -->
+  <div class="scene" id="scene-9">
+    <div class="scene-header" onclick="toggleExpand(9)">
+      <div class="scene-num">10</div>
+      <div>
+        <div class="scene-title">Admin — Notifications & Token Revoke</div>
+        <div class="scene-time">⏱ 7:30 – 8:15 &nbsp;|&nbsp; 45 seconds</div>
+      </div>
+      <div class="scene-check">▶</div>
+    </div>
+    <div class="scene-body">
+      <div class="grid">
+        <div class="box box-screen">
+          <div class="box-label">🖥 Show on Screen</div>
+          <p>Go to Administration → Field Notifications. Show the inbox with type badges and TG delivery status. Then switch to QR Manager and show the Revoke button (don't click it).</p>
+        </div>
+        <div class="box box-action">
+          <div class="box-label">🎯 Actions</div>
+          <ul>
+            <li>Click Administration → Field Notifications (🔔)</li>
+            <li>Show notification rows + ✅/⏳ delivery status</li>
+            <li>Click Administration → QR Code Manager (📲)</li>
+            <li>Hover over the 🚫 Revoke button on a token row</li>
+          </ul>
+        </div>
+        <div class="box box-narration">
+          <div class="box-label">🎙 Narration</div>
+          <p>"Back in the administration panel, the Field Notifications page gives a system-wide view of every notification sent across all employees — with Telegram delivery status shown for each one. If a token needs to be revoked — for example when an employee leaves the project — the admin goes to QR Manager, finds the token, and clicks revoke. Access is removed instantly. New tokens for new team members can be generated in seconds."</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCENE 11 -->
+  <div class="scene" id="scene-10">
+    <div class="scene-header" onclick="toggleExpand(10)">
+      <div class="scene-num">11</div>
+      <div>
+        <div class="scene-title">Closing</div>
+        <div class="scene-time">⏱ 8:15 – 8:45 &nbsp;|&nbsp; 30 seconds</div>
+      </div>
+      <div class="scene-check">▶</div>
+    </div>
+    <div class="scene-body">
+      <div class="grid">
+        <div class="box box-screen">
+          <div class="box-label">🖥 Show on Screen</div>
+          <p>Return to the main ACCSYS Dashboard. Let it sit. End on the dashboard with all modules visible in the left nav.</p>
+        </div>
+        <div class="box box-action">
+          <div class="box-label">🎯 Actions</div>
+          <ul>
+            <li>Click Dashboard in main nav</li>
+            <li>Let the page fully load</li>
+            <li>Slowly scroll nav items once</li>
+            <li>Hold still for 5 seconds</li>
+          </ul>
+        </div>
+        <div class="box box-narration">
+          <div class="box-label">🎙 Narration</div>
+          <p>"ACCSYS Field Operations covers the complete cycle: Cash advances issued and confirmed. Daily expenses recorded and claimed. Site milestones tracked and approved. Fleet incidents reported in real time. Sub-contractor work documented and submitted for payment. All of this from a phone, with no paper, and a full audit trail for every action. A detailed training video for each role will follow once the Telegram notification system is fully configured. Thank you for watching."</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end scenes -->
+
+<!-- PRODUCTION GUIDE -->
+<div style="max-width:1000px; margin:0 auto 40px; padding:0 32px;">
+  <div style="background:#1a2540; color:white; border-radius:16px; padding:24px 28px;">
+    <h2 style="font-size:16px; margin-bottom:16px;">🛠 Production Guide — Free Tools Only</h2>
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; font-size:13px;">
+      <div style="background:rgba(255,255,255,0.08); border-radius:10px; padding:14px;">
+        <div style="font-weight:800; margin-bottom:8px; color:#90caf9;">STEP 1 — Generate Voiceover</div>
+        <p style="opacity:0.85; line-height:1.6;">Open <strong>ttsmaker.com</strong> (free, no account needed).<br>Paste VIDEO_SCRIPT.txt content.<br>Choose voice: English Male → Natural.<br>Download as MP3.</p>
+      </div>
+      <div style="background:rgba(255,255,255,0.08); border-radius:10px; padding:14px;">
+        <div style="font-weight:800; margin-bottom:8px; color:#a5d6a7;">STEP 2 — Record Screen</div>
+        <p style="opacity:0.85; line-height:1.6;">Press <strong>Win + G</strong> → Start Recording.<br>Follow this storyboard scene by scene.<br>Play audio through speakers while recording, OR record separately and sync in editing.</p>
+      </div>
+      <div style="background:rgba(255,255,255,0.08); border-radius:10px; padding:14px;">
+        <div style="font-weight:800; margin-bottom:8px; color:#ffcc80;">STEP 3 — Edit & Combine</div>
+        <p style="opacity:0.85; line-height:1.6;">Download <strong>CapCut Desktop</strong> (free).<br>Import screen recording + MP3 audio.<br>Drop audio on timeline, trim video clips to match.<br>Export as MP4.</p>
+      </div>
+    </div>
+    <div style="margin-top:16px; font-size:12px; opacity:0.7;">
+      Alternative voice tool: elevenlabs.io (free tier — higher quality) &nbsp;|&nbsp;
+      Alternative editor: DaVinci Resolve (free — more powerful) &nbsp;|&nbsp;
+      Alternative recorder: OBS Studio (free — best quality)
+    </div>
+  </div>
+</div>
+
+<script>
+  let current = 0;
+  let total = 11;
+  let doneScenes = new Set();
+  let startTime = Date.now();
+  let timerInterval;
+
+  function updateProgress() {
+    document.getElementById('progressFill').style.width = ((doneScenes.size / total) * 100) + '%';
+    document.getElementById('sceneCounter').textContent = `Scene ${current + 1} of ${total} · ${doneScenes.size} done`;
+  }
+
+  function goToScene(n) {
+    // Remove active from all
+    for (let i = 0; i < total; i++) {
+      const el = document.getElementById('scene-' + i);
+      el.classList.remove('active');
+      if (doneScenes.has(i)) el.classList.add('done');
+      else el.classList.remove('done');
+    }
+    current = Math.max(0, Math.min(total - 1, n));
+    const el = document.getElementById('scene-' + current);
+    el.classList.add('active');
+    el.classList.remove('done');
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    updateProgress();
+  }
+
+  function nextScene() {
+    markDone();
+    if (current < total - 1) goToScene(current + 1);
+  }
+
+  function prevScene() {
+    if (current > 0) goToScene(current - 1);
+  }
+
+  function markDone() {
+    doneScenes.add(current);
+    document.getElementById('scene-' + current).classList.add('done');
+    updateProgress();
+  }
+
+  function toggleExpand(n) {
+    const el = document.getElementById('scene-' + n);
+    if (n !== current) {
+      el.classList.toggle('expanded');
+    }
+  }
+
+  // Timer
+  function startTimer() {
+    startTime = Date.now();
+    timerInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const m = Math.floor(elapsed / 60);
+      const s = elapsed % 60;
+      document.getElementById('timer').textContent = m + ':' + String(s).padStart(2, '0');
+    }, 1000);
+  }
+
+  startTimer();
+  updateProgress();
+</script>
+</body>
+</html>

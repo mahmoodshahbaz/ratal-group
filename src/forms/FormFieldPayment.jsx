@@ -42,10 +42,10 @@ const DEPT_CARDS = {
 const BANK_DEPTS = { 'ANB-77':['TISU'], 'ANB-39':['NISU','CISU','ITSU'] }
 
 const DEPT_THEME = {
-  TISU:{ color:'#1a6b3a', light:'#e8f5e9', dark:'#0d3d20' },
-  NISU:{ color:'#1a5c8b', light:'#e3f2fd', dark:'#0a2d4a' },
-  CISU:{ color:'#7a3b1e', light:'#fbe9e7', dark:'#3e1a08' },
-  ITSU:{ color:'#5c1a7a', light:'#f3e5f5', dark:'#2e0a3d' },
+  TISU:{ color:'#16a34a', light:'#dcfce7', dark:'#14532d', grad:'linear-gradient(135deg,#14532d,#16a34a)' },
+  NISU:{ color:'#2563eb', light:'#dbeafe', dark:'#1e3a8a', grad:'linear-gradient(135deg,#1e3a8a,#2563eb)' },
+  CISU:{ color:'#dc2626', light:'#fee2e2', dark:'#7f1d1d', grad:'linear-gradient(135deg,#7f1d1d,#dc2626)' },
+  ITSU:{ color:'#7c3aed', light:'#ede9fe', dark:'#4c1d95', grad:'linear-gradient(135deg,#4c1d95,#7c3aed)' },
 }
 const dTheme = (dept) => DEPT_THEME[dept] || { color:'#1a6b3a', light:'#e8f5e9', dark:'#0d3d20' }
 
@@ -226,6 +226,7 @@ export default function FormFieldPayment() {
   const [custodianName, setCustodianName] = useState('')
   const [sessionNotes,  setSessionNotes]  = useState('')
 
+  const [deptMap,     setDeptMap]     = useState({}) // dept_code → dept_id
   const [employees,   setEmployees]   = useState([])
   const [contractors, setContractors] = useState([])
   const [pools,       setPools]       = useState({})
@@ -235,21 +236,57 @@ export default function FormFieldPayment() {
   const [submitted,   setSubmitted]   = useState(false)
   const [error,       setError]       = useState('')
 
+  // ── Pending receipt reminders ─────────────────────────────────────────────
+  const [pendingReceipts,      setPendingReceipts]      = useState([])
+  const [pendingReceiptsOpen,  setPendingReceiptsOpen]  = useState(false)
+  const [markingReceiptId,     setMarkingReceiptId]     = useState(null)
+
   const selectedCard = (DEPT_CARDS[sessionDept]||[]).find(c=>c.value===card)
   const cardBank     = selectedCard?.bank||''
   const cardDepts    = cardBank?(BANK_DEPTS[cardBank]||[]):[]
   const theme        = dTheme(sessionDept)
 
-  // Load people once
+  // Load people + dept map once — use correct DB column names
   useEffect(()=>{
-    sb.from('employees').select('id,full_name,department_name,iban').eq('is_active',true).order('full_name')
+    sb.from('departments').select('id,dept_code').eq('is_active',true)
+      .then(({data})=>{
+        const map={}
+        ;(data||[]).forEach(d=>{ if(d.dept_code) map[d.dept_code.toUpperCase()]=d.id })
+        setDeptMap(map)
+      })
+    sb.from('employees').select('id,full_name_en,department_id,iban').eq('is_active',true).order('full_name_en')
       .then(({data})=>setEmployees(data||[]))
-    sb.from('contractors').select('id,company_name,contact_name,iban').in('status',['ACTIVE','OPEN']).order('company_name')
+    sb.from('contractors').select('id,contractor_name,contact_name,iban').in('status',['ACTIVE','OPEN']).order('contractor_name')
       .then(({data})=>setContractors(data||[]))
   },[])
 
   useEffect(()=>{ setCard(''); setPools({}); setLines([]) },[sessionDept])
   useEffect(()=>{ if(card && sessionDept) loadPool() },[card,sessionDept])
+
+  // Load pending receipt reminders on mount
+  useEffect(()=>{
+    async function loadPendingReceipts() {
+      try {
+        const { data: pLines } = await sb.from('field_payment_lines')
+          .select('id,session_id,accountable_party_name,accountable_party_type,amount,bank_charge_amount')
+          .in('accountable_party_type',['SUPPLIER','LOCAL_SUPPLIER','CONTRACTOR'])
+          .eq('has_receipt', false)
+          .order('created_at',{ascending:false})
+          .limit(30)
+        if(!pLines?.length) return
+
+        const sids = [...new Set(pLines.map(l=>l.session_id))]
+        const { data: sessions } = await sb.from('field_payment_sessions')
+          .select('id,session_date,submitted_by_name')
+          .in('id', sids)
+        const sessMap = {}
+        ;(sessions||[]).forEach(s=>{ sessMap[s.id]=s })
+
+        setPendingReceipts(pLines.map(l=>({ ...l, _session: sessMap[l.session_id]||null })))
+      } catch(e){ /* non-critical */ }
+    }
+    loadPendingReceipts()
+  },[])
 
   async function loadPool() {
     setPoolLoading(true)
@@ -301,24 +338,26 @@ export default function FormFieldPayment() {
     updateLine(lineId,{_resolve:'resolving'})
     const clean = iban.trim().replace(/\s/g,'').toUpperCase()
     const [{data:emps},{data:cons}] = await Promise.all([
-      sb.from('employees').select('id,full_name,iban,department_name').eq('iban',clean).limit(1),
-      sb.from('contractors').select('id,company_name,iban').eq('iban',clean).limit(1),
+      sb.from('employees').select('id,full_name_en,iban').eq('iban',clean).limit(1),
+      sb.from('contractors').select('id,contractor_name,iban').eq('iban',clean).limit(1),
     ])
     if(emps?.length){
       const e=emps[0]
-      updateLine(lineId,{_resolve:'employee',accountable_party_type:'EMPLOYEE',accountable_party_id:e.id,accountable_party_name:e.full_name,accountable_party_iban:e.iban})
+      updateLine(lineId,{_resolve:'employee',accountable_party_type:'EMPLOYEE',accountable_party_id:e.id,accountable_party_name:e.full_name_en,accountable_party_iban:e.iban})
     } else if(cons?.length){
       const c=cons[0]
-      updateLine(lineId,{_resolve:'contractor',accountable_party_type:'CONTRACTOR',accountable_party_id:c.id,accountable_party_name:c.company_name,accountable_party_iban:c.iban})
+      updateLine(lineId,{_resolve:'contractor',accountable_party_type:'CONTRACTOR',accountable_party_id:c.id,accountable_party_name:c.contractor_name,accountable_party_iban:c.iban})
     } else {
       updateLine(lineId,{_resolve:'not_found',accountable_party_iban:clean,accountable_party_type:'',accountable_party_id:'',accountable_party_name:''})
     }
   }
 
-  const deptEmployees = useMemo(()=>
-    employees.filter(e=>sessionDept?(e.department_name||'').toUpperCase().includes(sessionDept):true),
-    [employees,sessionDept]
-  )
+  // deptEmployees: filter by selected department using dept_code→id map
+  const deptEmployees = useMemo(()=>{
+    if(!sessionDept || !deptMap[sessionDept]) return employees
+    const deptId = deptMap[sessionDept]
+    return employees.filter(e => e.department_id === deptId)
+  }, [employees, sessionDept, deptMap])
 
   const deptUsage = useMemo(()=>{
     const usage={}
@@ -335,6 +374,14 @@ export default function FormFieldPayment() {
   const sessionTotal  = useMemo(()=>lines.reduce((s,l)=>s+(parseFloat(l.amount)||0),0),[lines])
   const bankFeesTotal = useMemo(()=>lines.reduce((s,l)=>s+(l.bank_fee_enabled?parseFloat(l.bank_fee)||0:0),0),[lines])
   const hasOver       = useMemo(()=>Object.values(deptUsage).some(u=>u.used>u.available&&u.available>0),[deptUsage])
+
+  async function markReceiptDone(lineId) {
+    setMarkingReceiptId(lineId)
+    try {
+      await sb.from('field_payment_lines').update({ has_receipt: true }).eq('id', lineId)
+      setPendingReceipts(prev => prev.filter(r => r.id !== lineId))
+    } catch(e){ /* ignore */ } finally { setMarkingReceiptId(null) }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault(); setError('')
@@ -354,14 +401,18 @@ export default function FormFieldPayment() {
       const {allocations,overTotal}=calcFifo(pools,lines)
       const poolTotal=Object.values(pools).reduce((s,p)=>s+(p.available||0),0)
 
-      const {data:session,error:sErr}=await sb.from('field_payment_sessions').insert({
-        entity_id:'ACCSYS',session_date:sessionDate,card_used:card,bank_account:cardBank,
+      // Generate session ID client-side to avoid needing a SELECT policy for anon
+      const sessionId = crypto.randomUUID()
+      const {error:sErr}=await sb.from('field_payment_sessions').insert({
+        id:sessionId,
+        session_date:sessionDate,card_used:card,bank_account:cardBank,
         department_name:sessionDept,mr_approved_amount:poolTotal,session_total:sessionTotal,
         bank_charges_total:bankFeesTotal,card_pool_total:poolTotal,over_distributed:overTotal,
         proxy_count:lines.filter(l=>l.use_proxy).length,submitted_by_name:custodianName.trim(),
         submitted_at:new Date().toISOString(),status:'SUBMITTED',je_posted:false,notes:sessionNotes.trim()||null,
-      }).select('id').single()
+      })
       if(sErr) throw new Error(sErr.message)
+      const session = { id: sessionId }
 
       const lineRows=lines.map((l,i)=>({
         session_id:session.id, sort_order:i+1, dept_code:l.dept_code,
@@ -379,6 +430,7 @@ export default function FormFieldPayment() {
         amount:parseFloat(l.amount),
         reference_no:l.reference_no||null,
         notes:[l.notes,l.receipt_name?`Receipt:${l.receipt_name}`:''].filter(Boolean).join(' | ')||null,
+        has_receipt: !!l.receipt_name,
       }))
 
       const {error:lErr}=await sb.from('field_payment_lines').insert(lineRows)
@@ -398,13 +450,54 @@ export default function FormFieldPayment() {
   // ── Success screen ────────────────────────────────────────────────────────
   if(submitted) return (
     <div style={S.page}>
-      <div style={{ textAlign:'center', padding:'60px 24px', background:'#fff', borderRadius:20, boxShadow:S.shadow }}>
-        <div style={{ fontSize:64, marginBottom:16 }}>✅</div>
-        <div style={{ fontSize:22, fontWeight:800, color:theme.color, marginBottom:8 }}>Session Submitted</div>
-        <div style={{ color:'#64748b', fontSize:14, marginBottom:24 }}>Field payment session recorded successfully. Accounts will review and post.</div>
-        {hasOver && <div style={{ background:'#fff8e1', border:'1.5px solid #fbbf24', borderRadius:12, padding:'12px 16px', color:'#92400e', fontSize:13, marginBottom:20 }}>⚠️ Over-distributed — Accounts will reconcile.</div>}
-        <button style={{ ...S.btnPrimary(theme.color), width:'100%', padding:16, fontSize:16 }} onClick={()=>window.location.reload()}>+ New Session</button>
+      {/* Hero header */}
+      <div style={{ background: theme.grad || `linear-gradient(160deg,${theme.dark} 0%,${theme.color} 100%)`,
+        borderRadius:20, padding:'32px 24px 28px', marginBottom:16,
+        boxShadow:`0 8px 32px ${theme.color}50`, textAlign:'center' }}>
+        <div style={{ width:72, height:72, background:'rgba(255,255,255,0.18)', borderRadius:20,
+          display:'flex', alignItems:'center', justifyContent:'center', fontSize:38,
+          margin:'0 auto 16px' }}>✅</div>
+        <div style={{ fontSize:24, fontWeight:900, color:'#fff', letterSpacing:'-0.5px' }}>Session Submitted!</div>
+        <div style={{ fontSize:13, color:'rgba(255,255,255,0.75)', marginTop:6 }}>
+          Recorded successfully · Accounts will review &amp; post
+        </div>
       </div>
+
+      {/* Summary card */}
+      <div style={{ background:'#fff', borderRadius:16, boxShadow:S.shadow, overflow:'hidden', marginBottom:12 }}>
+        <div style={{ background: theme.light, padding:'12px 18px', borderBottom:`2px solid ${theme.color}22` }}>
+          <div style={{ fontSize:12, fontWeight:700, color:theme.color, letterSpacing:1, textTransform:'uppercase' }}>Session Summary</div>
+        </div>
+        <div style={{ padding:'16px 18px', display:'flex', flexDirection:'column', gap:12 }}>
+          {[
+            { icon:'🏢', label:'Department', val: sessionDept },
+            { icon:'💳', label:'Card Used',  val: (DEPT_CARDS[sessionDept]||[]).find(c=>c.value===card)?.label || card },
+            { icon:'📅', label:'Date',       val: sessionDate },
+            { icon:'👤', label:'Custodian',  val: custodianName || '—' },
+            { icon:'💰', label:'Session Total', val: `SAR ${fmt(sessionTotal)}`, bold:true },
+            { icon:'🧾', label:'Lines',      val: `${lines.length} payment line${lines.length!==1?'s':''}` },
+          ].map(r=>(
+            <div key={r.label} style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, color:'#64748b', fontSize:13 }}>
+                <span>{r.icon}</span><span>{r.label}</span>
+              </div>
+              <div style={{ fontSize:r.bold?16:13, fontWeight:r.bold?800:600, color:r.bold?theme.color:'#1e293b' }}>{r.val}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {hasOver && (
+        <div style={{ background:'#fff8e1', border:`1.5px solid #fbbf24`, borderRadius:12,
+          padding:'12px 16px', color:'#92400e', fontSize:13, marginBottom:12 }}>
+          ⚠️ <strong>Over-distributed</strong> — Accounts will reconcile the variance.
+        </div>
+      )}
+
+      <button style={{ ...S.btnPrimary(theme.color), width:'100%', padding:18, fontSize:16, fontWeight:800, borderRadius:14 }}
+        onClick={()=>window.location.reload()}>
+        + Start New Session
+      </button>
     </div>
   )
 
@@ -412,9 +505,9 @@ export default function FormFieldPayment() {
     <div style={S.page}>
 
       {/* ── App Header ─────────────────────────────────────────────────────── */}
-      <div style={{ background:`linear-gradient(160deg,${theme.dark} 0%,${theme.color} 100%)`,
+      <div style={{ background: theme.grad || `linear-gradient(160deg,${theme.dark} 0%,${theme.color} 100%)`,
         borderRadius:20, padding:'20px 20px 18px', marginBottom:16,
-        boxShadow:`0 8px 32px ${theme.color}40` }}>
+        boxShadow:`0 8px 32px ${theme.color}50` }}>
         <div style={{ display:'flex', alignItems:'center', gap:14 }}>
           <div style={{ width:48, height:48, background:'rgba(255,255,255,0.18)', borderRadius:14,
             display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, flexShrink:0 }}>💳</div>
@@ -424,6 +517,68 @@ export default function FormFieldPayment() {
           </div>
         </div>
       </div>
+
+      {/* ── Pending Receipt Reminders ──────────────────────────────────────── */}
+      {pendingReceipts.length > 0 && (
+        <div style={{ background:'#fff', borderRadius:16, border:'1.5px solid #bae6fd',
+          marginBottom:14, overflow:'hidden', boxShadow:'0 2px 12px rgba(3,105,161,0.08)' }}>
+          <button type="button"
+            onClick={()=>setPendingReceiptsOpen(v=>!v)}
+            style={{ width:'100%', padding:'12px 16px', background:'#f0f9ff',
+              border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:10,
+              borderBottom:pendingReceiptsOpen?'1.5px solid #bae6fd':'none' }}>
+            <span style={{ fontSize:20 }}>📎</span>
+            <div style={{ flex:1, textAlign:'left' }}>
+              <div style={{ fontWeight:800, fontSize:14, color:'#0369a1' }}>
+                Pending Receipts — {pendingReceipts.length} payment{pendingReceipts.length!==1?'s':''} missing receipt
+              </div>
+              <div style={{ fontSize:11, color:'#64748b', marginTop:1 }}>
+                Tap to {pendingReceiptsOpen?'hide':'review'} — collect &amp; mark as received
+              </div>
+            </div>
+            <span style={{ fontSize:18, color:'#0369a1', transition:'transform 0.2s',
+              transform:pendingReceiptsOpen?'rotate(180deg)':'none' }}>⌃</span>
+          </button>
+
+          {pendingReceiptsOpen && (
+            <div style={{ padding:'8px 12px 12px' }}>
+              {pendingReceipts.map(pr=>(
+                <div key={pr.id} style={{ border:'1px solid #e0f2fe', borderRadius:10,
+                  padding:'10px 12px', marginBottom:8, background:'#f8fafc',
+                  display:'flex', alignItems:'center', gap:10 }}>
+                  <span style={{ fontSize:20, flexShrink:0 }}>
+                    {pr.accountable_party_type==='CONTRACTOR'?'🏗️':
+                     pr.accountable_party_type==='SUPPLIER'?'🏢':'🏪'}
+                  </span>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontWeight:700, fontSize:13, color:'#0f172a',
+                      whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                      {pr.accountable_party_name || pr.accountable_party_type}
+                    </div>
+                    <div style={{ fontSize:11, color:'#64748b', marginTop:1 }}>
+                      SAR {fmt(pr.amount)}
+                      {pr._session?.session_date ? ` · ${pr._session.session_date}` : ''}
+                      {pr._session?.submitted_by_name ? ` · ${pr._session.submitted_by_name}` : ''}
+                    </div>
+                  </div>
+                  <button type="button"
+                    disabled={markingReceiptId === pr.id}
+                    onClick={()=>markReceiptDone(pr.id)}
+                    style={{ background:markingReceiptId===pr.id?'#94a3b8':'#15803d',
+                      color:'#fff', border:'none', borderRadius:8, padding:'6px 10px',
+                      fontSize:11, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap',
+                      flexShrink:0 }}>
+                    {markingReceiptId===pr.id?'…':'✓ Received'}
+                  </button>
+                </div>
+              ))}
+              <div style={{ fontSize:11, color:'#94a3b8', textAlign:'center', marginTop:4 }}>
+                Tap "✓ Received" once you have collected the physical receipt from the party.
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
 
@@ -788,19 +943,32 @@ function PaymentLine({ line, idx, sessionDept, cardDepts, employees, allEmployee
 
                 {/* Auto-resolved: Contractor */}
                 {resolved==='contractor'&&(
-                  <div style={{ background:'#eff6ff', border:'1.5px solid #bfdbfe', borderRadius:12, padding:'12px 14px' }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                      <span style={{ fontSize:22 }}>🏗️</span>
-                      <div style={{ flex:1 }}>
-                        <div style={{ fontWeight:800, fontSize:14, color:'#1d4ed8' }}>Contractor — auto identified</div>
-                        <div style={{ fontSize:13, color:'#1e293b', marginTop:2 }}>{line.accountable_party_name}</div>
-                        <div style={{ fontFamily:'monospace', fontSize:10, color:'#64748b', marginTop:1 }}>{line.accountable_party_iban}</div>
+                  <div>
+                    <div style={{ background:'#eff6ff', border:'1.5px solid #bfdbfe', borderRadius:12, padding:'12px 14px', marginBottom: (!line.receipt_name ? 8 : 0) }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                        <span style={{ fontSize:22 }}>🏗️</span>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontWeight:800, fontSize:14, color:'#1d4ed8' }}>Contractor — auto identified</div>
+                          <div style={{ fontSize:13, color:'#1e293b', marginTop:2 }}>{line.accountable_party_name}</div>
+                          <div style={{ fontFamily:'monospace', fontSize:10, color:'#64748b', marginTop:1 }}>{line.accountable_party_iban}</div>
+                        </div>
+                        <button type="button" onClick={()=>onUpdate({_resolve:'not_found',accountable_party_type:'',accountable_party_id:'',accountable_party_name:''})}
+                          style={{ background:'none', border:'1px solid #bfdbfe', borderRadius:8, padding:'4px 10px', color:'#1d4ed8', cursor:'pointer', fontSize:11 }}>
+                          Change
+                        </button>
                       </div>
-                      <button type="button" onClick={()=>onUpdate({_resolve:'not_found',accountable_party_type:'',accountable_party_id:'',accountable_party_name:''})}
-                        style={{ background:'none', border:'1px solid #bfdbfe', borderRadius:8, padding:'4px 10px', color:'#1d4ed8', cursor:'pointer', fontSize:11 }}>
-                        Change
-                      </button>
                     </div>
+                    {/* Soft receipt reminder for contractor payments — receipt comes AFTER payment */}
+                    {!line.receipt_name&&(
+                      <div style={{ background:'#f0f9ff', border:'1.5px solid #bae6fd', borderRadius:10, padding:'8px 12px', display:'flex', alignItems:'center', gap:8, fontSize:12, color:'#0369a1' }}>
+                        <span>💡</span>
+                        <span style={{ flex:1 }}>Remember to collect &amp; attach the receipt from the contractor after payment.</span>
+                        <button type="button" onClick={()=>fileRef.current?.click()}
+                          style={{ background:'#0284c7', color:'#fff', border:'none', borderRadius:8, padding:'5px 10px', fontSize:11, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>
+                          📷 Attach
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -825,21 +993,41 @@ function PaymentLine({ line, idx, sessionDept, cardDepts, employees, allEmployee
                     {/* Employee dropdown */}
                     {isEmployee&&(
                       <select value={line.accountable_party_id}
-                        onChange={e=>{ const emp=employees.find(x=>x.id===e.target.value); onUpdate({accountable_party_id:e.target.value,accountable_party_name:emp?.full_name||''}) }}
+                        onChange={e=>{ const emp=employees.find(x=>x.id===e.target.value); onUpdate({accountable_party_id:e.target.value,accountable_party_name:emp?.full_name_en||''}) }}
                         style={{ ...S.inp, marginBottom:6 }}>
                         <option value="">— Select employee —</option>
-                        {employees.map(emp=><option key={emp.id} value={emp.id}>{emp.full_name}</option>)}
+                        {employees.map(emp=><option key={emp.id} value={emp.id}>{emp.full_name_en}</option>)}
                       </select>
                     )}
 
                     {/* Contractor dropdown */}
                     {isContractor&&(
                       <select value={line.accountable_party_id}
-                        onChange={e=>{ const c=contractors.find(x=>x.id===e.target.value); onUpdate({accountable_party_id:e.target.value,accountable_party_name:c?.company_name||''}) }}
+                        onChange={e=>{ const c=contractors.find(x=>x.id===e.target.value); onUpdate({accountable_party_id:e.target.value,accountable_party_name:c?.contractor_name||''}) }}
                         style={{ ...S.inp, marginBottom:6 }}>
                         <option value="">— Select contractor —</option>
-                        {contractors.map(c=><option key={c.id} value={c.id}>{c.company_name}{c.contact_name?` — ${c.contact_name}`:''}</option>)}
+                        {contractors.map(c=><option key={c.id} value={c.id}>{c.contractor_name}{c.contact_name?` — ${c.contact_name}`:''}</option>)}
                       </select>
+                    )}
+
+                    {/* Soft receipt reminder — receipt comes AFTER payment, not required to submit */}
+                    {['SUPPLIER','LOCAL_SUPPLIER','CONTRACTOR'].includes(line.accountable_party_type)&&!line.receipt_name&&(
+                      <div style={{ background:'#f0f9ff', border:'1.5px solid #bae6fd', borderRadius:10, padding:'10px 12px', marginBottom:8, display:'flex', alignItems:'flex-start', gap:8 }}>
+                        <span style={{ fontSize:16, flexShrink:0 }}>💡</span>
+                        <div style={{ fontSize:12, color:'#0369a1', lineHeight:1.5 }}>
+                          <strong>Reminder:</strong> Collect the receipt / invoice from this party after payment. You can attach it now if you already have it, or submit and attach later.
+                          <button type="button"
+                            onClick={()=>fileRef.current?.click()}
+                            style={{ display:'inline-block', marginTop:6, background:'#0284c7', color:'#fff', border:'none', borderRadius:8, padding:'6px 12px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                            📷 Attach Now (optional)
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {['SUPPLIER','LOCAL_SUPPLIER','CONTRACTOR'].includes(line.accountable_party_type)&&line.receipt_name&&(
+                      <div style={{ background:'#f0fdf4', border:'1.5px solid #86efac', borderRadius:10, padding:'8px 12px', marginBottom:8, display:'flex', alignItems:'center', gap:8, fontSize:12, color:'#15803d', fontWeight:700 }}>
+                        ✅ Receipt attached: {line.receipt_name}
+                      </div>
                     )}
 
                     {/* Free text for others */}
@@ -885,10 +1073,10 @@ function PaymentLine({ line, idx, sessionDept, cardDepts, employees, allEmployee
                 {line.use_proxy&&(
                   <div style={{ marginTop:6 }}>
                     <select value={line.transfer_agent_id}
-                      onChange={e=>{ const emp=allEmployees.find(x=>x.id===e.target.value); onUpdate({transfer_agent_id:e.target.value,transfer_agent_name:emp?.full_name||''}) }}
+                      onChange={e=>{ const emp=allEmployees.find(x=>x.id===e.target.value); onUpdate({transfer_agent_id:e.target.value,transfer_agent_name:emp?.full_name_en||''}) }}
                       style={{ ...S.inp, marginBottom:6 }}>
                       <option value="">— Who received? —</option>
-                      {allEmployees.map(emp=><option key={emp.id} value={emp.id}>{emp.full_name}</option>)}
+                      {allEmployees.map(emp=><option key={emp.id} value={emp.id}>{emp.full_name_en}</option>)}
                     </select>
                     {!line.transfer_agent_id&&(
                       <input placeholder="Or type name" value={line.transfer_agent_name}
@@ -908,10 +1096,10 @@ function PaymentLine({ line, idx, sessionDept, cardDepts, employees, allEmployee
           <>
             <SField label="Custodian — Who used the card? *">
               <select value={line.custodian_id}
-                onChange={e=>{ const emp=allEmployees.find(x=>x.id===e.target.value); onUpdate({custodian_id:e.target.value,custodian_name:emp?.full_name||''}) }}
+                onChange={e=>{ const emp=allEmployees.find(x=>x.id===e.target.value); onUpdate({custodian_id:e.target.value,custodian_name:emp?.full_name_en||''}) }}
                 style={{ ...S.inp, borderColor:lColor }}>
                 <option value="">— Select custodian —</option>
-                {allEmployees.map(emp=><option key={emp.id} value={emp.id}>{emp.full_name}</option>)}
+                {allEmployees.map(emp=><option key={emp.id} value={emp.id}>{emp.full_name_en}</option>)}
               </select>
             </SField>
 
@@ -1096,10 +1284,12 @@ function FifoPreview({ pools, lines }) {
 
 // ─── Layout helpers ───────────────────────────────────────────────────────────
 function SCard({ children }) {
-  return <div style={{ background:'#fff', borderRadius:18, border:'1px solid #f1f5f9', marginBottom:14, overflow:'hidden', boxShadow:'0 2px 12px rgba(0,0,0,0.06)' }}>{children}</div>
+  return <div style={{ background:'#fff', borderRadius:18, border:'1px solid #e2e8f0', marginBottom:14, overflow:'hidden', boxShadow:'0 3px 16px rgba(0,0,0,0.08)' }}>{children}</div>
 }
-function SHead({ children, color='#1a6b3a' }) {
-  return <div style={{ padding:'12px 16px', fontWeight:800, fontSize:14, color, borderBottom:'1px solid #f1f5f9', background:'#fafafa' }}>{children}</div>
+function SHead({ children, color='#16a34a' }) {
+  return <div style={{ padding:'13px 16px', fontWeight:800, fontSize:14, color:'#fff',
+    background:`linear-gradient(90deg,${color}ee,${color}bb)`,
+    borderBottom:`2px solid ${color}` }}>{children}</div>
 }
 function SLabel({ children }) {
   return <div style={{ fontSize:10, fontWeight:800, color:'#64748b', textTransform:'uppercase', letterSpacing:0.8, marginBottom:6 }}>{children}</div>

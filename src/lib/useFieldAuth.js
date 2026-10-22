@@ -81,8 +81,11 @@ export function useFieldAuth() {
     entityId:       null,
     assignments:    [],     // site_assignments[] for this employee
     allowedForms:   [],     // keys of forms this role+eligibility can see
-    error:          null,   // null | 'no_token' | 'invalid_token' | 'token_inactive' | 'employee_inactive'
+    error:          null,   // null | 'no_token' | 'invalid_token' | 'token_inactive' | 'token_expired' | 'employee_inactive'
     tokenId:        null,
+    siteScopeId:    null,   // site_master_id — if set, token is scoped to one site
+    boundMobile:    null,   // bound IMEI/mobile for this token
+    expiresAt:      null,   // token expiry timestamp
   })
 
   useEffect(() => {
@@ -94,8 +97,8 @@ export function useFieldAuth() {
     const params   = new URLSearchParams(window.location.search)
     const urlToken = params.get('t')
 
-    // ── DEV BYPASS ── Add ?dev=1 to URL or set localStorage to skip QR auth ──
-    const devMode = params.get('dev') === '1' || localStorage.getItem('accsys_dev_mode') === '1'
+    // ── DEV / PREVIEW BYPASS ─────────────────────────────────────────────────
+    const devMode = params.get('dev') === '1' || params.get('preview') === '1' || localStorage.getItem('accsys_dev_mode') === '1'
     if (devMode) {
       // Load a REAL employee from the DB so form submissions actually work
       try {
@@ -178,6 +181,10 @@ export function useFieldAuth() {
           employment_type,
           is_active,
           entity_id,
+          expires_at,
+          revoked_at,
+          bound_mobile,
+          site_master_id,
           employee:employee_id (
             id,
             full_name_en,
@@ -189,6 +196,8 @@ export function useFieldAuth() {
             designation,
             job_title,
             employment_type,
+            employee_category,
+            system_role,
             overtime_eligible,
             food_allowance_eligible,
             status,
@@ -203,9 +212,15 @@ export function useFieldAuth() {
         return
       }
 
-      // Token must be active
-      if (!qt.is_active) {
+      // Token must be active (not revoked, not expired)
+      if (!qt.is_active || qt.revoked_at) {
         _clearAndFail('token_inactive')
+        return
+      }
+
+      // Check expiry
+      if (qt.expires_at && new Date(qt.expires_at) < new Date()) {
+        _clearAndFail('token_expired')
         return
       }
 
@@ -232,6 +247,9 @@ export function useFieldAuth() {
           role_on_site,
           assigned_from,
           assigned_to,
+          allow_fa,
+          allow_ot,
+          allow_others,
           project:project_id ( id, project_number, project_name ),
           contractor:contractor_id ( id, contractor_name )
         `)
@@ -246,10 +264,26 @@ export function useFieldAuth() {
         .eq('employee_id', qt.employee.id)
         .eq('is_read', false)
 
+      // Load per-token form permission overrides (delta from role default)
+      const { data: deltas } = await supabase
+        .from('qr_token_forms')
+        .select('form_key, is_granted')
+        .eq('token_id', qt.id)
+
       // Compute which forms this employee can access
-      const baseForms  = ROLE_FORM_ACCESS[qt.role] || []
-      const emp        = qt.employee
-      const allowedForms = baseForms.filter(f => {
+      const emp      = qt.employee
+      let formSet    = new Set(ROLE_FORM_ACCESS[qt.role] || [])
+
+      // Apply delta overrides: is_granted=true adds, is_granted=false removes
+      if (deltas?.length) {
+        deltas.forEach(d => {
+          if (d.is_granted) formSet.add(d.form_key)
+          else              formSet.delete(d.form_key)
+        })
+      }
+
+      // Apply eligibility filters last (hard rules — cannot be overridden by delta)
+      const allowedForms = [...formSet].filter(f => {
         if (f === 'food_allowance' && !emp.food_allowance_eligible) return false
         if (f === 'overtime'       && !emp.overtime_eligible)        return false
         return true
@@ -269,6 +303,9 @@ export function useFieldAuth() {
         unreadCount:    unreadCount || 0,
         error:          null,
         tokenId:        qt.id,
+        siteScopeId:    qt.site_master_id || null,
+        boundMobile:    qt.bound_mobile   || null,
+        expiresAt:      qt.expires_at     || null,
       })
 
     } catch (err) {
@@ -291,6 +328,7 @@ export function useFieldAuth() {
       loading: false, employee: null, role: null,
       employmentType: null, entityId: null,
       assignments: [], allowedForms: [], error: 'no_token', tokenId: null,
+      siteScopeId: null, boundMobile: null, expiresAt: null,
     })
   }
 

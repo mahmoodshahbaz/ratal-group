@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ratal Group — App-Wide UI Design Audit & Proposal</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f0f2f5; color: #1a2e3d; }
+
+  /* ── Cover ── */
+  .cover { background: linear-gradient(135deg, #1a2e3d 0%, #0d1f2d 100%); color: #fff; padding: 60px 48px; position: relative; overflow: hidden; }
+  .cover::before { content:''; position:absolute; inset:0; background-image: radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 28px 28px; }
+  .cover-inner { position: relative; z-index: 1; max-width: 900px; }
+  .cover-tag { font-size: 11px; font-weight: 800; letter-spacing: 3px; color: rgba(255,255,255,0.4); text-transform: uppercase; margin-bottom: 16px; }
+  .cover h1 { font-size: 42px; font-weight: 900; line-height: 1.1; margin-bottom: 14px; }
+  .cover h1 span { color: #7ec8e3; }
+  .cover p { font-size: 15px; color: rgba(255,255,255,0.6); line-height: 1.6; max-width: 600px; margin-bottom: 24px; }
+  .cover-meta { display: flex; gap: 32px; flex-wrap: wrap; }
+  .cover-meta-item { }
+  .cover-meta-item .label { font-size: 10px; color: rgba(255,255,255,0.35); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+  .cover-meta-item .val { font-size: 14px; color: #fff; font-weight: 700; }
+  .cover-badge { display: inline-block; background: rgba(126,200,227,0.15); border: 1px solid rgba(126,200,227,0.3); color: #7ec8e3; border-radius: 20px; padding: 4px 14px; font-size: 11px; font-weight: 700; margin-top: 20px; }
+
+  /* ── Layout ── */
+  .page { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+  .section-title { font-size: 22px; font-weight: 900; color: #1a2e3d; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }
+  .section-sub { font-size: 13px; color: #6b7c93; margin-bottom: 28px; line-height: 1.5; }
+  .divider { height: 1px; background: #e8edf2; margin: 40px 0; }
+
+  /* ── Findings grid ── */
+  .findings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .finding-card { background: #fff; border-radius: 14px; padding: 20px; border-left: 4px solid #e8edf2; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+  .finding-card.critical { border-left-color: #e53935; }
+  .finding-card.high { border-left-color: #f57c00; }
+  .finding-card.medium { border-left-color: #fbc02d; }
+  .finding-card.done { border-left-color: #43a047; }
+  .finding-label { font-size: 10px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .finding-card.critical .finding-label { color: #e53935; }
+  .finding-card.high .finding-label { color: #f57c00; }
+  .finding-card.medium .finding-label { color: #f9a825; }
+  .finding-card.done .finding-label { color: #43a047; }
+  .finding-title { font-size: 15px; font-weight: 800; color: #1a2e3d; margin-bottom: 6px; }
+  .finding-desc { font-size: 12px; color: #6b7c93; line-height: 1.5; }
+
+  /* ── Page inventory ── */
+  .inv-section { margin-bottom: 28px; }
+  .inv-section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .inv-section-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .inv-section-name { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+  .inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+  .inv-item { background: #fff; border-radius: 10px; padding: 12px 14px; display: flex; align-items: flex-start; gap: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); border: 1px solid #f0f2f5; }
+  .inv-status { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+  .inv-status.ok { background: #43a047; }
+  .inv-status.partial { background: #f57c00; }
+  .inv-status.plain { background: #e53935; }
+  .inv-label { font-size: 12px; font-weight: 700; color: #1a2e3d; }
+  .inv-note { font-size: 10px; color: #9aabbf; margin-top: 2px; }
+
+  /* ── Design system spec ── */
+  .spec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px; }
+  @media (max-width: 700px) { .spec-grid { grid-template-columns: 1fr; } }
+  .spec-card { background: #fff; border-radius: 14px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+  .spec-card h3 { font-size: 14px; font-weight: 800; color: #1a2e3d; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* ── Color swatches ── */
+  .color-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .color-swatch { width: 36px; height: 36px; border-radius: 9px; flex-shrink: 0; }
+  .color-info .name { font-size: 13px; font-weight: 700; color: #1a2e3d; }
+  .color-info .hex { font-size: 11px; color: #9aabbf; font-family: monospace; }
+  .color-info .pages { font-size: 10px; color: #9aabbf; margin-top: 1px; }
+
+  /* ── Anatomy mockup ── */
+  .anatomy { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); margin-bottom: 28px; border: 1px solid #e8edf2; }
+  .anatomy-banner { background: linear-gradient(90deg, #f8faff 0%, #eef2f9 100%); padding: 20px 28px; border-left: 6px solid var(--accent, #5A32D4); position: relative; }
+  .anatomy-banner .section-tag { font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--accent, #5A32D4); margin-bottom: 5px; }
+  .anatomy-banner .page-title { font-size: 26px; font-weight: 900; color: #1a2e3d; }
+  .anatomy-banner .page-desc { font-size: 12px; color: #6b7c93; margin-top: 4px; }
+  .anatomy-banner .cta-btn { position: absolute; right: 28px; top: 50%; transform: translateY(-50%); background: var(--accent, #5A32D4); color: #fff; border: none; border-radius: 10px; padding: 10px 20px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .anatomy-kpi { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 16px 28px; background: #fafbfd; border-bottom: 1px solid #f0f2f5; }
+  .anatomy-kpi-card { background: #fff; border-radius: 10px; padding: 14px 16px; text-align: center; border: 1px solid #f0f2f5; }
+  .anatomy-kpi-card .kpi-val { font-size: 20px; font-weight: 900; color: var(--accent, #5A32D4); }
+  .anatomy-kpi-card .kpi-label { font-size: 10px; color: #9aabbf; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-top: 2px; }
+  .anatomy-filter { padding: 12px 28px; background: #fff; border-bottom: 1px solid #f0f2f5; display: flex; gap: 10px; align-items: center; }
+  .anatomy-filter-input { flex: 1; height: 36px; border: 1px solid #e8edf2; border-radius: 8px; background: #f8faff; }
+  .anatomy-filter-select { width: 120px; height: 36px; border: 1px solid #e8edf2; border-radius: 8px; background: #f8faff; }
+  .anatomy-table { width: 100%; }
+  .anatomy-table thead tr { background: #1a2e3d; }
+  .anatomy-table thead th { padding: 10px 16px; font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 0.5px; text-align: left; position: sticky; top: 0; }
+  .anatomy-table tbody tr { border-bottom: 1px solid #f0f2f5; }
+  .anatomy-table tbody td { padding: 12px 16px; font-size: 13px; color: #1a2e3d; }
+  .anatomy-table tbody tr:nth-child(even) { background: #f8faff; }
+  .anatomy-sticky-note { background: #fff3e0; border: 1px solid #ffcc80; border-radius: 8px; padding: 6px 12px; font-size: 11px; color: #e65100; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; }
+
+  /* ── Modal anatomy ── */
+  .modal-anatomy { display: flex; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.12); height: 360px; border: 1px solid #e8edf2; }
+  .modal-left { width: 250px; flex-shrink: 0; background: var(--outer, #5A32D4); display: flex; align-items: stretch; padding: 12px; }
+  .modal-left-inner { flex: 1; background: #EEF0F8; border-radius: 8px; position: relative; overflow: hidden; display: flex; flex-direction: column; }
+  .modal-corner-box { position: absolute; top: 0; right: 0; width: '55%'; height: 70px; background: var(--outer, #5A32D4); opacity: 0.25; }
+  .modal-sidebar-content { padding: 16px; position: relative; z-index: 1; }
+  .modal-sidebar-brand { font-size: 10px; font-weight: 800; color: var(--outer, #5A32D4); margin-bottom: 14px; }
+  .modal-sidebar-cat { font-size: 9px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--outer, #5A32D4); margin-bottom: 4px; opacity: 0.7; }
+  .modal-sidebar-step { font-size: 22px; font-weight: 900; color: #1a2e3d; line-height: 1.1; margin-bottom: 4px; }
+  .modal-sidebar-desc { font-size: 10px; color: #6b7c93; line-height: 1.4; margin-bottom: 12px; }
+  .modal-step-item { display: flex; align-items: center; gap: 8px; padding: 7px 0 7px 10px; border-left: 3px solid rgba(0,0,0,0.08); margin-bottom: 2px; }
+  .modal-step-item.active { border-left-color: var(--outer, #5A32D4); }
+  .modal-step-item.done { border-left-color: rgba(90,50,212,0.35); }
+  .modal-step-label { font-size: 11px; font-weight: 600; color: #9aabbf; }
+  .modal-step-item.active .modal-step-label { color: #1a2e3d; font-weight: 700; }
+  .modal-step-item.done .modal-step-label { color: #5a7a8a; }
+  .modal-right { flex: 1; display: flex; flex-direction: column; position: relative; }
+  .modal-white-card { position: absolute; top: 14px; right: 14px; bottom: 14px; left: 0; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.12); display: flex; flex-direction: column; }
+  .modal-card-header { padding: 16px 20px 12px; border-bottom: 1px solid #f0f2f5; flex-shrink: 0; }
+  .modal-card-title { font-size: 16px; font-weight: 800; color: var(--outer, #5A32D4); }
+  .modal-card-body { flex: 1; padding: 14px 20px; }
+  .field-row { display: flex; gap: 12px; margin-bottom: 12px; }
+  .field-box { flex: 1; height: 36px; background: #f8faff; border: 1px solid #e8edf2; border-radius: 8px; }
+  .field-label { font-size: 10px; color: #9aabbf; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .modal-card-footer { padding: 12px 20px; border-top: 1px solid #f0f2f5; display: flex; justify-content: space-between; flex-shrink: 0; }
+  .footer-btn-ghost { background: #f0f2f5; border: none; border-radius: 8px; padding: 8px 16px; font-size: 12px; font-weight: 700; color: #6b7c93; cursor: pointer; }
+  .footer-btn-fill { background: var(--outer, #5A32D4); border: none; border-radius: 8px; padding: 8px 20px; font-size: 12px; font-weight: 700; color: #fff; cursor: pointer; }
+
+  /* ── Banner (step 0) anatomy ── */
+  .banner-anatomy { display: flex; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.12); height: 280px; border: 1px solid #e8edf2; margin-bottom: 28px; }
+  .banner-left { flex: 1; background: #F0F4F1; position: relative; display: flex; flex-direction: column; }
+  .banner-dot-grid { position: absolute; inset: 0; background-image: radial-gradient(circle, rgba(0,0,0,0.08) 1px, transparent 1px); background-size: 22px 22px; }
+  .banner-corner { position: absolute; top: 0; left: 0; width: 0; height: 0; border-top: 90px solid var(--outer, #5A32D4); border-right: 90px solid transparent; }
+  .banner-brand { position: absolute; top: 12px; right: 16px; font-size: 10px; font-weight: 800; color: var(--outer, #5A32D4); letter-spacing: 0.5px; }
+  .banner-content { position: relative; z-index: 2; flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 40px 32px 24px; }
+  .banner-section-tag { font-size: 10px; font-weight: 800; color: var(--outer, #5A32D4); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 6px; }
+  .banner-title-1 { font-size: 36px; font-weight: 900; color: #1a2e3d; text-transform: uppercase; line-height: 1; }
+  .banner-title-2 { font-size: 36px; font-weight: 900; color: var(--outer, #5A32D4); text-transform: uppercase; line-height: 1; }
+  .banner-desc { font-size: 11px; color: #6b7c93; border-left: 3px solid var(--outer, #5A32D4); padding-left: 8px; margin-top: 10px; line-height: 1.5; }
+  .banner-steps { display: flex; gap: 8px; margin-top: 16px; }
+  .banner-pill { padding: 5px 12px; border-radius: 20px; font-size: 10px; font-weight: 700; background: rgba(0,0,0,0.05); color: #6b7c93; }
+  .banner-pill.active { background: var(--outer, #5A32D4); color: #fff; }
+  .banner-start-btn { margin-top: 12px; display: inline-flex; align-items: center; gap: 8px; background: var(--outer, #5A32D4); color: #fff; border: none; border-radius: 24px; padding: 10px 22px; font-size: 13px; font-weight: 800; cursor: pointer; }
+  .banner-right { width: 260px; flex-shrink: 0; background: linear-gradient(160deg, var(--outer, #5A32D4) 0%, var(--outer2, #3a1fa0) 100%); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+  .banner-svg-placeholder { width: 160px; height: 160px; background: rgba(255,255,255,0.08); border-radius: 24px; display: flex; align-items: center; justify-content: center; font-size: 64px; }
+
+  /* ── Heading hierarchy ── */
+  .hierarchy-demo { background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+  .hierarchy-topbar { background: #1a2e3d; padding: 10px 20px; display: flex; align-items: center; gap: 10px; }
+  .hierarchy-topbar .bar-accent { width: 4px; height: 20px; border-radius: 2px; background: #6a1b9a; }
+  .hierarchy-topbar .bar-title { color: #fff; font-size: 13px; font-weight: 800; }
+  .hierarchy-body { padding: 0; }
+  .hierarchy-banner { background: linear-gradient(90deg, #f5f0ff 0%, #ede8fc 100%); padding: 18px 24px; border-left: 5px solid #6a1b9a; }
+  .hierarchy-breadcrumb { font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: #6a1b9a; margin-bottom: 5px; }
+  .hierarchy-h1 { font-size: 24px; font-weight: 900; color: #1a2e3d; }
+  .hierarchy-desc { font-size: 11px; color: #6b7c93; margin-top: 4px; }
+
+  /* ── Sticky header spec ── */
+  .sticky-demo { background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+  .sticky-header { background: #1a2e3d; padding: 10px 16px; display: grid; grid-template-columns: 2fr 2fr 1fr 1fr 1fr; gap: 12px; position: sticky; top: 0; z-index: 10; }
+  .sticky-header span { font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.5px; }
+  .sticky-note { background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 8px; padding: 10px 14px; font-size: 11px; color: #2e7d32; font-weight: 600; display: flex; gap: 8px; align-items: center; margin: 0 0 12px; }
+
+  /* ── Priority table ── */
+  .priority-table { width: 100%; border-collapse: collapse; }
+  .priority-table th { background: #1a2e3d; color: rgba(255,255,255,0.8); padding: 10px 14px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; }
+  .priority-table td { padding: 10px 14px; font-size: 13px; border-bottom: 1px solid #f0f2f5; }
+  .priority-table tr:nth-child(even) td { background: #f8faff; }
+  .badge { display: inline-block; border-radius: 6px; padding: 2px 8px; font-size: 10px; font-weight: 700; }
+  .badge.p1 { background: #ffebee; color: #c62828; }
+  .badge.p2 { background: #fff3e0; color: #e65100; }
+  .badge.p3 { background: #e8f5e9; color: #2e7d32; }
+  .badge.global { background: #e3f2fd; color: #1565c0; }
+  .pages-count { display: inline-block; background: #f0f2f5; border-radius: 20px; padding: 2px 10px; font-size: 11px; font-weight: 700; color: #37474f; }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 4px; margin-bottom: 24px; background: #fff; border-radius: 12px; padding: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); width: fit-content; }
+  .tab { padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; background: transparent; color: #6b7c93; transition: all 0.15s; }
+  .tab.active { background: #1a2e3d; color: #fff; }
+
+  /* ── Template areas ── */
+  .template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 28px; }
+  .template-card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1.5px solid #f0f2f5; }
+  .template-icon { font-size: 28px; margin-bottom: 8px; }
+  .template-name { font-size: 13px; font-weight: 800; color: #1a2e3d; margin-bottom: 4px; }
+  .template-note { font-size: 11px; color: #9aabbf; line-height: 1.4; }
+  .template-status { display: inline-block; margin-top: 8px; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
+  .template-status.needed { background: #fff3e0; color: #e65100; }
+  .template-status.exists { background: #e8f5e9; color: #2e7d32; }
+
+  .callout { background: #e3f2fd; border: 1px solid #90caf9; border-radius: 12px; padding: 16px 20px; margin-bottom: 28px; }
+  .callout h4 { font-size: 13px; font-weight: 800; color: #1565c0; margin-bottom: 6px; }
+  .callout p { font-size: 12px; color: #1a2e3d; line-height: 1.6; }
+
+  .summary-box { background: linear-gradient(135deg, #1a2e3d 0%, #0d1f2d 100%); border-radius: 16px; padding: 28px 32px; color: #fff; margin-bottom: 32px; }
+  .summary-box h2 { font-size: 22px; font-weight: 900; margin-bottom: 16px; }
+  .summary-nums { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .summary-num .num { font-size: 36px; font-weight: 900; color: #7ec8e3; }
+  .summary-num .lbl { font-size: 11px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- COVER -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-inner">
+    <div class="cover-tag">Ratal Group · Internal ERP System</div>
+    <h1>App-Wide UI <span>Design Audit</span><br>&amp; Consistency Proposal</h1>
+    <p>Full review of all 80+ pages, modal forms, and data tables — with a unified design approach for consistent branding, navigation hierarchy, and user experience across every section of the app.</p>
+    <div class="cover-meta">
+      <div class="cover-meta-item"><div class="label">Date</div><div class="val">October 2026</div></div>
+      <div class="cover-meta-item"><div class="label">Pages Audited</div><div class="val">83 Pages</div></div>
+      <div class="cover-meta-item"><div class="label">Sections</div><div class="val">10 Groups</div></div>
+      <div class="cover-meta-item"><div class="label">Forms Needing Update</div><div class="val">~60</div></div>
+    </div>
+    <div class="cover-badge">Visual Proposal Only — Awaiting Approval Before Coding</div>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 1 — FINDINGS SUMMARY -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div style="margin-bottom:8px; margin-top:32px;">
+    <div class="section-title">🔍 What We Found</div>
+    <div class="section-sub">Key inconsistencies identified across the entire application after reviewing all 158 screenshots and 83 JSX page files.</div>
+  </div>
+
+  <div class="summary-box">
+    <h2>Audit Summary</h2>
+    <div class="summary-nums">
+      <div class="summary-num"><div class="num">6</div><div class="lbl">Pages with Banner+Wizard</div></div>
+      <div class="summary-num"><div class="num">77</div><div class="lbl">Pages Plain / No Banner</div></div>
+      <div class="summary-num"><div class="num">0</div><div class="lbl">Pages with Sticky Headers</div></div>
+      <div class="summary-num"><div class="num">4</div><div class="lbl">Templates Exist<br>(need ~12 more)</div></div>
+    </div>
+  </div>
+
+  <div class="findings-grid">
+    <div class="finding-card critical">
+      <div class="finding-label">🔴 Critical — All Pages</div>
+      <div class="finding-title">No Page-Level Banner on 77 Pages</div>
+      <div class="finding-desc">Only 6 pages (Employees, Vehicles, Projects, PurchaseOrders, Contractors, SiteMaster) have the banner+wizard pattern. Every other page opens to a plain white area with just a title.</div>
+    </div>
+    <div class="finding-card critical">
+      <div class="finding-label">🔴 Critical — All Tables</div>
+      <div class="finding-title">Table Headers Scroll Away</div>
+      <div class="finding-desc">No page in the app has sticky table headers. When rows overflow, the column headings disappear and users lose context. This must be fixed app-wide.</div>
+    </div>
+    <div class="finding-card critical">
+      <div class="finding-label">🔴 Critical — All Pages</div>
+      <div class="finding-title">No Section → Sub-page Heading Hierarchy</div>
+      <div class="finding-desc">The page title in the top bar shows the page name but not its section. Pages don't show their parent group (Finance, HR, Planning) in the content area, causing confusion.</div>
+    </div>
+    <div class="finding-card high">
+      <div class="finding-label">🟠 High — Form Pages</div>
+      <div class="finding-title">~50 Forms Are Plain Modals</div>
+      <div class="finding-desc">Forms like Invoices, Expenses, Loans, Vacations, Payroll, Overtime, etc. use plain white modals with no branding, no color identity, no step guidance. No banner, no wizard structure.</div>
+    </div>
+    <div class="finding-card high">
+      <div class="finding-label">🟠 High — List Pages</div>
+      <div class="finding-title">Page-Level KPI Cards Inconsistent</div>
+      <div class="finding-desc">PurchaseOrders has colored gradient KPI cards. FieldPayments has plain white KPI boxes. Invoices has none. Employees has none. No standard pattern exists for stats rows.</div>
+    </div>
+    <div class="finding-card high">
+      <div class="finding-label">🟠 High — All Pages</div>
+      <div class="finding-title">No Form Descriptions</div>
+      <div class="finding-desc">No page explains what it does. "Petty Cash", "Cost Allocation", "Journal Vouchers" etc. open with no description of what the form is for or how to use it. First-time users have no guidance.</div>
+    </div>
+    <div class="finding-card medium">
+      <div class="finding-label">🟡 Medium — Long Forms</div>
+      <div class="finding-title">Scrolling Inside Forms</div>
+      <div class="finding-desc">Forms with many fields (Invoices 4 sections, Loans, Employees full) require scrolling within the modal. These should be split into named steps, each fitting in one screen without scroll.</div>
+    </div>
+    <div class="finding-card medium">
+      <div class="finding-label">🟡 Medium — Templates</div>
+      <div class="finding-title">Missing Templates for Key Workflows</div>
+      <div class="finding-desc">Expense Claims, Food Allowance, Leave Applications, Compliance Reports, Staff Action Letters, and Sub-Con Certificates need printable templates in the Template Library.</div>
+    </div>
+    <div class="finding-card done">
+      <div class="finding-label">✅ Already Done</div>
+      <div class="finding-title">Employees, Vehicles, Projects, Purchase Orders</div>
+      <div class="finding-desc">These 6 pages already have the correct banner+wizard pattern with colored outer ring, light inner area, left sidebar step tracker, floating white card, and SVG illustration.</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 2 — PAGE INVENTORY -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div class="section-title">📋 Page Inventory — Current Status</div>
+  <div class="section-sub">
+    <span style="display:inline-flex;align-items:center;gap:6px;margin-right:16px;"><span style="width:8px;height:8px;border-radius:50%;background:#43a047;display:inline-block;"></span> Banner+Wizard (done)</span>
+    <span style="display:inline-flex;align-items:center;gap:6px;margin-right:16px;"><span style="width:8px;height:8px;border-radius:50%;background:#f57c00;display:inline-block;"></span> Has page header / partial styling</span>
+    <span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:#e53935;display:inline-block;"></span> Plain — needs full update</span>
+  </div>
+  <div style="margin-top:20px;"></div>
+
+  <!-- MAIN -->
+  <div class="inv-section">
+    <div class="inv-section-header"><div class="inv-section-dot" style="background:#546e7a"></div><div class="inv-section-name" style="color:#546e7a">Main</div></div>
+    <div class="inv-grid">
+      <div class="inv-item"><div class="inv-status partial"></div><div><div class="inv-label">Dashboard</div><div class="inv-note">Has KPI cards + charts. Needs section banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Approvals</div><div class="inv-note">Plain list. No banner. No description.</div></div></div>
+    </div>
+  </div>
+
+  <!-- OPERATIONS -->
+  <div class="inv-section">
+    <div class="inv-section-header"><div class="inv-section-dot" style="background:#5A32D4"></div><div class="inv-section-name" style="color:#5A32D4">Operations</div></div>
+    <div class="inv-grid">
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">LOI Register</div><div class="inv-note">Plain table. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status ok"></div><div><div class="inv-label">Fleet / Vehicles</div><div class="inv-note">✅ Banner+Wizard done (navy/teal)</div></div></div>
+      <div class="inv-item"><div class="inv-status ok"></div><div><div class="inv-label">Purchase Orders</div><div class="inv-note">✅ Banner+Wizard done (teal + navy)</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Template Library</div><div class="inv-note">Plain card grid. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Money Requests</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status partial"></div><div><div class="inv-label">Field Payment Notifications</div><div class="inv-note">Has title+tabs. Plain KPI cards. No banner.</div></div></div>
+    </div>
+  </div>
+
+  <!-- MASTERS -->
+  <div class="inv-section">
+    <div class="inv-section-header"><div class="inv-section-dot" style="background:#00695c"></div><div class="inv-section-name" style="color:#00695c">Masters</div></div>
+    <div class="inv-grid">
+      <div class="inv-item"><div class="inv-status ok"></div><div><div class="inv-label">Projects</div><div class="inv-note">✅ Banner+Wizard done</div></div></div>
+      <div class="inv-item"><div class="inv-status ok"></div><div><div class="inv-label">Party List (Contractors)</div><div class="inv-note">✅ Banner+Wizard done</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Departments</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status partial"></div><div><div class="inv-label">Employees</div><div class="inv-note">List page plain. Add form has banner+wizard ✅</div></div></div>
+      <div class="inv-item"><div class="inv-status ok"></div><div><div class="inv-label">Site Master</div><div class="inv-note">✅ Banner+Wizard done</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Site Assignment</div><div class="inv-note">Plain list. No banner.</div></div></div>
+    </div>
+  </div>
+
+  <!-- FINANCE -->
+  <div class="inv-section">
+    <div class="inv-section-header"><div class="inv-section-dot" style="background:#0277bd"></div><div class="inv-section-name" style="color:#0277bd">Finance</div></div>
+    <div class="inv-grid">
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Invoices</div><div class="inv-note">List OK. Add form: plain modal (no banner).</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Payment Receipts</div><div class="inv-note">Plain list. Add form: plain modal.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Payments</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Receipts</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Expenses</div><div class="inv-note">Plain list. Add form: plain modal.</div></div></div>
+    </div>
+  </div>
+
+  <!-- ACCOUNTING -->
+  <div class="inv-section">
+    <div class="inv-section-header"><div class="inv-section-dot" style="background:#00838f"></div><div class="inv-section-name" style="color:#00838f">Accounting</div></div>
+    <div class="inv-grid">
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Chart of Accounts</div><div class="inv-note">Plain table. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Accounts</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Bank Book</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">VAT Payments</div><div class="inv-note">Plain form. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Petty Cash</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Intercompany</div><div class="inv-note">Plain. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Group Consolidation</div><div class="inv-note">Plain. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Cheque Register</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Journal Vouchers</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Recurring Journals</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Period Close</div><div class="inv-note">Plain form. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Bank Reconciliation</div><div class="inv-note">Plain. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">General Ledger</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Trial Balance</div><div class="inv-note">Plain table. No banner.</div></div></div>
+    </div>
+  </div>
+
+  <!-- REPORTS -->
+  <div class="inv-section">
+    <div class="inv-section-header"><div class="inv-section-dot" style="background:#558b2f"></div><div class="inv-section-name" style="color:#558b2f">Reports</div></div>
+    <div class="inv-grid">
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Reports</div><div class="inv-note">Plain. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">P&L Report</div><div class="inv-note">Plain. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Income Statement</div><div class="inv-note">Plain. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Department P&L</div><div class="inv-note">Plain. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">AR Aging</div><div class="inv-note">Plain table. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">AP Aging</div><div class="inv-note">Plain table. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Cash Flow</div><div class="inv-note">Plain. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Balance Sheet</div><div class="inv-note">Plain. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">VAT Return</div><div class="inv-note">Plain. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">VAT Analysis</div><div class="inv-note">Plain. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Financial Ratios</div><div class="inv-note">Plain. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Management Report</div><div class="inv-note">Plain. No banner.</div></div></div>
+    </div>
+  </div>
+
+  <!-- PLANNING -->
+  <div class="inv-section">
+    <div class="inv-section-header"><div class="inv-section-dot" style="background:#6a1b9a"></div><div class="inv-section-name" style="color:#6a1b9a">Planning</div></div>
+    <div class="inv-grid">
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Budget</div><div class="inv-note">Plain. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Fixed Assets</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Commission Tracker</div><div class="inv-note">Plain. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Cash Management</div><div class="inv-note">Plain. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Cost Allocation</div><div class="inv-note">Plain. No banner.</div></div></div>
+    </div>
+  </div>
+
+  <!-- HUMAN RESOURCES -->
+  <div class="inv-section">
+    <div class="inv-section-header"><div class="inv-section-dot" style="background:#e65100"></div><div class="inv-section-name" style="color:#e65100">Human Resources</div></div>
+    <div class="inv-grid">
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Staff Actions</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Outsource Employees</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Payroll</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Payslip</div><div class="inv-note">Plain. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Overtime</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Food Allowance</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Vacations & Leave</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Leave Balance</div><div class="inv-note">Plain. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Loans, EOS & Penalties</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Compliance Alerts</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Notice Board</div><div class="inv-note">Plain. No banner.</div></div></div>
+    </div>
+  </div>
+
+  <!-- ADMINISTRATION -->
+  <div class="inv-section">
+    <div class="inv-section-header"><div class="inv-section-dot" style="background:#37474f"></div><div class="inv-section-name" style="color:#37474f">Administration</div></div>
+    <div class="inv-grid">
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Bulk Data Upload</div><div class="inv-note">Plain. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Document Vault</div><div class="inv-note">Plain. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">QR Code Manager</div><div class="inv-note">Plain. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Field Notifications</div><div class="inv-note">Plain. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">User Management</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Settings</div><div class="inv-note">Plain form. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Audit Log</div><div class="inv-note">Empty page. Just lock icon.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Data Import</div><div class="inv-note">Plain. No banner.</div></div></div>
+    </div>
+  </div>
+
+  <!-- TRAVEL -->
+  <div class="inv-section">
+    <div class="inv-section-header"><div class="inv-section-dot" style="background:#1565C0"></div><div class="inv-section-name" style="color:#1565C0">Travel</div></div>
+    <div class="inv-grid">
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Tickets</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Customers</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Airlines</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">BSP</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Refunds</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Booking Register</div><div class="inv-note">Plain list. No banner.</div></div></div>
+      <div class="inv-item"><div class="inv-status plain"></div><div><div class="inv-label">Customer CRM</div><div class="inv-note">Plain. No banner.</div></div></div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 3 — PROPOSED DESIGN SYSTEM -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div class="section-title">🎨 Proposed Design System</div>
+  <div class="section-sub">A unified template that every page will follow — with color variation per section. Only 3 things change between sections: the accent color, the page title, and the description.</div>
+
+  <!-- 3A — SECTION COLORS -->
+  <h3 style="font-size:15px;font-weight:800;color:#1a2e3d;margin-bottom:16px;margin-top:28px;">Section Color Palette</h3>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-bottom:32px;">
+    <div style="background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+      <div class="color-row"><div class="color-swatch" style="background:#546e7a"></div><div class="color-info"><div class="name">Main / General</div><div class="hex">#546e7a</div><div class="pages">Dashboard, Approvals</div></div></div>
+      <div class="color-row"><div class="color-swatch" style="background:#1565C0"></div><div class="color-info"><div class="name">Travel</div><div class="hex">#1565C0</div><div class="pages">Tickets, Customers, Airlines, BSP, Refunds, Bookings, CRM</div></div></div>
+      <div class="color-row"><div class="color-swatch" style="background:#5A32D4"></div><div class="color-info"><div class="name">Operations</div><div class="hex">#5A32D4</div><div class="pages">LOI, Vehicles, PO, Templates, Money Requests, Field Payments</div></div></div>
+      <div class="color-row"><div class="color-swatch" style="background:#00695c"></div><div class="color-info"><div class="name">Masters</div><div class="hex">#00695c</div><div class="pages">Projects, Party List, Departments, Employees, Sites</div></div></div>
+      <div class="color-row"><div class="color-swatch" style="background:#0277bd"></div><div class="color-info"><div class="name">Finance</div><div class="hex">#0277bd</div><div class="pages">Invoices, Payments, Receipts, Expenses</div></div></div>
+    </div>
+    <div style="background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+      <div class="color-row"><div class="color-swatch" style="background:#00838f"></div><div class="color-info"><div class="name">Accounting</div><div class="hex">#00838f</div><div class="pages">COA, Bank Book, JV, Ledger, Trial Balance, Recon</div></div></div>
+      <div class="color-row"><div class="color-swatch" style="background:#558b2f"></div><div class="color-info"><div class="name">Reports</div><div class="hex">#558b2f</div><div class="pages">P&L, Balance Sheet, Cash Flow, Aging, VAT Reports</div></div></div>
+      <div class="color-row"><div class="color-swatch" style="background:#6a1b9a"></div><div class="color-info"><div class="name">Planning</div><div class="hex">#6a1b9a</div><div class="pages">Budget, Fixed Assets, Commission, Cash Mgmt, Cost Alloc</div></div></div>
+      <div class="color-row"><div class="color-swatch" style="background:#e65100"></div><div class="color-info"><div class="name">Human Resources</div><div class="hex">#e65100</div><div class="pages">Payroll, Overtime, Leave, Loans, Compliance, Engagement</div></div></div>
+      <div class="color-row"><div class="color-swatch" style="background:#37474f"></div><div class="color-info"><div class="name">Administration</div><div class="hex">#37474f</div><div class="pages">Users, Settings, Audit Log, Bulk Upload, Data Import</div></div></div>
+    </div>
+  </div>
+
+  <!-- 3B — PAGE ANATOMY (LIST PAGE) -->
+  <h3 style="font-size:15px;font-weight:800;color:#1a2e3d;margin-bottom:10px;">Standard Page Anatomy — List Page</h3>
+  <div class="callout">
+    <h4>Design Rule: Every List Page follows this exact structure</h4>
+    <p>The <strong>Section Banner</strong> is a light colored strip at the top of every page. It shows the section name (e.g., "Finance"), the page title (e.g., "Invoices"), a one-line description, and the primary action button. Table headers are sticky and stay visible when rows scroll.</p>
+  </div>
+
+  <!-- ANATOMY MOCKUP — LIST PAGE (Finance / Invoices example) -->
+  <div class="anatomy" style="--accent:#0277bd;">
+    <div class="anatomy-banner">
+      <div class="anatomy-banner .section-tag">Finance</div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px;">
+        <div>
+          <div style="font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#0277bd;margin-bottom:5px;">Finance</div>
+          <div style="font-size:26px;font-weight:900;color:#1a2e3d;">Invoices</div>
+          <div style="font-size:12px;color:#6b7c93;margin-top:4px;">Create and manage tax invoices, credit notes and debit notes. All invoices auto-post to the general ledger.</div>
+        </div>
+        <button style="background:#0277bd;color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0;margin-top:4px;">+ New Invoice</button>
+      </div>
+    </div>
+    <div class="anatomy-kpi" style="--accent:#0277bd;">
+      <div class="anatomy-kpi-card"><div class="kpi-val" style="color:#0277bd;">SAR 0</div><div class="kpi-label">Total Invoiced</div></div>
+      <div class="anatomy-kpi-card"><div class="kpi-val" style="color:#e53935;">SAR 0</div><div class="kpi-label">Outstanding</div></div>
+      <div class="anatomy-kpi-card"><div class="kpi-val" style="color:#43a047;">SAR 0</div><div class="kpi-label">Collected</div></div>
+      <div class="anatomy-kpi-card"><div class="kpi-val" style="color:#f57c00;">0</div><div class="kpi-label">Drafts</div></div>
+    </div>
+    <div class="anatomy-filter">
+      <div class="anatomy-filter-input" style="display:flex;align-items:center;padding:0 12px;font-size:12px;color:#9aabbf;">🔍 Search invoices...</div>
+      <div class="anatomy-filter-select" style="display:flex;align-items:center;padding:0 12px;font-size:12px;color:#6b7c93;">All Statuses ▾</div>
+      <div class="anatomy-filter-select" style="display:flex;align-items:center;padding:0 12px;font-size:12px;color:#6b7c93;">All Types ▾</div>
+    </div>
+    <div style="max-height:160px;overflow-y:auto;">
+      <table class="anatomy-table">
+        <thead>
+          <tr>
+            <th>Invoice #</th>
+            <th>Client</th>
+            <th>Date</th>
+            <th>Amount</th>
+            <th>Status <span class="anatomy-sticky-note">📌 Sticky</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>INV-0001</td><td>Mobiserve KSA</td><td>2026-05-03</td><td>SAR 7,390</td><td><span style="background:#e8f5e9;color:#2e7d32;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;">PAID</span></td></tr>
+          <tr><td>INV-0002</td><td>ACWA Power</td><td>2026-06-14</td><td>SAR 15,200</td><td><span style="background:#e3f2fd;color:#1565c0;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;">ISSUED</span></td></tr>
+          <tr><td>INV-0003</td><td>Saudi Aramco</td><td>2026-07-01</td><td>SAR 44,000</td><td><span style="background:#fff8e1;color:#f57c00;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;">DRAFT</span></td></tr>
+          <tr><td>INV-0004</td><td>NEOM</td><td>2026-08-20</td><td>SAR 82,500</td><td><span style="background:#e3f2fd;color:#1565c0;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;">ISSUED</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="callout" style="margin-top:16px;">
+    <h4>Key Technical Point — Sticky Headers</h4>
+    <p>All tables will use <code>position: sticky; top: 0; z-index: 10</code> on the <code>&lt;thead&gt;</code> row, with the table wrapper set to <code>overflow-y: auto; max-height: calc(100vh - Xpx)</code>. This keeps column headers visible at all times regardless of scroll position.</p>
+  </div>
+
+  <!-- 3C — HEADING HIERARCHY -->
+  <h3 style="font-size:15px;font-weight:800;color:#1a2e3d;margin-bottom:10px;margin-top:32px;">Heading Hierarchy — Section → Sub-page</h3>
+  <div class="callout">
+    <h4>Rule: The banner always shows TWO levels of heading</h4>
+    <p>Level 1 (tiny uppercase label): The sidebar group name — "Finance", "Planning", "Human Resources", etc.<br>Level 2 (large bold title): The specific page name — "Fixed Assets", "Payroll", "Bank Reconciliation", etc.<br><br>The top-bar shows this already (via the currentNav label), but the page content area itself must also repeat it so users always know where they are.</p>
+  </div>
+
+  <div class="hierarchy-demo" style="margin-bottom:28px;">
+    <div class="hierarchy-topbar">
+      <div class="bar-accent" style="background:#6a1b9a;"></div>
+      <div class="bar-title">📐 Fixed Assets</div>
+      <div style="margin-left:auto;font-size:12px;color:rgba(255,255,255,0.4);">Top bar (already exists)</div>
+    </div>
+    <div class="hierarchy-body">
+      <div class="hierarchy-banner" style="border-left-color:#6a1b9a;">
+        <div class="hierarchy-breadcrumb" style="color:#6a1b9a;">Planning</div>
+        <div class="hierarchy-h1">Fixed Assets</div>
+        <div class="hierarchy-desc">Register and depreciate capital assets. Track purchase date, useful life, and book value per IFRS schedules.</div>
+      </div>
+      <div style="padding:20px 24px;background:#f8faff;font-size:12px;color:#9aabbf;font-style:italic;">↑ This banner appears in the page content area — the user always sees both levels: "Planning" (section) → "Fixed Assets" (page)</div>
+    </div>
+  </div>
+
+  <!-- 3D — FORM/MODAL (wizard pattern) -->
+  <h3 style="font-size:15px;font-weight:800;color:#1a2e3d;margin-bottom:10px;margin-top:32px;">Form/Add Modal — Banner + Wizard (All Sections)</h3>
+  <div class="callout">
+    <h4>Rule: ALL "Add New" modals use the banner + wizard pattern</h4>
+    <p>Step 0 = intro banner (light gray background, dot grid, corner triangle, left text panel, right dark colored panel with SVG illustration, pill steps, START button).<br>Steps 1+ = colored outer ring → light inner container → top-right corner box → left sidebar 220px (section name + step heading + thin-border step list) → floating white card right (form fields).<br><br>The only difference between sections is the accent color and the step content.</p>
+  </div>
+
+  <!-- Banner step 0 mockup (Finance / Invoice) -->
+  <div style="--outer:#0277bd;--outer2:#01579b;" class="banner-anatomy">
+    <div class="banner-left">
+      <div class="banner-dot-grid"></div>
+      <div class="banner-corner" style="border-top-color:#01579b;"></div>
+      <div class="banner-brand" style="color:#0277bd;">Ratal Advanced Technologies</div>
+      <div class="banner-content">
+        <div class="banner-section-tag" style="color:#0277bd;">Finance</div>
+        <div class="banner-title-1" style="color:#1a2e3d;">NEW</div>
+        <div class="banner-title-2" style="color:#0277bd;">INVOICE</div>
+        <div class="banner-desc" style="border-left-color:#0277bd;color:#6b7c93;">Create a tax invoice, credit note or debit note.<br>Auto-posts to the general ledger on issue.</div>
+        <div class="banner-steps">
+          <div class="banner-pill active" style="background:#0277bd;color:#fff;">① Details</div>
+          <div class="banner-pill">② Terms</div>
+          <div class="banner-pill">③ Line Items</div>
+        </div>
+        <button class="banner-start-btn" style="background:#0277bd;">Start ➤</button>
+      </div>
+    </div>
+    <div class="banner-right" style="background:linear-gradient(160deg,#01579b 0%,#013d7a 100%);">
+      <div class="banner-svg-placeholder">🧾</div>
+    </div>
+  </div>
+
+  <!-- Wizard step 1 mockup (Finance / Invoice) -->
+  <h4 style="font-size:13px;font-weight:800;color:#6b7c93;margin:16px 0 10px;text-transform:uppercase;letter-spacing:0.5px;">Form Steps — Example (Finance / Blue theme)</h4>
+  <div class="modal-anatomy" style="--outer:#0277bd;">
+    <div class="modal-left">
+      <div class="modal-left-inner">
+        <div style="position:absolute;top:0;right:0;width:55%;height:32%;background:#0277bd;opacity:0.2;"></div>
+        <div class="modal-sidebar-content">
+          <div class="modal-sidebar-brand" style="color:#0277bd;">Ratal Advanced Technologies</div>
+          <div class="modal-sidebar-cat" style="color:#0277bd;">New Invoice</div>
+          <div class="modal-sidebar-step">Invoice Details</div>
+          <div class="modal-sidebar-desc">Select invoice type, client, project and billing date.</div>
+          <div style="font-size:9px;font-weight:800;color:#0277bd;letter-spacing:1px;margin-bottom:12px;opacity:0.7;">STEP 1 OF 3</div>
+          <div class="modal-step-item active" style="border-left-color:#0277bd;"><div class="modal-step-label" style="color:#1a2e3d;font-weight:700;">Invoice Details</div></div>
+          <div class="modal-step-item" style="border-left-color:rgba(0,0,0,0.08);"><div class="modal-step-label">Terms & Settings</div></div>
+          <div class="modal-step-item" style="border-left-color:rgba(0,0,0,0.08);"><div class="modal-step-label">Line Items</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-right" style="background:#e3f0fb;">
+      <div class="modal-white-card">
+        <div class="modal-card-header">
+          <div class="modal-card-title" style="color:#0277bd;">Invoice Details</div>
+        </div>
+        <div class="modal-card-body">
+          <div class="field-label">Invoice Type</div>
+          <div style="height:36px;background:#f8faff;border:1px solid #e8edf2;border-radius:8px;margin-bottom:12px;display:flex;align-items:center;padding:0 12px;font-size:12px;color:#6b7c93;">Tax Invoice (B2B) ▾</div>
+          <div class="field-row">
+            <div style="flex:1;"><div class="field-label">Client</div><div class="field-box"></div></div>
+            <div style="flex:1;"><div class="field-label">Project</div><div class="field-box"></div></div>
+          </div>
+          <div class="field-row">
+            <div style="flex:1;"><div class="field-label">Invoice Date</div><div class="field-box"></div></div>
+            <div style="flex:1;"><div class="field-label">Due Date</div><div class="field-box"></div></div>
+          </div>
+          <div class="field-label">Reference / PO#</div>
+          <div style="height:36px;background:#f8faff;border:1px solid #e8edf2;border-radius:8px;margin-bottom:12px;"></div>
+        </div>
+        <div class="modal-card-footer">
+          <button class="footer-btn-ghost">Cancel</button>
+          <button class="footer-btn-fill" style="background:#0277bd;">Next →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HR wizard example -->
+  <h4 style="font-size:13px;font-weight:800;color:#6b7c93;margin:20px 0 10px;text-transform:uppercase;letter-spacing:0.5px;">Same pattern — Human Resources / Orange theme</h4>
+  <div class="modal-anatomy" style="--outer:#e65100;">
+    <div class="modal-left">
+      <div class="modal-left-inner">
+        <div style="position:absolute;top:0;right:0;width:55%;height:32%;background:#e65100;opacity:0.15;"></div>
+        <div class="modal-sidebar-content">
+          <div class="modal-sidebar-brand" style="color:#e65100;">Ratal Advanced Technologies</div>
+          <div class="modal-sidebar-cat" style="color:#e65100;">New Vacation Request</div>
+          <div class="modal-sidebar-step">Leave Details</div>
+          <div class="modal-sidebar-desc">Specify leave type, dates, and coverage arrangement.</div>
+          <div style="font-size:9px;font-weight:800;color:#e65100;letter-spacing:1px;margin-bottom:12px;opacity:0.7;">STEP 1 OF 2</div>
+          <div class="modal-step-item active" style="border-left-color:#e65100;"><div class="modal-step-label" style="color:#1a2e3d;font-weight:700;">Leave Details</div></div>
+          <div class="modal-step-item" style="border-left-color:rgba(0,0,0,0.08);"><div class="modal-step-label">Supporting Docs</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-right" style="background:#fff3e0;">
+      <div class="modal-white-card">
+        <div class="modal-card-header">
+          <div class="modal-card-title" style="color:#e65100;">Leave Details</div>
+        </div>
+        <div class="modal-card-body">
+          <div class="field-label">Employee</div>
+          <div style="height:36px;background:#f8faff;border:1px solid #e8edf2;border-radius:8px;margin-bottom:12px;display:flex;align-items:center;padding:0 12px;font-size:12px;color:#6b7c93;">Select employee ▾</div>
+          <div class="field-row">
+            <div style="flex:1;"><div class="field-label">Leave Type</div><div class="field-box"></div></div>
+            <div style="flex:1;"><div class="field-label">Days</div><div class="field-box"></div></div>
+          </div>
+          <div class="field-row">
+            <div style="flex:1;"><div class="field-label">Start Date</div><div class="field-box"></div></div>
+            <div style="flex:1;"><div class="field-label">Return Date</div><div class="field-box"></div></div>
+          </div>
+        </div>
+        <div class="modal-card-footer">
+          <button class="footer-btn-ghost">Cancel</button>
+          <button class="footer-btn-fill" style="background:#e65100;">Next →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 4 — STANDARD MODAL SIZE & STEP SPLITTING -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div class="section-title">📐 Standard Modal Size &amp; Step Splitting Rules</div>
+  <div class="section-sub">All modals use the same fixed dimensions. Long forms are split into steps — never scrolled.</div>
+
+  <div class="spec-grid">
+    <div class="spec-card">
+      <h3>Modal Size Standard</h3>
+      <table style="width:100%;border-collapse:collapse;">
+        <tr style="border-bottom:1px solid #f0f2f5;"><td style="padding:8px 0;font-size:12px;color:#6b7c93;font-weight:700;">Modal height</td><td style="padding:8px 0;font-size:12px;font-weight:700;text-align:right;"><code>height: 92vh</code></td></tr>
+        <tr style="border-bottom:1px solid #f0f2f5;"><td style="padding:8px 0;font-size:12px;color:#6b7c93;font-weight:700;">Min height</td><td style="padding:8px 0;font-size:12px;font-weight:700;text-align:right;"><code>minHeight: 600px</code></td></tr>
+        <tr style="border-bottom:1px solid #f0f2f5;"><td style="padding:8px 0;font-size:12px;color:#6b7c93;font-weight:700;">Width</td><td style="padding:8px 0;font-size:12px;font-weight:700;text-align:right;"><code>width: 900px (max)</code></td></tr>
+        <tr style="border-bottom:1px solid #f0f2f5;"><td style="padding:8px 0;font-size:12px;color:#6b7c93;font-weight:700;">Outer padding</td><td style="padding:8px 0;font-size:12px;font-weight:700;text-align:right;"><code>padding: 20px</code></td></tr>
+        <tr><td style="padding:8px 0;font-size:12px;color:#6b7c93;font-weight:700;">White card offset</td><td style="padding:8px 0;font-size:12px;font-weight:700;text-align:right;"><code>left: 258, top/right/bottom: 22</code></td></tr>
+      </table>
+    </div>
+    <div class="spec-card">
+      <h3>Step Splitting Rules</h3>
+      <div style="font-size:12px;color:#6b7c93;line-height:1.8;">
+        <div style="margin-bottom:8px;padding:8px;background:#f8faff;border-radius:8px;border-left:3px solid #5A32D4;"><strong style="color:#1a2e3d;">1 screen = max 5 fields per step</strong><br>If a form has more than 5 fields, split into steps.</div>
+        <div style="margin-bottom:8px;padding:8px;background:#f8faff;border-radius:8px;border-left:3px solid #5A32D4;"><strong style="color:#1a2e3d;">Step names go in the left sidebar</strong><br>Each step gets a clear name: "Basic Details", "Financial Terms", "Documents", "Review &amp; Submit".</div>
+        <div style="padding:8px;background:#f8faff;border-radius:8px;border-left:3px solid #5A32D4;"><strong style="color:#1a2e3d;">Line-item tables = their own step</strong><br>Any form with a line items table (invoices, POs) puts the table in its own step to give it full width.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step splitting per form -->
+  <h3 style="font-size:15px;font-weight:800;color:#1a2e3d;margin-bottom:14px;">Proposed Step Splits — Key Forms</h3>
+  <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.05);margin-bottom:28px;">
+    <table class="priority-table">
+      <thead><tr><th>Form</th><th>Section</th><th>Current</th><th>Proposed Steps</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Invoice</strong></td><td style="color:#0277bd;font-weight:700;">Finance</td><td>1 long scrolling modal</td><td>Step 1: Details + Client | Step 2: Terms + VAT | Step 3: Line Items | Step 4: Review</td></tr>
+        <tr><td><strong>Vacation Request</strong></td><td style="color:#e65100;font-weight:700;">HR</td><td>Plain modal</td><td>Step 1: Leave Details | Step 2: Attachments + Submit</td></tr>
+        <tr><td><strong>Loan / EOSB</strong></td><td style="color:#e65100;font-weight:700;">HR</td><td>Plain modal</td><td>Step 1: Employee + Type | Step 2: Amount + Schedule | Step 3: Documents</td></tr>
+        <tr><td><strong>Expense Claim</strong></td><td style="color:#0277bd;font-weight:700;">Finance</td><td>No template</td><td>Step 1: Period + Employee | Step 2: Line Items | Step 3: Approval + Upload</td></tr>
+        <tr><td><strong>Petty Cash</strong></td><td style="color:#00838f;font-weight:700;">Accounting</td><td>Plain modal</td><td>Step 1: Fund Details | Step 2: Transactions | Step 3: Reconcile</td></tr>
+        <tr><td><strong>Journal Voucher</strong></td><td style="color:#00838f;font-weight:700;">Accounting</td><td>Plain modal</td><td>Step 1: Header | Step 2: Debit/Credit Lines | Step 3: Attachments</td></tr>
+        <tr><td><strong>Fixed Asset</strong></td><td style="color:#6a1b9a;font-weight:700;">Planning</td><td>Plain modal</td><td>Step 1: Asset Details | Step 2: Depreciation | Step 3: Documents</td></tr>
+        <tr><td><strong>Overtime</strong></td><td style="color:#e65100;font-weight:700;">HR</td><td>Plain modal</td><td>Step 1: Employee + Date | Step 2: Hours + Approval</td></tr>
+        <tr><td><strong>Payroll Run</strong></td><td style="color:#e65100;font-weight:700;">HR</td><td>Plain list</td><td>Step 1: Period + Category | Step 2: Review Employees | Step 3: Adjustments | Step 4: Post</td></tr>
+        <tr><td><strong>Bank Recon</strong></td><td style="color:#00838f;font-weight:700;">Accounting</td><td>Plain view</td><td>Step 1: Statement Import | Step 2: Matching | Step 3: Differences + Close</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 5 — TEMPLATES NEEDED -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div class="section-title">📄 Templates Needed</div>
+  <div class="section-sub">Printable/downloadable DOCX/PDF templates that should be in the Template Library.</div>
+
+  <div class="template-grid">
+    <div class="template-card"><div class="template-icon">🧾</div><div class="template-name">Expense Claim Form</div><div class="template-note">Monthly claim with itemized rows, project allocation, manager approval box.</div><div class="template-status exists">✅ Exists</div></div>
+    <div class="template-card"><div class="template-icon">📦</div><div class="template-name">Outgoing PO</div><div class="template-note">Formal PO to supplier with terms, line items, and signature.</div><div class="template-status exists">✅ Exists</div></div>
+    <div class="template-card"><div class="template-icon">👷</div><div class="template-name">SubCon Payment Certificate</div><div class="template-note">Milestone completion + hours confirmation for sub-contractors.</div><div class="template-status exists">✅ Exists</div></div>
+    <div class="template-card"><div class="template-icon">💼</div><div class="template-name">Debit Note</div><div class="template-note">Formal debit note to client or supplier.</div><div class="template-status exists">✅ Exists</div></div>
+    <div class="template-card"><div class="template-icon">🍽️</div><div class="template-name">Food Allowance Register</div><div class="template-note">Monthly food allowance distribution list with employee sign-off.</div><div class="template-status needed">⚠️ Needed</div></div>
+    <div class="template-card"><div class="template-icon">⏱️</div><div class="template-name">Overtime Approval Letter</div><div class="template-note">Official approval letter for overtime with hours and rate.</div><div class="template-status needed">⚠️ Needed</div></div>
+    <div class="template-card"><div class="template-icon">🏖️</div><div class="template-name">Leave Application Form</div><div class="template-note">Employee leave request with dates, type, balance check, and manager sign-off.</div><div class="template-status needed">⚠️ Needed</div></div>
+    <div class="template-card"><div class="template-icon">📋</div><div class="template-name">Staff Action Form</div><div class="template-note">HR action form for promotions, transfers, salary changes, warnings.</div><div class="template-status needed">⚠️ Needed</div></div>
+    <div class="template-card"><div class="template-icon">💳</div><div class="template-name">Loan Agreement</div><div class="template-note">Employee loan agreement with repayment schedule and signature.</div><div class="template-status needed">⚠️ Needed</div></div>
+    <div class="template-card"><div class="template-icon">🏁</div><div class="template-name">End of Service Certificate</div><div class="template-note">EOSB calculation summary + clearance certificate.</div><div class="template-status needed">⚠️ Needed</div></div>
+    <div class="template-card"><div class="template-icon">💵</div><div class="template-name">Salary Slip (Payslip)</div><div class="template-note">Monthly payslip with basic, allowances, deductions, net pay.</div><div class="template-status needed">⚠️ Needed (G5)</div></div>
+    <div class="template-card"><div class="template-icon">⚠️</div><div class="template-name">Warning Letter</div><div class="template-note">Formal HR warning letter with violation description and consequence.</div><div class="template-status needed">⚠️ Needed</div></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 6 — IMPLEMENTATION PRIORITY -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div class="section-title">🚀 Implementation Priority</div>
+  <div class="section-sub">Recommended order for applying the new design system — global CSS changes first, then section by section.</div>
+
+  <div class="callout">
+    <h4>Phase 0 — Global Changes (affects all pages, code done once)</h4>
+    <p>Before touching any individual page:<br>
+    1. Add a <strong>PageBanner component</strong> reusable across all pages (takes: section, title, description, color, ctaLabel, ctaClick)<br>
+    2. Add a <strong>sticky header CSS class</strong> applied to all table &lt;thead&gt; elements<br>
+    3. Add a <strong>KpiCard component</strong> (standard stat card: value, label, color)<br>
+    These 3 components get built once and dropped into every page.</p>
+  </div>
+
+  <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.05);margin-bottom:28px;">
+    <table class="priority-table">
+      <thead><tr><th>Phase</th><th>What</th><th>Pages</th><th>Priority</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Phase 0</strong></td><td>Build PageBanner, KpiCard, StickyTable reusable components</td><td><span class="badge global">Global</span></td><td><span class="badge p1">P1 — First</span></td></tr>
+        <tr><td><strong>Phase 1a</strong></td><td>Operations pages — banners + wizard forms + sticky headers</td><td><span class="pages-count">6 pages</span><br><small>LOI, Template Library, Money Requests, Field Payments + banner for PO/Vehicles list</small></td><td><span class="badge p1">P1</span></td></tr>
+        <tr><td><strong>Phase 1b</strong></td><td>Finance pages — banners + wizard forms + sticky headers</td><td><span class="pages-count">5 pages</span><br><small>Invoices, Payment Receipts, Payments, Receipts, Expenses</small></td><td><span class="badge p1">P1</span></td></tr>
+        <tr><td><strong>Phase 2a</strong></td><td>Human Resources pages — banners + wizard forms</td><td><span class="pages-count">11 pages</span><br><small>Payroll, Overtime, Vacations, Loans, Compliance, Food Allowance, Leave, Engagement, Staff Actions, Outsource, Payslip</small></td><td><span class="badge p2">P2</span></td></tr>
+        <tr><td><strong>Phase 2b</strong></td><td>Masters pages — add section banner to list pages</td><td><span class="pages-count">4 pages</span><br><small>Departments, Site Assignment + list banners for Employees, Projects</small></td><td><span class="badge p2">P2</span></td></tr>
+        <tr><td><strong>Phase 3a</strong></td><td>Accounting pages — banners + wizard forms</td><td><span class="pages-count">14 pages</span><br><small>COA, Bank Book, Petty Cash, JV, Cheques, Intercompany, Ledger, Trial Balance, Recon, Period Close, Recurring, Group Consol, VAT Pay, Accounts</small></td><td><span class="badge p2">P2</span></td></tr>
+        <tr><td><strong>Phase 3b</strong></td><td>Planning pages — banners + wizard forms</td><td><span class="pages-count">5 pages</span><br><small>Budget, Fixed Assets, Commission, Cash Mgmt, Cost Allocation</small></td><td><span class="badge p2">P2</span></td></tr>
+        <tr><td><strong>Phase 4a</strong></td><td>Reports pages — section banners (mostly read-only, just banner + filters)</td><td><span class="pages-count">12 pages</span><br><small>P&L, Balance Sheet, Cash Flow, AR/AP Aging, VAT Return/Report, Ratios, Mgmt Report, Statements, Income Statement</small></td><td><span class="badge p3">P3</span></td></tr>
+        <tr><td><strong>Phase 4b</strong></td><td>Administration pages — banners + forms</td><td><span class="pages-count">8 pages</span><br><small>Users, Settings, Audit Log, QR Manager, Field Notifications, Bulk Upload, Document Vault, Data Import</small></td><td><span class="badge p3">P3</span></td></tr>
+        <tr><td><strong>Phase 4c</strong></td><td>Travel pages — banners + forms</td><td><span class="pages-count">7 pages</span><br><small>Tickets, Customers, Airlines, BSP, Refunds, Bookings, CRM</small></td><td><span class="badge p3">P3</span></td></tr>
+        <tr><td><strong>Phase 5</strong></td><td>Template Library — add 8 missing templates</td><td><span class="pages-count">8 templates</span></td><td><span class="badge p3">P3</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- SIGN-OFF -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div style="background:linear-gradient(135deg,#1a2e3d 0%,#0d1f2d 100%);border-radius:16px;padding:28px 32px;color:#fff;margin-bottom:32px;">
+    <div style="font-size:10px;font-weight:800;letter-spacing:2px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:8px;">Ready for Approval</div>
+    <div style="font-size:22px;font-weight:900;margin-bottom:12px;">This is the Visual Proposal — No Code Yet</div>
+    <div style="font-size:14px;color:rgba(255,255,255,0.65);line-height:1.7;max-width:700px;margin-bottom:20px;">
+      Once you approve this approach, we implement phase by phase starting with the global components, then section by section. You confirm each section before we move to the next.
+      <br><br>
+      <strong style="color:#7ec8e3;">Questions to confirm before coding starts:</strong>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:14px;">
+        <div style="font-size:11px;font-weight:800;color:#7ec8e3;margin-bottom:6px;">Q1 — Start Section?</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.6);">Which section to start with after Phase 0? Finance (Invoices etc.) or HR (Payroll etc.)?</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:14px;">
+        <div style="font-size:11px;font-weight:800;color:#7ec8e3;margin-bottom:6px;">Q2 — Dashboard Banner?</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.6);">Dashboard is unique — should it also get a banner, or keep its current KPI card design (already good)?</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:14px;">
+        <div style="font-size:11px;font-weight:800;color:#7ec8e3;margin-bottom:6px;">Q3 — Report Pages?</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.6);">Reports are mostly read-only views. Should they get the full banner+KPI cards, or just the section heading strip?</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:14px;">
+        <div style="font-size:11px;font-weight:800;color:#7ec8e3;margin-bottom:6px;">Q4 — Templates Priority?</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.6);">Which missing template is most urgent? Salary Slip, Leave Application, or something else?</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

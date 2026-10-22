@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACCSYS — Shareable Forms Preview</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; padding: 24px; }
+  h1 { font-size: 20px; font-weight: 600; color: #1a2540; margin-bottom: 4px; }
+  .sub { font-size: 13px; color: #666; margin-bottom: 24px; }
+  .port-bar { background: #fff; border: 1px solid #dde; border-radius: 8px; padding: 10px 16px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+  .port-bar label { font-size: 13px; color: #555; font-weight: 500; white-space: nowrap; }
+  .port-bar input { flex: 1; border: 1px solid #ccc; border-radius: 5px; padding: 5px 10px; font-size: 13px; }
+  .port-bar button { background: #1a2540; color: #fff; border: none; border-radius: 5px; padding: 6px 14px; font-size: 13px; cursor: pointer; }
+  .dev-bar { background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 10px 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .dev-bar label { font-weight: 500; color: #5d4037; }
+  .toggle { position:relative; width:40px; height:22px; flex-shrink:0; }
+  .toggle input { opacity:0; width:0; height:0; }
+  .slider { position:absolute; inset:0; background:#ccc; border-radius:22px; cursor:pointer; transition:.2s; }
+  .slider:before { content:''; position:absolute; width:16px; height:16px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
+  input:checked + .slider { background:#f57f17; }
+  input:checked + .slider:before { transform:translateX(18px); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .card { background: #fff; border-radius: 10px; border: 1px solid #e0e3ea; overflow: hidden; transition: box-shadow 0.15s; }
+  .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.10); }
+  .card-top { padding: 14px 16px 12px; display: flex; align-items: flex-start; gap: 12px; }
+  .icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .card-name { font-size: 14px; font-weight: 600; color: #1a2540; line-height: 1.3; }
+  .card-desc { font-size: 11.5px; color: #777; margin-top: 3px; line-height: 1.4; }
+  .card-bottom { border-top: 1px solid #f0f0f0; padding: 10px 16px; display: flex; gap: 8px; align-items: center; }
+  .path { font-family: monospace; font-size: 11px; color: #888; flex: 1; }
+  .btn-open { background: #1a2540; color: #fff; border: none; border-radius: 6px; padding: 5px 12px; font-size: 12px; cursor: pointer; text-decoration: none; white-space: nowrap; display: inline-block; }
+  .btn-mobile { background: #f0f4ff; color: #3355cc; border: 1px solid #c0ccee; border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .status { font-size: 10px; padding: 2px 7px; border-radius: 3px; font-weight: 600; }
+  .done { background: #e8f5e9; color: #2e7d32; }
+  .warn { background: #fff8e1; color: #f57f17; }
+  .section-title { font-size: 12px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin: 20px 0 10px; }
+  #qr-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:999; align-items:center; justify-content:center; }
+  #qr-modal.open { display:flex; }
+  #qr-box { background:#fff; border-radius:12px; padding:24px; text-align:center; max-width:280px; }
+  #qr-box h3 { font-size:15px; margin-bottom:12px; color:#1a2540; }
+  #qr-img { width:200px; height:200px; border:1px solid #eee; border-radius:6px; }
+  #qr-url { font-size:11px; color:#888; margin-top:8px; word-break:break-all; }
+  #qr-close { margin-top:14px; background:#1a2540; color:#fff; border:none; border-radius:6px; padding:7px 20px; cursor:pointer; font-size:13px; }
+</style>
+</head>
+<body>
+
+<h1>📱 ACCSYS — Shareable Forms</h1>
+<p class="sub">Preview all mobile/QR forms. Make sure your dev server is running first.</p>
+
+<div class="port-bar">
+  <label>Dev server URL:</label>
+  <input type="text" id="base-url" value="http://localhost:5173" />
+  <button onclick="rebuildLinks()">Update</button>
+</div>
+
+<div class="dev-bar">
+  <label class="toggle"><input type="checkbox" id="dev-toggle" onchange="toggleDev(this.checked)"><span class="slider"></span></label>
+  <label for="dev-toggle">🔧 Dev mode — bypass QR auth for preview (<code>?dev=1</code> added to QR-auth forms)</label>
+</div>
+
+<p class="section-title">✅ Field Operations (QR-Auth)</p>
+<div class="grid" id="grid-field"></div>
+
+<p class="section-title">✅ Self-Service (No Login)</p>
+<div class="grid" id="grid-noauth"></div>
+
+<p class="section-title">⚠️ Needs Review</p>
+<div class="grid" id="grid-review"></div>
+
+<div id="qr-modal">
+  <div id="qr-box">
+    <h3 id="qr-title">QR Code</h3>
+    <img id="qr-img" src="" alt="QR code" />
+    <p id="qr-url"></p>
+    <button id="qr-close" onclick="closeQR()">Close</button>
+  </div>
+</div>
+
+<script>
+let devMode = false;
+function toggleDev(on) { devMode = on; rebuildLinks(); }
+
+const FORMS = {
+  field: [
+    { icon:'📝', color:'#1565c0', bg:'#e3f2fd', name:'Daily Expense', path:'/forms/daily-expense', desc:'Fuel, hotel, meals, materials. OCR scanner, VAT cross-check.', status:'done', qrAuth:true },
+    { icon:'🧾', color:'#0277bd', bg:'#e1f5fe', name:'Expense Claim', path:'/forms/expense-claim', desc:'Monthly claim submission, cutoff logic, per-project.', status:'done', qrAuth:true },
+    { icon:'💸', color:'#b71c1c', bg:'#ffebee', name:'Field Payment (DH)', path:'/forms/field-payment', desc:'DH issues cash advance to employee. Receipt-first flow.', status:'done', qrAuth:true },
+    { icon:'📍', color:'#2e7d32', bg:'#e8f5e9', name:'Site Completion', path:'/forms/site-completion', desc:'Milestone update, photo upload, per site assignment.', status:'done', qrAuth:true },
+    { icon:'⚡', color:'#1a2540', bg:'#e8eaf6', name:'DH Command Centre', path:'/forms/dh-dashboard', desc:'Cash, sites, claims, team, notifications dashboard.', status:'done', qrAuth:true },
+    { icon:'💳', color:'#2e7d32', bg:'#e8f5e9', name:'Payment Confirmation', path:'/forms/payment-validation', desc:'Employee confirms cash receipt of advance.', status:'done', qrAuth:true },
+    { icon:'🚗', color:'#37474f', bg:'#eceff1', name:'Vehicle Report', path:'/forms/car-maintenance', desc:'Fuel log, maintenance, incident, inspection.', status:'done', qrAuth:true },
+    { icon:'👷', color:'#33691e', bg:'#f1f8e9', name:'Sub-Con Claim', path:'/forms/subcon-claim', desc:'Work completion, hours, milestones, photos.', status:'done', qrAuth:true },
+  ],
+  noauth: [
+    { icon:'🍽️', color:'#880e4f', bg:'#fce4ec', name:'Food Allowance', path:'/forms/food-allowance', desc:'Bulk eligible employee confirmation, QR auth.', status:'done' },
+    { icon:'⏱️', color:'#e65100', bg:'#fff3e0', name:'Overtime Request', path:'/forms/overtime', desc:'5-screen mobile wizard, duplicate guard, DH approval.', status:'done' },
+    { icon:'💰', color:'#1a237e', bg:'#e8eaf6', name:'Money Request', path:'/forms/money-request', desc:'No login. Department-based, approval chain.', status:'done' },
+    { icon:'📦', color:'#0097a7', bg:'#e0f7fa', name:'PO Request', path:'/forms/po-request', desc:'Job type, category, line items, Drive upload.', status:'done' },
+  ],
+  review: [
+    { icon:'💵', color:'#5c6bc0', bg:'#e8eaf6', name:'Cash Payment Voucher', path:'/forms/cash-payment', desc:'⚠️ No entity binding. Needs ?entity_id= URL param.', status:'warn' },
+    { icon:'💳', color:'#78909c', bg:'#eceff1', name:'FormPayment (Orphan)', path:'/forms/payment', desc:'⚠️ Route exists but not on FormLanding. May be superseded by Field Payment.', status:'warn' },
+  ]
+};
+
+function getBase() {
+  return document.getElementById('base-url').value.replace(/\/$/, '');
+}
+
+function showQR(url, name) {
+  const base = getBase();
+  const full = base + url;
+  document.getElementById('qr-title').textContent = name;
+  document.getElementById('qr-url').textContent = full;
+  document.getElementById('qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(full)}`;
+  document.getElementById('qr-modal').classList.add('open');
+}
+
+function closeQR() {
+  document.getElementById('qr-modal').classList.remove('open');
+}
+
+function buildCard(f) {
+  const base = getBase();
+  const devSuffix = (devMode && f.qrAuth) ? '?dev=1' : '';
+  const fullPath = f.path + devSuffix;
+  const devBadge = (f.qrAuth && devMode) ? ' <span style="background:#fff3e0;color:#e65100;font-size:10px;padding:1px 5px;border-radius:3px;font-weight:600;">dev</span>' : '';
+  return `
+    <div class="card">
+      <div class="card-top">
+        <div class="icon" style="background:${f.bg}; font-size:20px">${f.icon}</div>
+        <div>
+          <div class="card-name">${f.name} <span class="status ${f.status}">${f.status === 'done' ? '✓ Done' : '⚠ Review'}</span>${devBadge}</div>
+          <div class="card-desc">${f.desc}</div>
+        </div>
+      </div>
+      <div class="card-bottom">
+        <span class="path">${fullPath}</span>
+        <button class="btn-mobile" onclick="showQR('${fullPath}','${f.name}')">📱 QR</button>
+        <a class="btn-open" href="${base}${fullPath}" target="_blank">Open →</a>
+      </div>
+    </div>`;
+}
+
+function rebuildLinks() {
+  document.getElementById('grid-field').innerHTML   = FORMS.field.map(buildCard).join('');
+  document.getElementById('grid-noauth').innerHTML  = FORMS.noauth.map(buildCard).join('');
+  document.getElementById('grid-review').innerHTML  = FORMS.review.map(buildCard).join('');
+}
+
+rebuildLinks();
+</script>
+</body>
+</html>

@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ratal Group — All Forms Design Visual</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0d1520; color: #1a2e3d; display: flex; height: 100vh; overflow: hidden; }
+
+/* ── LEFT NAV ── */
+.left-nav { width: 200px; flex-shrink: 0; background: #0a1018; border-right: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; overflow-y: auto; }
+.left-nav-title { padding: 16px 14px 10px; font-size: 10px; font-weight: 800; letter-spacing: 2px; color: rgba(255,255,255,0.25); text-transform: uppercase; }
+.nav-item { padding: 10px 14px; cursor: pointer; display: flex; align-items: center; gap: 9px; border-left: 3px solid transparent; transition: all 0.12s; }
+.nav-item:hover { background: rgba(255,255,255,0.04); }
+.nav-item.active { border-left-color: var(--c); background: rgba(255,255,255,0.06); }
+.nav-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.nav-label { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.55); }
+.nav-item.active .nav-label { color: #fff; }
+.nav-count { margin-left: auto; font-size: 9px; background: rgba(255,255,255,0.08); border-radius: 10px; padding: 1px 6px; color: rgba(255,255,255,0.35); font-weight: 700; }
+
+/* ── MAIN AREA ── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── TOP BAR ── */
+.topbar { background: #0f1923; border-bottom: 1px solid rgba(255,255,255,0.07); padding: 0 24px; height: 52px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.topbar-left { display: flex; align-items: center; gap: 12px; }
+.topbar-section-dot { width: 10px; height: 10px; border-radius: 50%; }
+.topbar-title { color: #fff; font-size: 15px; font-weight: 900; }
+.topbar-sub { color: rgba(255,255,255,0.35); font-size: 12px; }
+.topbar-badge { background: rgba(255,200,0,0.12); border: 1px solid rgba(255,200,0,0.3); color: #ffd700; border-radius: 16px; padding: 4px 12px; font-size: 10px; font-weight: 800; }
+
+/* ── FORM TABS ── */
+.form-tabs-bar { background: #111a26; border-bottom: 1px solid rgba(255,255,255,0.07); padding: 0 24px; display: flex; gap: 0; overflow-x: auto; flex-shrink: 0; scrollbar-width: none; }
+.form-tab { padding: 12px 18px; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.35); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.12s; flex-shrink: 0; }
+.form-tab:hover { color: rgba(255,255,255,0.65); }
+.form-tab.active { color: #fff; border-bottom-color: var(--accent); }
+
+/* ── STEP PILLS ── */
+.step-bar { background: #0f1923; padding: 10px 24px; display: flex; gap: 6px; align-items: center; flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.step-pill { padding: 5px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; cursor: pointer; border: 1.5px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.35); transition: all 0.12s; }
+.step-pill:hover { border-color: rgba(255,255,255,0.25); color: rgba(255,255,255,0.7); }
+.step-pill.active { color: #fff; border-color: transparent; }
+.step-arrow { color: rgba(255,255,255,0.15); font-size: 14px; }
+
+/* ── CANVAS ── */
+.canvas { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 0; background: #111824; }
+
+/* ── MODAL ── */
+.modal { width: 900px; max-width: 100%; border-radius: 18px; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.7); }
+
+/* ══ BANNER (step 0) ══ */
+.b-wrap { display: flex; height: 480px; }
+.b-left { flex: 1; position: relative; display: flex; flex-direction: column; background: #F4F7F4; overflow: hidden; }
+.b-dots { position: absolute; inset: 0; background-image: radial-gradient(circle, rgba(0,0,0,0.07) 1px, transparent 1px); background-size: 22px 22px; pointer-events: none; }
+.b-corner { position: absolute; top: 0; left: 0; width: 0; height: 0; border-style: solid; }
+.b-brand { position: absolute; top: 12px; right: 18px; font-size: 9px; font-weight: 800; letter-spacing: 0.5px; z-index: 5; }
+.b-close { position: absolute; top: 11px; left: 12px; width: 26px; height: 26px; border-radius: 7px; background: rgba(0,0,0,0.06); border: none; cursor: pointer; font-size: 12px; color: #666; z-index: 10; display: flex; align-items: center; justify-content: center; }
+.b-content { position: relative; z-index: 2; flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 50px 36px 24px; }
+.b-tag { font-size: 9px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 8px; }
+.b-t1 { font-size: 34px; font-weight: 900; text-transform: uppercase; line-height: 1; color: #0d1a2a; }
+.b-t2 { font-size: 34px; font-weight: 900; text-transform: uppercase; line-height: 1.05; margin-bottom: 10px; }
+.b-desc { font-size: 11px; color: #5a7080; line-height: 1.6; border-left: 3px solid; padding-left: 9px; max-width: 300px; margin-bottom: 16px; }
+.b-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+.b-pill { padding: 4px 12px; border-radius: 16px; font-size: 10px; font-weight: 700; background: rgba(0,0,0,0.05); color: #6b7c93; }
+.b-start { display: inline-flex; align-items: center; gap: 8px; border: none; border-radius: 26px; padding: 10px 22px; font-size: 13px; font-weight: 800; color: #fff; cursor: pointer; }
+.b-right { width: 260px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+.b-icon { width: 140px; height: 140px; background: rgba(255,255,255,0.1); border-radius: 24px; display: flex; align-items: center; justify-content: center; font-size: 64px; }
+
+/* ══ WIZARD (step 1+) ══ */
+.w-outer { flex: 1; display: flex; padding: 16px; overflow: hidden; }
+.w-inner { flex: 1; border-radius: 11px; position: relative; display: flex; overflow: hidden; }
+.w-corner { position: absolute; top: 0; right: 0; width: 52%; height: 34%; z-index: 1; opacity: 0.2; }
+.w-sidebar { width: 212px; flex-shrink: 0; padding: 18px 14px 14px; display: flex; flex-direction: column; position: relative; z-index: 2; }
+.ws-brand { font-size: 9px; font-weight: 800; margin-bottom: 18px; }
+.ws-cat { font-size: 8px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; opacity: 0.7; }
+.ws-name { font-size: 20px; font-weight: 900; color: #0d1a2a; line-height: 1.1; margin-bottom: 5px; }
+.ws-desc { font-size: 10px; color: #5a7080; line-height: 1.5; margin-bottom: 7px; }
+.ws-count { font-size: 8px; font-weight: 800; letter-spacing: 1px; margin-bottom: 12px; opacity: 0.65; }
+.ws-list { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+.ws-item { padding: 8px 0 8px 11px; border-left: 3px solid rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: space-between; cursor: default; }
+.ws-label { font-size: 11px; font-weight: 500; color: #aab; }
+.ws-item.si-active .ws-label { color: #0d1a2a; font-weight: 700; }
+.ws-item.si-done .ws-label { color: #5a8070; }
+.ws-check { font-size: 9px; color: #5a8070; }
+
+/* ── White card ── */
+.wc { position: absolute; top: 16px; right: 16px; bottom: 16px; left: 238px; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.13); display: flex; flex-direction: column; overflow: hidden; z-index: 3; }
+.wc-hdr { padding: 16px 20px 12px; border-bottom: 1px solid #edf2f8; flex-shrink: 0; display: flex; align-items: flex-start; justify-content: space-between; }
+.wc-title { font-size: 16px; font-weight: 800; }
+.wc-close { width: 26px; height: 26px; border-radius: 7px; background: #f0f4f8; border: none; cursor: pointer; font-size: 12px; color: #666; display: flex; align-items: center; justify-content: center; }
+.wc-body { flex: 1; padding: 14px 20px; overflow-y: auto; }
+.wc-footer { padding: 11px 20px; border-top: 1px solid #f0f4f8; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+
+/* ── Form fields ── */
+.fr { display: flex; gap: 10px; margin-bottom: 12px; }
+.fc { flex: 1; min-width: 0; }
+.fc.w2 { flex: 2; }
+.fl { font-size: 9px; font-weight: 800; color: #8a9db0; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.fi { width: 100%; height: 34px; border: 1.5px solid #e8edf5; border-radius: 8px; background: #f8faff; padding: 0 11px; font-size: 12px; color: #c8d4e0; display: flex; align-items: center; }
+.fi.fv { background: #fff; border-color: #d0d8e4; color: #1a2e3d; font-weight: 600; }
+.fi.fa { color: #1a2e3d; }
+.fta { width: 100%; height: 60px; border: 1.5px solid #e8edf5; border-radius: 8px; background: #f8faff; padding: 8px 11px; font-size: 12px; color: #c8d4e0; display: flex; align-items: flex-start; }
+.fsec { background: #f8faff; border: 1px solid #e8edf5; border-radius: 9px; padding: 12px 14px; margin-bottom: 12px; }
+.fsec-title { font-size: 9px; font-weight: 800; color: #8a9db0; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+
+/* footer btns */
+.btn-g { background: #f0f4f8; border: none; border-radius: 8px; padding: 9px 16px; font-size: 12px; font-weight: 700; color: #6b7c93; cursor: pointer; }
+.btn-f { border: none; border-radius: 8px; padding: 9px 18px; font-size: 12px; font-weight: 800; color: #fff; cursor: pointer; }
+.pdots { display: flex; gap: 4px; }
+.pd { width: 5px; height: 5px; border-radius: 50%; background: #d0d8e4; }
+.pd.pa { width: 14px; border-radius: 3px; }
+
+/* line items */
+.li-tbl { width: 100%; border-collapse: collapse; font-size: 11px; }
+.li-tbl th { background: #f0f4f8; padding: 7px 9px; font-size: 9px; font-weight: 800; color: #7a8fa0; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; }
+.li-tbl td { padding: 7px 9px; border-bottom: 1px solid #f0f4f8; color: #c8d4e0; }
+.li-add { margin-top: 6px; background: #f0f4f8; border: 1.5px dashed #c8d4e0; border-radius: 7px; padding: 7px; width: 100%; font-size: 11px; font-weight: 700; color: #7a8fa0; cursor: pointer; }
+.totals-box { margin-top: 10px; display: flex; justify-content: flex-end; }
+.totals-inner { background: #f8faff; border: 1px solid #e8edf5; border-radius: 9px; padding: 10px 14px; min-width: 200px; }
+.totals-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
+.totals-row.tot { border-top: 1px solid #e8edf5; padding-top: 5px; font-size: 14px; font-weight: 900; }
+
+/* ── annotations ── */
+.ann-bar { width: 900px; max-width: 100%; margin-top: 14px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.ann { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); border-radius: 9px; padding: 11px 13px; }
+.ann-icon { font-size: 14px; margin-bottom: 4px; }
+.ann-t { font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.65); margin-bottom: 3px; }
+.ann-d { font-size: 10px; color: rgba(255,255,255,0.35); line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<!-- LEFT NAV -->
+<div class="left-nav">
+  <div class="left-nav-title">Sections</div>
+  <div id="leftNav"></div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-section-dot" id="tbDot"></div>
+      <div>
+        <div class="topbar-title" id="tbTitle"></div>
+        <div class="topbar-sub" id="tbSub"></div>
+      </div>
+    </div>
+    <div class="topbar-badge">Visual Mockup — Awaiting Approval</div>
+  </div>
+  <div class="form-tabs-bar" id="formTabsBar"></div>
+  <div class="step-bar" id="stepBar"></div>
+  <div class="canvas" id="canvas"></div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// ALL SECTIONS & FORMS DATA
+// ─────────────────────────────────────────────────────────────────────────────
+const SECTIONS = [
+  {
+    id:'finance', label:'Finance', icon:'💰', color:'#0277bd', dark:'#01579b', light:'#e3f2fd',
+    forms:[
+      { id:'invoice', name:'Invoice', icon:'🧾',
+        desc:'Create tax invoices, credit/debit notes.\nAuto-posts to the general ledger.',
+        t1:'NEW', t2:'INVOICE',
+        steps:[
+          { name:'Invoice Details', desc:'Set type, client, project and billing date.', fields:[
+            [{l:'Invoice Type',v:'Tax Invoice (B2B) ▾',fv:true},{l:'Invoice Date',v:'01/10/2026'}],
+            [{l:'Client / Customer',v:'Select client ▾'},{l:'Project',v:'Select project ▾'}],
+            [{l:'Contractor PO #',v:'e.g. PO-11207'},{l:'Currency',v:'SAR ▾',fv:true}],
+            [{l:'Department',v:'Select dept ▾'},{l:'Due Date',v:'31/10/2026'}],
+          ]},
+          { name:'Terms & VAT', desc:'Set VAT rate, payment terms and billing mode.', fields:[
+            [{l:'VAT Rate (%)',v:'15',fv:true},{l:'Billing Mode',v:'Regular ▾',fv:true}],
+            [{l:'Retention (%)',v:'0'},{l:'Payment Terms',v:'Net 30 ▾'}],
+            [{l:'Bank Account',v:'Select account ▾'},{l:'Discount (%)',v:'0'}],
+            [{l:'Notes / Remarks',v:'Optional internal note',ta:true}],
+          ]},
+          { name:'Line Items', desc:'Add billable items with quantity and unit price.', lineItems:true,
+            liCols:['Description','Job Type','Qty','Unit Price (SAR)','VAT%','Total']},
+          { name:'Review & Post', desc:'Confirm totals, attach files and post.', fields:[
+            [{l:'Invoice Total (SAR)',v:'SAR 0.00',fv:true},{l:'VAT Amount (SAR)',v:'SAR 0.00',fv:true}],
+            [{l:'Grand Total (SAR)',v:'SAR 0.00',fv:true},{l:'Status',v:'DRAFT → ISSUE',fv:true}],
+            [{l:'Attach Supporting Docs',v:'Click to upload file(s)...'}],
+          ]},
+        ]
+      },
+      { id:'payreceipt', name:'Payment Receipt', icon:'💵',
+        desc:'Record payments received against invoices.\nAllocates to one or more outstanding invoices.',
+        t1:'PAYMENT', t2:'RECEIPT',
+        steps:[
+          { name:'Receipt Details', desc:'Set client, payment method and amount received.', fields:[
+            [{l:'Client',v:'Select client ▾'},{l:'Receipt Date',v:'01/10/2026'}],
+            [{l:'Payment Method',v:'Bank Transfer ▾',fv:true},{l:'Bank Account',v:'Select account ▾'}],
+            [{l:'Amount Received (SAR)',v:'e.g. 25,000.00'},{l:'Reference / Cheque #',v:'e.g. TXN-001'}],
+            [{l:'Notes',v:'Optional',ta:true}],
+          ]},
+          { name:'Invoice Allocation', desc:'Allocate the receipt to open invoices.', fields:[
+            [{l:'Open Invoices',v:'↓ Select invoices to allocate against',fv:false}],
+          ], lineItems:true, liCols:['Invoice #','Date','Total','Outstanding','Allocate (SAR)']},
+        ]
+      },
+      { id:'payment', name:'Payment (Outgoing)', icon:'💸',
+        desc:'Issue payments to employees, suppliers or sub-contractors.\nGoes through approval workflow before funds are sent.',
+        t1:'OUTGOING', t2:'PAYMENT',
+        steps:[
+          { name:'Payment Details', desc:'Select party type, payee and purpose.', fields:[
+            [{l:'Payment To',v:'Employee ▾',fv:true},{l:'Payee / Name',v:'Select employee ▾'}],
+            [{l:'Payment Method',v:'Bank Transfer ▾',fv:true},{l:'Amount (SAR)',v:'e.g. 5,000.00'}],
+            [{l:'Project',v:'Select project ▾'},{l:'Department',v:'Select dept ▾'}],
+            [{l:'Purpose / Narration',v:'Describe the payment purpose',ta:true}],
+          ]},
+          { name:'Reference & Approval', desc:'Add reference and attach authorization.', fields:[
+            [{l:'Related Money Request #',v:'Select MR ▾'},{l:'Payment Date',v:'01/10/2026'}],
+            [{l:'Bank Account (From)',v:'Select bank ▾'},{l:'Reference #',v:'Optional'}],
+            [{l:'Attach Approval / Receipt',v:'Upload supporting document...'}],
+          ]},
+        ]
+      },
+      { id:'expense', name:'Expense', icon:'🧮',
+        desc:'Record a business expense with VAT claim.\nLinks to project and department for cost allocation.',
+        t1:'EXPENSE', t2:'RECORD',
+        steps:[
+          { name:'Expense Details', desc:'Enter date, type, department and requester.', fields:[
+            [{l:'Expense Date',v:'01/10/2026'},{l:'Expense Type',v:'Materials ▾',fv:true}],
+            [{l:'Category',v:'Site Expenses ▾'},{l:'Department',v:'Select dept ▾'}],
+            [{l:'Requester Name',v:'Select employee ▾'},{l:'Contact Number',v:'+966 5X XXX'}],
+            [{l:'Project',v:'Select project ▾'},{l:'Project #',v:'Auto-filled',fv:true}],
+          ]},
+          { name:'Amount & VAT', desc:'Enter amount, VAT paid, vendor details.', fields:[
+            [{l:'Amount (Before VAT) SAR',v:'e.g. 1,000.00'},{l:'VAT Paid?',v:'Yes ▾',fv:true}],
+            [{l:'VAT Amount (SAR)',v:'150.00',fv:true},{l:'Total Amount (SAR)',v:'1,150.00',fv:true}],
+            [{l:'Vendor / Company',v:'e.g. ABC Trading Co.'},{l:'Invoice / Receipt #',v:'Optional'}],
+            [{l:'Remarks',v:'Optional notes',ta:true}],
+          ]},
+          { name:'Attachments', desc:'Upload invoice scan or receipt photo.', fields:[
+            [{l:'Upload Receipt / Invoice',v:'Click to attach file(s)...'}],
+            [{l:'Status',v:'PENDING → submit for approval',fv:true},{l:'GL Account',v:'Auto-assigned',fv:true}],
+          ]},
+        ]
+      },
+      { id:'receipt', name:'Receipt (Travel)', icon:'🧾',
+        desc:'Record a receipt from a travel customer (RAT/GWT).',
+        t1:'TRAVEL', t2:'RECEIPT',
+        steps:[
+          { name:'Receipt Details', desc:'Set customer, invoice and payment info.', fields:[
+            [{l:'Customer',v:'Select customer ▾'},{l:'Receipt Date',v:'01/10/2026'}],
+            [{l:'Invoice Ref',v:'Select invoice ▾'},{l:'Amount (SAR)',v:'e.g. 5,250.00'}],
+            [{l:'Payment Mode',v:'Cash ▾',fv:true},{l:'Reference',v:'Optional'}],
+            [{l:'Notes',v:'Optional',ta:true}],
+          ]},
+        ]
+      },
+    ]
+  },
+
+  {
+    id:'hr', label:'Human Resources', icon:'👥', color:'#e65100', dark:'#bf360c', light:'#fff3e0',
+    forms:[
+      { id:'vacation', name:'Vacation / Leave', icon:'🏖️',
+        desc:'Submit a leave application for approval.\nBalance is checked automatically.',
+        t1:'VACATION', t2:'REQUEST',
+        steps:[
+          { name:'Leave Details', desc:'Employee, leave type and dates.', fields:[
+            [{l:'Employee',v:'Select employee ▾'},{l:'Leave Type',v:'Annual Leave ▾',fv:true}],
+            [{l:'Start Date',v:'01/10/2026'},{l:'End Date',v:'15/10/2026'}],
+            [{l:'Days Requested',v:'14',fv:true},{l:'Balance Available',v:'21 days',fv:true}],
+            [{l:'Notes / Reason',v:'e.g. Family travel',ta:true}],
+          ]},
+          { name:'Attachments', desc:'Upload supporting docs and submit.', fields:[
+            [{l:'Upload Document',v:'Click to attach (if required)...'}],
+            [{l:'Coverage / Replacement',v:'Select employee ▾'},{l:'Approval Route',v:'Manager → HR',fv:true}],
+          ]},
+        ]
+      },
+      { id:'loan', name:'Loan / EOS / Penalty', icon:'💳',
+        desc:'Record an employee loan, End-of-Service calculation,\nor apply a salary penalty.',
+        t1:'LOAN / EOS', t2:'RECORD',
+        steps:[
+          { name:'Select Employee', desc:'Choose the employee and record type.', fields:[
+            [{l:'Employee',v:'Select employee ▾'},{l:'Record Type',v:'Loan ▾',fv:true}],
+          ]},
+          { name:'Loan Details', desc:'Amount, installments, start date.', fields:[
+            [{l:'Loan Amount (SAR)',v:'e.g. 5,000'},{l:'Monthly Installment (SAR)',v:'Auto-calc',fv:true}],
+            [{l:'No. of Installments',v:'e.g. 10'},{l:'Start Date',v:'01/11/2026'}],
+            [{l:'Reason',v:'e.g. Emergency expense',ta:true}],
+          ]},
+        ]
+      },
+      { id:'overtime', name:'Overtime', icon:'⏱️',
+        desc:'Record employee overtime hours for project sites.\nLinks to job type and calculates total automatically.',
+        t1:'OVERTIME', t2:'REQUEST',
+        steps:[
+          { name:'Employee & Project', desc:'Select employee, project and site.', fields:[
+            [{l:'Employee',v:'Select employee ▾'},{l:'OT Date',v:'01/10/2026'}],
+            [{l:'Department',v:'Auto-filled',fv:true},{l:'Project',v:'Select project ▾'}],
+            [{l:'Job #',v:'Auto-filled',fv:true},{l:'Job Type',v:'MECHANICAL ▾'}],
+          ]},
+          { name:'Hours & Rate', desc:'Work type, OT type, times, and rate.', fields:[
+            [{l:'Work Type',v:'Shutdown ▾',fv:true},{l:'OT Type',v:'NORMAL ▾',fv:true}],
+            [{l:'From Time',v:'06:00'},{l:'To Time',v:'18:00'}],
+            [{l:'Hours',v:'12',fv:true},{l:'Rate / hr (SAR)',v:'Auto-calc',fv:true}],
+            [{l:'Total Amount (SAR)',v:'SAR 0.00',fv:true},{l:'Reason',v:'Describe OT reason',ta:false}],
+          ]},
+        ]
+      },
+      { id:'food', name:'Food Allowance', icon:'🍽️',
+        desc:'Record food allowance distribution for site workers.\nGroups by coverage type and number of persons.',
+        t1:'FOOD', t2:'ALLOWANCE',
+        steps:[
+          { name:'Employee & Location', desc:'Employee, project, location and month.', fields:[
+            [{l:'Employee',v:'Select employee ▾'},{l:'Request Date',v:'01/10/2026'}],
+            [{l:'Department',v:'Auto-filled',fv:true},{l:'Project',v:'Select project ▾'}],
+            [{l:'Job #',v:'Auto-filled',fv:true},{l:'Location / Site',v:'e.g. NEOM Site-A'}],
+            [{l:'Allowance Month',v:'October 2026',fv:true}],
+          ]},
+          { name:'Coverage & Amount', desc:'Coverage type, persons, days and rate.', fields:[
+            [{l:'Coverage Type',v:'Single ▾',fv:true},{l:'No. of Persons',v:'1'}],
+            [{l:'No. of Days',v:'e.g. 25'},{l:'Daily Rate (SAR)',v:'35.00',fv:true}],
+            [{l:'Total Amount (SAR)',v:'SAR 875.00',fv:true},{l:'Notes',v:'Optional',ta:false}],
+          ]},
+        ]
+      },
+      { id:'staffaction', name:'Staff Action', icon:'📋',
+        desc:'Record HR actions: release, transfer, promotion, suspension.\nGenerates the official action letter.',
+        t1:'STAFF', t2:'ACTION',
+        steps:[
+          { name:'Employee & Action', desc:'Select employee and action type.', fields:[
+            [{l:'Employee',v:'Select employee ▾'},{l:'Action Type',v:'Release ▾',fv:true}],
+            [{l:'Department',v:'Auto-filled',fv:true},{l:'Action Date',v:'01/10/2026'}],
+          ]},
+          { name:'Action Details', desc:'Provide details specific to the action.', fields:[
+            [{l:'Last Working Day',v:'31/10/2026'},{l:'Reason for Leaving',v:'Resignation ▾'}],
+            [{l:'Transfer To (Dept)',v:'N/A — Release'},{l:'New Designation',v:'N/A — Release'}],
+            [{l:'Settlement Due (SAR)',v:'SAR 0.00',fv:true},{l:'EOS Calculation',v:'Auto-calc',fv:true}],
+            [{l:'Notes / HR Remarks',v:'Internal notes',ta:true}],
+          ]},
+        ]
+      },
+      { id:'compliance', name:'Compliance Alert', icon:'⚠️',
+        desc:'Track document expiry for employees and vehicles.\nAlerts are triggered automatically before expiry.',
+        t1:'COMPLIANCE', t2:'ALERT',
+        steps:[
+          { name:'Document Details', desc:'Set category, document type and expiry.', fields:[
+            [{l:'Category',v:'Employee ▾',fv:true},{l:'Employee / Vehicle',v:'Select ▾'}],
+            [{l:'Document Type',v:'Iqama ▾',fv:true},{l:'Document Number',v:'e.g. 2456789012'}],
+            [{l:'Expiry Date',v:'01/04/2027'},{l:'Alert Days Before',v:'30',fv:true}],
+            [{l:'Notes',v:'Optional notes',ta:true}],
+          ]},
+        ]
+      },
+      { id:'outsource', name:'Outsource Employee', icon:'🧑‍🔧',
+        desc:'Register a third-party (outsourced) employee\nassigned to your projects from a contractor.',
+        t1:'OUTSOURCE', t2:'EMPLOYEE',
+        steps:[
+          { name:'Personal Details', desc:'Name, nationality, ID and classification.', fields:[
+            [{l:'Full Name (EN)',v:'e.g. Ahmad Al-Harbi'},{l:'Nationality',v:'Saudi ▾'}],
+            [{l:'Iqama / National ID',v:'e.g. 2456789012'},{l:'Iqama Expiry',v:'01/06/2027'}],
+            [{l:'Designation',v:'e.g. Electrician'},{l:'Employee Type',v:'Outsource ▾',fv:true}],
+          ]},
+          { name:'Assignment', desc:'Assign to contractor, department and site.', fields:[
+            [{l:'Contractor (Party)',v:'Select contractor ▾'},{l:'Department',v:'Select dept ▾'}],
+            [{l:'Project',v:'Select project ▾'},{l:'Site',v:'Select site ▾'}],
+            [{l:'Start Date',v:'01/10/2026'},{l:'Monthly Rate (SAR)',v:'e.g. 3,500'}],
+          ]},
+        ]
+      },
+    ]
+  },
+
+  {
+    id:'accounting', label:'Accounting', icon:'📒', color:'#00838f', dark:'#005f69', light:'#e0f7fa',
+    forms:[
+      { id:'jv', name:'Journal Voucher', icon:'📝',
+        desc:'Manual journal entry.\nDebit and credit totals must balance before posting.',
+        t1:'JOURNAL', t2:'VOUCHER',
+        steps:[
+          { name:'Header Info', desc:'Date, voucher type and narration.', fields:[
+            [{l:'Voucher Type',v:'General Journal ▾',fv:true},{l:'Voucher Date',v:'01/10/2026'}],
+            [{l:'Reference #',v:'JV-0001',fv:true},{l:'Currency',v:'SAR ▾',fv:true}],
+            [{l:'Narration / Description',v:'e.g. Monthly accrual — October 2026',ta:true}],
+          ]},
+          { name:'Debit/Credit Lines', desc:'Enter all account lines. Total DR must = CR.', lineItems:true,
+            liCols:['Account Code','Account Name','Dept','DR (SAR)','CR (SAR)']},
+          { name:'Attachments', desc:'Upload supporting documents and post.', fields:[
+            [{l:'Upload Supporting Doc',v:'Click to attach...'}],
+            [{l:'Total DR (SAR)',v:'SAR 0.00',fv:true},{l:'Total CR (SAR)',v:'SAR 0.00',fv:true}],
+            [{l:'Balanced?',v:'✓ Balanced',fv:true},{l:'Post Status',v:'POST →',fv:true}],
+          ]},
+        ]
+      },
+      { id:'cheque', name:'Cheque Register', icon:'📄',
+        desc:'Record issued or received cheques.\nStatus tracking: Pending → Deposited → Cleared / Bounced.',
+        t1:'CHEQUE', t2:'REGISTER',
+        steps:[
+          { name:'Cheque Details', desc:'Type, payee, amount and date.', fields:[
+            [{l:'Cheque Type',v:'Issued ▾',fv:true},{l:'Cheque Date',v:'01/10/2026'}],
+            [{l:'Payee / Drawer Name',v:'e.g. Mobiserve KSA'},{l:'Amount (SAR)',v:'e.g. 15,000.00'}],
+            [{l:'Currency',v:'SAR ▾',fv:true},{l:'Cheque Number',v:'e.g. 001234'}],
+            [{l:'Bank Name',v:'ANB ▾'},{l:'Bank Account',v:'Select account ▾'}],
+          ]},
+          { name:'GL & Notes', desc:'Link to GL account and add memo.', fields:[
+            [{l:'GL Account',v:'Select account ▾'},{l:'Status',v:'PENDING',fv:true}],
+            [{l:'Reference / Memo',v:'Optional notes'},{l:'Related Invoice/MR',v:'Optional link'}],
+          ]},
+        ]
+      },
+      { id:'pettycash', name:'Petty Cash', icon:'💵',
+        desc:'Record petty cash transactions: OUT, IN, Replenishment, Opening.',
+        t1:'PETTY', t2:'CASH',
+        steps:[
+          { name:'Transaction', desc:'Entry type, amount and description.', fields:[
+            [{l:'Entry Type',v:'OUT — Payment ▾',fv:true},{l:'Transaction Date',v:'01/10/2026'}],
+            [{l:'Cash Box',v:'Select account ▾'},{l:'Amount (SAR)',v:'e.g. 250.00'}],
+            [{l:'Category',v:'Stationery ▾',fv:true},{l:'Reference',v:'Optional receipt #'}],
+            [{l:'Description',v:'e.g. A4 paper reams × 10',ta:true}],
+          ]},
+        ]
+      },
+      { id:'coa', name:'Chart of Accounts', icon:'📒',
+        desc:'Add or edit GL accounts in the chart of accounts.\nOrganized by type: Assets, Liabilities, Equity, Revenue, Expense.',
+        t1:'CHART OF', t2:'ACCOUNTS',
+        steps:[
+          { name:'Account Setup', desc:'Set code, name, type and normal balance.', fields:[
+            [{l:'Account Type',v:'Asset ▾',fv:true},{l:'Account Sub-Type',v:'Current Asset ▾',fv:true}],
+            [{l:'Account Code',v:'e.g. 1110'},{l:'Account Name (EN)',v:'e.g. Cash at Bank'}],
+            [{l:'Normal Balance',v:'Debit ▾',fv:true},{l:'Currency',v:'SAR ▾',fv:true}],
+            [{l:'Opening Balance (SAR)',v:'0'},{l:'Description',v:'Optional description',ta:false}],
+          ]},
+        ]
+      },
+      { id:'bankaccount', name:'Bank Account', icon:'🏦',
+        desc:'Register a bank or cash account used for transactions.',
+        t1:'BANK', t2:'ACCOUNT',
+        steps:[
+          { name:'Account Details', desc:'Name, bank, account number and type.', fields:[
+            [{l:'Account Name',v:'e.g. ANB Main Operations'},{l:'Account Type',v:'BANK ▾',fv:true}],
+            [{l:'Bank Name',v:'e.g. Arab National Bank'},{l:'Account Number',v:'e.g. 6012345678901'}],
+            [{l:'IBAN',v:'SA12 3456 7890 1234 5678 9012'},{l:'Currency',v:'SAR ▾',fv:true}],
+            [{l:'Opening Balance (SAR)',v:'0'},{l:'GL Code (Auto)',v:'Auto-assigned',fv:true}],
+          ]},
+        ]
+      },
+      { id:'vatpay', name:'VAT Payment', icon:'🏛',
+        desc:'Record VAT payments made to ZATCA.\nLinked to VAT return period for reconciliation.',
+        t1:'VAT', t2:'PAYMENT',
+        steps:[
+          { name:'VAT Filing', desc:'Set VAT period, amounts and payment details.', fields:[
+            [{l:'VAT Period (From)',v:'01/07/2026'},{l:'VAT Period (To)',v:'30/09/2026'}],
+            [{l:'Output VAT (SAR)',v:'Auto-calc',fv:true},{l:'Input VAT (SAR)',v:'0.00'}],
+            [{l:'Net VAT Due (SAR)',v:'Auto-calc',fv:true},{l:'Amount Paid (SAR)',v:'e.g. 12,500.00'}],
+            [{l:'Payment Date',v:'01/10/2026'},{l:'Filing Reference #',v:'e.g. ZATCA-Q3-2026'}],
+            [{l:'Bank Account',v:'Select account ▾'},{l:'Notes',v:'Optional',ta:false}],
+          ]},
+        ]
+      },
+      { id:'bankrecon', name:'Bank Reconciliation', icon:'⚖️',
+        desc:'Match bank statement transactions with GL entries.\nIdentify and clear outstanding items.',
+        t1:'BANK', t2:'RECONCILIATION',
+        steps:[
+          { name:'Statement Import', desc:'Select account and upload bank statement.', fields:[
+            [{l:'Bank Account',v:'Select account ▾'},{l:'Statement Date',v:'30/09/2026'}],
+            [{l:'Statement Opening Balance',v:'SAR 0.00'},{l:'Statement Closing Balance',v:'SAR 0.00'}],
+            [{l:'Upload Statement (CSV/PDF)',v:'Click to attach...'}],
+          ]},
+          { name:'Matching', desc:'Match statement lines to GL entries.', fields:[
+            [{l:'GL Balance (as at date)',v:'SAR 0.00',fv:true},{l:'Statement Balance',v:'SAR 0.00',fv:true}],
+            [{l:'Difference',v:'SAR 0.00',fv:true},{l:'Status',v:'Unreconciled',fv:true}],
+          ]},
+        ]
+      },
+      { id:'interco', name:'Intercompany', icon:'🔗',
+        desc:'Record transactions between group entities.\nAuto-posts matching entries to both sides.',
+        t1:'INTER-', t2:'COMPANY',
+        steps:[
+          { name:'Transaction Setup', desc:'From/To entities, category and amount.', fields:[
+            [{l:'From Entity',v:'ACCSYS ▾',fv:true},{l:'To Entity',v:'RAT ▾'}],
+            [{l:'Category',v:'Management Fees ▾',fv:true},{l:'Amount (SAR)',v:'e.g. 25,000'}],
+            [{l:'Transaction Date',v:'30/09/2026'},{l:'Period',v:'Sep 2026',fv:true}],
+            [{l:'Narration',v:'e.g. Monthly management fee charge',ta:true}],
+          ]},
+        ]
+      },
+      { id:'recurjv', name:'Recurring Journals', icon:'🔁',
+        desc:'Set up a journal entry that repeats on a schedule.\nAutomatic posting monthly, quarterly or yearly.',
+        t1:'RECURRING', t2:'JOURNAL',
+        steps:[
+          { name:'Schedule', desc:'Set rule name, frequency and next run date.', fields:[
+            [{l:'Rule Name',v:'e.g. Monthly Rent Accrual'},{l:'Frequency',v:'Monthly ▾',fv:true}],
+            [{l:'Start Date',v:'01/10/2026'},{l:'End Date',v:'Optional'}],
+            [{l:'Next Run',v:'01/11/2026',fv:true},{l:'Status',v:'Active ▾',fv:true}],
+          ]},
+          { name:'Journal Lines', desc:'The debit/credit lines to post each run.', lineItems:true,
+            liCols:['Account Code','Account Name','DR (SAR)','CR (SAR)']},
+        ]
+      },
+      { id:'periodclose', name:'Period Close', icon:'🔒',
+        desc:'Close an accounting period to prevent future edits.\nVerifies all journals are balanced before closing.',
+        t1:'PERIOD', t2:'CLOSE',
+        steps:[
+          { name:'Close Period', desc:'Select year, month and confirm closure.', fields:[
+            [{l:'Financial Year',v:'2026 ▾',fv:true},{l:'Period (Month)',v:'September ▾',fv:true}],
+            [{l:'Open Journals',v:'0 unposted',fv:true},{l:'Journal Count',v:'247 posted',fv:true}],
+            [{l:'Confirmation',v:'Type CLOSE to confirm',ta:false}],
+          ]},
+        ]
+      },
+    ]
+  },
+
+  {
+    id:'planning', label:'Planning', icon:'📐', color:'#6a1b9a', dark:'#4a148c', light:'#f3e5f5',
+    forms:[
+      { id:'budget', name:'Budget', icon:'💼',
+        desc:'Set annual or monthly budgets per GL account.\nCompare actual vs budget in P&L reports.',
+        t1:'BUDGET', t2:'SETUP',
+        steps:[
+          { name:'Period & Scope', desc:'Select year, period and department.', fields:[
+            [{l:'Financial Year',v:'2026 ▾',fv:true},{l:'Period',v:'Annual ▾',fv:true}],
+            [{l:'Department',v:'All Departments ▾',fv:true},{l:'Entity',v:'ACCSYS ▾',fv:true}],
+          ]},
+          { name:'Budget Amounts', desc:'Enter budget per income/expense account.', lineItems:true,
+            liCols:['Account Code','Account Name','Type','Budget (SAR)','Prior Year']},
+        ]
+      },
+      { id:'fixedasset', name:'Fixed Asset', icon:'🏗️',
+        desc:'Register a capital asset and set depreciation schedule\nper IFRS rules.',
+        t1:'FIXED', t2:'ASSET',
+        steps:[
+          { name:'Asset Details', desc:'Name, category, purchase info and assignment.', fields:[
+            [{l:'Asset Name',v:'e.g. Toyota Land Cruiser 2026'},{l:'Category',v:'Vehicle ▾',fv:true}],
+            [{l:'Asset Code',v:'Auto-assigned',fv:true},{l:'Status',v:'ACTIVE ▾',fv:true}],
+            [{l:'Purchase Date',v:'01/06/2026'},{l:'Purchase Cost (SAR)',v:'185,000'}],
+            [{l:'Supplier / Vendor',v:'Select contractor ▾'},{l:'Serial / Plate #',v:'Optional'}],
+            [{l:'Location / Dept',v:'Select dept ▾'},{l:'Assigned To',v:'Select employee ▾'}],
+          ]},
+          { name:'Depreciation', desc:'Method, rate, useful life and GL accounts.', fields:[
+            [{l:'Depreciation Method',v:'Straight-Line ▾',fv:true},{l:'Useful Life (Months)',v:'60',fv:true}],
+            [{l:'Annual Rate (%)',v:'20.00',fv:true},{l:'Salvage Value (SAR)',v:'0'}],
+            [{l:'Start Depreciation',v:'01/07/2026'},{l:'GL — Depr Expense',v:'Select account ▾'}],
+            [{l:'GL — Accum Depr',v:'Select account ▾'},{l:'GL — Asset Account',v:'Select account ▾'}],
+          ]},
+          { name:'Documents', desc:'Attach invoice, warranty and insurance docs.', fields:[
+            [{l:'Upload Purchase Invoice',v:'Click to attach...'}],
+            [{l:'Upload Warranty Doc',v:'Optional'}],
+            [{l:'Notes',v:'Internal notes about this asset',ta:true}],
+          ]},
+        ]
+      },
+      { id:'commission', name:'Commission Tracker', icon:'💸',
+        desc:'Record agency or staff commissions earned or paid.\nLinks to airline, ticket and booking reference.',
+        t1:'COMMISSION', t2:'RECORD',
+        steps:[
+          { name:'Commission Details', desc:'Direction, type, source and amounts.', fields:[
+            [{l:'Direction',v:'Received (Agency) ▾',fv:true},{l:'Commission Type',v:'AIRLINE ▾',fv:true}],
+            [{l:'Airline / Supplier',v:'Select ▾'},{l:'Ticket / Booking Ref',v:'e.g. TKT-001'}],
+            [{l:'Booking Amount (SAR)',v:'e.g. 5,250'},{l:'Rate (%)',v:'e.g. 3.00'}],
+            [{l:'Commission (SAR)',v:'SAR 157.50',fv:true},{l:'Currency',v:'SAR ▾',fv:true}],
+            [{l:'Period',v:'October 2026',fv:true},{l:'Status',v:'PENDING ▾',fv:true}],
+          ]},
+        ]
+      },
+      { id:'costalloc', name:'Cost Allocation', icon:'⚙️',
+        desc:'Define allocation rules that split overhead costs\nacross departments or projects.',
+        t1:'COST', t2:'ALLOCATION',
+        steps:[
+          { name:'Rule Setup', desc:'Source account and allocation basis.', fields:[
+            [{l:'Rule Name',v:'e.g. IT Overhead Split'},{l:'Source Account',v:'Select account ▾'}],
+            [{l:'Basis',v:'Fixed % ▾',fv:true},{l:'Frequency',v:'Monthly ▾',fv:true}],
+            [{l:'Description',v:'Optional description',ta:true}],
+          ]},
+          { name:'Allocation Lines', desc:'Set cost centers and percentages (must total 100%).', lineItems:true,
+            liCols:['Cost Center Type','Cost Center','Target Account','% Share']},
+        ]
+      },
+      { id:'cashmgmt', name:'Cash Management', icon:'🏦',
+        desc:'View real-time balances across all bank and cash accounts.\nFilter by account and date range.',
+        t1:'CASH', t2:'MANAGEMENT',
+        steps:[
+          { name:'Filter & View', desc:'Select account and date range to review.', fields:[
+            [{l:'Account',v:'All Accounts ▾',fv:true},{l:'Date From',v:'01/10/2026'}],
+            [{l:'Date To',v:'31/10/2026'},{l:'View Mode',v:'Ledger ▾',fv:true}],
+          ]},
+        ]
+      },
+    ]
+  },
+
+  {
+    id:'operations', label:'Operations', icon:'🏗', color:'#5A32D4', dark:'#3a1fa0', light:'#EEF0F8',
+    forms:[
+      { id:'loi', name:'LOI Register', icon:'📥',
+        desc:'Register a Letter of Intent received from a client.\nCan be converted to a Project with one click.',
+        t1:'LOI', t2:'REGISTER',
+        steps:[
+          { name:'LOI Details', desc:'Client, type, scope and value.', fields:[
+            [{l:'LOI Number',v:'Auto-assigned',fv:true},{l:'LOI Date',v:'01/10/2026'}],
+            [{l:'Client Name',v:'e.g. Saudi Aramco'},{l:'Client Type',v:'Main Contractor ▾',fv:true}],
+            [{l:'Department',v:'Select dept ▾'},{l:'Value (SAR)',v:'e.g. 500,000'}],
+            [{l:'Scope Description',v:'e.g. Electrical works for Pump Station 4',ta:true}],
+          ]},
+          { name:'Documents & Status', desc:'Attach the LOI document and set status.', fields:[
+            [{l:'Upload LOI Document',v:'Click to attach PDF...'},{l:'Status',v:'ACTIVE ▾',fv:true}],
+            [{l:'Expected Start Date',v:'01/11/2026'},{l:'Expected Duration',v:'e.g. 6 months'}],
+            [{l:'Notes',v:'Internal notes',ta:true}],
+          ]},
+        ]
+      },
+      { id:'moneyreq', name:'Money Request', icon:'💰',
+        desc:'Request a cash advance or payment for a site project.\nGoes through multi-level approval workflow.',
+        t1:'MONEY', t2:'REQUEST',
+        steps:[
+          { name:'Request Details', desc:'Who to pay, amount and purpose.', fields:[
+            [{l:'Payment To',v:'Employee ▾',fv:true},{l:'Payee',v:'Select ▾'}],
+            [{l:'Amount (SAR)',v:'e.g. 8,500'},{l:'Required By',v:'05/10/2026'}],
+            [{l:'Project',v:'Select project ▾'},{l:'Department',v:'Auto-filled',fv:true}],
+            [{l:'Site',v:'Select site ▾'},{l:'Purpose',v:'Describe the purchase/payment',ta:false}],
+          ]},
+          { name:'Supporting Info', desc:'Add reference, quotation and notes.', fields:[
+            [{l:'Supplier (if known)',v:'Optional'},{l:'Quotation / PO #',v:'Optional'}],
+            [{l:'Upload Quotation / Doc',v:'Click to attach...'}],
+            [{l:'Additional Notes',v:'Any notes for the approver',ta:true}],
+          ]},
+        ]
+      },
+      { id:'fieldpay', name:'Field Payment Notification', icon:'💳',
+        desc:'Issue cash distribution to site department heads via ATM card.\nFunds tracked per session and employee.',
+        t1:'FIELD', t2:'PAYMENT',
+        steps:[
+          { name:'Session Setup', desc:'Card, department and distribution amount.', fields:[
+            [{l:'Card Type',v:'ATM Card A ▾',fv:true},{l:'Department Head',v:'Select ▾'}],
+            [{l:'Session Date',v:'01/10/2026'},{l:'Distribution Amount (SAR)',v:'e.g. 25,000'}],
+            [{l:'Related Money Request',v:'Select MR ▾'},{l:'Notes',v:'Optional',ta:false}],
+          ]},
+        ]
+      },
+      { id:'template', name:'Template Library', icon:'📋',
+        desc:'Manage printable DOCX templates linked to forms.\nGenerate and upload documents to Google Drive.',
+        t1:'TEMPLATE', t2:'LIBRARY',
+        steps:[
+          { name:'Template Details', desc:'Name, category and linked form type.', fields:[
+            [{l:'Template Name',v:'e.g. Outgoing PO'},{l:'Category',v:'Operations ▾',fv:true}],
+            [{l:'Linked Form',v:'Purchase Order ▾'},{l:'File Type',v:'DOCX ▾',fv:true}],
+            [{l:'Upload Template File',v:'Click to attach .docx template...'}],
+            [{l:'Description',v:'What this template is for',ta:true}],
+          ]},
+        ]
+      },
+    ]
+  },
+
+  {
+    id:'masters', label:'Masters', icon:'🗃️', color:'#00695c', dark:'#004d40', light:'#E8F5E9',
+    forms:[
+      { id:'department', name:'Department', icon:'🏛️',
+        desc:'Create a department, assign a head and link to a GL cost center.',
+        t1:'NEW', t2:'DEPARTMENT',
+        steps:[
+          { name:'Department Info', desc:'Code, name and entity assignment.', fields:[
+            [{l:'Department Code',v:'e.g. ITSU'},{l:'Department Name',v:'e.g. IT Support Unit'}],
+            [{l:'Department Type',v:'Technical ▾',fv:true},{l:'Entity',v:'ACCSYS ▾',fv:true}],
+            [{l:'Description',v:'Brief description of this department',ta:true}],
+          ]},
+          { name:'Head & GL', desc:'Assign department head and GL cost center.', fields:[
+            [{l:'Department Head',v:'Select employee ▾'},{l:'Cost Center (GL)',v:'Select account ▾'}],
+            [{l:'Parent Department',v:'None (top-level) ▾',fv:true},{l:'Status',v:'Active ▾',fv:true}],
+          ]},
+        ]
+      },
+      { id:'siteassign', name:'Site Assignment', icon:'📋',
+        desc:'Assign employees or sub-contractors to a site for a project.\nRemote or on-site classification.',
+        t1:'SITE', t2:'ASSIGNMENT',
+        steps:[
+          { name:'Assignee', desc:'Employee or sub-contractor to assign.', fields:[
+            [{l:'Assignee Type',v:'Employee ▾',fv:true},{l:'Employee / Sub-Con',v:'Select ▾'}],
+            [{l:'Department',v:'Auto-filled',fv:true},{l:'Assignment Date',v:'01/10/2026'}],
+          ]},
+          { name:'Site & Project', desc:'Site, project and work mode.', fields:[
+            [{l:'Site',v:'Select site ▾'},{l:'Project',v:'Select project ▾'}],
+            [{l:'Work Mode',v:'On-Site ▾',fv:true},{l:'Status',v:'ACTIVE ▾',fv:true}],
+            [{l:'Notes',v:'Optional assignment notes',ta:true}],
+          ]},
+        ]
+      },
+    ]
+  },
+
+  {
+    id:'admin', label:'Administration', icon:'⚙️', color:'#37474f', dark:'#1c313a', light:'#ECEFF1',
+    forms:[
+      { id:'user', name:'User Management', icon:'👤',
+        desc:'Create user accounts and assign role-based access\nper entity and module.',
+        t1:'NEW', t2:'USER',
+        steps:[
+          { name:'User Info', desc:'Name, email, mobile and department.', fields:[
+            [{l:'Full Name',v:'e.g. Ahmad Al-Harbi'},{l:'Email Address',v:'ahmad@accsys.com'}],
+            [{l:'Mobile Number',v:'+966 5X XXX XXXX'},{l:'Department',v:'Select dept ▾'}],
+            [{l:'Link to Employee',v:'Search employee ▾'},{l:'Language',v:'English ▾',fv:true}],
+          ]},
+          { name:'Role & Access', desc:'Role, entity access and permissions.', fields:[
+            [{l:'Role',v:'Select role ▾',fv:true},{l:'Entity Access',v:'ACCSYS ▾',fv:true}],
+            [{l:'Send Welcome Email?',v:'Yes — send credentials ▾',fv:true},{l:'Status',v:'Active ▾',fv:true}],
+          ]},
+        ]
+      },
+      { id:'settings', name:'Settings', icon:'⚙️',
+        desc:'Configure entity details, financial year and system defaults.',
+        t1:'ENTITY', t2:'SETTINGS',
+        steps:[
+          { name:'Entity Details', desc:'Company name, registration and address.', fields:[
+            [{l:'Entity Name (EN)',v:'e.g. Ratal Advanced Technologies'},{l:'Entity Code',v:'ACCSYS',fv:true}],
+            [{l:'CR Number',v:'e.g. 1234567890'},{l:'VAT Number',v:'e.g. 300XXXXXXXXX'}],
+            [{l:'Entity Type',v:'Corporate ▾',fv:true},{l:'Currency',v:'SAR ▾',fv:true}],
+            [{l:'Address',v:'e.g. Riyadh, Saudi Arabia',ta:true}],
+          ]},
+          { name:'Financial Settings', desc:'Year, opening period and defaults.', fields:[
+            [{l:'Financial Year Start',v:'January ▾',fv:true},{l:'Current Period',v:'Oct 2026',fv:true}],
+            [{l:'Default VAT Rate (%)',v:'15',fv:true},{l:'Round to (SAR)',v:'2 decimals ▾',fv:true}],
+          ]},
+        ]
+      },
+      { id:'docvault', name:'Document Vault', icon:'🗄️',
+        desc:'Centralized store for company documents and contracts.\nOrganized by category with expiry tracking.',
+        t1:'DOCUMENT', t2:'VAULT',
+        steps:[
+          { name:'Document Details', desc:'Name, category, date and expiry.', fields:[
+            [{l:'Document Name',v:'e.g. Trade License 2026'},{l:'Category',v:'Licenses ▾',fv:true}],
+            [{l:'Issue Date',v:'01/01/2026'},{l:'Expiry Date',v:'31/12/2026'}],
+            [{l:'Issued By',v:'Ministry of Commerce ▾'},{l:'Reference Number',v:'Optional'}],
+            [{l:'Upload Document',v:'Click to attach PDF / scan...'}],
+            [{l:'Notes',v:'Optional notes',ta:true}],
+          ]},
+        ]
+      },
+    ]
+  },
+
+  {
+    id:'travel', label:'Travel', icon:'✈️', color:'#1565C0', dark:'#0d47a1', light:'#E3F2FD',
+    forms:[
+      { id:'ticket', name:'Ticket', icon:'✈️',
+        desc:'Issue a travel ticket and link it to a customer booking\nfor billing and BSP settlement.',
+        t1:'NEW', t2:'TICKET',
+        steps:[
+          { name:'Passenger & Route', desc:'Passenger, airline, origin and destination.', fields:[
+            [{l:'Passenger Name',v:'e.g. Ahmad Al-Harbi'},{l:'Ticket Type',v:'One-way ▾',fv:true}],
+            [{l:'Airline',v:'Select airline ▾'},{l:'Customer',v:'Select customer ▾'}],
+            [{l:'Origin (IATA)',v:'RUH — Riyadh'},{l:'Destination (IATA)',v:'DXB — Dubai'}],
+            [{l:'Departure Date',v:'15/10/2026'},{l:'Return Date',v:'N/A (one-way)',fv:true}],
+          ]},
+          { name:'Fare & Charges', desc:'Base fare, taxes, markup and payment.', fields:[
+            [{l:'Base Fare (SAR)',v:'850.00'},{l:'Taxes & Fees (SAR)',v:'127.50'}],
+            [{l:'Agent Markup (SAR)',v:'50.00'},{l:'Total Fare (SAR)',v:'1,027.50',fv:true}],
+            [{l:'Payment Method',v:'Cash ▾',fv:true},{l:'Commission (%)',v:'1.5'}],
+          ]},
+          { name:'Documents', desc:'Attach ticket PDF and confirm issuance.', fields:[
+            [{l:'Ticket Number (PNR)',v:'e.g. ABC123'},{l:'Upload Ticket PDF',v:'Click to attach...'}],
+            [{l:'Status',v:'ISSUED',fv:true},{l:'Booking Reference',v:'Optional'}],
+          ]},
+        ]
+      },
+      { id:'customer', name:'Customer', icon:'👥',
+        desc:'Add a travel customer account.\nLinked to invoices, tickets and receipts.',
+        t1:'NEW', t2:'CUSTOMER',
+        steps:[
+          { name:'Customer Details', desc:'Names, type and contact info.', fields:[
+            [{l:'Customer Name (EN)',v:'e.g. ACWA Power'},{l:'Customer Name (AR)',v:'Optional'}],
+            [{l:'Account No.',v:'Auto-assigned',fv:true},{l:'Customer Type',v:'Corporate ▾',fv:true}],
+            [{l:'Contact Person',v:'e.g. Mohammad Ali'},{l:'Phone Number',v:'+966 5X XXX XXXX'}],
+            [{l:'Email',v:'e.g. travel@acwa.com'},{l:'City',v:'Riyadh ▾'}],
+          ]},
+        ]
+      },
+      { id:'airline', name:'Airline', icon:'🛫',
+        desc:'Register an airline with its commission tiers\nfor BSP and agency calculations.',
+        t1:'NEW', t2:'AIRLINE',
+        steps:[
+          { name:'Airline Info', desc:'Codes, name and route type.', fields:[
+            [{l:'Airline Code (IATA)',v:'e.g. SV'},{l:'Numeric Code',v:'e.g. 065'}],
+            [{l:'Airline Name (EN)',v:'e.g. Saudia Airlines'},{l:'Airline Name (AR)',v:'Optional'}],
+            [{l:'Route Type',v:'International ▾',fv:true},{l:'Account No.',v:'Optional'}],
+          ]},
+          { name:'Commission Tiers', desc:'Set up to 4 commission percentage tiers.', fields:[
+            [{l:'Tier 1 (%)',v:'e.g. 1.0'},{l:'Tier 2 (%)',v:'e.g. 2.0'}],
+            [{l:'Tier 3 (%)',v:'e.g. 3.0'},{l:'Tier 4 (%)',v:'e.g. 0'}],
+            [{l:'Default Tier',v:'Tier 1 ▾',fv:true}],
+          ]},
+        ]
+      },
+      { id:'bsp', name:'BSP Settlement', icon:'🏦',
+        desc:'Record BSP billing statements and commission payments\nfrom IATA for airline ticket sales.',
+        t1:'BSP', t2:'SETTLEMENT',
+        steps:[
+          { name:'BSP Details', desc:'Period, airline, sales and commissions.', fields:[
+            [{l:'BSP Period',v:'e.g. Sep 2026 (W1)'},{l:'Airline',v:'Select airline ▾'}],
+            [{l:'Gross Sales (SAR)',v:'e.g. 45,000'},{l:'Commission Earned (SAR)',v:'e.g. 900'}],
+            [{l:'Deductions (SAR)',v:'e.g. 0'},{l:'Net Remittance (SAR)',v:'44,100',fv:true}],
+            [{l:'Payment Date',v:'15/10/2026'},{l:'Reference',v:'BSP-2026-09-W1'}],
+          ]},
+        ]
+      },
+      { id:'refund', name:'Refund', icon:'↩️',
+        desc:'Process a ticket refund for a customer.\nDeducts cancellation fee and updates invoice.',
+        t1:'TICKET', t2:'REFUND',
+        steps:[
+          { name:'Refund Details', desc:'Ticket, reason and refund amount.', fields:[
+            [{l:'Ticket Number',v:'Select ticket ▾'},{l:'Customer',v:'Auto-filled',fv:true}],
+            [{l:'Refund Reason',v:'Voluntary Cancellation ▾',fv:true},{l:'Refund Date',v:'01/10/2026'}],
+            [{l:'Gross Refund (SAR)',v:'Auto-calc',fv:true},{l:'Cancellation Fee (SAR)',v:'e.g. 150'}],
+            [{l:'Net Refund to Customer (SAR)',v:'Auto-calc',fv:true},{l:'Refund Method',v:'Cash ▾',fv:true}],
+          ]},
+        ]
+      },
+      { id:'booking', name:'Booking Register', icon:'📑',
+        desc:'Log a customer travel booking before tickets are issued.\nLinked to invoice on billing.',
+        t1:'NEW', t2:'BOOKING',
+        steps:[
+          { name:'Booking Details', desc:'Customer, route, dates and status.', fields:[
+            [{l:'Customer',v:'Select customer ▾'},{l:'Booking Date',v:'01/10/2026'}],
+            [{l:'Origin',v:'RUH — Riyadh'},{l:'Destination',v:'DXB — Dubai'}],
+            [{l:'Travel Date',v:'15/10/2026'},{l:'Pax Count',v:'1'}],
+            [{l:'Airline',v:'Select airline ▾'},{l:'Status',v:'Unbilled ▾',fv:true}],
+            [{l:'Notes',v:'Optional booking notes',ta:true}],
+          ]},
+        ]
+      },
+    ]
+  },
+
+  {
+    id:'reports', label:'Reports', icon:'📊', color:'#558b2f', dark:'#33691e', light:'#F1F8E9',
+    forms:[
+      { id:'pnl', name:'P&L Report', icon:'📊',
+        desc:'Profit & Loss from posted journal entries.\nFilter by entity, department and period.',
+        t1:'P&L', t2:'REPORT',
+        steps:[
+          { name:'Report Filters', desc:'Set period, entity and grouping.', fields:[
+            [{l:'Entity',v:'ACCSYS ▾',fv:true},{l:'Period Type',v:'Monthly ▾',fv:true}],
+            [{l:'From Period',v:'Jan 2026'},{l:'To Period',v:'Sep 2026'}],
+            [{l:'Department Filter',v:'All Departments ▾',fv:true},{l:'View Mode',v:'Summary ▾',fv:true}],
+          ]},
+        ]
+      },
+      { id:'balsheet', name:'Balance Sheet', icon:'🏛',
+        desc:'Assets = Liabilities + Equity as at a given date.',
+        t1:'BALANCE', t2:'SHEET',
+        steps:[
+          { name:'Report Filters', desc:'Set as-of date and entity.', fields:[
+            [{l:'Entity',v:'ACCSYS ▾',fv:true},{l:'As-of Date',v:'30/09/2026',fv:false}],
+            [{l:'Comparison Period',v:'Prior Year ▾'},{l:'View',v:'Standard ▾',fv:true}],
+          ]},
+        ]
+      },
+      { id:'araging', name:'AR Aging', icon:'📋',
+        desc:'Outstanding receivables by age bucket.\nFilter by client and as-of date.',
+        t1:'AR', t2:'AGING',
+        steps:[
+          { name:'Aging Filters', desc:'As-of date, client and buckets.', fields:[
+            [{l:'As-of Date',v:'30/09/2026',fv:true},{l:'Client Filter',v:'All Clients ▾',fv:true}],
+            [{l:'Currency',v:'SAR ▾',fv:true},{l:'Show Zero Balance?',v:'No ▾',fv:true}],
+          ]},
+        ]
+      },
+      { id:'vatreturn', name:'VAT Return', icon:'🧮',
+        desc:'Compute VAT output, input and net payable\nfor a quarterly ZATCA filing.',
+        t1:'VAT', t2:'RETURN',
+        steps:[
+          { name:'VAT Period', desc:'Select quarter and review auto-calculated amounts.', fields:[
+            [{l:'VAT Period',v:'Q3 2026 (Jul–Sep) ▾',fv:true},{l:'Entity',v:'ACCSYS ▾',fv:true}],
+            [{l:'Output VAT (SAR)',v:'Auto-calc',fv:true},{l:'Input VAT (SAR)',v:'Auto-calc',fv:true}],
+            [{l:'Net VAT Payable (SAR)',v:'Auto-calc',fv:true}],
+          ]},
+        ]
+      },
+    ]
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────────────────────────
+let curSection = SECTIONS[0];
+let curForm = SECTIONS[0].forms[0];
+let curStep = 0; // 0 = banner, 1+ = wizard step
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDER LEFT NAV
+// ─────────────────────────────────────────────────────────────────────────────
+function renderNav() {
+  const el = document.getElementById('leftNav');
+  el.innerHTML = '';
+  SECTIONS.forEach(s => {
+    const d = document.createElement('div');
+    d.className = 'nav-item' + (s.id === curSection.id ? ' active' : '');
+    d.style.setProperty('--c', s.color);
+    d.innerHTML = `<div class="nav-dot" style="background:${s.color}"></div><div class="nav-label">${s.label}</div><div class="nav-count">${s.forms.length}</div>`;
+    d.onclick = () => { curSection = s; curForm = s.forms[0]; curStep = 0; renderAll(); };
+    el.appendChild(d);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDER TOP BAR
+// ─────────────────────────────────────────────────────────────────────────────
+function renderTopBar() {
+  document.getElementById('tbDot').style.background = curSection.color;
+  document.getElementById('tbTitle').textContent = curSection.icon + ' ' + curSection.label;
+  document.getElementById('tbSub').textContent = `${curSection.forms.length} forms — ${curForm.name} selected`;
+  document.body.style.setProperty('--accent', curSection.color);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDER FORM TABS
+// ─────────────────────────────────────────────────────────────────────────────
+function renderFormTabs() {
+  const el = document.getElementById('formTabsBar');
+  el.style.setProperty('--accent', curSection.color);
+  el.innerHTML = '';
+  curSection.forms.forEach(f => {
+    const t = document.createElement('div');
+    t.className = 'form-tab' + (f.id === curForm.id ? ' active' : '');
+    t.style.setProperty('--accent', curSection.color);
+    t.textContent = f.icon + ' ' + f.name;
+    t.onclick = () => { curForm = f; curStep = 0; renderAll(); };
+    el.appendChild(t);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDER STEP PILLS
+// ─────────────────────────────────────────────────────────────────────────────
+function renderStepBar() {
+  const el = document.getElementById('stepBar');
+  el.innerHTML = '';
+  const addPill = (label, idx) => {
+    const p = document.createElement('div');
+    p.className = 'step-pill' + (idx === curStep ? ' active' : '');
+    if (idx === curStep) { p.style.background = curSection.color + '33'; p.style.borderColor = curSection.color; p.style.color = '#fff'; }
+    p.textContent = label;
+    p.onclick = () => { curStep = idx; renderCanvas(); };
+    el.appendChild(p);
+    if (idx < curForm.steps.length) {
+      const arrow = document.createElement('span');
+      arrow.className = 'step-arrow';
+      arrow.textContent = '→';
+      el.appendChild(arrow);
+    }
+  };
+  addPill('Step 0 — Intro Banner', 0);
+  curForm.steps.forEach((s, i) => addPill(`Step ${i+1} — ${s.name}`, i+1));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDER CANVAS
+// ─────────────────────────────────────────────────────────────────────────────
+function renderCanvas() {
+  const el = document.getElementById('canvas');
+  el.innerHTML = '';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+
+  if (curStep === 0) {
+    // BANNER
+    modal.style.height = '480px';
+    modal.innerHTML = buildBanner();
+  } else {
+    // WIZARD
+    modal.style.height = '500px';
+    modal.innerHTML = buildWizard();
+  }
+  el.appendChild(modal);
+
+  // annotations
+  const ann = document.createElement('div');
+  ann.className = 'ann-bar';
+  ann.innerHTML = buildAnnotations();
+  el.appendChild(ann);
+}
+
+function buildBanner() {
+  const s = curSection, f = curForm;
+  const pills = f.steps.map((st, i) =>
+    `<span class="b-pill${i===0?' style="background:'+s.color+';color:#fff"':''}">${['①','②','③','④'][i]} ${st.name}</span>`).join('');
+  return `<div class="b-wrap">
+    <div class="b-left">
+      <div class="b-dots"></div>
+      <div class="b-corner" style="border-top:100px solid ${s.dark};border-right:100px solid transparent;"></div>
+      <div class="b-brand" style="color:${s.color}">Ratal Advanced Technologies</div>
+      <button class="b-close">✕</button>
+      <div class="b-content">
+        <div class="b-tag" style="color:${s.color}">${s.label}</div>
+        <div class="b-t1">${f.t1}</div>
+        <div class="b-t2" style="color:${s.color}">${f.t2}</div>
+        <div class="b-desc" style="border-color:${s.color}">${f.desc.replace('\n','<br>')}</div>
+        <div class="b-pills">${pills}</div>
+        <button class="b-start" style="background:${s.color}">Start ➤</button>
+      </div>
+    </div>
+    <div class="b-right" style="background:linear-gradient(160deg,${s.dark} 0%,${s.dark}cc 100%)">
+      <div class="b-icon">${f.icon}</div>
+    </div>
+  </div>`;
+}
+
+function buildWizard() {
+  const s = curSection, f = curForm;
+  const stepIdx = curStep - 1;
+  const step = f.steps[stepIdx] || f.steps[f.steps.length - 1];
+
+  const stepList = f.steps.map((st, i) => {
+    const isAct = i === stepIdx, isDone = i < stepIdx;
+    return `<div class="ws-item${isAct?' si-active':isDone?' si-done':''}"
+      style="border-left-color:${isAct?s.color:isDone?s.color+'55':'rgba(0,0,0,0.08)'}">
+      <span class="ws-label">${st.name}</span>
+      ${isDone?'<span class="ws-check">✓</span>':''}
+    </div>`;
+  }).join('');
+
+  const dots = f.steps.map((_, i) =>
+    `<div class="pd${i===stepIdx?' pa':''}" style="${i===stepIdx?'background:'+s.color:''}"></div>`).join('');
+
+  const body = step.lineItems ? buildLineItems(step, s) : buildFields(step.fields);
+
+  return `<div style="display:flex;height:100%;">
+    <div class="w-outer" style="background:${s.color}">
+      <div class="w-inner" style="background:${s.light}">
+        <div class="w-corner" style="background:${s.color}"></div>
+        <div class="w-sidebar">
+          <div class="ws-brand" style="color:${s.color}">Ratal Advanced Technologies</div>
+          <div class="ws-cat" style="color:${s.color}">${f.name}</div>
+          <div class="ws-name">${step.name}</div>
+          <div class="ws-desc">${step.desc}</div>
+          <div class="ws-count" style="color:${s.color}">STEP ${stepIdx+1} OF ${f.steps.length}</div>
+          <div class="ws-list">${stepList}</div>
+        </div>
+        <div class="wc">
+          <div class="wc-hdr">
+            <div class="wc-title" style="color:${s.color}">${step.name}</div>
+            <button class="wc-close">✕</button>
+          </div>
+          <div class="wc-body">${body}</div>
+          <div class="wc-footer">
+            <button class="btn-g">${stepIdx===0?'Cancel':'← Back'}</button>
+            <div class="pdots">${dots}</div>
+            <button class="btn-f" style="background:${s.color}">${stepIdx===f.steps.length-1?'✓ Save & Close':'Next →'}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function buildFields(rows) {
+  return (rows||[]).map(row => {
+    const cols = row.map(f => {
+      const v = f.v || '';
+      const cls = f.fv ? 'fi fv' : 'fi fa';
+      const inner = f.ta
+        ? `<div class="fta">${v}</div>`
+        : `<div class="${cls}">${v}</div>`;
+      return `<div class="fc${f.w2?' w2':''}"><div class="fl">${f.l}</div>${inner}</div>`;
+    }).join('');
+    return `<div class="fr">${cols}</div>`;
+  }).join('');
+}
+
+function buildLineItems(step, s) {
+  const cols = step.liCols || ['Description','Qty','Unit Price','Total'];
+  const ths = cols.map(c => `<th>${c}</th>`).join('');
+  const tds = cols.map(() => `<td>—</td>`).join('');
+  return `
+    <table class="li-tbl"><thead><tr>${ths}</tr></thead>
+    <tbody>
+      <tr>${tds}</tr>
+      <tr>${cols.map(()=>'<td style="color:#c8d4e0">Click + to add...</td>').join('')}</tr>
+    </tbody></table>
+    <button class="li-add" style="border-color:${s.color}55">+ Add Line</button>
+    <div class="totals-box">
+      <div class="totals-inner">
+        <div class="totals-row"><span style="color:#9aabbf">Subtotal</span><span style="font-weight:700">SAR 0.00</span></div>
+        <div class="totals-row"><span style="color:#9aabbf">VAT (15%)</span><span style="font-weight:700">SAR 0.00</span></div>
+        <div class="totals-row tot"><span style="color:${s.color}">TOTAL</span><span style="color:${s.color}">SAR 0.00</span></div>
+      </div>
+    </div>`;
+}
+
+function buildAnnotations() {
+  const s = curSection, f = curForm;
+  if (curStep === 0) return [
+    {i:'🎨',t:'Section Color',d:`Accent: ${s.color}. Corner triangle, brand text, pill buttons, and Start button all use this exact color.`},
+    {i:'🖼️',t:'Right Panel',d:`Dark gradient panel (${s.dark}) with large icon (${f.icon}). Gives the form strong visual identity.`},
+    {i:'📍',t:'Step Pills',d:`Shows all ${f.steps.length} steps upfront: ${f.steps.map(s=>s.name).join(', ')}`},
+    {i:'📄',t:'Form Description',d:`"${f.desc.replace('\n',' ')}" — every form explains what it's for.`},
+  ].map(a=>`<div class="ann"><div class="ann-icon">${a.i}</div><div class="ann-t">${a.t}</div><div class="ann-d">${a.d}</div></div>`).join('');
+  const stepIdx = curStep - 1;
+  const step = f.steps[stepIdx] || f.steps[0];
+  const fieldCount = step.lineItems ? 'line items table' : (step.fields||[]).reduce((n,r)=>n+r.length,0) + ' fields';
+  return [
+    {i:'🟣',t:'Outer Ring',d:`${s.color} — bold section color wrapping the whole form.`},
+    {i:'📋',t:'Left Sidebar',d:`220px: brand → form name → step name → step desc → STEP X OF ${f.steps.length} → step tracker`},
+    {i:'🃏',t:'White Card',d:`Step ${curStep}: "${step.name}" — ${fieldCount}. ${step.desc}`},
+    {i:'⬛',t:'Progress',d:`Step ${curStep} of ${f.steps.length}. ${stepIdx===0?'Cancel':'← Back'} left / ${stepIdx===f.steps.length-1?'Save & Close':'Next →'} right.`},
+  ].map(a=>`<div class="ann"><div class="ann-icon">${a.i}</div><div class="ann-t">${a.t}</div><div class="ann-d">${a.d}</div></div>`).join('');
+}
+
+function renderAll() {
+  renderNav();
+  renderTopBar();
+  renderFormTabs();
+  renderStepBar();
+  renderCanvas();
+}
+
+renderAll();
+</script>
+</body>
+</html>

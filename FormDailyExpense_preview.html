@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Daily Expense — App Preview</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#111827;font-family:-apple-system,'SF Pro Display','Segoe UI',system-ui,sans-serif;
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  min-height:100vh;padding:24px 0 40px;overflow-x:hidden}
+
+/* ── Phone shell ── */
+.phone-shell{
+  width:390px;height:844px;background:#f5f6fa;border-radius:50px;
+  box-shadow:0 0 0 12px #1c1c1e,0 0 0 14px #3a3a3c,0 40px 80px rgba(0,0,0,.8);
+  position:relative;overflow:hidden;display:flex;flex-direction:column;
+  flex-shrink:0
+}
+
+/* ── Status bar ── */
+.status-bar{
+  position:absolute;top:0;left:0;right:0;z-index:50;height:50px;
+  display:flex;align-items:flex-start;justify-content:space-between;
+  padding:14px 24px 0;font-size:12px;font-weight:700;color:#fff;
+  pointer-events:none
+}
+.status-bar.dark{color:#fff}
+.status-bar.light{color:#1e293b}
+.notch{
+  position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:120px;height:34px;background:#1c1c1e;border-radius:0 0 22px 22px;z-index:60
+}
+.status-right{display:flex;align-items:center;gap:5px;font-size:11px}
+.battery{width:22px;height:11px;border:1.5px solid currentColor;border-radius:3px;
+  position:relative;display:inline-flex;align-items:center;padding:1.5px}
+.battery::after{content:'';position:absolute;right:-4px;top:50%;transform:translateY(-50%);
+  width:2px;height:5px;background:currentColor;border-radius:0 1px 1px 0}
+.battery-fill{height:100%;border-radius:1px;background:currentColor}
+
+/* ── App viewport ── */
+.app{flex:1;overflow:hidden;position:relative;padding-top:50px}
+.screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
+  display:flex;flex-direction:column;transform:translateX(100%);
+  transition:transform .35s cubic-bezier(.25,.46,.45,.94);background:#f5f6fa}
+.screen.active{transform:translateX(0)}
+.screen.exit{transform:translateX(-30%)}
+/* Hide scrollbar */
+.screen::-webkit-scrollbar{display:none}
+
+/* ── Hero ── */
+.hero{padding:16px 22px 26px;border-radius:0 0 28px 28px;flex-shrink:0;position:relative}
+.hero-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.back-btn{background:rgba(255,255,255,.15);border:none;color:rgba(255,255,255,.85);
+  border-radius:10px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;gap:4px;font-family:inherit}
+.emp-chip{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+  border-radius:20px;padding:5px 12px 5px 6px;display:flex;align-items:center;gap:7px}
+.emp-avatar{width:24px;height:24px;border-radius:12px;background:rgba(255,255,255,.25);
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff}
+.emp-info{display:flex;flex-direction:column}
+.emp-name{font-size:11px;font-weight:800;color:#fff;line-height:1.2}
+.emp-dept{font-size:9px;color:rgba(255,255,255,.55);line-height:1.2}
+
+/* Progress dots */
+.prog-bar{display:flex;align-items:center;gap:0;margin-bottom:12px}
+.pdot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;transition:all .2s}
+.pdot.done{background:rgba(255,255,255,.9);font-size:13px}
+.pdot.cur{background:rgba(255,255,255,.08);border:2.5px solid rgba(255,255,255,.7);font-size:11px;color:rgba(255,255,255,.85)}
+.pdot.idle{background:rgba(255,255,255,.1);color:rgba(255,255,255,.3);font-size:11px}
+.pconn{flex:1;height:2px;margin:0 3px;border-radius:2px}
+.pconn.done{background:rgba(255,255,255,.7)}
+.pconn.idle{background:rgba(255,255,255,.15)}
+
+/* Hero content */
+.hero-step-label{font-size:10px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
+.hero-title{font-size:22px;font-weight:900;color:#fff;letter-spacing:-.3px;margin-bottom:2px}
+/* Project badge */
+.proj-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:5px 12px 5px 8px;margin-top:8px}
+.proj-dot{width:6px;height:6px;border-radius:3px;background:#4ade80}
+.proj-text{font-size:11px;color:rgba(255,255,255,.8);font-weight:700}
+
+/* ── Card ── */
+.card{background:#fff;border-radius:20px;margin:0 14px 12px;
+  box-shadow:0 2px 20px rgba(0,0,0,.06);border:1px solid rgba(0,0,0,.05);overflow:hidden}
+.sec{padding:16px 18px}
+.sec-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
+  display:flex;align-items:center;gap:7px;margin-bottom:14px}
+.sec-bar{width:20px;height:2.5px;border-radius:2px}
+.lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;
+  color:#94a3b8;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.bdg{padding:2px 8px;border-radius:5px;font-size:9px;font-weight:700;display:inline-flex}
+.inp{width:100%;padding:13px 15px;border:1.5px solid #e8ecf0;border-radius:13px;
+  font-size:14px;color:#1e293b;background:#fafbfc;outline:none;font-family:inherit;
+  min-height:48px;appearance:none;-webkit-appearance:none}
+.inp:focus{border-color:#94a3b8;background:#fff}
+
+/* ── Invoice type tiles ── */
+.inv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.inv-tile{padding:13px 6px;border-radius:14px;border:2px solid transparent;
+  cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;
+  transition:all .15s;background:#fff}
+.inv-tile .t-ico{font-size:22px}
+.inv-tile .t-name{font-size:10px;font-weight:800}
+.inv-tile .t-desc{font-size:9px;color:#94a3b8;text-align:center}
+
+/* ── Banner ── */
+.banner{border-radius:12px;padding:10px 13px;font-size:12px;line-height:1.6;
+  margin:0 0 10px;display:flex;gap:8px;align-items:flex-start}
+.b-info{background:#eff6ff;border:1.5px solid #bfdbfe;color:#1d4ed8}
+.b-ok{background:#f0fdf4;border:1.5px solid #bbf7d0;color:#15803d}
+.b-warn{background:#fffbeb;border:1.5px solid #fde68a;color:#92400e}
+.b-err{background:#fef2f2;border:1.5px solid #fecaca;color:#991b1b}
+
+/* ── Photo zone ── */
+.photo-box{border-radius:14px;overflow:hidden;position:relative;height:170px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer}
+.photo-box-empty{border:2px dashed;border-radius:14px;height:130px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.cam-circle{width:56px;height:56px;border-radius:16px;display:flex;align-items:center;
+  justify-content:center;font-size:28px}
+
+/* ── Amount big ── */
+.amt-big{font-size:38px;font-weight:900;text-align:center;font-family:'SF Mono',monospace;
+  padding:16px;border-radius:14px;border:2.5px solid #e8ecf0;min-height:68px;
+  display:flex;align-items:center;justify-content:center;background:#fafbfc;
+  color:#1e293b;letter-spacing:-1px}
+
+/* ── Toggle ── */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;
+  padding:13px 15px;border-radius:13px;border:2px solid #e8ecf0;background:#fafbfc;cursor:pointer}
+.sw{width:46px;height:26px;border-radius:13px;display:flex;align-items:center;
+  padding:3px;transition:all .2s;flex-shrink:0}
+.sw-knob{width:20px;height:20px;border-radius:10px;background:#fff;
+  box-shadow:0 1px 4px rgba(0,0,0,.3);transition:all .2s}
+
+/* ── Category grid ── */
+.cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cat-tile{padding:13px 8px;border-radius:16px;cursor:pointer;display:flex;
+  flex-direction:column;align-items:center;gap:5px;border:2px solid transparent;transition:all .15s}
+.cat-tile .c-ico{font-size:24px}
+.cat-tile .c-nam{font-size:10px;font-weight:700;text-align:center;line-height:1.3}
+
+/* ── Site button ── */
+.site-btn{display:flex;align-items:center;gap:10px;padding:12px 14px;width:100%;
+  border-radius:13px;border:2px solid #e8ecf0;background:#fafbfc;cursor:pointer;
+  margin-bottom:8px;text-align:left;font-family:inherit;transition:all .15s}
+
+/* ── Summary row ── */
+.srow{display:flex;justify-content:space-between;align-items:flex-start;
+  padding:9px 0;border-bottom:1px solid #f1f5f9}
+.srow:last-child{border-bottom:none}
+.s-lbl{font-size:12px;color:#94a3b8;font-weight:600;min-width:110px}
+.s-val{font-size:13px;color:#1e293b;font-weight:700;text-align:right;flex:1}
+
+/* ── Nav bar ── */
+.nav-bar{background:rgba(245,246,250,.96);backdrop-filter:blur(12px);
+  padding:12px 14px 24px;border-top:1px solid #e2e8f0;
+  display:flex;gap:10px;flex-shrink:0}
+.btn-back{padding:14px 18px;border-radius:14px;border:1.5px solid #e2e8f0;
+  background:#fff;color:#64748b;font-size:14px;font-weight:700;cursor:pointer;
+  flex-shrink:0;font-family:inherit}
+.btn-next{flex:1;padding:15px;border-radius:14px;border:none;color:#fff;
+  font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;
+  box-shadow:0 4px 18px rgba(0,0,0,.18);transition:transform .1s,box-shadow .1s}
+.btn-next:active{transform:scale(.97)}
+
+/* Body padding */
+.body{padding:14px 0 0;flex:1}
+.body > *{padding-left:0;padding-right:0}
+
+/* ── Step nav ── */
+.step-nav-wrap{display:flex;justify-content:center;margin-bottom:18px}
+.step-nav{display:flex;gap:6px;background:rgba(255,255,255,.06);
+  padding:6px;border-radius:16px}
+.sn-btn{padding:7px 12px;border-radius:10px;border:none;cursor:pointer;
+  font-size:11px;font-weight:700;color:rgba(255,255,255,.5);background:transparent;
+  font-family:inherit;transition:all .2s;white-space:nowrap}
+.sn-btn.cur{background:rgba(255,255,255,.12);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+
+/* ── Success animations ── */
+@keyframes pop{0%{transform:scale(.5);opacity:0}70%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.pop-in{animation:pop .45s cubic-bezier(.34,1.56,.64,1) forwards}
+.fade-up{animation:fadeUp .4s ease forwards}
+.fade-up-2{animation:fadeUp .4s .1s ease both}
+.fade-up-3{animation:fadeUp .4s .2s ease both}
+
+/* ── Dup warning ── */
+.dup-card{background:#fef2f2;border:2px solid #fca5a5;border-radius:16px;
+  padding:14px 16px;margin:0 14px 12px}
+
+/* ── Receipt thumb ── */
+.receipt-thumb{border-radius:10px;overflow:hidden;height:90px;
+  background:linear-gradient(135deg,#1e293b,#334155);
+  display:flex;align-items:center;justify-content:center;font-size:36px}
+
+/* Misc */
+.mono{font-family:'SF Mono',monospace}
+.divider{height:1px;background:#f1f5f9;margin:0 18px}
+</style>
+</head>
+<body>
+
+<!-- Step nav outside phone -->
+<div class="step-nav-wrap">
+  <div class="step-nav">
+    <button class="sn-btn cur" onclick="goStep(0)">📷 Scan</button>
+    <button class="sn-btn" onclick="goStep(1)">📄 Invoice</button>
+    <button class="sn-btn" onclick="goStep(2)">🏷️ Category</button>
+    <button class="sn-btn" onclick="goStep(3)">📝 Notes</button>
+    <button class="sn-btn" onclick="goStep(4)">✅ Review</button>
+    <button class="sn-btn" onclick="goStep(5)">🎉 Done</button>
+  </div>
+</div>
+
+<div class="phone-shell">
+  <!-- Notch -->
+  <div class="notch"></div>
+
+  <!-- Status bar (color changes per step) -->
+  <div class="status-bar dark" id="statusBar">
+    <span id="statusTime">9:41</span>
+    <div class="status-right">
+      <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor">
+        <rect x="0" y="5" width="3" height="6" rx="1" opacity=".4"/>
+        <rect x="4" y="3" width="3" height="8" rx="1" opacity=".6"/>
+        <rect x="8" y="1" width="3" height="10" rx="1" opacity=".8"/>
+        <rect x="12" y="0" width="3" height="11" rx="1"/>
+      </svg>
+      <svg width="16" height="12" viewBox="0 0 20 12" fill="currentColor">
+        <rect x="0" y="0" width="16" height="12" rx="3" opacity=".3"/>
+        <rect x="1" y="1" width="12" height="10" rx="2"/>
+        <rect x="17" y="3.5" width="3" height="5" rx="1.5" opacity=".6"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- App viewport -->
+  <div class="app">
+
+    <!-- ═══════════════════════════════ SCREEN 1 — SCAN ═══════════════════════════════ -->
+    <div class="screen active" id="s0">
+      <div class="hero" style="background:linear-gradient(145deg,#0b1222,#0e2b4a,#0369a1);box-shadow:0 8px 40px rgba(0,0,0,.45)">
+        <div class="hero-topbar">
+          <div style="width:60px"></div><!-- spacer -->
+          <div style="background:rgba(255,200,0,.15);border:1px solid rgba(255,200,0,.3);border-radius:8px;padding:3px 10px;font-size:10px;color:#fde68a;font-weight:700;letter-spacing:.5px">🛠 DEV</div>
+        </div>
+        <div class="prog-bar">
+          <div class="pdot cur" style="color:#38bdf8;border-color:#38bdf8;">1</div>
+          <div class="pconn idle"></div>
+          <div class="pdot idle">2</div>
+          <div class="pconn idle"></div>
+          <div class="pdot idle">3</div>
+          <div class="pconn idle"></div>
+          <div class="pdot idle">4</div>
+        </div>
+        <!-- Employee chip -->
+        <div class="emp-chip" style="display:inline-flex;margin-bottom:12px;">
+          <div class="emp-avatar">M</div>
+          <div class="emp-info">
+            <span class="emp-name">Mohammed Al-Rashidi</span>
+            <span class="emp-dept">Civil Engineering · E-00142</span>
+          </div>
+        </div>
+        <div class="hero-step-label">Step 1 of 4 · Scan Invoice</div>
+        <div class="hero-title">📷 Scan</div>
+        <!-- Active project badge -->
+        <div class="proj-badge">
+          <div class="proj-dot"></div>
+          <span class="proj-text">P-2024-011 · S-0042 Al Khobar Refinery</span>
+        </div>
+      </div>
+
+      <div class="body">
+        <div style="padding:14px 14px 0;">
+          <div style="font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">What type of invoice?</div>
+          <div class="inv-grid">
+            <div class="inv-tile" style="border-color:#0ea5e9;background:#0ea5e909;">
+              <span class="t-ico">📱</span>
+              <span class="t-name" style="color:#0ea5e9;">ZATCA QR</span>
+              <span class="t-desc">Saudi tax invoice</span>
+            </div>
+            <div class="inv-tile" style="border-color:#f9731630;">
+              <span class="t-ico">🖨️</span>
+              <span class="t-name" style="color:#475569;">Printed</span>
+              <span class="t-desc">No QR code</span>
+            </div>
+            <div class="inv-tile" style="border-color:#a78bfa30;">
+              <span class="t-ico">✍️</span>
+              <span class="t-name" style="color:#475569;">Handwritten</span>
+              <span class="t-desc">No VAT</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="sec">
+            <div class="sec-title" style="color:#0ea5e9;">
+              <div class="sec-bar" style="background:#0ea5e9;"></div>Photograph the ZATCA QR Code
+            </div>
+            <!-- Photo with QR scanned -->
+            <div class="photo-box" style="background:linear-gradient(145deg,#0f172a,#1e3a5f);">
+              <div style="text-align:center;">
+                <div style="font-size:52px;opacity:.6;">🧾</div>
+                <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:4px;">invoice_photo.jpg</div>
+              </div>
+              <div style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,.5);color:#fff;border:none;border-radius:18px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;cursor:pointer;">✕</div>
+              <!-- QR badge -->
+              <div style="position:absolute;bottom:10px;left:10px;background:rgba(34,197,94,.9);border-radius:8px;padding:4px 10px;font-size:10px;font-weight:800;color:#fff;display:flex;align-items:center;gap:5px;">
+                <span>📱</span> QR detected
+              </div>
+            </div>
+            <div class="banner b-ok" style="margin-top:10px;">
+              <span>✅</span>
+              <div style="font-size:12px;">
+                <strong>Auto-filled from ZATCA QR</strong><br>
+                ADNOC Distribution · VAT# 300123456789003 · <strong>SAR 185.00</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-bar">
+        <button class="btn-next" style="background:linear-gradient(135deg,#0369a1,#0ea5e9);" onclick="goStep(1)">Next — Invoice Details →</button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════ SCREEN 2 — INVOICE ═══════════════════════════════ -->
+    <div class="screen" id="s1">
+      <div class="hero" style="background:linear-gradient(145deg,#431407,#7c2d12,#c2410c);box-shadow:0 8px 40px rgba(0,0,0,.45)">
+        <div class="hero-topbar">
+          <button class="back-btn" onclick="goStep(0)">‹ Back</button>
+          <div class="emp-chip">
+            <div class="emp-avatar">M</div>
+            <div class="emp-info">
+              <span class="emp-name">Mohammed Al-Rashidi</span>
+              <span class="emp-dept">Civil Eng · E-00142</span>
+            </div>
+          </div>
+        </div>
+        <div class="prog-bar">
+          <div class="pdot done" style="color:#f97316;">✓</div>
+          <div class="pconn done"></div>
+          <div class="pdot cur" style="color:#fb923c;border-color:#fb923c;">2</div>
+          <div class="pconn idle"></div>
+          <div class="pdot idle">3</div>
+          <div class="pconn idle"></div>
+          <div class="pdot idle">4</div>
+        </div>
+        <div class="hero-step-label">Step 2 of 4 · Invoice Details</div>
+        <div class="hero-title">📄 Invoice</div>
+        <div class="proj-badge">
+          <div class="proj-dot"></div>
+          <span class="proj-text">P-2024-011 · S-0042 Al Khobar Refinery</span>
+        </div>
+      </div>
+
+      <div class="body">
+        <!-- Vendor -->
+        <div class="card">
+          <div class="sec">
+            <div class="sec-title" style="color:#f97316;"><div class="sec-bar" style="background:#f97316;"></div>Vendor / Supplier</div>
+            <div class="lbl">Vendor Name * <span class="bdg" style="background:#f9731615;color:#f97316;">📱 QR auto-fill</span></div>
+            <input class="inp" value="ADNOC Distribution" style="border-color:#f9731630;background:#fff;">
+          </div>
+        </div>
+
+        <!-- Invoice date -->
+        <div class="card">
+          <div class="sec">
+            <div class="sec-title" style="color:#f97316;"><div class="sec-bar" style="background:#f97316;"></div>Invoice Date</div>
+            <div class="lbl">Date on invoice * <span class="bdg" style="background:#f9731615;color:#f97316;">📱 QR</span></div>
+            <input class="inp" type="date" value="2026-10-18" style="border-color:#22c55e50;">
+            <div style="font-size:11px;color:#15803d;margin-top:5px;font-weight:700;">✓ 2 days ago — on time</div>
+          </div>
+        </div>
+
+        <!-- Amount -->
+        <div class="card">
+          <div class="sec">
+            <div class="sec-title" style="color:#f97316;"><div class="sec-bar" style="background:#f97316;"></div>Amount (SAR)</div>
+            <div style="font-size:10px;color:#f97316;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">📱 Auto-filled from ZATCA QR</div>
+            <div class="amt-big" style="border-color:#f9731640;background:#f9731606;color:#7c2d12;">185.00</div>
+            <div style="text-align:center;font-size:12px;color:#94a3b8;margin-top:5px;">SAR 185.00 total (inc. VAT)</div>
+            <!-- VAT toggle ON -->
+            <div style="margin-top:14px;">
+              <div class="banner b-ok" style="margin-bottom:10px;"><span>✅</span><span>VAT auto-detected. Net SAR 160.87 + VAT SAR 24.13</span></div>
+              <div class="toggle-row" style="border-color:#f9731650;background:#f9731606;">
+                <div>
+                  <div style="font-weight:700;font-size:14px;color:#7c2d12;">💳 VAT included?</div>
+                  <div style="font-size:12px;color:#f97316;margin-top:2px;font-weight:600;">Net: SAR 160.87 · VAT: SAR 24.13</div>
+                </div>
+                <div class="sw" style="background:#f97316;justify-content:flex-end;"><div class="sw-knob"></div></div>
+              </div>
+              <div style="margin-top:10px;">
+                <div class="lbl">VAT Reg. No. <span class="bdg" style="background:#f9731615;color:#f97316;">QR</span> <span class="bdg" style="background:#dcfce7;color:#15803d;">✓ Valid</span></div>
+                <input class="inp mono" value="300123456789003" style="border-color:#22c55e50;color:#14532d;font-size:13px;">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Invoice number -->
+        <div class="card">
+          <div class="sec">
+            <div class="sec-title" style="color:#f97316;"><div class="sec-bar" style="background:#f97316;"></div>Invoice Number</div>
+            <div class="lbl">Invoice No. <span style="text-transform:none;font-weight:400;color:#94a3b8;font-size:10px;">— enables duplicate detection</span></div>
+            <input class="inp mono" placeholder="e.g. INV-2026-00123" style="border-color:#f9731630;font-size:13px;">
+          </div>
+        </div>
+      </div>
+      <div class="nav-bar">
+        <button class="btn-back" onclick="goStep(0)">←</button>
+        <button class="btn-next" style="background:linear-gradient(135deg,#7c2d12,#ea580c);" onclick="goStep(2)">Next — Category →</button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════ SCREEN 3 — CATEGORY ═══════════════════════════════ -->
+    <div class="screen" id="s2">
+      <div class="hero" style="background:linear-gradient(145deg,#1e1b4b,#312e81,#4338ca);box-shadow:0 8px 40px rgba(0,0,0,.45)">
+        <div class="hero-topbar">
+          <button class="back-btn" onclick="goStep(1)">‹ Back</button>
+          <div class="emp-chip">
+            <div class="emp-avatar">M</div>
+            <div class="emp-info">
+              <span class="emp-name">Mohammed Al-Rashidi</span>
+              <span class="emp-dept">Civil Eng · E-00142</span>
+            </div>
+          </div>
+        </div>
+        <div class="prog-bar">
+          <div class="pdot done" style="color:#818cf8;">✓</div><div class="pconn done"></div>
+          <div class="pdot done" style="color:#818cf8;">✓</div><div class="pconn done"></div>
+          <div class="pdot cur" style="color:#a5b4fc;border-color:#a5b4fc;">3</div><div class="pconn idle"></div>
+          <div class="pdot idle">4</div>
+        </div>
+        <div class="hero-step-label">Step 3 of 4 · Classify</div>
+        <div class="hero-title">🏷️ Category</div>
+        <div class="proj-badge">
+          <div class="proj-dot"></div>
+          <span class="proj-text">P-2024-011 · S-0042 Al Khobar Refinery</span>
+        </div>
+      </div>
+
+      <div class="body">
+        <div class="card">
+          <div class="sec">
+            <div class="sec-title" style="color:#818cf8;"><div class="sec-bar" style="background:#818cf8;"></div>Expense Category</div>
+            <div class="cat-grid">
+              <div class="cat-tile" style="border-color:#b4530930;background:#b4530908;"><span class="c-ico">⛽</span><span class="c-nam" style="color:#b45309;">Fuel</span></div>
+              <div class="cat-tile" style="border-color:#0369a130;background:#0369a108;"><span class="c-ico">🏨</span><span class="c-nam" style="color:#0369a1;">Accommodation</span></div>
+              <div class="cat-tile" style="border-color:#15803d;background:#15803d;box-shadow:0 4px 16px #15803d40;"><span class="c-ico">🍽️</span><span class="c-nam" style="color:#fff;">Meals / Food</span></div>
+              <div class="cat-tile" style="border-color:#7c3aed30;background:#7c3aed08;"><span class="c-ico">🚗</span><span class="c-nam" style="color:#7c3aed;">Transport</span></div>
+              <div class="cat-tile" style="border-color:#b91c1c30;background:#b91c1c08;"><span class="c-ico">🔧</span><span class="c-nam" style="color:#b91c1c;">Materials</span></div>
+              <div class="cat-tile" style="border-color:#0284c730;background:#0284c708;"><span class="c-ico">📱</span><span class="c-nam" style="color:#0284c7;">SIM / Internet</span></div>
+              <div class="cat-tile" style="border-color:#47556930;background:#47556908;"><span class="c-ico">📎</span><span class="c-nam" style="color:#475569;">Office Supplies</span></div>
+              <div class="cat-tile" style="border-color:#065f4630;background:#065f4608;"><span class="c-ico">🏛️</span><span class="c-nam" style="color:#065f46;">Govt Fees</span></div>
+              <div class="cat-tile" style="border-color:#4338ca30;background:#4338ca08;"><span class="c-ico">🅿️</span><span class="c-nam" style="color:#4338ca;">Parking</span></div>
+            </div>
+          </div>
+        </div>
+        <div style="padding:0 14px"><div class="banner b-info"><span>🍽️</span><span><strong>Meals / Food</strong> · وجبات — linked to Field Allowance</span></div></div>
+
+        <!-- Site selector -->
+        <div class="card">
+          <div class="sec">
+            <div class="sec-title" style="color:#818cf8;"><div class="sec-bar" style="background:#818cf8;"></div>Site / Project</div>
+            <button class="site-btn" style="border-color:#e8ecf0;">
+              <span style="font-size:16px;">🏢</span>
+              <div><div style="font-size:13px;font-weight:700;color:#64748b;">None / General</div><div style="font-size:11px;color:#94a3b8;">Not site-specific</div></div>
+            </button>
+            <button class="site-btn" style="border-color:#818cf8;background:#818cf808;">
+              <span style="font-size:16px;">📍</span>
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:800;color:#312e81;">S-0042 — Al Khobar Refinery</div>
+                <div style="font-size:11px;color:#64748b;margin-top:1px;">P-2024-011 · Saudi Aramco · Civil Works</div>
+              </div>
+              <span style="color:#818cf8;font-weight:900;font-size:16px;">✓</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="nav-bar">
+        <button class="btn-back" onclick="goStep(1)">←</button>
+        <button class="btn-next" style="background:linear-gradient(135deg,#312e81,#4f46e5);" onclick="goStep(3)">Next — Notes →</button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════ SCREEN 4 — NOTES ═══════════════════════════════ -->
+    <div class="screen" id="s3">
+      <div class="hero" style="background:linear-gradient(145deg,#052e16,#14532d,#16a34a);box-shadow:0 8px 40px rgba(0,0,0,.45)">
+        <div class="hero-topbar">
+          <button class="back-btn" onclick="goStep(2)">‹ Back</button>
+          <div class="emp-chip">
+            <div class="emp-avatar">M</div>
+            <div class="emp-info">
+              <span class="emp-name">Mohammed Al-Rashidi</span>
+              <span class="emp-dept">Civil Eng · E-00142</span>
+            </div>
+          </div>
+        </div>
+        <div class="prog-bar">
+          <div class="pdot done" style="color:#22c55e;">✓</div><div class="pconn done"></div>
+          <div class="pdot done" style="color:#22c55e;">✓</div><div class="pconn done"></div>
+          <div class="pdot done" style="color:#22c55e;">✓</div><div class="pconn done"></div>
+          <div class="pdot cur" style="color:#4ade80;border-color:#4ade80;">4</div>
+        </div>
+        <div class="hero-step-label">Step 4 of 4 · Notes</div>
+        <div class="hero-title">📝 Notes</div>
+        <div class="proj-badge">
+          <div class="proj-dot"></div>
+          <span class="proj-text">P-2024-011 · S-0042 Al Khobar Refinery</span>
+        </div>
+      </div>
+
+      <div class="body">
+        <div class="card">
+          <div class="sec">
+            <div class="sec-title" style="color:#22c55e;"><div class="sec-bar" style="background:#22c55e;"></div>Remarks</div>
+            <textarea class="inp" rows="3" placeholder="Any additional context…" style="border-color:#22c55e30;resize:none;min-height:80px;"></textarea>
+          </div>
+        </div>
+        <!-- Summary mini -->
+        <div class="card" style="background:#f8fafc;">
+          <div class="sec">
+            <div class="sec-title" style="color:#22c55e;"><div class="sec-bar" style="background:#22c55e;"></div>Summary so far</div>
+            <div class="srow"><span class="s-lbl">Employee</span><span class="s-val">Mohammed Al-Rashidi</span></div>
+            <div class="srow"><span class="s-lbl">Department</span><span class="s-val">Civil Engineering</span></div>
+            <div class="srow"><span class="s-lbl">Project No.</span><span class="s-val mono" style="color:#22c55e;">P-2024-011</span></div>
+            <div class="srow"><span class="s-lbl">Site</span><span class="s-val">S-0042 Al Khobar Refinery</span></div>
+            <div class="divider" style="margin:0;"></div>
+            <div class="srow" style="margin-top:2px;"><span class="s-lbl">Vendor</span><span class="s-val">ADNOC Distribution</span></div>
+            <div class="srow"><span class="s-lbl">Date</span><span class="s-val">2026-10-18</span></div>
+            <div class="srow"><span class="s-lbl">Amount</span><span class="s-val" style="color:#22c55e;">SAR 185.00</span></div>
+            <div class="srow"><span class="s-lbl">Category</span><span class="s-val">🍽️ Meals / Food</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="nav-bar">
+        <button class="btn-back" onclick="goStep(2)">←</button>
+        <button class="btn-next" style="background:linear-gradient(135deg,#14532d,#16a34a);" onclick="goStep(4)">Review & Submit →</button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════ SCREEN 5 — SUMMARY ═══════════════════════════════ -->
+    <div class="screen" id="s4">
+      <div class="hero" style="background:linear-gradient(145deg,#0f2460,#1e3a8a,#2563eb);padding:16px 22px 28px;box-shadow:0 8px 40px rgba(0,0,0,.45)">
+        <div class="hero-topbar">
+          <button class="back-btn" onclick="goStep(3)">‹ Back</button>
+          <div class="emp-chip">
+            <div class="emp-avatar">M</div>
+            <div class="emp-info">
+              <span class="emp-name">Mohammed Al-Rashidi</span>
+              <span class="emp-dept">Civil Eng · E-00142</span>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:4px;">
+          <div style="font-size:11px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">Expense Review</div>
+          <div style="font-size:30px;font-weight:900;color:#fff;letter-spacing:-.5px;font-family:'SF Mono',monospace;">SAR 185.00</div>
+          <div style="font-size:13px;color:rgba(255,255,255,.55);margin-top:3px;">🍽️ Meals / Food · ADNOC Distribution</div>
+          <div class="proj-badge" style="margin-top:8px;">
+            <div class="proj-dot"></div>
+            <span class="proj-text">P-2024-011 · S-0042 Al Khobar</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="body">
+        <!-- Duplicate warning -->
+        <div class="dup-card">
+          <div style="font-weight:900;color:#dc2626;font-size:13px;margin-bottom:5px;">⚠️ Possible Duplicate Detected</div>
+          <div style="font-size:12px;color:#991b1b;line-height:1.65;">
+            You submitted <strong>INV-2026-00098</strong> on <strong>Oct 15, 2026</strong> for SAR <strong>185.00</strong> from the same vendor.
+          </div>
+          <button style="margin-top:10px;background:#dc2626;color:#fff;border:none;border-radius:10px;padding:9px 14px;font-size:12px;font-weight:800;cursor:pointer;width:100%;font-family:inherit;">
+            Confirm — this is a different invoice
+          </button>
+        </div>
+
+        <!-- Employee / project info -->
+        <div class="card">
+          <div class="sec">
+            <div class="sec-title" style="color:#60a5fa;"><div class="sec-bar" style="background:#60a5fa;"></div>Employee & Project</div>
+            <div class="srow"><span class="s-lbl">Employee</span><span class="s-val">Mohammed Al-Rashidi</span></div>
+            <div class="srow"><span class="s-lbl">Dept.</span><span class="s-val">Civil Engineering</span></div>
+            <div class="srow"><span class="s-lbl">Employee No.</span><span class="s-val mono">E-00142</span></div>
+            <div class="srow"><span class="s-lbl">Project No.</span><span class="s-val mono" style="color:#60a5fa;">P-2024-011</span></div>
+            <div class="srow"><span class="s-lbl">Site</span><span class="s-val">S-0042 — Al Khobar Refinery</span></div>
+          </div>
+        </div>
+
+        <!-- Invoice -->
+        <div class="card">
+          <div class="sec">
+            <div class="sec-title" style="color:#60a5fa;"><div class="sec-bar" style="background:#60a5fa;"></div>Invoice</div>
+            <div class="srow"><span class="s-lbl">Vendor</span><span class="s-val">ADNOC Distribution</span></div>
+            <div class="srow"><span class="s-lbl">Date</span><span class="s-val">Oct 18, 2026</span></div>
+            <div class="srow"><span class="s-lbl">Invoice No.</span><span class="s-val mono">INV-2026-00154</span></div>
+            <div class="srow"><span class="s-lbl">Type</span><span class="s-val">📱 ZATCA QR</span></div>
+          </div>
+        </div>
+
+        <!-- Financial -->
+        <div class="card">
+          <div class="sec">
+            <div class="sec-title" style="color:#60a5fa;"><div class="sec-bar" style="background:#60a5fa;"></div>Financial</div>
+            <div class="srow"><span class="s-lbl">Total (inc. VAT)</span><span class="s-val" style="color:#60a5fa;font-size:15px;">SAR 185.00</span></div>
+            <div class="srow"><span class="s-lbl">Net amount</span><span class="s-val">SAR 160.87</span></div>
+            <div class="srow"><span class="s-lbl">VAT 15%</span><span class="s-val">SAR 24.13</span></div>
+            <div class="srow"><span class="s-lbl">VAT Reg.</span><span class="s-val mono" style="font-size:11px;color:#15803d;">✓ 300123456789003</span></div>
+            <div class="srow"><span class="s-lbl">Category</span><span class="s-val">🍽️ Meals / Food</span></div>
+          </div>
+        </div>
+
+        <!-- Receipt thumb -->
+        <div class="card">
+          <div class="sec">
+            <div class="sec-title" style="color:#60a5fa;"><div class="sec-bar" style="background:#60a5fa;"></div>Receipt Photo</div>
+            <div class="receipt-thumb">🧾</div>
+          </div>
+        </div>
+
+        <div style="padding:0 14px 4px;">
+          <button style="background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;border:none;border-radius:16px;padding:18px;font-size:16px;font-weight:900;cursor:pointer;width:100%;box-shadow:0 4px 20px rgba(37,99,235,.35);margin-bottom:8px;font-family:inherit;" onclick="goStep(5)">
+            ✅ Submit SAR 185.00
+          </button>
+          <button class="btn-back" style="width:100%;text-align:center;border-radius:16px;padding:14px;margin-bottom:4px;" onclick="goStep(3)">← Edit Details</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════ SCREEN 6 — SUCCESS ═══════════════════════════════ -->
+    <div class="screen" id="s5">
+      <div class="hero" style="background:linear-gradient(145deg,#042f2e,#134e4a,#0f766e);padding:28px 22px 32px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.45)">
+        <div class="pop-in" style="width:86px;height:86px;background:rgba(255,255,255,.15);border-radius:26px;display:flex;align-items:center;justify-content:center;font-size:44px;margin:0 auto 18px;">✅</div>
+        <div class="fade-up" style="font-size:11px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;">Expense Recorded</div>
+        <div class="fade-up-2" style="font-size:36px;font-weight:900;color:#fff;font-family:'SF Mono',monospace;letter-spacing:-1px;">SAR 185.00</div>
+        <div class="fade-up-3" style="font-size:13px;color:rgba(255,255,255,.6);margin-top:4px;">🍽️ Meals / Food · ADNOC Distribution</div>
+      </div>
+
+      <div class="body">
+        <!-- Confirmation card -->
+        <div class="card">
+          <div class="sec">
+            <div class="sec-title" style="color:#2dd4bf;"><div class="sec-bar" style="background:#2dd4bf;"></div>Confirmed Details</div>
+            <div class="srow"><span class="s-lbl">Employee</span><span class="s-val">Mohammed Al-Rashidi</span></div>
+            <div class="srow"><span class="s-lbl">Department</span><span class="s-val">Civil Engineering</span></div>
+            <div class="srow"><span class="s-lbl">Project</span><span class="s-val mono" style="color:#2dd4bf;">P-2024-011</span></div>
+            <div class="srow"><span class="s-lbl">Site</span><span class="s-val">S-0042 Al Khobar</span></div>
+            <div class="srow"><span class="s-lbl">Vendor</span><span class="s-val">ADNOC Distribution</span></div>
+            <div class="srow"><span class="s-lbl">Invoice Date</span><span class="s-val">Oct 18, 2026</span></div>
+            <div class="srow"><span class="s-lbl">VAT</span><span class="s-val">SAR 24.13 (15%)</span></div>
+            <div class="srow"><span class="s-lbl">This month</span><span class="s-val" style="color:#2dd4bf;">4 expenses · SAR 742.50</span></div>
+          </div>
+        </div>
+
+        <div class="banner b-ok" style="margin:0 14px 10px;"><span>📤</span><span>Receipt uploaded to Google Drive · <strong>awaiting Accounts review</strong></span></div>
+
+        <div style="padding:0 14px 4px;">
+          <button style="background:linear-gradient(135deg,#134e4a,#0f766e);color:#fff;border:none;border-radius:16px;padding:17px;font-size:15px;font-weight:800;cursor:pointer;width:100%;box-shadow:0 4px 16px rgba(20,184,166,.3);margin-bottom:10px;font-family:inherit;" onclick="goStep(0)">
+            + Add Another Expense
+          </button>
+          <button style="background:#fff;color:#64748b;border:1.5px solid #e2e8f0;border-radius:16px;padding:14px;font-size:14px;font-weight:700;cursor:pointer;width:100%;font-family:inherit;">
+            ← Back to Forms
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- .app -->
+</div><!-- .phone-shell -->
+
+<script>
+let cur = 0;
+const heroColors = ['dark','dark','dark','dark','dark','dark'];
+
+function goStep(n) {
+  const prev = cur;
+  cur = n;
+  // transition
+  const screens = document.querySelectorAll('.screen');
+  screens[prev].classList.remove('active');
+  screens[prev].classList.add('exit');
+  setTimeout(() => screens[prev].classList.remove('exit'), 400);
+  screens[n].classList.add('active');
+  // scroll to top
+  screens[n].scrollTop = 0;
+  // step nav
+  document.querySelectorAll('.sn-btn').forEach((b,i) => b.classList.toggle('cur', i===n));
+  // status bar time update
+  const now = new Date();
+  document.getElementById('statusTime').textContent =
+    now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+}
+
+// Animate success screen on load
+document.getElementById('s5').addEventListener('transitionend', function() {
+  if (this.classList.contains('active')) {
+    this.querySelectorAll('.pop-in,.fade-up,.fade-up-2,.fade-up-3').forEach(el => {
+      el.style.animation = 'none';
+      el.offsetHeight;
+      el.style.animation = '';
+    });
+  }
+});
+</script>
+</body>
+</html>
