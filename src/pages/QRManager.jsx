@@ -463,7 +463,8 @@ export default function QRManager({ entityId, entityCode, isAr }) {
             {tokens.length === 0 ? 'No tokens generated yet. Click "Generate QR Token" to create one.' : 'No tokens match the current filter.'}
           </div>
         ) : (
-          <table style={{ width:'100%', borderCollapse:'collapse' }}>
+          <div style={{ overflowX:'auto' }}>
+          <table style={{ width:'100%', minWidth:780, borderCollapse:'collapse' }}>
             <thead>
               <tr>
                 {['Employee','Role','Status','Last Used','Generated','Expires','Actions'].map(h => (
@@ -525,112 +526,34 @@ export default function QRManager({ entityId, entityCode, isAr }) {
                         : <span style={{ color:'#aab2bd' }}>—</span>}
                     </td>
 
-                    {/* Actions — single ⋯ button with dropdown */}
-                    <td style={{ ...t.td, textAlign:'center', position:'relative' }}>
-                      <button
-                        onClick={e => { e.stopPropagation(); setOpenMenu(menuOpen ? null : tk.id) }}
-                        style={{
-                          background: menuOpen ? '#454D9B' : '#fff',
-                          color: menuOpen ? '#fff' : '#454D9B',
-                          border: '2px solid #454D9B',
-                          borderRadius: 8,
-                          padding: '6px 12px',
-                          fontSize: 12, fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'flex', alignItems: 'center', gap: 5,
-                          whiteSpace: 'nowrap',
-                          transition: 'all .15s',
-                          fontFamily: 'Arial,sans-serif',
-                        }}
-                        title="Actions"
-                      >
-                        Actions <span style={{ fontSize: 10 }}>{menuOpen ? '▲' : '▼'}</span>
-                      </button>
-
-                      {menuOpen && (
-                        <div
-                          onClick={e => e.stopPropagation()}
-                          style={{
-                            position:'absolute', right:0, top:'calc(100% + 6px)', zIndex:300,
-                            background:'#fff', borderRadius:12,
-                            boxShadow:'0 12px 40px rgba(0,0,0,0.22)',
-                            border:'1.5px solid #dde0f5',
-                            minWidth:210, overflow:'hidden',
-                          }}
-                        >
-                          {/* Header */}
-                          <div style={{ padding:'8px 18px 6px', fontSize:10, fontWeight:800, color:'#9198c7', letterSpacing:1, textTransform:'uppercase', borderBottom:'1px solid #f0f1fa' }}>
-                            {tk.employee_name}
-                          </div>
-
-                          {/* QR Code */}
-                          <button
-                            onClick={() => { setShowQR(tk); setOpenMenu(null) }}
-                            style={menuItem}
-                            onMouseEnter={e => e.currentTarget.style.background='#f0f1fa'}
-                            onMouseLeave={e => e.currentTarget.style.background='none'}
-                          >📱 &nbsp;Show QR Code</button>
-
-                          {/* Permissions */}
-                          <button
-                            onClick={() => { openPerms(tk); setOpenMenu(null) }}
-                            style={menuItem}
-                            onMouseEnter={e => e.currentTarget.style.background='#f0f1fa'}
-                            onMouseLeave={e => e.currentTarget.style.background='none'}
-                          >🛡️ &nbsp;Manage Permissions</button>
-
-                          <div style={{ borderTop:'1px solid #f0f1fa', margin:'4px 0' }} />
-
-                          {/* Share WhatsApp */}
-                          <button
-                            onClick={() => { shareWhatsApp(tk.token, tk.employee_name); setOpenMenu(null) }}
-                            style={menuItem}
-                            onMouseEnter={e => e.currentTarget.style.background='#f0f1fa'}
-                            onMouseLeave={e => e.currentTarget.style.background='none'}
-                          >💬 &nbsp;Share via WhatsApp</button>
-
-                          {/* Share Telegram */}
-                          <button
-                            onClick={() => { shareTelegram(tk.token, tk.employee_name); setOpenMenu(null) }}
-                            style={menuItem}
-                            onMouseEnter={e => e.currentTarget.style.background='#f0f1fa'}
-                            onMouseLeave={e => e.currentTarget.style.background='none'}
-                          >✈️ &nbsp;Share via Telegram</button>
-
-                          <div style={{ borderTop:'1px solid #f0f1fa', margin:'4px 0' }} />
-
-                          {/* Revoke / Reactivate */}
-                          {isActive ? (
-                            <button
-                              onClick={() => {
-                                setOpenMenu(null)
-                                if (window.confirm(`Revoke token for ${tk.employee_name}?`)) handleRevoke(tk.id)
-                              }}
-                              disabled={revoking === tk.id}
-                              style={{ ...menuItem, color:'#b71c1c' }}
-                              onMouseEnter={e => e.currentTarget.style.background='#fff5f5'}
-                              onMouseLeave={e => e.currentTarget.style.background='none'}
-                            >{revoking === tk.id ? '…' : '🚫  Revoke Access'}</button>
-                          ) : (
-                            <button
-                              onClick={() => { handleReactivate(tk.id); setOpenMenu(null) }}
-                              disabled={revoking === tk.id}
-                              style={{ ...menuItem, color:'#2e7d32' }}
-                              onMouseEnter={e => e.currentTarget.style.background='#f0fff4'}
-                              onMouseLeave={e => e.currentTarget.style.background='none'}
-                            >{revoking === tk.id ? '…' : '✅  Reactivate'}</button>
-                          )}
-
-                          {/* bottom padding */}
-                          <div style={{ height: 4 }} />
-                        </div>
-                      )}
+                    {/* Actions — inline icon buttons */}
+                    <td style={{ ...t.td, textAlign:'center', whiteSpace:'nowrap' }}>
+                      <div style={{ display:'flex', gap:4, justifyContent:'center', alignItems:'center' }}>
+                        <button onClick={() => setShowQR(tk)} title="Show QR Code"
+                          style={{ background:'#f0f1fa', border:'none', borderRadius:6, padding:'5px 7px', cursor:'pointer', fontSize:15 }}>📱</button>
+                        <button onClick={() => openPerms(tk)} title="Manage Permissions"
+                          style={{ background:'#f0f1fa', border:'none', borderRadius:6, padding:'5px 7px', cursor:'pointer', fontSize:15 }}>🛡️</button>
+                        <button onClick={() => shareWhatsApp(tk.token, tk.employee_name)} title="Share via WhatsApp"
+                          style={{ background:'#f0f1fa', border:'none', borderRadius:6, padding:'5px 7px', cursor:'pointer', fontSize:15 }}>💬</button>
+                        <button onClick={() => shareTelegram(tk.token, tk.employee_name)} title="Share via Telegram"
+                          style={{ background:'#f0f1fa', border:'none', borderRadius:6, padding:'5px 7px', cursor:'pointer', fontSize:15 }}>✈️</button>
+                        {isActive ? (
+                          <button onClick={() => { if (window.confirm(`Revoke token for ${tk.employee_name}?`)) handleRevoke(tk.id) }} title="Revoke Access"
+                            disabled={revoking === tk.id}
+                            style={{ background:'#fff0f0', border:'none', borderRadius:6, padding:'5px 7px', cursor:'pointer', fontSize:15 }}>🚫</button>
+                        ) : (
+                          <button onClick={() => handleReactivate(tk.id)} title="Reactivate"
+                            disabled={revoking === tk.id}
+                            style={{ background:'#f0fff4', border:'none', borderRadius:6, padding:'5px 7px', cursor:'pointer', fontSize:15 }}>✅</button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
