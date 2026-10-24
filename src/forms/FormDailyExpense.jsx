@@ -1139,9 +1139,13 @@ export default function FormDailyExpense() {
     try {
       let receiptUrl = null
       if (photoFile) {
-        const prefix = `${(emp.full_name_en||'').split(' ').slice(0,2).join('_').toUpperCase()}_${category}_SAR${Math.round(rawAmount)}_${today()}`
-        const r = await uploadToDrive(photoFile, 'expenses', prefix)
-        if (r) receiptUrl = r.viewUrl
+        try {
+          const prefix = `${(emp.full_name_en||'').split(' ').slice(0,2).join('_').toUpperCase()}_${category}_SAR${Math.round(rawAmount)}_${today()}`
+          const r = await uploadToDrive(photoFile, 'expenses', prefix)
+          if (r) receiptUrl = r.viewUrl
+        } catch (uploadErr) {
+          console.warn('[Drive upload] failed — continuing without receipt URL:', uploadErr?.message)
+        }
       }
 
       const { data: rpc, error: err } = await supabase.rpc('submit_expense_record', {
