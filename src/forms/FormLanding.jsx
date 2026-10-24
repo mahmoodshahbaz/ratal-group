@@ -200,7 +200,7 @@ const ERROR_MESSAGES = {
 // ══════════════════════════════════════════════════════════════════════════════
 // QR SCAN SCREEN
 // ══════════════════════════════════════════════════════════════════════════════
-function ScanQRScreen({ error }) {
+function ScanQRScreen({ error, debugError }) {
   const [lang, setLang] = useState('en')
   const isAr  = lang === 'ar'
   const errMsg = error && error !== 'no_token' ? ERROR_MESSAGES[error] : null
@@ -229,6 +229,11 @@ function ScanQRScreen({ error }) {
       {errMsg && (
         <div style={{ background: 'rgba(244,67,54,0.15)', border: '1px solid rgba(244,67,54,0.4)', borderRadius: 12, padding: '14px 20px', marginTop: 24, color: '#ffcdd2', fontSize: 13, lineHeight: 1.5, maxWidth: 300 }}>
           {isAr ? errMsg.ar : errMsg.en}
+        </div>
+      )}
+      {debugError && (
+        <div style={{ background: 'rgba(255,193,7,0.15)', border: '1px solid rgba(255,193,7,0.5)', borderRadius: 10, padding: '10px 16px', marginTop: 12, color: '#fff9c4', fontSize: 11, lineHeight: 1.5, maxWidth: 320, wordBreak: 'break-all', textAlign: 'left' }}>
+          <strong style={{ color: '#ffd54f' }}>DEBUG:</strong> {debugError}
         </div>
       )}
       <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 40, lineHeight: 1.7 }}>
@@ -952,7 +957,7 @@ export default function FormLanding() {
   }
 
   // ── No token / error ─────────────────────────────────────────────────────
-  if (!auth.employee) return <ScanQRScreen error={auth.error} />
+  if (!auth.employee) return <ScanQRScreen error={auth.error} debugError={auth.debugError} />
 
   // ── Gate loading (brief check after auth resolves) ────────────────────────
   if (!gateReady) {

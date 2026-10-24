@@ -898,8 +898,10 @@ export default function FormDailyExpense() {
   function applyQRData(parsed) {
     const d = dateFromZATCA(parsed.timestamp)
     setScanData(parsed)
-    setVendorName(parsed.seller    || '')
-    setVatNumber(parsed.vatNumber  || '')
+    // Strip BOM / zero-width chars and trim — Arabic text from ZATCA TLV can have invisible prefix bytes
+    const cleanStr = s => (s || '').replace(/^﻿/, '').replace(/[​-‍﻿]/g, '').trim()
+    setVendorName(cleanStr(parsed.seller))
+    setVatNumber(cleanStr(parsed.vatNumber))
     setInvoiceDate(d               || '')
     setAmount(parsed.totalWithVat  ? parseFloat(parsed.totalWithVat).toFixed(2) : '')
     if (parsed.vatAmount)  setVatAmountFromQR(parseFloat(parsed.vatAmount).toFixed(2))
@@ -1048,25 +1050,34 @@ export default function FormDailyExpense() {
 
     if (qrFound) return
 
-    // ── QR not found → manual entry ───────────────────────────────────────────
-    // Do NOT pre-fill fields from OCR — partial data confuses users more than an empty form.
-    // Run OCR silently in the background ONLY for duplicate invoice# detection.
+    // ── QR not found → OCR fills fields, user verifies ────────────────────────
     setScanStatus('no_scan')
     setVatMode('manual')
     setInvoiceType('PRINTED')
 
-    // Silent background OCR — only for duplicate guard, never touches form fields
+    // Run OCR and fill all extractable fields as a fallback
     ;(async () => {
       try {
         const Tess = await loadTesseract()
         if (!Tess) return
         const { data } = await Tess.recognize(ocrSource, 'eng+ara', {})
         const rawText = data.text || ''
-        // DEV_MODE only: expose raw text for debugging
+        // DEV_MODE: expose raw text for debugging
         if (DEV_MODE) { setOcrRawText(rawText); setOcrParsed(parseOCRText(rawText)) }
         const parsed = parseOCRText(rawText)
-        // Duplicate check only
+        setOcrParsed(parsed)
+
+        // Fill all fields from OCR — user must verify before proceeding
+        if (parsed.vendor)      setVendorName(v  => v  || parsed.vendor)
+        if (parsed.date)        setInvoiceDate(v => v  || parsed.date)
+        if (parsed.amount)      setAmount(v      => v  || parsed.amount)
+        if (parsed.vatNumber)   setVatNumber(v   => v  || parsed.vatNumber)
+        if (parsed.vatAmount)   setVatAmountFromQR(v => v || parsed.vatAmount)
+        if (parsed.vatNumber || parsed.amount) setVatPaid(true)
+
+        // Duplicate detection
         if (parsed.invoiceNumber) {
+          setInvoiceNumber(v => v || parsed.invoiceNumber)
           try {
             const { data: dup } = await supabase.rpc('check_duplicate_invoice',
               { p_employee_id: emp?.id, p_invoice_number: parsed.invoiceNumber,
@@ -1074,7 +1085,7 @@ export default function FormDailyExpense() {
             if (dup?.duplicate) setDupWarning(dup)
           } catch {}
         }
-      } catch(e) { console.warn('[OCR silent]', e.message) }
+      } catch(e) { console.warn('[OCR]', e.message) }
     })()
   }
 
@@ -1396,8 +1407,8 @@ export default function FormDailyExpense() {
                     <Banner type="warn">
                       <span>📋</span>
                       <div>
-                        <strong>QR code not found.</strong><br />
-                        Please fill in the invoice details on the next screen.
+                        <strong>QR not decoded — reading invoice text (OCR)…</strong><br />
+                        Fields will be auto-filled where possible. Please verify before continuing.
                       </div>
                     </Banner>
                   )}
@@ -1491,6 +1502,7 @@ export default function FormDailyExpense() {
                 value={vendorName}
                 onChange={e => setVendorName(e.target.value)}
                 accent={ts.color}
+                dir="auto"
               />
             </SSection>
           </SCard>
@@ -1577,8 +1589,8 @@ export default function FormDailyExpense() {
                     {vatMode === 'manual' && (
                       <div>
                         <Banner type="warn">
-                          <span>💡</span>
-                          <span>QR not decoded — fields filled from text OCR. Verify and correct if needed.</span>
+                          <span>📄</span>
+                          <span>QR not decoded — fields auto-filled from invoice text (OCR). <strong>Please verify all values</strong> before continuing.</span>
                         </Banner>
                         {/* Re-scan QR tip: shown when OCR couldn't decode QR */}
                         <div style={{ marginTop:8, background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:10,
