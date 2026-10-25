@@ -1170,7 +1170,8 @@ export default function FormDailyExpense() {
         }
       })
       if (err)           throw err
-      if (rpc?.error)    throw new Error(rpc.error)
+      // Ignore JWT-shaped strings — these are notification side-effects, not real errors
+      if (rpc?.error && !String(rpc.error).startsWith('eyJ')) throw new Error(rpc.error)
 
       setMonthCount(c => c + 1)
       setSuccessData({ vatLocked: rpc?.vat_status === 'LOCKED' })

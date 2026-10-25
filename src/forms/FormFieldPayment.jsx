@@ -125,6 +125,37 @@ function loadTesseract() {
   return _tesseractPromise
 }
 
+// ─── Image pre-processor: grayscale + contrast boost for better OCR ──────────
+async function preprocessImageForOCR(dataUrl) {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      // Scale up small images; cap at 2400px wide to avoid memory issues
+      const scale = Math.min(2400 / img.width, Math.max(1, 1800 / img.width))
+      canvas.width  = Math.round(img.width  * scale)
+      canvas.height = Math.round(img.height * scale)
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+
+      // Grayscale + contrast boost via pixel manipulation
+      const id = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      const d  = id.data
+      for (let i = 0; i < d.length; i += 4) {
+        // Luminance-weighted grayscale
+        let g = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2]
+        // Contrast boost: sigmoid-like stretch around midpoint 128
+        g = Math.max(0, Math.min(255, ((g - 128) * 1.6) + 128))
+        d[i] = d[i+1] = d[i+2] = g
+      }
+      ctx.putImageData(id, 0, 0)
+      resolve(canvas.toDataURL('image/png'))
+    }
+    img.onerror = () => resolve(dataUrl) // fall back to original on error
+    img.src = dataUrl
+  })
+}
+
 // ─── ANB receipt parser (robust — handles ATM slips where values are on next line) ──
 function parseAnbReceipt(rawText) {
   // Keep both line-by-line (for multi-line label:value) and flat (for inline)
@@ -138,22 +169,43 @@ function parseAnbReceipt(rawText) {
   if (directIban) {
     r.iban = directIban[1].toUpperCase()
   } else {
-    // Fallback: label then value (possibly with OCR noise — fix 0/O, 1/I/l)
-    const labelM = flat.match(/To\s+Acct(?:ount)?\s*No[:\s#]*([A-Z0-9\s]{20,30})/i)
-    if (labelM) {
-      r.iban = labelM[1].replace(/\s/g,'').toUpperCase()
-        .replace(/O/g,'0').replace(/[Il]/g,'1')
+    // Fallback: label then value on same or next line
+    for (let i = 0; i < lines.length; i++) {
+      if (/To\s+Acct|To\s+Account/i.test(lines[i])) {
+        const sameM = lines[i].match(/([A-Z]{2}\d{20,24})/i)
+        if (sameM) { r.iban = sameM[1].toUpperCase().replace(/O/g,'0').replace(/[Il]/g,'1'); break }
+        if (i + 1 < lines.length) {
+          const next = lines[i+1].replace(/\s/g,'')
+          if (/^[A-Z]{2}\d{20,24}$/i.test(next)) { r.iban = next.toUpperCase().replace(/O/g,'0').replace(/[Il]/g,'1'); break }
+        }
+      }
+    }
+    // Final flat fallback with OCR error correction
+    if (!r.iban) {
+      const labelM = flat.match(/To\s+Acct(?:ount)?\s*No[:\s#]*([A-Z0-9\s]{20,30})/i)
+      if (labelM) r.iban = labelM[1].replace(/\s/g,'').toUpperCase().replace(/O/g,'0').replace(/[Il]/g,'1')
     }
   }
 
   // ── Amount ────────────────────────────────────────────────────────────────
-  const amtM = flat.match(/Amount[:\s]*SAR\s*([\d,]+\.?\d*)/i)
+  // Primary: look for "Amount" label (handles "Quick Transfer\nAmount: SAR 5,000.00")
+  const amtM = flat.match(/(?:Transfer\s+)?Amount\s*:?\s*SAR\s*([\d,]+\.?\d*)/i)
+            || flat.match(/Amount\s*:?\s*([\d,]+\.\d{2})\b/i)
             || flat.match(/(?:Debit|Credit)\s+Amount[:\s]*(?:SAR\s*)?([\d,]+\.?\d*)/i)
-            || flat.match(/\bSAR\s+([\d,]+\.\d{2})\b/)
-  if (amtM) r.amount = amtM[1].replace(/,/g,'')
+  if (amtM) {
+    r.amount = amtM[1].replace(/,/g,'')
+  } else {
+    // Fallback: find all SAR X,XXX.XX values and pick the largest (main transaction)
+    const sarMatches = [...flat.matchAll(/\bSAR\s+([\d,]+\.\d{2})\b/gi)]
+    if (sarMatches.length > 0) {
+      const amounts = sarMatches.map(m => parseFloat(m[1].replace(/,/g,'')))
+      r.amount = String(Math.max(...amounts))
+    }
+  }
 
   // ── Fee + Vat: "Fee + Vat: SAR 1.15" or "Fee+Vat SAR1.15" etc. ──────────
-  const feeM = flat.match(/Fee\s*\+?\s*Vat[:\s]*(?:SAR\s*)?([\d,]+\.?\d*)/i)
+  const feeM = flat.match(/Fee\s*[+&]\s*Vat[:\s]*(?:SAR\s*)?([\d,]+\.?\d*)/i)
+            || flat.match(/Fee\s*\+?\s*Tax[:\s]*(?:SAR\s*)?([\d,]+\.?\d*)/i)
             || flat.match(/Bank\s+Fee[:\s]*(?:SAR\s*)?([\d,]+\.?\d*)/i)
             || flat.match(/Charges?[:\s]*(?:SAR\s*)?([\d,]+\.?\d*)/i)
   if (feeM) {
@@ -166,7 +218,7 @@ function parseAnbReceipt(rawText) {
            || flat.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b/)
   if (dtM) r.receipt_date = `${dtM[3]}-${dtM[2].padStart(2,'0')}-${dtM[1].padStart(2,'0')}`
 
-  // ── Reference No: may be on the NEXT LINE after the label ────────────────
+  // ── Reference No: may be on SAME LINE or NEXT LINE after the label ────────
   for (let i = 0; i < lines.length; i++) {
     if (/Reference\s*No/i.test(lines[i])) {
       // Same-line value (online receipts)
@@ -182,16 +234,31 @@ function parseAnbReceipt(rawText) {
   // Flat fallback for reference
   if (!r.reference_no) {
     const refFlat = flat.match(/Reference\s*No[:\s]+([A-Z0-9]{15,70})/i)
-    if (refFlat) r.reference_no = refFlat[1].trim()
+    if (refFlat) r.reference_no = refFlat[1].trim().toUpperCase()
+  }
+  // Last resort: long alphanumeric string that looks like a transaction ID
+  if (!r.reference_no) {
+    const txIdM = flat.match(/\b(\d{8}[A-Z]{3,}[A-Z0-9]{15,})\b/)
+    if (txIdM) r.reference_no = txIdM[1]
   }
 
-  // ── Acct Name (beneficiary / sender name on ANB ATM slip) ────────────────
+  // ── Acct Name (beneficiary / sender) — same-line OR next-line ────────────
   for (let i = 0; i < lines.length; i++) {
-    const m = lines[i].match(/Acct\s*Name[:\s]+(.+)/i)
-           || lines[i].match(/Full\s*Name[:\s]+(.+)/i)
-           || lines[i].match(/Beneficiary\s*Name[:\s]+(.+)/i)
-    if (m && m[1].trim().length > 2) { r.acct_name = m[1].trim(); break }
+    if (/Acct\s*Name|Full\s*Name|Beneficiary\s*Name/i.test(lines[i])) {
+      // Same-line
+      const sameM = lines[i].match(/(?:Acct\s*Name|Full\s*Name|Beneficiary\s*Name)[:\s]+(.+)/i)
+      if (sameM && sameM[1].trim().length > 2) { r.acct_name = sameM[1].trim(); break }
+      // Next line
+      if (i + 1 < lines.length && lines[i+1].length > 2 && !/^[\d:\/\\]+$/.test(lines[i+1])) {
+        r.acct_name = lines[i+1].trim(); break
+      }
+    }
   }
+
+  // ── ANB VAT ID ─────────────────────────────────────────────────────────────
+  const vatM = flat.match(/ANB\s+VAT\s+ID(?:\s+Number)?[:\s]*(\d{15})/i)
+            || flat.match(/VAT\s+(?:ID|Number|No)[:\s]*(\d{15})/i)
+  if (vatM) r.vat_id = vatM[1]
 
   return r
 }
@@ -746,25 +813,31 @@ function PaymentLine({ line, idx, sessionDept, cardDepts, employees, allEmployee
   async function handleFile(e) {
     const file = e.target.files?.[0]; if(!file) return
     const reader = new FileReader()
-    const dataUrl = await new Promise(res=>{ reader.onload=ev=>res(ev.target.result); reader.readAsDataURL(file) })
-    onUpdate({ receipt_name:file.name, receipt_data:dataUrl, _ocr_step:'scanning', _ocr_status:'⏳ Reading receipt…', _ocr_parsed:null, _resolve:'idle' })
+    const rawDataUrl = await new Promise(res=>{ reader.onload=ev=>res(ev.target.result); reader.readAsDataURL(file) })
+    onUpdate({ receipt_name:file.name, receipt_data:rawDataUrl, _ocr_step:'scanning', _ocr_status:'⏳ Enhancing image…', _ocr_parsed:null, _resolve:'idle' })
     try {
+      // Pre-process: grayscale + contrast boost for better OCR accuracy
+      const processedUrl = await preprocessImageForOCR(rawDataUrl)
+      onUpdate({ _ocr_status:'⏳ Reading receipt text…' })
+
       const Tesseract = await loadTesseract()
-      const { data:{ text } } = await Tesseract.recognize(dataUrl,'eng',{logger:()=>{}})
+      // Use English — ANB receipts are English; 'eng+ara' can be added if Arabic receipts needed
+      const { data:{ text } } = await Tesseract.recognize(processedUrl, 'eng', { logger:()=>{} })
+
       const parsed = parseAnbReceipt(text)
 
       const patch = { _ocr_step:'done', _ocr_parsed:parsed, _ocr_status:'' }
       const fills = []
 
-      if(parsed.amount)        { patch.amount        = parsed.amount;       fills.push(`SAR ${parsed.amount}`) }
-      if(parsed.bank_fee)      { patch.bank_fee       = parsed.bank_fee;    patch.bank_fee_enabled=true; fills.push(`Fee SAR ${parsed.bank_fee}`) }
-      if(parsed.reference_no)  { patch.reference_no   = parsed.reference_no; fills.push('TRN ✓') }
-      if(parsed.receipt_date)  { patch.receipt_date   = parsed.receipt_date; fills.push(`Date ${parsed.receipt_date}`) }
-      if(parsed.acct_name)     { patch._ocr_acct_name = parsed.acct_name }   // hint for name field
+      if(parsed.amount)        { patch.amount          = parsed.amount;       fills.push(`SAR ${parsed.amount}`) }
+      if(parsed.bank_fee)      { patch.bank_fee         = parsed.bank_fee;    patch.bank_fee_enabled=true; fills.push(`Fee SAR ${parsed.bank_fee}`) }
+      if(parsed.reference_no)  { patch.reference_no     = parsed.reference_no; fills.push('TRN ✓') }
+      if(parsed.receipt_date)  { patch.receipt_date     = parsed.receipt_date; fills.push(`Date ${parsed.receipt_date}`) }
+      if(parsed.acct_name)     { patch._ocr_acct_name   = parsed.acct_name }   // hint for name field
 
       patch._ocr_status = fills.length
         ? `✅ Auto-filled: ${fills.join(' · ')}`
-        : '⚠️ Could not read fields — check image quality or fill manually'
+        : '⚠️ Could not read fields — try a clearer photo or fill manually'
 
       onUpdate(patch)
 
@@ -777,6 +850,7 @@ function PaymentLine({ line, idx, sessionDept, cardDepts, employees, allEmployee
       }
 
     } catch(err) {
+      console.warn('[OCR]', err?.message)
       onUpdate({ _ocr_step:'done', _ocr_status:'⚠️ Scan failed — fill fields manually below' })
     }
     if(fileRef.current) fileRef.current.value=''
