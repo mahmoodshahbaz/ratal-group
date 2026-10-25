@@ -125,33 +125,38 @@ function loadTesseract() {
   return _tesseractPromise
 }
 
-// ─── Image pre-processor: grayscale + contrast boost for better OCR ──────────
+// ─── Image pre-processor: grayscale + aggressive contrast + binarize ─────────
 async function preprocessImageForOCR(dataUrl) {
   return new Promise((resolve) => {
     const img = new Image()
     img.onload = () => {
       const canvas = document.createElement('canvas')
-      // Scale up small images; cap at 2400px wide to avoid memory issues
-      const scale = Math.min(2400 / img.width, Math.max(1, 1800 / img.width))
+      // Scale to at least 2000px wide — Tesseract accuracy improves greatly above 1800px
+      const scale = Math.max(1, Math.min(3, 2200 / img.width))
       canvas.width  = Math.round(img.width  * scale)
       canvas.height = Math.round(img.height * scale)
       const ctx = canvas.getContext('2d')
+      // Apply CSS filter for sharpness before pixel work
+      ctx.filter = 'contrast(1.4) brightness(1.1)'
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      ctx.filter = 'none'
 
-      // Grayscale + contrast boost via pixel manipulation
+      // Grayscale + hard contrast stretch + binarize (threshold 160)
       const id = ctx.getImageData(0, 0, canvas.width, canvas.height)
       const d  = id.data
       for (let i = 0; i < d.length; i += 4) {
         // Luminance-weighted grayscale
         let g = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2]
-        // Contrast boost: sigmoid-like stretch around midpoint 128
-        g = Math.max(0, Math.min(255, ((g - 128) * 1.6) + 128))
+        // Binarize: thermal receipts are high-contrast black-on-white
+        // Anything above 160 → white (220), below → black (20)
+        // This separates text from grey receipt background cleanly
+        g = g > 160 ? 220 : 20
         d[i] = d[i+1] = d[i+2] = g
       }
       ctx.putImageData(id, 0, 0)
       resolve(canvas.toDataURL('image/png'))
     }
-    img.onerror = () => resolve(dataUrl) // fall back to original on error
+    img.onerror = () => resolve(dataUrl)
     img.src = dataUrl
   })
 }
@@ -187,30 +192,41 @@ function parseAnbReceipt(rawText) {
     }
   }
 
+  // ── OCR digit-error correction for numeric strings ────────────────────────
+  // Thermal receipts cause Tesseract to confuse: O→0, o→0, I/l→1, S→5, B→8, Z→2
+  function fixNum(s) {
+    return s.replace(/[Oo]/g,'0').replace(/[Il]/g,'1').replace(/B/g,'8').replace(/Z/g,'2')
+           .replace(/,/g,'')
+  }
+
   // ── Amount ────────────────────────────────────────────────────────────────
-  // Primary: look for "Amount" label (handles "Quick Transfer\nAmount: SAR 5,000.00")
-  const amtM = flat.match(/(?:Transfer\s+)?Amount\s*:?\s*SAR\s*([\d,]+\.?\d*)/i)
-            || flat.match(/Amount\s*:?\s*([\d,]+\.\d{2})\b/i)
-            || flat.match(/(?:Debit|Credit)\s+Amount[:\s]*(?:SAR\s*)?([\d,]+\.?\d*)/i)
+  // Allow O/o as OCR misread of 0 in numeric fields
+  const amtM = flat.match(/Amount\s*:?\s*SAR\s*([\dOo,]+\.[\dOo]*)/i)
+            || flat.match(/(?:Transfer|Debit|Credit)\s+Amount\s*:?\s*(?:SAR\s*)?([\dOo,]+\.[\dOo]{2})/i)
   if (amtM) {
-    r.amount = amtM[1].replace(/,/g,'')
+    r.amount = fixNum(amtM[1])
   } else {
-    // Fallback: find all SAR X,XXX.XX values and pick the largest (main transaction)
-    const sarMatches = [...flat.matchAll(/\bSAR\s+([\d,]+\.\d{2})\b/gi)]
+    // Fallback: find ALL SAR values (including O/o as 0), pick the LARGEST
+    // This handles cases where "Amount:" label is garbled but the SAR values survive
+    const sarMatches = [...flat.matchAll(/\bSAR\s+([\dOo,]+\.[\dOo]{2})\b/gi)]
     if (sarMatches.length > 0) {
-      const amounts = sarMatches.map(m => parseFloat(m[1].replace(/,/g,'')))
-      r.amount = String(Math.max(...amounts))
+      const amounts = sarMatches.map(m => ({ raw: m[1], val: parseFloat(fixNum(m[1])) }))
+      const largest = amounts.reduce((a,b) => b.val > a.val ? b : a)
+      r.amount = fixNum(largest.raw)
     }
   }
 
-  // ── Fee + Vat: "Fee + Vat: SAR 1.15" or "Fee+Vat SAR1.15" etc. ──────────
-  const feeM = flat.match(/Fee\s*[+&]\s*Vat[:\s]*(?:SAR\s*)?([\d,]+\.?\d*)/i)
-            || flat.match(/Fee\s*\+?\s*Tax[:\s]*(?:SAR\s*)?([\d,]+\.?\d*)/i)
-            || flat.match(/Bank\s+Fee[:\s]*(?:SAR\s*)?([\d,]+\.?\d*)/i)
-            || flat.match(/Charges?[:\s]*(?:SAR\s*)?([\d,]+\.?\d*)/i)
+  // ── Fee + Vat: "Fee + Vat: SAR 0.58" — always a small amount ────────────
+  const feeM = flat.match(/Fee\s*[+&]\s*(?:Vat|Tax)[:\s]*(?:SAR\s*)?([\dOo,]+\.[\dOo]*)/i)
+            || flat.match(/Bank\s+Fee[:\s]*(?:SAR\s*)?([\dOo,]+\.[\dOo]*)/i)
+            || flat.match(/Charges?[:\s]*(?:SAR\s*)?([\dOo,]+\.[\dOo]*)/i)
   if (feeM) {
-    r.bank_fee = feeM[1].replace(/,/g,'')
-    r.bank_fee_enabled = parseFloat(r.bank_fee) > 0
+    const feeVal = parseFloat(fixNum(feeM[1]))
+    // Sanity: fees are typically < SAR 50; don't accidentally grab the main amount
+    if (feeVal > 0 && feeVal < 50) {
+      r.bank_fee = String(feeVal)
+      r.bank_fee_enabled = true
+    }
   }
 
   // ── Date: DD/MM/YYYY (ANB ATM format) ────────────────────────────────────
