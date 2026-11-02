@@ -534,14 +534,14 @@ function loadTesseract() {
 // PAGE is a function so each step can apply its own bg color
 function getPage(t) {
   return {
-    maxWidth:480, margin:'0 auto', padding:'0 0 90px',
+    maxWidth:480, margin:'0 auto',
     fontFamily: MP.font,
     background: t.bg || MP.cream, minHeight:'100vh', boxSizing:'border-box',
   }
 }
 // Backward compat alias (some render paths use PAGE directly)
 const PAGE = {
-  maxWidth:480, margin:'0 auto', padding:'0 0 90px',
+  maxWidth:480, margin:'0 auto',
   fontFamily: MP.font,
   background: MP.cream, minHeight:'100vh', boxSizing:'border-box',
 }
@@ -561,8 +561,8 @@ function SSection({ title, accent, children, dark=false }) {
   return (
     <div style={{ padding:'16px 18px' }}>
       {title && (
-        <div style={{ fontSize:10, fontWeight:700, color:accent||labelColor, textTransform:'uppercase', letterSpacing:1, marginBottom:14, display:'flex', alignItems:'center', gap:6, fontFamily:MP.font }}>
-          <div style={{ width:22, height:2, background:accent||labelColor, borderRadius:2 }} />{title}
+        <div style={{ fontSize:11, fontWeight:800, color:accent||labelColor, textTransform:'uppercase', letterSpacing:1, marginBottom:14, display:'flex', alignItems:'center', gap:6, fontFamily:MP.font }}>
+          <div style={{ width:22, height:2.5, background:accent||labelColor, borderRadius:2 }} />{title}
         </div>
       )}
       {children}
@@ -571,7 +571,7 @@ function SSection({ title, accent, children, dark=false }) {
 }
 function FLabel({ children, accent, dark=false }) {
   return (
-    <div style={{ fontSize:10, fontWeight:600, color:accent||(dark?MP.textMutedDark:MP.textMutedLight), textTransform:'uppercase', letterSpacing:.9, marginBottom:6, fontFamily:MP.font }}>
+    <div style={{ fontSize:11, fontWeight:700, color:accent||(dark?MP.textMutedDark:'#5A5D6B'), textTransform:'uppercase', letterSpacing:.9, marginBottom:6, fontFamily:MP.font }}>
       {children}
     </div>
   )
@@ -689,7 +689,7 @@ function StepHeader({ stepId, t, emp, devMode, onBack, children }) {
       {s.num && <ProgressBar stepId={stepId} t={t} />}
       {/* Title area */}
       <div style={{ marginTop:14 }}>
-        <div style={{ fontSize:22, fontWeight:700, color:textClr, fontFamily:MP.font }}>
+        <div style={{ fontSize:24, fontWeight:800, color:textClr, fontFamily:MP.font }}>
           {s.icon} {s.label}
         </div>
         <div style={{ fontSize:12, color:mutedClr, marginTop:4, fontFamily:MP.font }}>
@@ -800,9 +800,9 @@ function NavBar({ onBack, onNext, nextLabel='Next →', nextColor, disabled, loa
   const disabledBg  = dark ? '#3A3D35' : '#E4E0D3'
   const disabledClr = dark ? '#5A5D55' : '#A7AAA0'
   return (
-    <div style={{ position:'fixed', bottom:0, left:0, right:0, background:navBg,
-      borderTop:`1px solid ${navBorder}`, padding:'12px 14px', boxSizing:'border-box',
-      display:'flex', gap:10, maxWidth:480, margin:'0 auto', zIndex:100 }}>
+    <div style={{ background:navBg,
+      borderTop:`1px solid ${navBorder}`, padding:'12px 14px 24px', boxSizing:'border-box',
+      display:'flex', gap:10 }}>
       {onBack && (
         <button onClick={onBack}
           style={{ padding:'14px 18px', borderRadius:14, border:`1.5px solid ${backBdr}`,
@@ -902,6 +902,17 @@ export default function FormDailyExpense() {
   const selCat     = visCats.find(c => c.key === category)
   const late       = lateStatus(invoiceDate)
   const t          = T[step] || T.summary // current theme
+
+  // ── Poppins font loader ────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!document.getElementById('poppins-font-de')) {
+      const link = document.createElement('link')
+      link.id   = 'poppins-font-de'
+      link.rel  = 'stylesheet'
+      link.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap'
+      document.head.appendChild(link)
+    }
+  }, [])
 
   // ── Dev mode loaders ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -1625,11 +1636,11 @@ export default function FormDailyExpense() {
               <input
                 type="number" inputMode="decimal" placeholder="0.00"
                 value={amount} onChange={e => setAmount(e.target.value)}
-                style={{ width:'100%', padding:'16px', borderRadius:14,
-                  border:`2.5px solid ${rawAmount>0?ts.color+'60':'#e8ecf0'}`,
-                  fontSize:32, fontWeight:900, textAlign:'center', color:ts.dark,
-                  outline:'none', boxSizing:'border-box', fontFamily:'monospace',
-                  background: rawAmount>0 ? `${ts.color}06` : '#fafbfc' }}
+                style={{ width:'100%', padding:'18px 16px', borderRadius:16,
+                  border:'none',
+                  fontSize:24, fontWeight:700, textAlign:'center', color:'#fff',
+                  outline:'none', boxSizing:'border-box', fontFamily:MP.font,
+                  background:'#843BF1' }}
               />
               {rawAmount > 0 && (
                 <div style={{ textAlign:'center', fontSize:12, color:'#64748b', marginTop:6 }}>
