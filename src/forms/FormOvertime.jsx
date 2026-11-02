@@ -164,6 +164,11 @@ export default function FormOvertime() {
   const [jobNo,            setJobNo]            = useState('')
   const [assignmentLoaded, setAssignmentLoaded] = useState(false)
   const [manualOverride,   setManualOverride]   = useState(false)
+  // Overlap check (populated when moving Step 3 → Step 4)
+  const [existingOTId,     setExistingOTId]     = useState(null)   // id of record to update
+  const [existingOTInfo,   setExistingOTInfo]   = useState(null)   // {from_time, to_time, request_number}
+  const [isUpdate,         setIsUpdate]         = useState(false)  // true = UPDATE, false = INSERT
+  const [checkingOT,       setCheckingOT]       = useState(false)  // loading state for check
   // Screen 3
   const [otType,   setOtType]   = useState('NORMAL')
   const [fromTime, setFromTime] = useState('')
@@ -307,7 +312,14 @@ export default function FormOvertime() {
     loadEmployeeAssignment(id)
   }
 
-  function goNext() {
+  // ── Time overlap helpers ────────────────────────────────────────────────────
+  function toMins(t) { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+  function overlaps(s1, e1, s2, e2) {
+    // Two ranges overlap if one starts before the other ends (strict — adjacent is NOT overlap)
+    return toMins(s1) < toMins(e2) && toMins(s2) < toMins(e1)
+  }
+
+  async function goNext() {
     setError('')
     if (step === 1) {
       if (!empId)   { setError(isAr ? 'يرجى اختيار الموظف أولاً' : 'Please select an employee first'); return }
@@ -319,6 +331,39 @@ export default function FormOvertime() {
     } else if (step === 3) {
       if (!fromTime || !toTime) { setError(isAr ? 'يرجى تحديد الأوقات' : 'Start and end time required'); return }
       if (totalHours <= 0)      { setError(isAr ? 'وقت النهاية يجب أن يكون بعد البداية' : 'End time must be after start time'); return }
+      // Check existing OT for this employee on this date before showing review
+      if (!previewMode) {
+        setCheckingOT(true)
+        try {
+          const { data: existing } = await supabase
+            .from('overtime_requests')
+            .select('id, from_time, to_time, request_number')
+            .eq('employee_id', empId)
+            .eq('ot_date', otDate)
+            .order('from_time')
+          if (existing && existing.length > 0) {
+            const hit = existing.find(r => overlaps(fromTime, toTime, r.from_time, r.to_time))
+            if (hit) {
+              setExistingOTId(hit.id)
+              setExistingOTInfo(hit)
+              setIsUpdate(true)
+            } else {
+              // No overlap — allow new entry alongside existing one(s)
+              setExistingOTId(null)
+              setExistingOTInfo(null)
+              setIsUpdate(false)
+            }
+          } else {
+            setExistingOTId(null)
+            setExistingOTInfo(null)
+            setIsUpdate(false)
+          }
+        } catch (_) {
+          setExistingOTId(null); setExistingOTInfo(null); setIsUpdate(false)
+        } finally {
+          setCheckingOT(false)
+        }
+      }
       setStep(4)
     } else if (step === 4) {
       submit()
@@ -330,19 +375,14 @@ export default function FormOvertime() {
   async function submit() {
     if (previewMode) { setReqNumber(PREVIEW.reqNumber); setStep(5); return }
     setLoading(true); setError('')
-    const { data: existing } = await supabase
-      .from('overtime_requests').select('id')
-      .eq('employee_id', empId).eq('ot_date', otDate).eq('project_id', projectId).maybeSingle()
-    if (existing) {
-      setError(isAr ? `تم تسجيل وقت إضافي لهذا الموظف مسبقاً بتاريخ ${otDate}` : `Overtime already recorded for ${empName} on ${otDate}.`)
-      setLoading(false); return
-    }
+
     let gLat = null, gLng = null
     try {
       const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 5000 }))
       gLat = pos.coords.latitude; gLng = pos.coords.longitude
     } catch {}
-    const { data, error: err } = await supabase.from('overtime_requests').insert({
+
+    const payload = {
       entity_id: empEntityId||null, ot_date: otDate, employee_id: empId,
       department: dept, contact_number: contact, project_id: projectId||null,
       project_number: projNum||null, job_number: jobNo||null,
@@ -350,10 +390,34 @@ export default function FormOvertime() {
       hours: totalHours, ot_rate: parseFloat(otRate.toFixed(4)),
       multiplier, total_amount: parseFloat(otAmount.toFixed(2)),
       gps_lat: gLat, gps_lng: gLng, remarks: remarks||null, status:'SUBMITTED',
-    }).select('request_number').single()
-    setLoading(false)
-    if (err) { setError(err.code === '23505' ? 'Duplicate: overtime already exists.' : err.message); return }
-    setReqNumber(data?.request_number || '—')
+    }
+
+    let reqNum = '—'
+
+    if (isUpdate && existingOTId) {
+      // UPDATE the overlapping record
+      const { data, error: err } = await supabase
+        .from('overtime_requests')
+        .update(payload)
+        .eq('id', existingOTId)
+        .select('request_number')
+        .single()
+      setLoading(false)
+      if (err) { setError(err.message); return }
+      reqNum = data?.request_number || existingOTInfo?.request_number || '—'
+    } else {
+      // INSERT new record
+      const { data, error: err } = await supabase
+        .from('overtime_requests')
+        .insert(payload)
+        .select('request_number')
+        .single()
+      setLoading(false)
+      if (err) { setError(err.code === '23505' ? (isAr ? 'يوجد تسجيل مكرر' : 'Duplicate entry detected.') : err.message); return }
+      reqNum = data?.request_number || '—'
+    }
+
+    setReqNumber(reqNum)
     setStep(5)
   }
 
@@ -361,6 +425,7 @@ export default function FormOvertime() {
     setStep(1)
     setOtType('NORMAL'); setFromTime(''); setToTime('')
     setRemarks(''); setError(''); setManualOverride(false)
+    setExistingOTId(null); setExistingOTInfo(null); setIsUpdate(false)
     setOtDate(new Date().toISOString().split('T')[0])
 
     // Re-apply the QR-authenticated employee immediately (don't blank the form)
@@ -476,11 +541,14 @@ export default function FormOvertime() {
               {isAr ? 'رجوع' : 'BACK'}
             </button>
           )}
-          <button onClick={goNext} type="button" disabled={loading}
+          <button onClick={goNext} type="button" disabled={loading || checkingOT}
             style={{ flex:1, height: TH.btnHeight, background: nextBg, color: nextColor,
               border:'none', borderRadius: TH.btnRadius, fontSize:14, fontWeight:800,
-              cursor: loading?'not-allowed':'pointer', opacity: loading?0.8:1, letterSpacing:'0.5px' }}>
-            {loading ? (isAr?'جاري الإرسال...':'Submitting...') : step===4 ? (isAr?'✓ إرسال':'✓ SUBMIT') : (isAr?'التالي':'NEXT')}
+              cursor: (loading||checkingOT)?'not-allowed':'pointer', opacity: (loading||checkingOT)?0.8:1, letterSpacing:'0.5px' }}>
+            {loading    ? (isAr?'جاري الإرسال...':'Submitting...')
+            : checkingOT ? (isAr?'جاري التحقق...':'Checking...')
+            : step===4 ? (isAr ? (isUpdate?'✓ تحديث':'✓ إرسال') : (isUpdate?'✓ UPDATE':'✓ SUBMIT'))
+            : (isAr?'التالي':'NEXT')}
           </button>
         </div>
       )}
@@ -726,6 +794,25 @@ export default function FormOvertime() {
   const screen4 = (
     <div style={{ paddingBottom:16 }}>
       {errBanner}
+
+      {/* Overlap warning — UPDATE mode */}
+      {isUpdate && existingOTInfo && (
+        <div style={{ margin:'8px 12px 0', background:'#fff3e0', border:'1.5px solid #ffb74d', borderRadius:12, padding:'12px 14px' }}>
+          <div style={{ fontSize:11, fontWeight:800, color:'#e65100', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:4 }}>
+            ⚠ {isAr ? 'تحديث سجل موجود' : 'Updating existing entry'}
+          </div>
+          <div style={{ fontSize:12, color:'#bf360c', lineHeight:1.5 }}>
+            {isAr
+              ? `لديك وقت إضافي مسجل لهذا اليوم: ${existingOTInfo.from_time}–${existingOTInfo.to_time}`
+              : `You already have OT on this date: ${existingOTInfo.from_time} – ${existingOTInfo.to_time}`}
+            {existingOTInfo.request_number ? ` (${existingOTInfo.request_number})` : ''}
+          </div>
+          <div style={{ fontSize:11, color:'#e65100', marginTop:5, fontWeight:600 }}>
+            {isAr ? 'الإرسال سيحدّث ذلك السجل بالأوقات الجديدة.' : 'Submitting will replace that record with the new times.'}
+          </div>
+        </div>
+      )}
+
       <div style={S.sectionTitle(false)}>{isAr?'تأكيد التفاصيل':'Confirm your details'}</div>
       <div style={S.card}>
         {reviewRows.map((r,i) => (
