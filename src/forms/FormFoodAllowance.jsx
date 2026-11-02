@@ -116,13 +116,17 @@ export default function FormFoodAllowance() {
   const [contact,     setContact]     = useState('')
   const [empFoodRate, setEmpFoodRate] = useState(null)
 
-  // Screen 2 — Project + date + location
-  const [allowDate, setAllowDate] = useState(new Date().toISOString().split('T')[0])
-  const [projectId, setProjectId] = useState('')
-  const [projNum,   setProjNum]   = useState('')
-  const [projName,  setProjName]  = useState('')
-  const [location,  setLocation]  = useState('')
-  const [jobNo,     setJobNo]     = useState('')
+  // Screen 2 — Project + date + location (auto-filled from site_assignment)
+  const [allowDate,         setAllowDate]         = useState(new Date().toISOString().split('T')[0])
+  const [projectId,         setProjectId]         = useState('')
+  const [projNum,           setProjNum]           = useState('')
+  const [projName,          setProjName]          = useState('')
+  const [location,          setLocation]          = useState('')
+  const [jobNo,             setJobNo]             = useState('')
+  const [siteMasterId,      setSiteMasterId]      = useState('')
+  const [assignmentId,      setAssignmentId]      = useState('')
+  const [assignmentLoading, setAssignmentLoading] = useState(false)
+  const [manualOverride,    setManualOverride]    = useState(false)
 
   // Screen 3 — Rate + optional team toggle
   const [hasTeam,          setHasTeam]          = useState(false)
@@ -195,6 +199,43 @@ export default function FormFoodAllowance() {
     setEmpFoodRate(e.fa_amount && e.fa_amount > 0 ? Number(e.fa_amount) : 30)
     setProjectId(''); setProjNum(''); setProjName('')
     setSiteWorkers([]); setSelectedWorkers([])
+    setManualOverride(false)
+    loadEmployeeAssignment(id)
+  }
+
+  async function loadEmployeeAssignment(eid) {
+    setAssignmentLoading(true)
+    setAssignmentId(''); setSiteMasterId(''); setLocation(''); setJobNo('')
+    try {
+      const { data } = await supabase
+        .from('site_assignments')
+        .select(`
+          id, project_id, site_master_id, is_remote,
+          project:project_id(id, project_number, project_name),
+          site:site_master_id(id, site_name, job_no, sm_id)
+        `)
+        .eq('employee_id', eid)
+        .eq('status', 'ACTIVE')
+        .order('assignment_date', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (data) {
+        setAssignmentId(data.id || '')
+        setProjectId(data.project_id || '')
+        setProjNum(data.project?.project_number || '')
+        setProjName(data.project?.project_name || '')
+        setSiteMasterId(data.site_master_id || '')
+        const sName = data.site?.site_name || ''
+        const jNo   = data.site?.job_no || data.site?.sm_id || ''
+        setLocation(sName)
+        setJobNo(jNo)
+      }
+    } catch (err) {
+      console.error('[FoodAllowance] loadEmployeeAssignment error:', err)
+    } finally {
+      setAssignmentLoading(false)
+    }
   }
 
   async function onProject(id, num, name) {
@@ -238,7 +279,8 @@ export default function FormFoodAllowance() {
       if (!contact) { setError(isAr ? 'رقم الجوال غير موجود' : 'Mobile number missing — update employee profile'); return }
       setStep(2)
     } else if (step === 2) {
-      if (!location) { setError(isAr ? 'يرجى إدخال اسم الموقع' : 'Please enter the site location'); return }
+      // location is required only in manual override mode (auto-fill always has a value)
+      if (manualOverride && !location) { setError(isAr ? 'يرجى إدخال اسم الموقع' : 'Please enter the site location'); return }
       setStep(3)
     } else if (step === 3) {
       if (hasTeam && selectedWorkers.length === 0) {
@@ -287,6 +329,8 @@ export default function FormFoodAllowance() {
       department:      dept,
       contact_number:  contact,
       project_id:      projectId || null,
+      site_master_id:  siteMasterId || null,
+      assignment_id:   assignmentId || null,
       job_no:          jobNo || null,
       location,
       is_remote:       true,
@@ -340,6 +384,7 @@ export default function FormFoodAllowance() {
     setEmpFoodRate(null); setSiteWorkers([]); setSelectedWorkers([])
     setRemarks(''); setError('')
     setAllowDate(new Date().toISOString().split('T')[0])
+    setSiteMasterId(''); setAssignmentId(''); setManualOverride(false)
   }
 
   // ─── Auth guard (QR token) ────────────────────────────────────────────────────
@@ -567,8 +612,10 @@ export default function FormFoodAllowance() {
   )
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // SCREEN 2 — Date + Location + Project
+  // SCREEN 2 — Date + auto-filled assignment info
   // ═══════════════════════════════════════════════════════════════════════════
+  const hasAssignment = !!(assignmentId || projNum || location)
+
   const screen2 = (
     <div style={{ paddingBottom:100 }}>
       {errBanner}
@@ -579,59 +626,126 @@ export default function FormFoodAllowance() {
         <input type="date" value={allowDate} onChange={e=>setAllowDate(e.target.value)} style={S.inp} />
       </div>
 
-      {/* Location */}
-      <div style={{ ...S.card, marginTop:10 }}>
-        <div style={S.lbl}>📍 {isAr?'اسم الموقع *':'Site / Location *'}</div>
-        <input value={location} onChange={e=>setLocation(e.target.value)}
-          placeholder={isAr?'مثال: برج الرياض — المنطقة ب':'e.g. Riyadh Tower Site — Zone B'}
-          style={S.inp} />
-        <div style={{ fontSize:10, color:FT.mutedLight, marginTop:6, fontFamily:FONT }}>
-          ⚠️ {isAr?'للمواقع النائية فقط':'Remote sites only'}
+      {/* Assignment loading spinner */}
+      {assignmentLoading && (
+        <div style={{ ...S.card, marginTop:10, textAlign:'center', padding:'20px', color:FT.mutedLight, fontSize:13, fontFamily:FONT }}>
+          ⏳ {isAr?'جاري تحميل بيانات الموقع…':'Loading site assignment…'}
         </div>
-      </div>
+      )}
 
-      {/* Project section header */}
-      <div style={{ padding:'16px 14px 8px', fontSize:10, color:FT.mutedLight, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.7px', fontFamily:FONT }}>
-        {isAr?'المشروع (اختياري)':'Project (optional)'}
-      </div>
-
-      {/* No project option */}
-      <div style={{ padding:'0 14px' }}>
-        <div onClick={() => { setProjectId(''); setProjNum(''); setProjName(''); setSiteWorkers([]); setSelectedWorkers([]) }}
-          style={{ background: !projectId ? FT.forest : '#fff', border:`1.5px solid ${!projectId ? FT.forest : FT.border}`, borderRadius:14, padding:'12px 14px', marginBottom:8, cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'all 0.15s' }}>
-          <div style={{ width:32, height:32, borderRadius:10, background: !projectId ? 'rgba(255,255,255,0.15)' : FT.tealLight, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, flexShrink:0 }}>
-            🚫
+      {/* ── Auto-filled assignment info ── */}
+      {!assignmentLoading && hasAssignment && !manualOverride && (
+        <>
+          <div style={{ padding:'14px 14px 6px', fontSize:10, color:FT.teal, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.7px', fontFamily:FONT, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <span>📋 {isAr?'بيانات الموقع المعين':'Assigned site details'}</span>
+            <span onClick={()=>setManualOverride(true)}
+              style={{ fontSize:10, color:FT.mutedLight, cursor:'pointer', textDecoration:'underline', fontWeight:400, letterSpacing:0 }}>
+              {isAr?'تغيير يدوي':'Change manually'}
+            </span>
           </div>
-          <span style={{ fontSize:13, fontWeight:600, color:!projectId?'#fff':FT.mutedLight, flex:1, fontFamily:FONT }}>
-            {isAr?'بدون مشروع':'No specific project'}
-          </span>
-          {!projectId && <span style={{ color:FT.yellow, fontWeight:900, fontSize:16 }}>✓</span>}
-        </div>
 
-        {deptProjects.map(p => {
-          const sel = projectId === p.id
-          return (
-            <div key={p.id}
-              onClick={() => onProject(p.id, p.project_number||'', p.project_name||'')}
-              style={{ background: sel ? FT.forest : '#fff', border:`1.5px solid ${sel ? FT.forest : FT.border}`, borderRadius:14, padding:'12px 14px', marginBottom:8, cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'all 0.15s' }}>
-              <div style={{ width:32, height:32, borderRadius:10, background: sel ? 'rgba(255,255,255,0.15)' : FT.tealLight, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, flexShrink:0 }}>
-                📍
-              </div>
+          {/* Project card */}
+          {projNum && (
+            <div style={{ margin:'0 14px 8px', background:FT.forest, borderRadius:14, padding:'14px 16px', display:'flex', alignItems:'center', gap:12 }}>
+              <div style={{ width:36, height:36, borderRadius:10, background:'rgba(255,255,255,0.12)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>📁</div>
               <div style={{ flex:1 }}>
-                <div style={{ fontSize:13, fontWeight:700, color:sel?'#fff':FT.text, fontFamily:FONT }}>[{p.project_number}] {p.project_name}</div>
-                <div style={{ fontSize:11, color:sel?'rgba(255,255,255,0.6)':FT.mutedLight, marginTop:2, fontFamily:FONT }}>{p.dept?.dept_name || empDeptCode}</div>
+                <div style={{ fontSize:9, color:FT.mutedDark, fontWeight:700, letterSpacing:'0.6px', textTransform:'uppercase', fontFamily:FONT }}>
+                  {isAr?'المشروع':'Project'}
+                </div>
+                <div style={{ fontSize:14, fontWeight:700, color:'#fff', fontFamily:FONT, marginTop:2 }}>
+                  {projNum}
+                </div>
+                {projName && <div style={{ fontSize:11, color:'rgba(255,255,255,0.65)', fontFamily:FONT, marginTop:1 }}>{projName}</div>}
               </div>
-              {sel && <span style={{ color:FT.yellow, fontWeight:900, fontSize:16 }}>✓</span>}
+              <span style={{ color:FT.yellow, fontSize:18 }}>✓</span>
             </div>
-          )
-        })}
-      </div>
+          )}
 
-      {/* Job No */}
-      <div style={{ ...S.card, marginTop:4 }}>
-        <div style={S.lbl}>🔢 {isAr?'رقم العمل (اختياري)':'Job # (optional)'}</div>
-        <input value={jobNo} onChange={e=>setJobNo(e.target.value)} placeholder="Optional" style={S.inp} />
-      </div>
+          {/* Site / Location card */}
+          <div style={{ margin:'0 14px 8px', background:'#fff', border:`1.5px solid ${FT.border}`, borderRadius:14, padding:'14px 16px', display:'flex', alignItems:'center', gap:12 }}>
+            <div style={{ width:36, height:36, borderRadius:10, background:FT.tealLight, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>📍</div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:9, color:FT.teal, fontWeight:700, letterSpacing:'0.6px', textTransform:'uppercase', fontFamily:FONT }}>
+                {isAr?'الموقع':'Site / Location'}
+              </div>
+              <div style={{ fontSize:14, fontWeight:700, color:FT.text, fontFamily:FONT, marginTop:2 }}>
+                {location || '—'}
+              </div>
+              {jobNo && <div style={{ fontSize:11, color:FT.mutedLight, fontFamily:FONT, marginTop:1 }}>Job # {jobNo}</div>}
+            </div>
+            <span style={{ fontSize:9, background:FT.teal, color:'#fff', borderRadius:6, padding:'3px 7px', fontWeight:700, fontFamily:FONT }}>
+              {isAr?'تلقائي':'AUTO'}
+            </span>
+          </div>
+        </>
+      )}
+
+      {/* ── No assignment found ── */}
+      {!assignmentLoading && !hasAssignment && !manualOverride && (
+        <div style={{ ...S.card, marginTop:10 }}>
+          <div style={{ textAlign:'center', padding:'10px 0 4px', color:FT.mutedLight, fontSize:13, fontFamily:FONT }}>
+            ⚠️ {isAr?'لا يوجد موقع معين لهذا الموظف':'No active site assignment found'}
+          </div>
+          <button onClick={()=>setManualOverride(true)}
+            style={{ width:'100%', marginTop:10, height:42, background:FT.forest, color:'#fff', border:'none', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:FONT }}>
+            {isAr?'إدخال يدوي':'Enter manually'}
+          </button>
+        </div>
+      )}
+
+      {/* ── Manual override fields ── */}
+      {(!assignmentLoading && manualOverride) && (
+        <>
+          <div style={{ padding:'14px 14px 6px', fontSize:10, color:FT.mutedLight, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.7px', fontFamily:FONT, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <span>✏️ {isAr?'إدخال يدوي':'Manual entry'}</span>
+            {hasAssignment && (
+              <span onClick={()=>setManualOverride(false)}
+                style={{ fontSize:10, color:FT.teal, cursor:'pointer', textDecoration:'underline', fontWeight:400, letterSpacing:0 }}>
+                {isAr?'استخدام المعين':'Use assigned'}
+              </span>
+            )}
+          </div>
+
+          <div style={{ ...S.card, marginTop:0 }}>
+            <div style={S.lbl}>📍 {isAr?'اسم الموقع *':'Site / Location *'}</div>
+            <input value={location} onChange={e=>setLocation(e.target.value)}
+              placeholder={isAr?'مثال: برج الرياض — المنطقة ب':'e.g. Riyadh Tower Site — Zone B'}
+              style={S.inp} />
+          </div>
+
+          <div style={{ padding:'10px 14px 6px', fontSize:10, color:FT.mutedLight, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.7px', fontFamily:FONT }}>
+            {isAr?'المشروع (اختياري)':'Project (optional)'}
+          </div>
+
+          <div style={{ padding:'0 14px' }}>
+            <div onClick={() => { setProjectId(''); setProjNum(''); setProjName(''); setSiteWorkers([]); setSelectedWorkers([]) }}
+              style={{ background: !projectId ? FT.forest : '#fff', border:`1.5px solid ${!projectId ? FT.forest : FT.border}`, borderRadius:14, padding:'12px 14px', marginBottom:8, cursor:'pointer', display:'flex', alignItems:'center', gap:10 }}>
+              <div style={{ width:32, height:32, borderRadius:10, background: !projectId ? 'rgba(255,255,255,0.15)' : FT.tealLight, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, flexShrink:0 }}>🚫</div>
+              <span style={{ fontSize:13, fontWeight:600, color:!projectId?'#fff':FT.mutedLight, flex:1, fontFamily:FONT }}>{isAr?'بدون مشروع':'No specific project'}</span>
+              {!projectId && <span style={{ color:FT.yellow, fontWeight:900, fontSize:16 }}>✓</span>}
+            </div>
+            {deptProjects.map(p => {
+              const sel = projectId === p.id
+              return (
+                <div key={p.id} onClick={() => onProject(p.id, p.project_number||'', p.project_name||'')}
+                  style={{ background: sel ? FT.forest : '#fff', border:`1.5px solid ${sel ? FT.forest : FT.border}`, borderRadius:14, padding:'12px 14px', marginBottom:8, cursor:'pointer', display:'flex', alignItems:'center', gap:10 }}>
+                  <div style={{ width:32, height:32, borderRadius:10, background: sel ? 'rgba(255,255,255,0.15)' : FT.tealLight, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, flexShrink:0 }}>📍</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:sel?'#fff':FT.text, fontFamily:FONT }}>[{p.project_number}] {p.project_name}</div>
+                    <div style={{ fontSize:11, color:sel?'rgba(255,255,255,0.6)':FT.mutedLight, marginTop:2, fontFamily:FONT }}>{p.dept?.dept_name || empDeptCode}</div>
+                  </div>
+                  {sel && <span style={{ color:FT.yellow, fontWeight:900, fontSize:16 }}>✓</span>}
+                </div>
+              )
+            })}
+          </div>
+
+          <div style={{ ...S.card, marginTop:4 }}>
+            <div style={S.lbl}>🔢 {isAr?'رقم العمل (اختياري)':'Job # (optional)'}</div>
+            <input value={jobNo} onChange={e=>setJobNo(e.target.value)} placeholder="Optional" style={S.inp} />
+          </div>
+        </>
+      )}
     </div>
   )
 
