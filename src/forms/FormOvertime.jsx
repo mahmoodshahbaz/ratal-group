@@ -553,7 +553,11 @@ export default function FormOvertime() {
               <div style={{ fontSize:11, fontWeight:700, color:'#2e7d32', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:2 }}>
                 AUTO — from site assignment
               </div>
-              <div style={{ fontSize:13, fontWeight:700, color:'#1b5e20' }}>[{projNum}] {projName}</div>
+              <div style={{ fontSize:13, fontWeight:700, color:'#1b5e20' }}>
+                {projNum || projName
+                  ? `[${projNum}] ${projName}`
+                  : jobNo ? `Job: ${jobNo}` : 'Site assigned'}
+              </div>
             </div>
             <span style={{ color:'#388e3c', fontSize:18 }}>✓</span>
           </div>
