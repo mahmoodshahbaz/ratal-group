@@ -201,19 +201,26 @@ export default function FormSiteCompletion() {
         photo_url: newlyChecked.includes(name) ? photoUrl : null,
         notes: newlyChecked.includes(name) ? (notes || null) : null,
       }))
-      const { error: logErr } = await supabase.from('site_status_logs').insert({
-        entity_id: auth.entityId, assignment_id: assignment.id,
-        employee_id: auth.employee.id, scope_type: scopeType,
-        milestones_newly_done: newlyChecked, all_milestones: allMilestones,
-        completion_pct: pct, photo_url: photoUrl,
-        notes: notes || null, submitted_at: now,
+
+      // Use SECURITY DEFINER RPC to bypass RLS (same pattern as all other field forms)
+      const { data: rpcResult, error: rpcErr } = await supabase.rpc('submit_site_status', {
+        payload: {
+          entity_id:             auth.entityId,
+          assignment_id:         assignment.id,
+          employee_id:           auth.employee.id,
+          scope_type:            scopeType,
+          milestones_newly_done: newlyChecked,
+          all_milestones:        allMilestones,
+          completed_milestones:  milestones.filter(m => checked[m]),
+          completion_pct:        pct,
+          photo_url:             photoUrl,
+          notes:                 notes || null,
+          submitted_at:          now,
+        }
       })
-      if (logErr) throw logErr
-      await supabase.from('site_assignments').update({
-        completion_pct: pct,
-        completed_milestones: milestones.filter(m => checked[m]),
-        last_status_at: now,
-      }).eq('id', assignment.id)
+      if (rpcErr) throw rpcErr
+      if (rpcResult?.ok === false) throw new Error(rpcResult.error || 'Submission failed')
+
       setSubmitted(true)
     } catch (err) { setError(err.message || 'Submission failed. Try again.') }
     setSubmitting(false)
@@ -517,6 +524,29 @@ export default function FormSiteCompletion() {
       />
 
       <div style={{ flex:1, overflowY:'auto', WebkitOverflowScrolling:'touch', padding:'16px 16px 8px' }}>
+
+        {/* Site info card — always visible so user knows which site they're updating */}
+        <div style={{ background: `${scopeColor}12`, border:`2px solid ${scopeColor}40`,
+          borderRadius:14, padding:'12px 16px', marginBottom:14,
+          display:'flex', alignItems:'center', gap:12 }}>
+          <div style={{ width:44, height:44, borderRadius:12, background:`${scopeColor}22`,
+            display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, flexShrink:0 }}>
+            {scopeIcon}
+          </div>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontSize:16, fontWeight:800, color:TH.text, lineHeight:1.2 }}>
+              {assignment.site_number}{assignment.site_name ? ` — ${assignment.site_name}` : ''}
+            </div>
+            {assignment.project?.project_name && (
+              <div style={{ fontSize:12, color:scopeColor, fontWeight:700, marginTop:2 }}>
+                📁 {assignment.project.project_name}
+              </div>
+            )}
+            <div style={{ fontSize:11, color:TH.muted, marginTop:2 }}>
+              {scopeType.replace(/_/g,' ')} · {pct}% complete
+            </div>
+          </div>
+        </div>
 
         {/* Newly ticked summary */}
         <div style={{ background:'#f0fdf4', border:'2px solid #86efac', borderRadius:14, padding:'12px 16px', marginBottom:14 }}>
