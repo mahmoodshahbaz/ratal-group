@@ -11,6 +11,7 @@
  */
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { useFieldAuth } from '../lib/useFieldAuth'
 import { THEMES } from './formTheme'
 import { OT_THEME as TH } from '../styles/mobileFormTheme'
 
@@ -135,8 +136,9 @@ const S = {
 
 export default function FormOvertime() {
 
+  const auth = useFieldAuth()
+
   const [step,       setStep]       = useState(1)
-  const [session,    setSession]    = useState(null)
   const [employees,  setEmployees]  = useState([])
   const [projects,   setProjects]   = useState([])
   const [deptMap,    setDeptMap]    = useState({})
@@ -169,6 +171,10 @@ export default function FormOvertime() {
   const [loading,   setLoading]   = useState(false)
   const [reqNumber, setReqNumber] = useState('')
   const [error,     setError]     = useState('')
+
+  // Roles that can submit on behalf of another employee
+  const CAN_SELECT_OTHER = ['STAFF_DH', 'STAFF_PM', 'STAFF_SUPERVISOR', 'FINANCE']
+  const canSelectOther = devMode || previewMode || CAN_SELECT_OTHER.includes(auth.role)
 
   // Calculations
   const totalHours = (() => {
@@ -206,23 +212,16 @@ export default function FormOvertime() {
     setRemarks(PREVIEW.remarks)
   }, [])
 
-  // Load data
+  // Load data once auth resolves
   useEffect(() => {
     if (previewMode) return
-    if (devMode) { loadData(null); return }
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) loadData(session)
-    })
-  }, [])
+    if (auth.loading) return
+    if (!auth.employee && !devMode) return
+    loadData()
+  }, [auth.loading])
 
-  async function loadData(session) {
-    let entityId = null
-    if (!devMode && session?.user?.id) {
-      const { data: prof } = await supabase
-        .from('user_profiles').select('entity_id').eq('id', session.user.id).single()
-      entityId = prof?.entity_id || null
-    }
+  async function loadData() {
+    const entityId = auth.entityId || null
     const empQ = devMode
       ? supabase.rpc('get_dev_employees')
       : supabase.from('employees')
@@ -234,9 +233,27 @@ export default function FormOvertime() {
     if (entityId && !devMode) projQ.eq('entity_id', entityId)
     const deptQ = supabase.from('departments').select('id,dept_name,dept_code').eq('is_active', true)
     const [{ data: emps }, { data: projs }, { data: depts }] = await Promise.all([empQ, projQ, deptQ])
-    setEmployees(emps || [])
+    const empList  = emps  || []
+    const deptDict = Object.fromEntries((depts || []).map(d => [d.id, d]))
+    setEmployees(empList)
     setProjects(projs || [])
-    setDeptMap(Object.fromEntries((depts || []).map(d => [d.id, d])))
+    setDeptMap(deptDict)
+
+    // Auto-select the QR-authenticated employee
+    const authEmp = auth.employee
+    if (authEmp && !empId) {
+      const match = empList.find(e => e.id === authEmp.id) || authEmp
+      const d     = deptDict[match.department_id] || {}
+      setEmpId(match.id)
+      setEmpName(match.full_name_en || '')
+      setEmpNum(match.employee_number || '')
+      setDept(d.dept_code || d.dept_name || '')
+      setEmpDeptCode(d.dept_code || d.dept_name || '')
+      setEmpDeptId(match.department_id || '')
+      setContact(match.phone || '')
+      setEmpEntityId(match.entity_id || '')
+      setEmpBasic(match.basic_salary || 0)
+    }
   }
 
   async function onEmp(id) {
@@ -317,13 +334,20 @@ export default function FormOvertime() {
     setOtDate(new Date().toISOString().split('T')[0])
   }
 
-  // ─── Login gate ─────────────────────────────────────────────────────────────
-  if (!session && !devMode && !previewMode) return (
+  // ─── Auth gate ──────────────────────────────────────────────────────────────
+  if (auth.loading && !devMode && !previewMode) return (
+    <div style={{ minHeight:'100vh', background: TH.pageBg, display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ textAlign:'center', padding:40 }}>
+        <div style={{ fontSize:13, color: TH.sub }}>Loading…</div>
+      </div>
+    </div>
+  )
+  if (!auth.employee && !devMode && !previewMode) return (
     <div style={{ minHeight:'100vh', background: TH.pageBg, display:'flex', alignItems:'center', justifyContent:'center' }}>
       <div style={{ textAlign:'center', padding:40 }}>
         <div style={{ fontSize:44, marginBottom:12 }}>🔐</div>
         <div style={{ fontSize:16, fontWeight:700, color: TH.text, marginBottom:8 }}>Sign in required</div>
-        <div style={{ fontSize:13, color: TH.sub }}>Open the Ratal Group app, sign in, then return to this link.</div>
+        <div style={{ fontSize:13, color: TH.sub }}>Scan your QR code to access this form.</div>
       </div>
     </div>
   )
@@ -347,7 +371,7 @@ export default function FormOvertime() {
         {isAr ? 'English' : 'العربية'}
       </button>
       <button
-        onClick={async () => { await supabase.auth.signOut(); window.location.reload() }}
+        onClick={() => { auth.logout(); window.location.reload() }}
         title="Sign out"
         style={{ background:'rgba(255,255,255,0.12)', color:'rgba(255,255,255,0.75)', border:'1px solid rgba(255,255,255,0.2)', borderRadius:6, padding:'3px 8px', fontSize:13, cursor:'pointer', lineHeight:1 }}>
         ⎋
@@ -421,13 +445,17 @@ export default function FormOvertime() {
       )}
       {errBanner}
 
-      <div style={S.sectionTitle(false)}>{isAr ? 'من أنت؟' : 'Select employee'}</div>
-      <div style={{ margin:'0 12px' }}>
-        <select value={empId} onChange={e => onEmp(e.target.value)} style={{ ...S.inp, fontSize:13 }}>
-          <option value="">-- {isAr?'اختر الموظف':'Choose from list'} --</option>
-          {employees.map(e => <option key={e.id} value={e.id}>{e.full_name_en} ({e.employee_number})</option>)}
-        </select>
-      </div>
+      {canSelectOther && (
+        <>
+          <div style={S.sectionTitle(false)}>{isAr ? 'من أنت؟' : 'Select employee'}</div>
+          <div style={{ margin:'0 12px' }}>
+            <select value={empId} onChange={e => onEmp(e.target.value)} style={{ ...S.inp, fontSize:13 }}>
+              <option value="">-- {isAr?'اختر الموظف':'Choose from list'} --</option>
+              {employees.map(e => <option key={e.id} value={e.id}>{e.full_name_en} ({e.employee_number})</option>)}
+            </select>
+          </div>
+        </>
+      )}
 
       {empId && (
         <>
