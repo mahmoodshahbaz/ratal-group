@@ -60,10 +60,12 @@ function statusLabel(pct) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function SiteCompletion({ entityId }) {
-  const [assignments, setAssignments] = useState([])
-  const [logs,        setLogs]        = useState([])
-  const [empMap,      setEmpMap]      = useState({})
-  const [loading,     setLoading]     = useState(true)
+  const [assignments,    setAssignments]    = useState([])
+  const [logs,           setLogs]           = useState([])
+  const [empMap,         setEmpMap]         = useState({})
+  const [siteMasterMap,  setSiteMasterMap]  = useState({})
+  const [deptMap,        setDeptMap]        = useState({})
+  const [loading,        setLoading]        = useState(true)
 
   // Filters
   const [filterScope,  setFilterScope]  = useState('')
@@ -81,11 +83,11 @@ export default function SiteCompletion({ entityId }) {
 
   async function load() {
     setLoading(true)
-    const [{ data: asgn }, { data: logsData }, { data: emps }] = await Promise.all([
+    const [{ data: asgn }, { data: logsData }, { data: emps }, { data: masters }, { data: depts }] = await Promise.all([
       supabase.from('site_assignments')
-        .select('id,site_number,site_name,scope_type,employee_id,completion_pct,completed_milestones,last_status_at,is_active,project_id')
+        .select('id,site_master_id,department_id,scope_type,employee_id,completion_pct,completed_milestones,last_status_at,is_active,project_id')
         .eq('entity_id', entityId)
-        .order('site_number'),
+        .order('id'),
       supabase.from('site_status_logs')
         .select('id,assignment_id,employee_id,scope_type,milestones_newly_done,completion_pct,photo_url,notes,submitted_at')
         .eq('entity_id', entityId)
@@ -93,10 +95,19 @@ export default function SiteCompletion({ entityId }) {
       supabase.from('employees')
         .select('id,full_name_en,department_id')
         .eq('entity_id', entityId),
+      supabase.from('site_masters')
+        .select('id,sm_id,job_no,site_name,dept_id')
+        .eq('entity_id', entityId),
+      supabase.from('departments')
+        .select('id,name')
+        .eq('entity_id', entityId),
     ])
-    const em = {}
-    emps?.forEach(e => { em[e.id] = e })
+    const em = {}; emps?.forEach(e => { em[e.id] = e })
+    const sm = {}; masters?.forEach(m => { sm[m.id] = m })
+    const dm = {}; depts?.forEach(d => { dm[d.id] = d })
     setEmpMap(em)
+    setSiteMasterMap(sm)
+    setDeptMap(dm)
     setAssignments(asgn || [])
     setLogs(logsData || [])
     setLoading(false)
@@ -106,11 +117,14 @@ export default function SiteCompletion({ entityId }) {
   const sites = useMemo(() => {
     const map = {}
     assignments.forEach(a => {
-      const key = a.site_number || a.id
+      const master  = siteMasterMap[a.site_master_id] || {}
+      const key     = a.site_master_id || a.id
+      const deptId  = master.dept_id || a.department_id
       if (!map[key]) map[key] = {
-        site_number: a.site_number,
-        site_name:   a.site_name,
+        site_number: master.sm_id || master.job_no || '—',
+        site_name:   master.site_name || '—',
         scope_type:  a.scope_type,
+        dept_name:   deptMap[deptId]?.name || '—',
         assignments: [],
         logs:        [],
       }
@@ -119,7 +133,7 @@ export default function SiteCompletion({ entityId }) {
 
     // Attach logs to sites via assignment_id (ascending for milestone tracking)
     const assignSiteMap = {}
-    assignments.forEach(a => { assignSiteMap[a.id] = a.site_number || a.id })
+    assignments.forEach(a => { assignSiteMap[a.id] = a.site_master_id || a.id })
     logs.forEach(log => {
       const key = assignSiteMap[log.assignment_id]
       if (key && map[key]) map[key].logs.push(log)
@@ -148,7 +162,7 @@ export default function SiteCompletion({ entityId }) {
 
       return { ...site, doneMilestones: allDone, totalMilestones: total, pct, startDate, lastUpdate, endDate, milestoneInfo }
     })
-  }, [assignments, logs])
+  }, [assignments, logs, siteMasterMap, deptMap])
 
   // ── Filter ─────────────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
@@ -227,12 +241,13 @@ export default function SiteCompletion({ entityId }) {
       <div style={{ background:'#fff', borderRadius:12, border:`1px solid ${L1}30`, overflow:'hidden', fontFamily:FF }}>
         {/* Sticky header */}
         <div style={{
-          display:'grid', gridTemplateColumns:'90px 1fr 110px 100px 100px 130px 100px',
+          display:'grid', gridTemplateColumns:'90px 1fr 130px 110px 100px 100px 130px 100px',
           background:MC, color:'#fff', fontSize:11, fontWeight:700,
           padding:'10px 16px', letterSpacing:0.6, position:'sticky', top:0, zIndex:2,
         }}>
           <div>SITE #</div>
           <div>SITE NAME</div>
+          <div>DEPARTMENT</div>
           <div># MILESTONES</div>
           <div>START DATE</div>
           <div>END DATE</div>
@@ -259,7 +274,7 @@ export default function SiteCompletion({ entityId }) {
               <div
                 onClick={() => toggle(key)}
                 style={{
-                  display:'grid', gridTemplateColumns:'90px 1fr 110px 100px 100px 130px 100px',
+                  display:'grid', gridTemplateColumns:'90px 1fr 130px 110px 100px 100px 130px 100px',
                   padding:'12px 16px', alignItems:'center', cursor:'pointer',
                   borderBottom:`1px solid ${L2}`,
                   background: open ? L2 : '#fff',
@@ -283,6 +298,9 @@ export default function SiteCompletion({ entityId }) {
                   </div>
                   <span style={{ fontSize:11, color:'#90a4ae', marginLeft:'auto' }}>{open ? '▲' : '▼'}</span>
                 </div>
+
+                {/* Department */}
+                <div style={{ fontSize:12, color:'#546e7a', fontWeight:600 }}>{site.dept_name || '—'}</div>
 
                 {/* # Milestones */}
                 <div style={{ fontSize:13, fontWeight:700, color:'#1a2e3d' }}>
