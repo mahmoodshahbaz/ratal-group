@@ -156,7 +156,11 @@ export default function FormFoodAllowance() {
       })
     : projects
 
-  // Load data once auth resolves
+  // Roles that can submit on behalf of another employee
+  const CAN_SELECT_OTHER = ['STAFF_DH', 'STAFF_PM', 'STAFF_SUPERVISOR', 'FINANCE']
+  const canSelectOther = devMode || CAN_SELECT_OTHER.includes(auth.role)
+
+  // Load data once auth resolves, then auto-select the logged-in employee
   useEffect(() => {
     if (auth.loading) return
     if (!auth.employee && !devMode) return
@@ -164,7 +168,6 @@ export default function FormFoodAllowance() {
   }, [auth.loading])
 
   async function loadData() {
-    // Entity comes from QR token auth (no user_profiles lookup needed)
     const entityId = auth.entityId || null
 
     const empQ = devMode
@@ -179,9 +182,31 @@ export default function FormFoodAllowance() {
     const deptQ = supabase.from('departments').select('id,dept_name,dept_code').eq('is_active', true)
     const [empRes, projRes, deptRes] = await Promise.all([empQ, projQ, deptQ])
     if (empRes.error) console.error('[FoodAllowance] employees error:', empRes.error)
-    setEmployees(empRes.data || [])
+
+    const empList  = empRes.data || []
+    const deptDict = Object.fromEntries((deptRes.data || []).map(d => [d.id, d]))
+    setEmployees(empList)
     setProjects(projRes.data || [])
-    setDeptMap(Object.fromEntries((deptRes.data || []).map(d => [d.id, d])))
+    setDeptMap(deptDict)
+
+    // Auto-select the QR-authenticated employee (skip Step 1 for non-managers)
+    const authEmp = auth.employee
+    if (authEmp && !empId) {
+      // Find the full employee record from the loaded list
+      const match = empList.find(e => e.id === authEmp.id) || authEmp
+      const d    = deptDict[match.department_id] || {}
+      const code = d.dept_code || d.dept_name || ''
+      setEmpId(match.id)
+      setEmpName(match.full_name_en || '')
+      setEmpNum(match.employee_number || '')
+      setDept(d.dept_code || d.dept_name || '')
+      setEmpDeptCode(code)
+      setContact(match.phone || '')
+      setEmpEntityId(match.entity_id || '')
+      setEmpFoodRate(match.fa_amount && match.fa_amount > 0 ? Number(match.fa_amount) : 30)
+      // Load their site assignment
+      loadEmployeeAssignment(match.id)
+    }
   }
 
   function onEmp(id) {
@@ -330,7 +355,6 @@ export default function FormFoodAllowance() {
       contact_number:  contact,
       project_id:      projectId || null,
       site_master_id:  siteMasterId || null,
-      assignment_id:   assignmentId || null,
       job_no:          jobNo || null,
       location,
       is_remote:       true,
@@ -516,7 +540,7 @@ export default function FormFoodAllowance() {
   )
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // SCREEN 1 — Employee selection + details
+  // SCREEN 1 — Employee info (auto-filled from QR) or selector for DH/PM
   // ═══════════════════════════════════════════════════════════════════════════
   const screen1 = (
     <div style={{ paddingBottom:100 }}>
@@ -527,24 +551,22 @@ export default function FormFoodAllowance() {
       )}
       {errBanner}
 
-      {/* Dropdown */}
-      <div style={{ padding:'14px 14px 0' }}>
-        <div style={S.lbl}>
-          {isAr ? 'اختر الموظف' : 'Choose an employee'}
+      {/* DH/PM/FINANCE: show employee dropdown */}
+      {canSelectOther && (
+        <div style={{ padding:'14px 14px 0' }}>
+          <div style={S.lbl}>{isAr ? 'اختر الموظف' : 'Choose an employee'}</div>
+          <select value={empId} onChange={e => onEmp(e.target.value)}
+            style={{ ...S.inp, appearance:'none', WebkitAppearance:'none', backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235B7566' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`, backgroundRepeat:'no-repeat', backgroundPosition:'right 14px center', paddingRight:36 }}>
+            <option value="">-- {isAr?'اختر':'Choose'} --</option>
+            {employees.filter(e => e.employment_type !== 'OUTSOURCED').map(e =>
+              <option key={e.id} value={e.id}>{e.full_name_en} ({e.employee_number})</option>
+            )}
+          </select>
+          <div style={{ fontSize:10, color:FT.mutedLight, marginTop:5, paddingLeft:2, fontFamily:FONT }}>
+            {employees.filter(e=>e.employment_type!=='OUTSOURCED').length} {isAr ? 'موظف متاح' : 'employees available'}
+          </div>
         </div>
-        <select value={empId} onChange={e => onEmp(e.target.value)}
-          style={{ ...S.inp, appearance:'none', WebkitAppearance:'none', backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235B7566' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`, backgroundRepeat:'no-repeat', backgroundPosition:'right 14px center', paddingRight:36 }}>
-          <option value="">-- {isAr?'اختر':'Choose'} --</option>
-          {employees.filter(e => e.employment_type !== 'OUTSOURCED').map(e =>
-            <option key={e.id} value={e.id}>{e.full_name_en} ({e.employee_number})</option>
-          )}
-        </select>
-        <div style={{ fontSize:10, color: employees.length===0 ? FT.error : FT.mutedLight, marginTop:5, paddingLeft:2, fontFamily:FONT }}>
-          {employees.length === 0
-            ? '⚠ No employees loaded — check Supabase RLS or is_active flag'
-            : `${employees.filter(e=>e.employment_type!=='OUTSOURCED').length} ${isAr ? 'موظف متاح' : 'employees available'}`}
-        </div>
-      </div>
+      )}
 
       {/* Employee details card — shown after selection */}
       {empId && (
