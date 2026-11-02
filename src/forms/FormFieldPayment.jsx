@@ -1406,7 +1406,7 @@ const S = {
   inp:{
     padding:'12px 14px', border:'1.5px solid #e2e8f0', borderRadius:12,
     fontSize:15, outline:'none', width:'100%', boxSizing:'border-box',
-    fontFamily:'inherit', background:'#fff', minHeight:48,
+    fontFamily:'inherit', background:'#fff', color:'#1a2e3d', minHeight:48,
     WebkitAppearance:'none', appearance:'none',
     transition:'border-color 0.15s',
   },

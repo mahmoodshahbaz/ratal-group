@@ -17,7 +17,7 @@
 
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
-  color-scheme: light dark;
+  color-scheme: light;
   color: var(--text);
   background: var(--bg);
   font-synthesis: none;
@@ -52,6 +52,12 @@
 
 body {
   margin: 0;
+}
+
+/* Force light rendering on all form controls so dark-mode OS/browser
+   never applies white text on white inputs in the ACCSYS forms. */
+input, select, textarea, button {
+  color-scheme: light;
 }
 
 #root {

@@ -627,7 +627,7 @@ export default function FormExpenseClaim() {
               placeholder="Any context or explanations for your claim…"
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              style={{ width:'100%', padding:'11px 13px', borderRadius:10, border:'1.5px solid #dde3ec', fontSize:14, outline:'none', resize:'none', boxSizing:'border-box', fontFamily:'inherit' }}
+              style={{ width:'100%', padding:'11px 13px', borderRadius:10, border:'1.5px solid #dde3ec', fontSize:14, outline:'none', resize:'none', boxSizing:'border-box', fontFamily:'inherit', color:'#1a2e3d', background:'#fff' }}
             />
           </div>
         )}
