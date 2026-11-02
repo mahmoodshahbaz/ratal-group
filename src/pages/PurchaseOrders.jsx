@@ -1,5 +1,6 @@
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
+import FormShell from '../components/FormShell'
 import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
 const MC = GROUP_COLORS.Operations
 import React, { useState, useEffect, useRef } from 'react'
@@ -551,27 +552,27 @@ export default function PurchaseOrders({ entityId, entityCode, isAr }) {
         onStart={() => { setShowIpoBanner(false); setShowIpoForm(true) }}
         onStartAlt={() => { setShowIpoBanner(false); resetPdfImport(); setShowPdfImport(true) }}
         startAltLabel="Import from PDF"
-        chapterL1="#70A5A6"
-        chapterL2="#EAF3F2"
-        moduleColor={MC}
-        chapterLabel="Operations"
+        chapterName="Operations"
         formTitle={['Incoming', 'Purchase', 'Order']}
-        steps={['PO Details', 'Billing & Terms', 'Line Items']}
+        heading="Register a PO received from a Main Contractor"
+        description="Drives the AR billing pipeline — attach line items, billing mode and retention terms."
         icon="📥"
-        description="Register a Purchase Order received from a Main Contractor. Drives the AR billing pipeline."
+        iconLabel={'AR\nBilling'}
+        workflowSteps={['PO Details', 'Billing & Terms', 'Filed & Saved']}
+        steps={['PO Details', 'Billing & Terms', 'Line Items']}
       />
       <PageBanner
         isOpen={showOpoBanner}
         onClose={() => setShowOpoBanner(false)}
         onStart={() => { setShowOpoBanner(false); setShowOpoForm(true) }}
-        chapterL1="#70A5A6"
-        chapterL2="#EAF3F2"
-        moduleColor={MC}
-        chapterLabel="Operations"
+        chapterName="Operations"
         formTitle={['Outgoing', 'Purchase', 'Order']}
-        steps={['Header', 'Line Items', 'Approval']}
+        heading="Issue a PO to a Supplier or Sub-Contractor"
+        description="Raises an AP purchase order for goods and services. Auto-generates a formatted PO document on save."
         icon="📤"
-        description="Issue a Purchase Order to a Supplier or Sub-Contractor for goods and services."
+        iconLabel={'AP\nPayable'}
+        workflowSteps={['Dept & Project', 'Supplier & Terms', 'Filed & Saved']}
+        steps={['Dept & Project', 'Supplier & Terms', 'Line Items & Notes']}
       />
 
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18 }}>
@@ -904,41 +905,22 @@ export default function PurchaseOrders({ entityId, entityCode, isAr }) {
       {showIpoForm&&(()=>{
         const PRI=INC_PRI, BOX1=INC_BOX1, BOX2=INC_BOX2
         const STEPS=['PO Details','Billing & Terms','Line Items']
-        const STEP_DESC=['Contractor, PO reference, date, department and project.','Payment terms, currency, billing mode and retention %.','Add line items with job type, quantity and unit price.']
         return (
-          <div style={S.overlay} onClick={e=>{if(e.target===e.currentTarget)setShowIpoForm(false)}}>
-            <div style={{ background:'#70A5A6', borderRadius:18, padding:8, width:960, maxWidth:'calc(100vw - 24px)', boxShadow:'0 24px 80px rgba(0,0,0,0.35)' }}>
-              
-                <div style={{ background:'#EAF3F2', borderRadius:12, display:'flex', position:'relative', overflow:'hidden', minHeight:520 }}>
-                    <div style={{ position:'absolute', top:0, right:0, width:220, height:185, background:'#0079BC', borderRadius:'0 12px 0 90px', zIndex:1 }} />
-                    <div style={{ width:260, flexShrink:0, padding:'20px 20px 16px', display:'flex', flexDirection:'column', position:'relative', zIndex:2, fontFamily:PP }}>
-                      <div style={{ fontSize:9, fontWeight:800, color:'#53666F', letterSpacing:1.5, textTransform:'uppercase', marginBottom:4 }}>Ratal Advanced Technologies</div>
-                      <div style={{ fontSize:9, fontWeight:800, color:'#0079BC', letterSpacing:2, textTransform:'uppercase', marginBottom:6 }}>Operations</div>
-                      <div style={{ fontSize:22, fontWeight:900, color:'#172D37', lineHeight:1.1, marginBottom:6, fontFamily:PP }}>{STEPS[ipoStep-1]}</div>
-                      <div style={{ fontSize:11, color:'#53666F', lineHeight:1.5, marginBottom:8 }}>{STEP_DESC[ipoStep-1]}</div>
-                      <div style={{ fontSize:9, fontWeight:800, color:'#0079BC', letterSpacing:1, marginBottom:14 }}>STEP {ipoStep} OF {STEPS.length}</div>
-                      <div style={{ flex:1, display:'flex', flexDirection:'column', gap:1 }}>
-                        {STEPS.map((name,idx)=>{
-                          const sn=idx+1, isAct=ipoStep===sn, isDone=ipoStep>sn
-                          return (
-                            <div key={sn} onClick={()=>isDone&&setIpoStep(sn)} style={{ display:'flex', alignItems:'center', padding:'8px 0 8px 12px', cursor:isDone?'pointer':'default', borderLeft:isAct?'3px solid #0079BC':isDone?'3px solid rgba(0,121,188,0.35)':'3px solid rgba(0,0,0,0.08)' }}>
-                              <span style={{ fontSize:12, fontWeight:isAct?700:500, color:isAct?'#0d1f1a':isDone?'#4a7a6a':'#8aabba' }}>{name}</span>
-                              {isDone&&<span style={{ marginLeft:6, fontSize:10, color:'#4a7a6a' }}>✓</span>}
-                            </div>
-                          )
-                        })}
-                      </div>
-                      <div style={{ fontSize:10, color:'#8aabba', marginTop:8, fontFamily:PP }}>Register the received PO in Accounts Receivable</div>
-                    </div>
-                    <div style={{ flex:1, background:'#fff', borderRadius:10, margin:'56px 10px 10px 0', display:'flex', flexDirection:'column', overflow:'hidden', zIndex:3 }}>
-                      <div style={{ padding:'20px 24px 0', flexShrink:0 }}>
-                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
-                          <div style={{ fontSize:16, fontWeight:900, color:'#fff', marginBottom:10, fontFamily:PP }}>{STEPS[ipoStep-1]}</div>
-                          <button onClick={()=>setShowIpoForm(false)} style={{ background:'#f0f4f8', border:'none', color:'#8aabba', borderRadius:8, width:28, height:28, cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>✕</button>
-                        </div>
-                        <div style={{ height:1, background:'#e8edf5' }} />
-                      </div>
-                      <div style={{ flex:1, overflowY:'auto', padding:'16px 24px 14px', fontFamily:PP }}>
+        <FormShell
+          isOpen={showIpoForm}
+          onClose={() => setShowIpoForm(false)}
+          chapterName="Operations"
+          title={['Incoming', 'Purchase', 'Order']}
+          description="Register PO received from Main Contractor."
+          steps={STEPS}
+          currentStep={ipoStep}
+          onBack={ipoStep===1 ? ()=>setShowIpoForm(false) : ()=>setIpoStep(s=>s-1)}
+          backLabel={ipoStep===1 ? 'Cancel' : 'Back'}
+          onNext={ipoStep<STEPS.length ? ()=>setIpoStep(s=>s+1) : saveIpo}
+          nextLabel={ipoStep<STEPS.length ? 'Next' : (editIpo?'Update PO':'Save Incoming PO')}
+          nextDisabled={savingIpo && ipoStep===STEPS.length}
+        >
+        <div style={{ fontFamily: PP }}>
                       {ipoStep===1&&(
                         <>
                           {/* Row 1: Contractor + PO# — the primary identifiers */}
@@ -1063,69 +1045,30 @@ export default function PurchaseOrders({ entityId, entityCode, isAr }) {
                           <LineItemsEditor items={ipoItems} onChange={setIpoItems} accentColor={PRI} billingMode={ipoForm.billing_mode} />
                         </div>
                       )}
-                      </div>
-                      <div style={{ padding:'14px 24px', borderTop:'1px solid #f0f4f8', display:'flex', justifyContent:'space-between', alignItems:'center', background:'#fafbfd', flexShrink:0 }}>
-                        <button onClick={()=>ipoStep===1?setShowIpoForm(false):setIpoStep(s=>s-1)}
-                          style={{ background:'#747474', color:'#fff', border:'none', borderRadius:22, padding:'9px 24px', fontWeight:700, cursor:'pointer', fontFamily:PP }}>
-                          {ipoStep===1?'Cancel':'Back'}
-                        </button>
-                        {ipoStep<STEPS.length ? (
-                          <button onClick={()=>setIpoStep(s=>s+1)}
-                            style={{ ...S.btn(PRI), padding:'9px 26px' }}>
-                            Next
-                          </button>
-                        ) : (
-                          <button onClick={saveIpo} disabled={savingIpo}
-                            style={{ ...S.btn(PRI), padding:'9px 26px' }}>
-                            {savingIpo?'Saving…':editIpo?'Update PO':'Save Incoming PO'}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-            </div>
+        </div>
+        </FormShell>
         )
       })()}
 
       {showOpoForm&&(()=>{
         const PRI=OUT_PRI, BOX1=OUT_BOX1, BOX2=OUT_BOX2
         const STEPS=['Dept & Project','Supplier & Terms','Line Items & Notes']
-        const STEP_DESC=['Department, project, site and brief description of the purchase.','Choose the supplier or sub-contractor and set payment terms.','Add line items with job type, quantity and unit price. Add notes below.']
         return (
-          <div style={S.overlay} onClick={e=>{if(e.target===e.currentTarget)setShowOpoForm(false)}}>
-            <div style={{ background:'#70A5A6', borderRadius:18, padding:8, width:960, maxWidth:'calc(100vw - 24px)', boxShadow:'0 24px 80px rgba(0,0,0,0.35)' }}>
-              
-                <div style={{ background:'#EAF3F2', borderRadius:12, display:'flex', position:'relative', overflow:'hidden', minHeight:520 }}>
-                    <div style={{ position:'absolute', top:0, right:0, width:220, height:185, background:'#0079BC', borderRadius:'0 12px 0 90px', zIndex:1 }} />
-                    <div style={{ width:260, flexShrink:0, padding:'20px 20px 16px', display:'flex', flexDirection:'column', position:'relative', zIndex:2, fontFamily:PP }}>
-                      <div style={{ fontSize:9, fontWeight:800, color:'#53666F', letterSpacing:1.5, textTransform:'uppercase', marginBottom:4 }}>Ratal Advanced Technologies</div>
-                      <div style={{ fontSize:9, fontWeight:800, color:'#0079BC', letterSpacing:2, textTransform:'uppercase', marginBottom:6 }}>Operations</div>
-                      <div style={{ fontSize:22, fontWeight:900, color:'#172D37', lineHeight:1.1, marginBottom:6, fontFamily:PP }}>{STEPS[opoStep-1]}</div>
-                      <div style={{ fontSize:11, color:'#53666F', lineHeight:1.5, marginBottom:8 }}>{STEP_DESC[opoStep-1]}</div>
-                      <div style={{ fontSize:9, fontWeight:800, color:'#0079BC', letterSpacing:1, marginBottom:14 }}>STEP {opoStep} OF {STEPS.length}</div>
-                      <div style={{ flex:1, display:'flex', flexDirection:'column', gap:1 }}>
-                        {STEPS.map((name,idx)=>{
-                          const sn=idx+1, isAct=opoStep===sn, isDone=opoStep>sn
-                          return (
-                            <div key={sn} onClick={()=>isDone&&setOpoStep(sn)} style={{ display:'flex', alignItems:'center', padding:'8px 0 8px 12px', cursor:isDone?'pointer':'default', borderLeft:isAct?'3px solid #0079BC':isDone?'3px solid rgba(0,121,188,0.35)':'3px solid rgba(0,0,0,0.08)' }}>
-                              <span style={{ fontSize:12, fontWeight:isAct?700:500, color:isAct?'#0a1322':isDone?'#4a6a8a':'#8aabba' }}>{name}</span>
-                              {isDone&&<span style={{ marginLeft:6, fontSize:10, color:'#4a6a8a' }}>✓</span>}
-                            </div>
-                          )
-                        })}
-                      </div>
-                      <div style={{ fontSize:10, color:'#8aabba', marginTop:8, fontFamily:PP }}>Issue PO to Supplier / Sub-Contractor · AP</div>
-                    </div>
-                    <div style={{ flex:1, background:'#fff', borderRadius:10, margin:'56px 10px 10px 0', display:'flex', flexDirection:'column', overflow:'hidden', zIndex:3 }}>
-                      <div style={{ padding:'20px 24px 0', flexShrink:0 }}>
-                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
-                          <div style={{ fontSize:16, fontWeight:900, color:'#fff', marginBottom:10, fontFamily:PP }}>{STEPS[opoStep-1]}</div>
-                          <button onClick={()=>setShowOpoForm(false)} style={{ background:'#f0f4f8', border:'none', color:'#8aabba', borderRadius:8, width:28, height:28, cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>✕</button>
-                        </div>
-                        <div style={{ height:1, background:'#e8edf5' }} />
-                      </div>
-                      <div style={{ flex:1, overflowY:'auto', padding:'16px 24px 14px', fontFamily:PP }}>
+        <FormShell
+          isOpen={showOpoForm}
+          onClose={() => setShowOpoForm(false)}
+          chapterName="Operations"
+          title={['Outgoing', 'Purchase', 'Order']}
+          description="Issue a PO to a Supplier or Sub-Contractor."
+          steps={STEPS}
+          currentStep={opoStep}
+          onBack={opoStep===1 ? ()=>setShowOpoForm(false) : ()=>setOpoStep(s=>s-1)}
+          backLabel={opoStep===1 ? 'Cancel' : 'Back'}
+          onNext={opoStep<STEPS.length ? ()=>setOpoStep(s=>s+1) : saveOpo}
+          nextLabel={opoStep<STEPS.length ? 'Next' : (editOpo?'Update PO':'Submit Outgoing PO')}
+          nextDisabled={savingOpo && opoStep===STEPS.length}
+        >
+        <div style={{ fontFamily: PP }}>
                       {opoStep===1&&(
                         <>
                           {/* Brief Description + OPO# — per PDF spec, top of Step 1 */}
@@ -1236,28 +1179,8 @@ export default function PurchaseOrders({ entityId, entityCode, isAr }) {
                           </div>
                         </>
                       )}
-                      </div>
-                      <div style={{ padding:'14px 24px', borderTop:'1px solid #f0f4f8', display:'flex', justifyContent:'space-between', alignItems:'center', background:'#fafbfd', flexShrink:0 }}>
-                        <button onClick={()=>opoStep===1?setShowOpoForm(false):setOpoStep(s=>s-1)}
-                          style={{ background:'#747474', color:'#fff', border:'none', borderRadius:22, padding:'9px 24px', fontWeight:700, cursor:'pointer', fontFamily:PP }}>
-                          {opoStep===1?'Cancel':'Back'}
-                        </button>
-                        {opoStep<STEPS.length ? (
-                          <button onClick={()=>setOpoStep(s=>s+1)}
-                            style={{ ...S.btn(PRI), padding:'9px 26px' }}>
-                            Next
-                          </button>
-                        ) : (
-                          <button onClick={saveOpo} disabled={savingOpo}
-                            style={{ ...S.btn(PRI), padding:'9px 26px' }}>
-                            {savingOpo?'Saving…':editOpo?'Update PO':'Submit Outgoing PO'}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-            </div>
+        </div>
+        </FormShell>
         )
       })()}
 

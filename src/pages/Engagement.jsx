@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import FormShell from '../components/FormShell'
+import PageBanner from '../components/PageBanner'
+
+const L3 = '#795338'
 
 // Employee Engagement — Notice Board, Announcements, Birthdays, Work Anniversaries, Quick Links
 
@@ -8,12 +12,10 @@ const TODAY = new Date().toISOString().slice(0,10)
 const TODAY_MD = TODAY.slice(5) // MM-DD for birthday matching
 
 const S = {
-  card:  { background:'#fff', borderRadius:14, padding:'20px 22px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)', marginBottom:18 },
-  inp:   { width:'100%', padding:'8px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:13, outline:'none', boxSizing:'border-box', fontFamily:'inherit' },
-  btn:   (c='#5A32D4') => ({ background:c, color:'#fff', border:'none', borderRadius:8, padding:'9px 18px', fontSize:13, fontWeight:700, cursor:'pointer' }),
-  label: { display:'block', fontSize:11, color:'#6b7c93', fontWeight:700, marginBottom:4 },
-  overlay:{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' },
-  modal: { background:'#fff', borderRadius:16, padding:28, width:540, maxWidth:'96vw', maxHeight:'90vh', overflowY:'auto' },
+  card:  { background:'#fff', borderRadius:4, padding:'20px 22px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)', marginBottom:18 },
+  inp:   { width:'100%', padding:'8px 10px', borderRadius:4, border:'1px solid #dde3ec', fontSize:13, outline:'none', boxSizing:'border-box', fontFamily:'Poppins, sans-serif' },
+  btn:   (c=L3) => ({ background:c, color:'#fff', border:'none', borderRadius:4, padding:'9px 18px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'Poppins, sans-serif' }),
+  label: { display:'block', fontSize:11, color:'#6b7c93', fontWeight:700, marginBottom:4, fontFamily:'Poppins, sans-serif' },
 }
 
 const CATEGORIES = ['ANNOUNCEMENT','POLICY','REMINDER','CELEBRATION','TRAINING','GENERAL']
@@ -34,6 +36,8 @@ export default function Engagement({ entityId }) {
   const [form,     setForm]    = useState(EMPTY)
   const [saving,   setSaving]  = useState(false)
   const [catFilter,setCat]     = useState('')
+  const [showBanner,setShowBanner] = useState(false)
+  const [wizardStep,setWizardStep] = useState(1)
 
   useEffect(() => { if (entityId) load() }, [entityId])
 
@@ -49,8 +53,8 @@ export default function Engagement({ entityId }) {
     setLoading(false)
   }
 
-  function openNew()    { setEditing(null); setForm(EMPTY); setShowForm(true) }
-  function openEdit(n)  { setEditing(n); setForm({ title:n.title||'', body:n.body||'', category:n.category||'ANNOUNCEMENT', priority:n.priority||'MEDIUM', expires_at:n.expires_at||'', pinned:n.pinned||false }); setShowForm(true) }
+  function openNew()    { setEditing(null); setForm(EMPTY); setShowBanner(true) }
+  function openEdit(n)  { setEditing(n); setForm({ title:n.title||'', body:n.body||'', category:n.category||'ANNOUNCEMENT', priority:n.priority||'MEDIUM', expires_at:n.expires_at||'', pinned:n.pinned||false }); setWizardStep(1); setShowForm(true) }
 
   async function save() {
     if (!form.title.trim()) { alert('Title is required'); return }
@@ -61,7 +65,7 @@ export default function Engagement({ entityId }) {
       : await supabase.from('notices').insert(payload)
     setSaving(false)
     if (error) { alert(error.message); return }
-    setShowForm(false); load()
+    setShowForm(false); setShowBanner(false); setWizardStep(1); load()
   }
 
   async function deleteNotice(id) {
@@ -107,7 +111,7 @@ export default function Engagement({ entityId }) {
         <div>
           <div style={{ fontSize:12, color:'#64748b' }}>Notice board · Announcements · Celebrations · Company updates</div>
         </div>
-        <button style={S.btn()} onClick={openNew}>+ Post Notice</button>
+        <button style={S.btn(L3)} onClick={openNew}>+ Post Notice</button>
       </div>
 
       {/* Celebrations & Anniversaries */}
@@ -150,7 +154,7 @@ export default function Engagement({ entityId }) {
 
       {/* Category filter */}
       <div style={{ display:'flex', gap:8, marginBottom:16, overflowX:'auto', flexWrap:'nowrap', paddingBottom:2 }}>
-        <button onClick={()=>setCat('')} style={{ ...S.btn(catFilter===''?'#5A32D4':'#f0f4f8'), color:catFilter===''?'#fff':'#6b7c93', padding:'6px 14px', fontSize:11 }}>All</button>
+        <button onClick={()=>setCat('')} style={{ ...S.btn(catFilter===''?L3:'#f0f4f8'), color:catFilter===''?'#fff':'#6b7c93', padding:'6px 14px', fontSize:11 }}>All</button>
         {CATEGORIES.map(c=>(
           <button key={c} onClick={()=>setCat(c==='all'?'':c)} style={{ ...S.btn(catFilter===c?CAT_COLORS[c]:'#f0f4f8'), color:catFilter===c?'#fff':'#6b7c93', padding:'6px 14px', fontSize:11 }}>{c}</button>
         ))}
@@ -199,42 +203,84 @@ export default function Engagement({ entityId }) {
         </div>
       </div>
 
-      {/* FORM MODAL */}
-      {showForm && (
-        <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&setShowForm(false)}>
-          <div style={S.modal}>
-            <div style={{ fontWeight:800, fontSize:16, color:'#1a2e3d', marginBottom:18 }}>{editing?'Edit':'Post'} Notice</div>
-            <div style={{ marginBottom:14 }}><label style={S.label}>Title *</label>
-              <input style={S.inp} value={form.title} onChange={e=>f('title',e.target.value)} placeholder="Notice title" /></div>
+      {/* PAGE BANNER — new notice only */}
+      <PageBanner
+        isOpen={showBanner}
+        onClose={()=>setShowBanner(false)}
+        onStart={()=>{ setShowBanner(false); setWizardStep(1); setShowForm(true) }}
+        chapterName="HR"
+        formTitle={['Post','Notice','Board']}
+        heading="Notice Board"
+        iconLabel="📋"
+        workflowSteps={['Notice Details','Message & Settings']}
+        description="Post an announcement, policy update, or reminder for all team members."
+      />
+
+      {/* FORM SHELL — new + edit */}
+      <FormShell
+        isOpen={showForm}
+        onClose={()=>{ setShowForm(false); setWizardStep(1) }}
+        chapterName="HR"
+        title={editing ? ['Edit','Notice',''] : ['Post','Notice','Board']}
+        steps={['Notice Details','Message & Settings']}
+        currentStep={wizardStep}
+        onBack={()=>setWizardStep(s=>s-1)}
+        backLabel="Back"
+        onNext={wizardStep===1 ? ()=>{ if(!form.title.trim()){alert('Title is required');return}; setWizardStep(2) } : save}
+        nextLabel={wizardStep===1 ? 'Next →' : (saving ? 'Saving…' : (editing ? 'Update Notice' : 'Post Notice'))}
+        nextDisabled={saving}
+      >
+        {wizardStep===1 && (
+          <div>
+            <div style={{ marginBottom:14 }}>
+              <label style={S.label}>Title *</label>
+              <input style={S.inp} value={form.title} onChange={e=>f('title',e.target.value)} placeholder="Notice title" />
+            </div>
             <div style={{ display:'flex', gap:10, marginBottom:14 }}>
-              <div style={{ flex:1 }}><label style={S.label}>Category</label>
+              <div style={{ flex:1 }}>
+                <label style={S.label}>Category</label>
                 <select style={S.inp} value={form.category} onChange={e=>f('category',e.target.value)}>
                   {CATEGORIES.map(c=><option key={c}>{c}</option>)}
-                </select></div>
-              <div style={{ flex:1 }}><label style={S.label}>Priority</label>
+                </select>
+              </div>
+              <div style={{ flex:1 }}>
+                <label style={S.label}>Priority</label>
                 <select style={S.inp} value={form.priority} onChange={e=>f('priority',e.target.value)}>
                   <option value="HIGH">🔴 HIGH</option>
                   <option value="MEDIUM">🟡 MEDIUM</option>
                   <option value="LOW">🟢 LOW</option>
-                </select></div>
+                </select>
+              </div>
             </div>
-            <div style={{ marginBottom:14 }}><label style={S.label}>Body / Details</label>
-              <textarea style={{ ...S.inp, height:120, resize:'vertical' }} value={form.body} onChange={e=>f('body',e.target.value)} placeholder="Write the full notice here…" /></div>
-            <div style={{ display:'flex', gap:10, marginBottom:18, alignItems:'flex-end' }}>
-              <div style={{ flex:1 }}><label style={S.label}>Expires On (optional)</label>
-                <input type="date" style={S.inp} value={form.expires_at} onChange={e=>f('expires_at',e.target.value)} /></div>
-              <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:13, fontWeight:600, paddingBottom:10 }}>
+          </div>
+        )}
+        {wizardStep===2 && (
+          <div>
+            <div style={{ marginBottom:14 }}>
+              <label style={S.label}>Body / Details</label>
+              <textarea style={{ ...S.inp, height:120, resize:'vertical' }} value={form.body} onChange={e=>f('body',e.target.value)} placeholder="Write the full notice here…" />
+            </div>
+            <div style={{ display:'flex', gap:10, marginBottom:14, alignItems:'flex-end' }}>
+              <div style={{ flex:1 }}>
+                <label style={S.label}>Expires On (optional)</label>
+                <input type="date" style={S.inp} value={form.expires_at} onChange={e=>f('expires_at',e.target.value)} />
+              </div>
+              <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:13, fontWeight:600, paddingBottom:10, fontFamily:'Poppins, sans-serif' }}>
                 <input type="checkbox" checked={form.pinned} onChange={e=>f('pinned',e.target.checked)} />
                 📌 Pin to top
               </label>
             </div>
-            <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
-              <button style={S.btn('#aab2bd')} onClick={()=>setShowForm(false)}>Cancel</button>
-              <button style={S.btn()} onClick={save} disabled={saving}>{saving?'Saving…':'Post Notice'}</button>
-            </div>
+            {form.title && (
+              <div style={{ background:'#F7F2ED', borderRadius:4, padding:'12px 14px', fontSize:12, color:'#795338', borderLeft:'3px solid #BCA99A' }}>
+                <div style={{ fontWeight:700, marginBottom:4 }}>Preview</div>
+                <div><strong>{form.title}</strong> · {form.category} · {form.priority}</div>
+                {form.expires_at && <div style={{ marginTop:4 }}>Expires: {new Date(form.expires_at).toLocaleDateString('en-GB')}</div>}
+                {form.pinned && <div style={{ marginTop:4 }}>📌 Pinned</div>}
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        )}
+      </FormShell>
     </div>
   )
 }

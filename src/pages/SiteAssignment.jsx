@@ -13,11 +13,11 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import { GROUP_COLORS } from '../styles/appStyles'
+import { GROUP_COLORS, CHAPTER_PALETTES } from '../styles/appStyles'
 
-const PRI = GROUP_COLORS.Masters  // '#8C601B'
-const L1  = '#C8B48F'
-const L2  = '#FAF5E9'
+const PRI = GROUP_COLORS.Masters           // '#8C601B'
+const L1  = CHAPTER_PALETTES.Masters.L1   // '#C8B48F'
+const L2  = CHAPTER_PALETTES.Masters.L2   // '#FAF5E9'
 
 // ── Helpers ──────────────────────────────────────────────────────
 const TODAY = new Date().toISOString().split('T')[0]
@@ -70,6 +70,58 @@ const PERIOD_OPTS = [
   { v: 'WEEKLY',  l: '📆 Weekly'  },
   { v: 'MONTHLY', l: '🗓 Monthly' },
 ]
+
+// ── Employee category styling ─────────────────────────────────
+const CAT_STYLE = {
+  '01': { bg: '#e3f2fd', color: '#1565c0', border: '#1565c0', label: 'ACCSYS-LOCAL'  },
+  '02': { bg: '#f3e5f5', color: '#6a1b9a', border: '#6a1b9a', label: 'ACCSYS-EXPAT'  },
+  '03': { bg: '#fff3e0', color: '#e65100', border: '#e65100', label: 'OUTSOURCED'     },
+  '04': { bg: '#ffebee', color: '#c62828', border: '#c62828', label: 'CONTRACT'       },
+}
+// Derive category from employee_code PREFIX first (OUT- / CON-),
+// then employee_category numeric code, then employee_type string, as fallbacks.
+function deriveCategory(emp) {
+  // 1. Code prefix — definitive for OUT and CON employees
+  const code = (emp?.employee_code || emp?.employee_number || '').toUpperCase()
+  if (code.startsWith('OUT')) return '03'   // OUTSOURCED — always amber
+  if (code.startsWith('CON')) return '04'   // CONTRACT   — always red
+
+  // 2. employee_category numeric code (new records via Employees wizard)
+  const cat = emp?.employee_category
+  if (cat === '01') return '01'
+  if (cat === '02') return '02'
+  if (cat === '03') return '03'
+  if (cat === '04') return '04'
+
+  // 3. employee_category may still hold a legacy string value
+  if (cat) {
+    const c = cat.toUpperCase()
+    if (c.includes('EXPAT'))      return '02'
+    if (c.includes('LOCAL'))      return '01'
+    if (c.includes('OUTSOURCED')) return '03'
+    if (c.includes('CONTRACT'))   return '04'
+  }
+
+  // 4. Fall back to employee_type string field (always present on ACC employees)
+  const type = (emp?.employee_type || '').toUpperCase()
+  if (type.includes('EXPAT'))      return '02'
+  if (type.includes('LOCAL'))      return '01'
+  if (type.includes('OUTSOURCED')) return '03'
+  if (type.includes('CONTRACT'))   return '04'
+
+  return '01'  // ultimate fallback
+}
+function getCatStyle(cat) {
+  return CAT_STYLE[cat] || { bg: '#f5f5f5', color: '#90a4ae', border: '#90a4ae', label: '?' }
+}
+function getIdleAlert(lastDate) {
+  if (!lastDate) return null
+  const days = Math.floor((new Date(TODAY) - new Date(lastDate)) / (1000 * 60 * 60 * 24))
+  if (days < 4)  return null
+  if (days < 8)  return { days, label: `⚠ ${days}d idle`,   bg: '#fff8e1', color: '#f57c00' }
+  if (days < 15) return { days, label: `🚨 ${days}d idle`,  bg: '#ffebee', color: '#c62828' }
+  return          { days, label: `💀 ${days}d — release?`, bg: '#b71c1c', color: '#fff'    }
+}
 
 // ─────────────────────────────────────────────────────────────────
 export default function SiteAssignment({ entityId }) {
@@ -134,6 +186,9 @@ export default function SiteAssignment({ entityId }) {
   const [empRows,    setEmpRows]    = useState([])
   const [subconRows, setSubconRows] = useState([])
 
+  // ── Idle tracking for OUT/CON employees ──────────────────────
+  const [idleMap, setIdleMap] = useState({}) // employee_id → last assigned date
+
   // ── History ───────────────────────────────────────────────────
   const [historyRows,    setHistoryRows]    = useState([])
   const [historyLoading, setHistoryLoading] = useState(false)
@@ -155,7 +210,7 @@ export default function SiteAssignment({ entityId }) {
           .eq('entity_id', entityId).order('project_number'),
         supabase.from('site_masters').select('id,sm_id,job_no,site_name,project_id,dept_id,status')
           .eq('entity_id', entityId).neq('status', 'CLOSED').neq('status', 'HANDED_OVER').order('sm_id'),
-        supabase.from('employees').select('id,full_name_en,employee_number,employee_code,department_id')
+        supabase.from('employees').select('id,full_name_en,employee_number,employee_code,department_id,employee_category,employee_type')
           .eq('entity_id', entityId).eq('is_active', true).order('full_name_en'),
         supabase.from('contractors').select('id,contractor_name,contractor_code,vendor_type')
           .eq('entity_id', entityId).eq('status', 'ACTIVE')
@@ -170,6 +225,31 @@ export default function SiteAssignment({ entityId }) {
     }
     loadMasters()
   }, [entityId])
+
+  // ── Load last assignment date for OUT/CON employees ───────────
+  useEffect(() => {
+    if (!entityId || !employees.length) return
+    const outConIds = employees
+      .filter(e => {
+        const code = (e.employee_code || e.employee_number || '').toUpperCase()
+        return code.startsWith('OUT') || code.startsWith('CON')
+      })
+      .map(e => e.id)
+    if (!outConIds.length) return
+    supabase
+      .from('site_assignments')
+      .select('employee_id,assignment_date')
+      .in('employee_id', outConIds)
+      .eq('status', 'ACTIVE')
+      .order('assignment_date', { ascending: false })
+      .then(({ data }) => {
+        const map = {}
+        ;(data || []).forEach(a => {
+          if (!map[a.employee_id]) map[a.employee_id] = a.assignment_date
+        })
+        setIdleMap(map)
+      })
+  }, [entityId, employees])
 
   // ── Load approved POs (once per entity) ──────────────────────
   useEffect(() => {
@@ -588,6 +668,20 @@ export default function SiteAssignment({ entityId }) {
             <div key={i} style={{ fontSize: 10, color: '#fff', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'left' }}>{h}</div>
           ))}
         </div>}
+
+        {/* Category legend strip — employee tab only */}
+        {activeTab === 'EMPLOYEE' && (
+          <div style={{ display: 'flex', gap: 10, padding: '5px 14px', background: '#f9f6f0', borderBottom: '1px solid #ede8dc', flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ fontSize: 9, fontWeight: 800, color: '#9e8c6a', textTransform: 'uppercase', letterSpacing: 0.5 }}>Category:</span>
+            {Object.entries(CAT_STYLE).map(([, st]) => (
+              <span key={st.label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ width: 8, height: 18, background: st.border, borderRadius: 2, display: 'inline-block' }} />
+                <span style={{ background: st.bg, color: st.color, borderRadius: 4, padding: '1px 6px', fontSize: 9, fontWeight: 800 }}>{st.label}</span>
+              </span>
+            ))}
+            <span style={{ marginLeft: 8, fontSize: 9, color: '#b0a080' }}>· ⚠ 4-7d idle &nbsp;· 🚨 8-14d idle &nbsp;· 💀 15d+ — recommend release (OUT/CON only)</span>
+          </div>
+        )}
       </div>
 
       {/* ══ ROSTER ══════════════════════════════════════════════ */}
@@ -678,14 +772,19 @@ export default function SiteAssignment({ entityId }) {
           empRows.length === 0
             ? <EmptyState msg={selectedDept ? 'No employees in this department.' : 'Select a department above to filter the roster.'} />
             : empRows.map(row => {
-              const emp   = employees.find(e => e.id === row.id)
-              const sites = sitesForProject(row.projectId)
+              const emp        = employees.find(e => e.id === row.id)
+              const sites      = sitesForProject(row.projectId)
               const isAssigned = !!row.existingId
+              const cat        = deriveCategory(emp)
+              const catSt      = getCatStyle(cat)
+              const isOutCon   = cat === '03' || cat === '04'
+              const idleAlert  = isOutCon ? getIdleAlert(idleMap[row.id] || null) : null
               return (
                 <div key={row.id} style={{
                   display: 'grid', gridTemplateColumns: GRID_EMP, gap: 8,
                   padding: '8px 14px', borderBottom: '1px solid #f0f4f8', alignItems: 'center',
                   background: isAssigned ? `${PRI}0d` : 'white',
+                  borderLeft: `4px solid ${catSt.border}`,
                   transition: 'background 0.1s',
                 }}>
 
@@ -696,8 +795,22 @@ export default function SiteAssignment({ entityId }) {
 
                   {/* Name + per-row allowances */}
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#1a2540', textAlign: 'left' }}>{emp?.full_name_en}</div>
-                    <div style={{ fontSize: 10, color: '#aab2bd', textAlign: 'left', marginBottom: 2 }}>{emp?.employee_number || emp?.employee_code || ''}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#1a2540' }}>{emp?.full_name_en}</div>
+                      {cat && (
+                        <span style={{ background: catSt.bg, color: catSt.color, borderRadius: 5, padding: '1px 6px', fontSize: 9, fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                          {catSt.label}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ fontSize: 10, color: '#aab2bd', marginBottom: 2 }}>{emp?.employee_number || emp?.employee_code || ''}</div>
+                      {idleAlert && (
+                        <span style={{ background: idleAlert.bg, color: idleAlert.color, borderRadius: 5, padding: '1px 6px', fontSize: 9, fontWeight: 800 }}>
+                          {idleAlert.label}
+                        </span>
+                      )}
+                    </div>
                     {/* Per-person FA / OT / Oth mini-toggles */}
                     <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                       {[

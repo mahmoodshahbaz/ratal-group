@@ -1,5 +1,6 @@
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
+import FormShell from '../components/FormShell'
 import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
 const MC = GROUP_COLORS.Masters
 import { useState, useEffect } from 'react'
@@ -76,6 +77,7 @@ export default function Contractors({ entityId }) {
   // ── Main form fields ─────────────────────────────────────────
   const [code,         setCode]         = useState('')
   const [name,         setName]         = useState('')
+  const [nameAr,       setNameAr]       = useState('')
   const [vendorType,   setVendorType]   = useState('CONTRACTOR')
   const [contact,      setContact]      = useState('')
   const [email,        setEmail]        = useState('')
@@ -86,6 +88,7 @@ export default function Contractors({ entityId }) {
   const [status,       setStatus]       = useState('ACTIVE')
   const [crNumber,     setCrNumber]     = useState('')
   const [nationalId,   setNationalId]   = useState('')
+  const [clientRegNo,  setClientRegNo]  = useState('')
   const [vatRegStatus, setVatRegStatus] = useState('UNKNOWN')
   const [specs,        setSpecs]        = useState([])
 
@@ -142,9 +145,9 @@ export default function Contractors({ entityId }) {
   // ── Form helpers ─────────────────────────────────────────────
   function resetForm() {
     setStep(1)
-    setCode(''); setName(''); setVendorType('CONTRACTOR'); setContact('')
+    setCode(''); setName(''); setNameAr(''); setVendorType('CONTRACTOR'); setContact('')
     setEmail(''); setPhone(''); setAddress(''); setVatNo(''); setTerms('30')
-    setStatus('ACTIVE'); setCrNumber(''); setNationalId('')
+    setStatus('ACTIVE'); setCrNumber(''); setNationalId(''); setClientRegNo('')
     setVatRegStatus('UNKNOWN'); setSpecs([])
     setCurrency('SAR'); setPortalRequired(false); setPortalName(''); setBillingNotes('')
     setBankAccounts([]); setShowBankForm(false); setEditingBank(null); setBankForm(EMPTY_BANK)
@@ -161,6 +164,7 @@ export default function Contractors({ entityId }) {
     setStep(1)
     setCode(c.contractor_code||'')
     setName(c.contractor_name||'')
+    setNameAr(c.contractor_name_ar||'')
     setVendorType(c.vendor_type||'CONTRACTOR')
     setContact(c.contact_person||'')
     setEmail(c.contact_email||'')
@@ -171,6 +175,7 @@ export default function Contractors({ entityId }) {
     setStatus(c.status||'ACTIVE')
     setCrNumber(c.cr_number||'')
     setNationalId(c.national_id||'')
+    setClientRegNo(c.client_reg_number||'')
     setVatRegStatus(c.vat_reg_status||'UNKNOWN')
     setSpecs(c.specializations||[])
     setCurrency(c.currency||'SAR')
@@ -204,8 +209,9 @@ export default function Contractors({ entityId }) {
     const payload = {
       entity_id:       entityId,
       contractor_code: finalCode || null,
-      contractor_name: name.trim(),
-      company_name:    name.trim(),
+      contractor_name:    name.trim(),
+      contractor_name_ar: nameAr.trim() || null,
+      company_name:       name.trim(),
       vendor_type:     vendorType,
       contact_person:  contact || null,
       contact_email:   email   || null,
@@ -214,9 +220,10 @@ export default function Contractors({ entityId }) {
       vat_number:      vatNo   || null,
       payment_terms:   parseInt(terms) || 30,
       status,
-      cr_number:       crNumber   || null,
-      national_id:     nationalId || null,
-      vat_reg_status:  vatRegStatus,
+      cr_number:         crNumber     || null,
+      national_id:       nationalId   || null,
+      client_reg_number: clientRegNo  || null,
+      vat_reg_status:    vatRegStatus,
       specializations: specs,
       currency:        currency || 'SAR',
       portal_required: portalRequired,
@@ -227,14 +234,16 @@ export default function Contractors({ entityId }) {
       const { error } = await supabase.from('contractors').update(payload).eq('id', editing.id)
       setSaving(false)
       if (error) { alert(error.message); return }
-      setOpen(false); resetForm(); setEditing(null); load()
+      load()
+      setEditing(prev => ({ ...prev, ...payload }))
+      setStep(4)
     } else {
       const { data, error } = await supabase.from('contractors').insert(payload).select().single()
       setSaving(false)
       if (error) { alert(error.message); return }
       load()
-      // Re-open in edit mode so user can immediately add bank accounts
-      openEdit(data)
+      setEditing(data)
+      setStep(4)
     }
   }
 
@@ -414,6 +423,9 @@ export default function Contractors({ entityId }) {
                     <div>
                       <div style={{ fontSize:10, color:'#9e9e9e', fontWeight:700, marginBottom:6, letterSpacing:0.5 }}>PARTY IDENTITY</div>
                       <div style={{ fontSize:14, fontWeight:800, color:'#1a2e3d', marginBottom:2 }}>{c.contractor_name}</div>
+                      {c.contractor_name_ar && (
+                        <div style={{ fontSize:13, color:'#5a6a7a', marginBottom:4, direction:'rtl', textAlign:'right', fontFamily:'Tahoma, Arial, sans-serif', background:'#f5f0e8', borderRadius:5, padding:'3px 8px', display:'inline-block' }}>{c.contractor_name_ar}</div>
+                      )}
                       {c.company_name && c.company_name !== c.contractor_name && (
                         <div style={{ fontSize:12, color:'#6b7c93', marginBottom:4 }}>{c.company_name}</div>
                       )}
@@ -482,6 +494,7 @@ export default function Contractors({ entityId }) {
                       linkedId={c.id}
                       linkedName={c.contractor_name}
                       accentColor="#5A32D4"
+                      chapterName="Masters"
                     />
                   </div>
                 </div>
@@ -501,14 +514,14 @@ export default function Contractors({ entityId }) {
         isOpen={showBanner}
         onClose={() => setShowBanner(false)}
         onStart={() => { setShowBanner(false); setStep(1); setOpen(true) }}
-        chapterL1="#C8B48F"
-        chapterL2="#FAF5E9"
-        moduleColor="#8C601B"
-        chapterLabel="Masters"
+        chapterName="Masters"
         formTitle={['New', 'Party', 'Creation']}
-        steps={['Party Identity', 'VAT & Billing', 'Contact & Terms']}
-        icon="🏢"
+        heading="Register contractors, suppliers and vendors"
         description="Register a contractor, supplier, vendor or sub-contractor. Party code is automatically assigned."
+        icon="🏢"
+        iconLabel={'Party\nManagement'}
+        workflowSteps={['Party Identity', 'VAT & Billing', 'Contact & Terms', 'Documents']}
+        steps={['Party Identity', 'VAT & Billing', 'Contact & Terms', 'Documents']}
       />
 
       {/* ══════════════════════════════════════════════════════════
@@ -517,65 +530,27 @@ export default function Contractors({ entityId }) {
       {open && (() => {
         const PP  = "'Poppins','Inter',sans-serif"
         const PRI = '#8C601B'   // Masters L3 accent
-        const L1  = '#C8B48F'   // Masters outer frame
-        const L2  = '#FAF5E9'   // Masters inner background
-        const STEP_NAMES = ['','Party Identity','VAT & Billing','Contact & Terms']
-        const STEP_DESC  = ['','Type, name, code & registration numbers','VAT status, compliance & billing settings','Contact details, payment terms & address']
         const inp  = (ex={}) => ({ width:'100%', padding:'9px 14px', borderRadius:20, border:`1px solid ${PRI}44`, fontSize:13, color:'#172D37', background:'#fdfaf6', outline:'none', fontFamily:PP, boxSizing:'border-box', ...ex })
         const sec  = { fontSize:9, fontWeight:800, color:PRI, letterSpacing:1.5, textTransform:'uppercase', marginBottom:8, marginTop:12, paddingBottom:4, borderBottom:`1.5px solid ${PRI}33` }
         const lbl  = { display:'block', fontSize:11, fontWeight:600, color:'#53666F', marginBottom:4 }
         const row  = { display:'flex', gap:12, marginBottom:12, flexWrap:'wrap' }
         const col  = { flex:1, minWidth:120 }
         return (
-        <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&(setOpen(false),resetForm())}>
-          <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap');`}</style>
-          <div style={{ width:860, maxWidth:'calc(100vw - 24px)', borderRadius:18, overflow:'hidden', boxShadow:'0 28px 64px rgba(0,0,0,0.32)', fontFamily:PP, background:L1, padding:8 }}>
-
-
-            {/* ── STEPS 1–3 — 6-layer layout ── */}
-            {step>=1 && (
-              <div style={{ background:L2, borderRadius:12, display:'flex', minHeight:560, position:'relative', overflow:'hidden' }}>
-                <div style={{ position:'absolute', top:0, right:0, width:'55%', height:'36%', background:PRI, borderRadius:'0 12px 0 90px', zIndex:1 }} />
-
-                  {/* Sidebar */}
-                  <div style={{ width:220, flexShrink:0, padding:'28px 18px 18px', display:'flex', flexDirection:'column', fontFamily:PP, position:'relative', zIndex:2 }}>
-                    <div style={{ fontSize:9, fontWeight:800, color:'#53666F', letterSpacing:1.8, textTransform:'uppercase', marginBottom:3 }}>Ratal Advanced Technologies</div>
-                    <div style={{ fontSize:9, fontWeight:800, color:PRI, letterSpacing:1.8, textTransform:'uppercase', marginBottom:16 }}><strong>Masters</strong></div>
-                    <div style={{ fontSize:24, fontWeight:900, color:'#172D37', lineHeight:1.1, marginBottom:6 }}>{STEP_NAMES[step]}</div>
-                    <div style={{ fontSize:11, color:'#53666F', lineHeight:1.5, marginBottom:8 }}>{STEP_DESC[step]}</div>
-                    <div style={{ fontSize:9, fontWeight:800, color:PRI, letterSpacing:1, marginBottom:14 }}>STEP {step} OF 3</div>
-                    <div style={{ flex:1, display:'flex', flexDirection:'column', gap:1 }}>
-                      {['Party Identity','VAT & Billing','Contact & Terms'].map((nm,idx)=>{
-                        const sn=idx+1, isAct=step===sn, isDone=step>sn
-                        return (
-                          <div key={sn} onClick={()=>isDone&&setStep(sn)} style={{ display:'flex', alignItems:'center', padding:'8px 0 8px 12px', cursor:isDone?'pointer':'default', borderLeft:isAct?`3px solid ${PRI}`:isDone?`3px solid ${PRI}55`:'3px solid rgba(0,0,0,0.08)' }}>
-                            <span style={{ fontSize:12, fontWeight:isAct?700:500, color:isAct?'#172D37':isDone?PRI:'#b09070' }}>{nm}</span>
-                            {isDone && <span style={{ marginLeft:6, fontSize:10, color:PRI }}>✓</span>}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  {/* White card — L4 */}
-                  <div style={{ position:'absolute', top:22, right:22, bottom:22, left:256, background:'#fff', borderRadius:16, display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:`0 6px 24px ${PRI}22`, zIndex:3 }}>
-
-                    {/* Card header */}
-                    <div style={{ padding:'18px 22px 0', flexShrink:0 }}>
-                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-                        <div>
-                          <div style={{ fontSize:17, fontWeight:700, color:'#172D37' }}>
-                            {['','Party Identity','VAT & Billing','Contact & Terms'][step]}
-                          </div>
-                          {code && <div style={{ fontSize:11, color:PRI, fontWeight:700, marginTop:2 }}>{code}</div>}
-                        </div>
-                        <button onClick={()=>{setOpen(false);resetForm()}} style={{ background:`${PRI}18`, border:'none', color:PRI, borderRadius:8, width:28, height:28, cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>✕</button>
-                      </div>
-                      <div style={{ height:1, background:`${PRI}22` }} />
-                    </div>
-
-                    {/* Scrollable form */}
-                    <div style={{ flex:1, overflowY:'auto', padding:'14px 22px 10px', fontFamily:PP }}>
+          <FormShell
+            isOpen={open}
+            onClose={() => { setOpen(false); resetForm() }}
+            chapterName="Masters"
+            title={['New', 'Party', 'Creation']}
+            description="Register a contractor, supplier, vendor or sub-contractor."
+            steps={['Party Identity', 'VAT & Billing', 'Contact & Terms', 'Documents']}
+            currentStep={step}
+            onBack={step===1 ? () => { setOpen(false); resetForm() } : () => setStep(s=>s-1)}
+            backLabel={step===1 ? 'Cancel' : 'Back'}
+            onNext={step===3 ? save : step<4 ? () => setStep(s=>s+1) : () => { setOpen(false); resetForm() }}
+            nextLabel={step===3 ? (saving ? 'Saving…' : editing ? '✓ Update Party' : '✓ Save Party') : step===4 ? 'Done' : 'Save & Next'}
+            nextDisabled={saving && step===3}
+          >
+          <div style={{ fontFamily:PP }}>
 
                       {/* Step 1 — Party Identity */}
                       {step===1 && <>
@@ -601,9 +576,15 @@ export default function Contractors({ entityId }) {
                           </div>
                         </div>
                         <div style={sec}>Identity</div>
-                        <div style={{ marginBottom:12 }}>
-                          <label style={lbl}>Party / Company Name *</label>
-                          <input style={inp()} value={name} onChange={e=>setName(e.target.value)} placeholder="Full legal name as on CR or contract" />
+                        <div style={row}>
+                          <div style={col}>
+                            <label style={lbl}>Party / Company Name — English *</label>
+                            <input style={inp()} value={name} onChange={e=>setName(e.target.value)} placeholder="Full legal name as on CR or contract" />
+                          </div>
+                          <div style={col}>
+                            <label style={lbl}>اسم الجهة — Arabic</label>
+                            <input style={{ ...inp(), direction:'rtl', textAlign:'right', fontFamily:'Tahoma, Arial, sans-serif' }} value={nameAr} onChange={e=>setNameAr(e.target.value)} placeholder="الاسم الكامل بالعربية" />
+                          </div>
                         </div>
                         <div style={row}>
                           <div style={col}>
@@ -615,12 +596,18 @@ export default function Contractors({ entityId }) {
                             <input style={inp()} value={crNumber} onChange={e=>setCrNumber(e.target.value)} placeholder="1010XXXXXX" />
                           </div>
                         </div>
-                        {(vendorType==='SUB_CONTRACTOR'||vendorType==='CONTRACTOR') && (
-                          <div style={{ marginBottom:12 }}>
-                            <label style={lbl}>National ID / Iqama (for individuals)</label>
-                            <input style={inp()} value={nationalId} onChange={e=>setNationalId(e.target.value)} placeholder="If individual, not company" />
+                        <div style={row}>
+                          {(vendorType==='SUB_CONTRACTOR'||vendorType==='CONTRACTOR') && (
+                            <div style={col}>
+                              <label style={lbl}>National ID / Iqama</label>
+                              <input style={inp()} value={nationalId} onChange={e=>setNationalId(e.target.value)} placeholder="If individual, not company" />
+                            </div>
+                          )}
+                          <div style={col}>
+                            <label style={lbl}>Registration No. (assigned by this party)</label>
+                            <input style={inp()} value={clientRegNo} onChange={e=>setClientRegNo(e.target.value)} placeholder="Vendor code / supplier number they gave us" />
                           </div>
-                        )}
+                        </div>
                       </>}
 
                       {/* Step 2 — VAT & Billing */}
@@ -707,23 +694,29 @@ export default function Contractors({ entityId }) {
                         )}
                       </>}
 
-                    </div>
-
-                    {/* Footer inside white card */}
-                    <div style={{ flexShrink:0, padding:'11px 22px 14px', borderTop:`1px solid ${PRI}22`, display:'flex', justifyContent:'space-between', alignItems:'center', fontFamily:PP }}>
-                      <button onClick={step===1?(()=>{setOpen(false);resetForm()}):()=>setStep(s=>s-1)} style={{ background:'#747474', color:'#fff', border:'none', borderRadius:24, padding:'9px 24px', cursor:'pointer', fontSize:13, fontWeight:600 }}>{step===1?'Cancel':'Back'}</button>
-                      <span style={{ fontSize:10, color:'#b09070' }}>Complete all three steps to add the party</span>
-                      {step<3
-                        ? <button onClick={()=>setStep(s=>s+1)} style={{ background:PRI, color:'#fff', border:'none', borderRadius:24, padding:'9px 28px', cursor:'pointer', fontSize:13, fontWeight:700, boxShadow:`0 4px 14px ${PRI}44` }}>Save &amp; Next</button>
-                        : <button onClick={async()=>{ await save() }} disabled={saving} style={{ background:saving?'#c7c7c7':PRI, color:'#fff', border:'none', borderRadius:24, padding:'9px 28px', cursor:saving?'not-allowed':'pointer', fontSize:13, fontWeight:700, boxShadow:saving?'none':`0 4px 14px ${PRI}44` }}>{saving?'Saving…':editing?'✓ Update Party':'✓ Add Party'}</button>
-                      }
-                    </div>
-                  </div>
-              </div>
-            )}
+                      {/* Step 4 — Documents */}
+                      {step===4 && <>
+                        <div style={sec}>Party Documents</div>
+                        {editing ? (
+                          <EntityDocs
+                            entityId={entityId}
+                            linkedType="CONTRACTOR"
+                            linkedId={editing.id}
+                            linkedName={editing.contractor_name}
+                            accentColor={PRI}
+                            chapterName="Masters"
+                          />
+                        ) : (
+                          <div style={{ textAlign:'center', padding:'32px 16px', color:'#aab2bd' }}>
+                            <div style={{ fontSize:32, marginBottom:12 }}>📎</div>
+                            <div style={{ fontSize:14, fontWeight:600, color:'#6b7c93', marginBottom:6 }}>Documents can be added after saving</div>
+                            <div style={{ fontSize:12, color:'#aab2bd' }}>Click "Save Party" on the previous step first, then open the party's detail row to attach compliance documents.</div>
+                          </div>
+                        )}
+                      </>}
 
           </div>
-        </div>
+          </FormShell>
         )
       })()}
     </div>

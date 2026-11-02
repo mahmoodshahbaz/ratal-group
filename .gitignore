@@ -1,4 +1,7 @@
-node_modules 
+node_modules
 
 # Office temp files
 ~$*
+
+# Service account keys — never commit these
+ACCSYS-Keys/

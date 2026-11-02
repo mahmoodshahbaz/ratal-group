@@ -126,6 +126,17 @@ const BUILTIN_EXTRA = [
     drive_folder:  'employee-profiles',
     sort_order:    20,
   },
+  {
+    id:            '__builtin_vacation_application',
+    template_key:  'vacation_application',
+    template_name: 'Vacation Application Form',
+    category:      'HR',
+    language:      'EN',
+    description:   'ACCSYS official vacation application — employee details, leave type checkboxes, dates, previous leave history, signatures, QR-code linked to leave record',
+    compiled_html: null,
+    drive_folder:  'vacation-applications',
+    sort_order:    21,
+  },
 ]
 
 // Sample data for preview by template key
@@ -487,6 +498,34 @@ const PREVIEW_DATA = {
     bank_name:       'Arab National Bank (ANB)',
     hr_manager:      'Hafiz Shahzad Amjad Hussain',
     gm_name:         'Mahmood Shahbaz',
+  },
+
+  vacation_application: {
+    employee_name:      'Khalid Hassan Al-Zahrani',
+    date_issued:        '31 Oct 2026',
+    home_address:       'Sulaymaniyah District, Riyadh, Saudi Arabia',
+    telephone:          '+966 55 123 4567',
+    leave_type:         'ANNUAL',
+    start_date:         '2026-12-01',
+    end_date:           '2026-12-30',
+    last_work_day:      'Saturday, 30 Nov 2026',
+    rejoin_day:         'Thursday, 31 Dec 2026',
+    join_date_accsys:   '01 March 2023',
+    prev1_from:         '2025-12-01',
+    prev1_to:           '2025-12-30',
+    prev1_days:         '30',
+    prev2_from:         '',
+    prev2_to:           '',
+    prev2_days:         '',
+    prev3_from:         '',
+    prev3_to:           '',
+    prev3_days:         '',
+    prev_rejoin_date:   '2026-01-01',
+    entitlement_cycle:  '1_YEAR',
+    entitled_days:      '30',
+    replacement_name:   'Ahmed Al-Otaibi',
+    leave_id:           'VAC-2026-0042',
+    qr_base_url:        'https://accsys.app',
   },
 
   // ── Finance claim templates ───────────────────────────────────────────────

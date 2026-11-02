@@ -13,6 +13,77 @@ const fmt  = d => d ? new Date(d).toLocaleDateString('en-GB') : '—'
 const TODAY = new Date().toISOString().slice(0,10)
 
 const UNITS    = ['NISU','TISU','CISU','ITSU','ALL']
+
+// Department-specific work types
+const WORK_TYPES_BY_UNIT = {
+  NISU: [
+    'MW Links',
+    'Microwave Installation',
+    'Fibre Optic Works',
+    'Transmission Network',
+    'Tower Construction & Modification',
+    'Power Systems / BSCU',
+    'DAS / IBS Indoor Coverage',
+    'OSP Civil Works',
+    'ISP Installation',
+    'Commissioning & Testing',
+    'O&M Services',
+    'Supply Only',
+    'Other',
+  ],
+  TISU: [
+    'Node B / BTS Installation',
+    'Radio Equipment Supply',
+    'Antenna & Feeder Works',
+    'Shelter Civil Works',
+    'RF Integration',
+    'Drive Test & Optimization',
+    'Commissioning & Acceptance',
+    'Network Rollout',
+    'O&M Support',
+    'Supply Only',
+    'Other',
+  ],
+  CISU: [
+    'Civil Construction',
+    'Foundation Works',
+    'Building Construction',
+    'Road & Pavement Works',
+    'Site Preparation',
+    'Land Survey & Layout',
+    'Structural Steel Works',
+    'Drainage & Utilities',
+    'Landscaping',
+    'Supply of Materials',
+    'Other',
+  ],
+  ITSU: [
+    'IT Charter',
+    'Network Infrastructure Setup',
+    'Server & Storage',
+    'CCTV & Security Systems',
+    'Software Integration',
+    'Structured Cabling',
+    'Cloud Services',
+    'Cybersecurity Audit',
+    'IT Help Desk Contract',
+    'Supply Only',
+    'Other',
+  ],
+  ALL: [
+    'MW Links', 'Microwave Installation', 'Fibre Optic Works', 'Transmission Network',
+    'Tower Construction & Modification', 'Power Systems / BSCU', 'DAS / IBS Indoor Coverage',
+    'OSP Civil Works', 'ISP Installation',
+    'Node B / BTS Installation', 'Radio Equipment Supply', 'Antenna & Feeder Works',
+    'Shelter Civil Works', 'RF Integration', 'Drive Test & Optimization', 'Network Rollout',
+    'Civil Construction', 'Foundation Works', 'Building Construction', 'Road & Pavement Works',
+    'Site Preparation', 'Land Survey & Layout', 'Structural Steel Works',
+    'IT Charter', 'Network Infrastructure Setup', 'Server & Storage',
+    'CCTV & Security Systems', 'Software Integration', 'Structured Cabling',
+    'Cloud Services', 'Cybersecurity Audit', 'IT Help Desk Contract',
+    'Commissioning & Testing', 'O&M Services', 'O&M Support', 'Supply Only', 'Other',
+  ],
+}
 const STATUSES = ['RECEIVED','RESPONDED','CONVERTED','REJECTED','EXPIRED']
 const STATUS_META = {
   RECEIVED:  { color:'#0079BC', bg:'#e3f2fd',   icon:'📥' },
@@ -195,14 +266,14 @@ export default function LOI({ entityId }) {
         isOpen={showBanner}
         onClose={() => setShowBanner(false)}
         onStart={() => { setShowBanner(false); setShowForm(true) }}
-        chapterL1="#70A5A6"
-        chapterL2="#EAF3F2"
-        moduleColor={MC}
-        chapterLabel="Operations"
+        chapterName="Operations"
         formTitle={['NEW', 'LOI', 'REQUEST']}
-        steps={['Request Details', 'Attachments']}
+        heading="Record Letter of Intent details"
+        description="Even if you receive a verbal notification or via WhatsApp, fill this in for your own records and to safeguard yourself. Goes through DH approval before filing."
         icon="📋"
-        description={`Record Letter of Intent details — even if you receive a verbal notification or via WhatsApp, fill this in for your own records and to safeguard yourself. Goes through DH approval before filing.`}
+        iconLabel={'DH Approval\nRequired'}
+        workflowSteps={['Fill Details', 'DH Approval', 'Filed & Saved']}
+        steps={['Request Details', 'Attachments']}
       />
 
       {/* Header — chapter H1 provided by AppShell; only action button here */}
@@ -448,7 +519,7 @@ export default function LOI({ entityId }) {
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1.5fr 1fr', gap:12, marginBottom:14 }}>
               <div>
                 <label style={S.label}>Service Unit</label>
-                <select style={S.inp} value={form.service_unit} onChange={e=>f('service_unit',e.target.value)}>
+                <select style={S.inp} value={form.service_unit} onChange={e=>{ f('service_unit',e.target.value); f('work_type','') }}>
                   {UNITS.map(u=><option key={u}>{u}</option>)}
                 </select>
               </div>
@@ -456,8 +527,11 @@ export default function LOI({ entityId }) {
                 <label style={S.label}>Work Type / Category</label>
                 <select style={S.inp} value={form.work_type} onChange={e=>f('work_type',e.target.value)}>
                   <option value="">— Select —</option>
-                  {['MW Links','Node B','IT Charter','Maintenance','Civil Works','Supply','Commissioning','Other'].map(t=><option key={t}>{t}</option>)}
+                  {(WORK_TYPES_BY_UNIT[form.service_unit] || WORK_TYPES_BY_UNIT.ALL).map(t=><option key={t}>{t}</option>)}
                 </select>
+                {form.service_unit && form.service_unit !== 'ALL' && (
+                  <div style={{ fontSize:10, color:'#6b7c93', marginTop:3 }}>Showing {form.service_unit} work types</div>
+                )}
               </div>
               <div>
                 <label style={S.label}>Estimated Value (SAR)</label>

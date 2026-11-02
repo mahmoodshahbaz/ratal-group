@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth'
+import FormShell from '../components/FormShell'
+import PageBanner from '../components/PageBanner'
+
+const L3 = '#AF3564'  // Planning accent
 
 // ═══════════════════════════════════════════════════════════════════
 // Commission Tracker — Phase 18
@@ -54,15 +58,16 @@ const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov
 
 // ── Shared styles ─────────────────────────────────────────────────
 const S = {
-  card:   { background:'#fff', borderRadius:14, padding:'16px 20px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)', marginBottom:12 },
-  tab:    (active,color='#1565C0') => ({
+  card:   { background:'#fff', borderRadius:4, padding:'16px 20px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)', marginBottom:12 },
+  tab:    (active,color=L3) => ({
     padding:'8px 16px', borderRadius:20, fontWeight:700, fontSize:12, cursor:'pointer', border:'none',
+    fontFamily:"'Poppins',sans-serif",
     background: active ? color : 'transparent',
     color:      active ? '#fff' : '#6b7c93',
   }),
-  btn:    (c='#1565C0') => ({ background:c, color:'#fff', border:'none', borderRadius:8, padding:'8px 14px', fontSize:12, fontWeight:700, cursor:'pointer' }),
-  input:  { padding:'8px 10px', borderRadius:8, border:'1px solid #dde3ec', fontSize:12, outline:'none', background:'#fff', width:'100%', boxSizing:'border-box' },
-  label:  { display:'block', fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4 },
+  btn:    (c=L3) => ({ background:c, color:'#fff', border:'none', borderRadius:4, padding:'8px 14px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:"'Poppins',sans-serif" }),
+  input:  { padding:'8px 10px', borderRadius:4, border:'1px solid #dde3ec', fontSize:12, outline:'none', background:'#fff', width:'100%', boxSizing:'border-box', fontFamily:"'Poppins',sans-serif" },
+  label:  { display:'block', fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4, fontFamily:"'Poppins',sans-serif" },
   pill:   (s) => ({ ...STATUS_COLORS[s]||{bg:'#f5f7fa',color:'#546e7a',border:'#dde3ec'},
     border:'1.5px solid', borderRadius:20, padding:'2px 10px', fontSize:10, fontWeight:700, display:'inline-block' }),
 }
@@ -131,8 +136,9 @@ function CommissionModal({ entityId, direction, item, employees, rateCards, onCl
     reference:        '',
     ...item,
   })
-  const [saving, setSaving] = useState(false)
-  const [err, setErr]       = useState('')
+  const [saving, setSaving]     = useState(false)
+  const [err, setErr]           = useState('')
+  const [wizardStep, setWizardStep] = useState(1)
 
   function calcCommission(bookingAmt, rate) {
     const b = +bookingAmt||0, r = +rate||0
@@ -212,150 +218,157 @@ function CommissionModal({ entityId, direction, item, employees, rateCards, onCl
   )
 
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-      <div style={{ background:'#fff', borderRadius:16, width:'100%', maxWidth:700, maxHeight:'90vh', overflow:'auto', padding:28 }}>
-        <div style={{ fontWeight:800, fontSize:16, color:'#1a2e3d', marginBottom:20 }}>
-          {item?.id ? 'Edit' : 'New'} {form.direction==='RECEIVED'?'Agency':'Staff'} Commission
-        </div>
+    <FormShell
+      isOpen={true}
+      onClose={onClose}
+      chapterName="Planning"
+      title={item?.id ? ['Edit', 'Commission', 'Entry'] : ['New', 'Commission', 'Entry']}
+      steps={['Transaction', 'Supplier & Agent', 'Commission & Settlement']}
+      currentStep={wizardStep}
+      onBack={wizardStep===1 ? onClose : () => setWizardStep(s=>s-1)}
+      backLabel={wizardStep===1 ? 'Cancel' : 'Back'}
+      onNext={wizardStep<3 ? () => setWizardStep(s=>s+1) : save}
+      nextLabel={wizardStep<3 ? 'Next →' : (saving ? 'Saving…' : '✓ Save Commission')}
+      nextDisabled={saving}
+    >
+      <div style={{ flex:1, overflowY:'auto', padding:'14px 18px', fontFamily:"'Poppins',sans-serif" }}>
 
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-          <F label="Direction">
-            <select value={form.direction} onChange={e=>setForm(f=>({...f,direction:e.target.value}))} style={S.input}>
-              <option value="RECEIVED">RECEIVED (from supplier)</option>
-              <option value="PAID">PAID (to staff/agent)</option>
-            </select>
-          </F>
-          <F label="Type">
-            <select value={form.commission_type} onChange={e=>setForm(f=>({...f,commission_type:e.target.value}))} style={S.input}>
-              {COMM_TYPES.map(t=><option key={t}>{t}</option>)}
-            </select>
-          </F>
-          <F label="Period Year">
-            <input type="number" style={S.input} value={form.period_year}
-              onChange={e=>setForm(f=>({...f,period_year:e.target.value}))} />
-          </F>
-          <F label="Period Month">
-            <select value={form.period_month} onChange={e=>setForm(f=>({...f,period_month:e.target.value}))} style={S.input}>
-              {MONTHS.map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}
-            </select>
-          </F>
-
-          {/* Booking link */}
-          <F label="Booking Ref / PNR">
-            <input style={S.input} value={form.booking_ref} onChange={e=>setForm(f=>({...f,booking_ref:e.target.value}))} placeholder="e.g. ABC123" />
-          </F>
-          <F label="Ticket Number">
-            <input style={S.input} value={form.ticket_number} onChange={e=>setForm(f=>({...f,ticket_number:e.target.value}))} placeholder="e.g. 065-1234567890" />
-          </F>
-          <F label="Travel Date">
-            <input type="date" style={S.input} value={form.travel_date} onChange={e=>setForm(f=>({...f,travel_date:e.target.value}))} />
-          </F>
-          <F label="Route">
-            <input style={S.input} value={form.route} onChange={e=>setForm(f=>({...f,route:e.target.value}))} placeholder="e.g. RUH-DXB" />
-          </F>
-          <F label="Pax Name">
-            <input style={S.input} value={form.pax_name} onChange={e=>setForm(f=>({...f,pax_name:e.target.value}))} placeholder="Passenger name" />
-          </F>
-          <F label="Pax Count">
-            <input type="number" style={S.input} value={form.pax_count} min={1}
-              onChange={e=>setForm(f=>({...f,pax_count:e.target.value}))} />
-          </F>
-
-          {/* Supplier */}
-          <F label="Supplier Code (Airline/Hotel)">
-            <input style={S.input} value={form.supplier_code} onChange={e=>setForm(f=>({...f,supplier_code:e.target.value.toUpperCase()}))} placeholder="e.g. SV, EK" />
-          </F>
-          <F label="Supplier Name">
-            <input style={S.input} value={form.supplier_name} onChange={e=>setForm(f=>({...f,supplier_name:e.target.value}))} placeholder="Saudi Airlines, etc." />
-          </F>
-          {form.commission_type==='AIRLINE' && (
-            <F label="BSP File Reference">
-              <input style={S.input} value={form.bsp_file_ref} onChange={e=>setForm(f=>({...f,bsp_file_ref:e.target.value}))} placeholder="BSP memo ref" />
+        {/* ── Step 1: Transaction Details ── */}
+        {wizardStep === 1 && (
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <F label="Direction">
+              <select value={form.direction} onChange={e=>setForm(f=>({...f,direction:e.target.value}))} style={S.input}>
+                <option value="RECEIVED">RECEIVED (from supplier)</option>
+                <option value="PAID">PAID (to staff/agent)</option>
+              </select>
             </F>
-          )}
-
-          {/* Agent (for PAID or STAFF type) */}
-          {(form.direction==='PAID'||form.commission_type==='STAFF') && (
-            <>
-              <F label="Staff Agent">
-                <select value={form.agent_id} onChange={e=>{
-                  const emp = employees.find(x=>x.id===e.target.value)
-                  setForm(f=>({...f,agent_id:e.target.value,agent_name:emp?.full_name||'',department:emp?.department||''}))
-                }} style={S.input}>
-                  <option value="">— Select agent —</option>
-                  {employees.map(e=><option key={e.id} value={e.id}>{e.full_name}</option>)}
-                </select>
-              </F>
-              <F label="Department">
-                <input style={S.input} value={form.department} onChange={e=>setForm(f=>({...f,department:e.target.value}))} placeholder="Department" />
-              </F>
-            </>
-          )}
-
-          {/* Amounts */}
-          <F label="Rate Card (optional)">
-            <select onChange={e=>applyRate(e.target.value)} style={S.input} defaultValue="">
-              <option value="">— Apply a rate card —</option>
-              {rateCards.filter(r=>r.is_active).map(r=>(
-                <option key={r.id} value={r.id}>{r.supplier_name||r.commission_type} — {r.rate_value}{r.rate_type==='PERCENTAGE'?'%':' SAR flat'}</option>
-              ))}
-            </select>
-          </F>
-          <F label="Booking Amount (gross)">
-            <input type="number" style={S.input} value={form.booking_amount}
-              onChange={e=>handleBookingChange(e.target.value)} placeholder="0.00" step="0.01" />
-          </F>
-          <F label="Commission Rate %">
-            <input type="number" style={S.input} value={form.commission_rate}
-              onChange={e=>handleRateChange(e.target.value)} placeholder="e.g. 3" step="0.01" />
-          </F>
-          <F label="Commission Amount *">
-            <input type="number" style={{ ...S.input, fontWeight:700, color:'#1565C0', fontSize:14 }}
-              value={form.commission_amount}
-              onChange={e=>setForm(f=>({...f,commission_amount:e.target.value}))} placeholder="0.00" step="0.01" />
-          </F>
-          <F label="Currency">
-            <select value={form.currency} onChange={e=>setForm(f=>({...f,currency:e.target.value}))} style={S.input}>
-              {['SAR','USD','AED','EUR','GBP','BHD','KWD','OMR','QAR'].map(c=><option key={c}>{c}</option>)}
-            </select>
-          </F>
-          {form.currency!=='SAR' && (
-            <F label="Exchange Rate to SAR">
-              <input type="number" style={S.input} value={form.exchange_rate}
-                onChange={e=>setForm(f=>({...f,exchange_rate:e.target.value}))} step="0.0001" />
+            <F label="Type">
+              <select value={form.commission_type} onChange={e=>setForm(f=>({...f,commission_type:e.target.value}))} style={S.input}>
+                {COMM_TYPES.map(t=><option key={t}>{t}</option>)}
+              </select>
             </F>
-          )}
-
-          {/* Settlement (when already settled) */}
-          <F label="Settlement Date">
-            <input type="date" style={S.input} value={form.settlement_date} onChange={e=>setForm(f=>({...f,settlement_date:e.target.value}))} />
-          </F>
-          <F label="Settlement Reference">
-            <input style={S.input} value={form.settlement_ref} onChange={e=>setForm(f=>({...f,settlement_ref:e.target.value}))} />
-          </F>
-
-          {/* GL accounts */}
-          <F label="GL Income Account">
-            <input style={S.input} value={form.gl_account_income} onChange={e=>setForm(f=>({...f,gl_account_income:e.target.value}))} placeholder="Income account code" />
-          </F>
-          <F label="GL Bank/BSP Account">
-            <input style={S.input} value={form.gl_account_bank} onChange={e=>setForm(f=>({...f,gl_account_bank:e.target.value}))} placeholder="Bank account code" />
-          </F>
-
-          <div style={{ gridColumn:'1/-1' }}>
-            <F label="Notes">
-              <input style={S.input} value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} />
+            <F label="Period Year">
+              <input type="number" style={S.input} value={form.period_year}
+                onChange={e=>setForm(f=>({...f,period_year:e.target.value}))} />
+            </F>
+            <F label="Period Month">
+              <select value={form.period_month} onChange={e=>setForm(f=>({...f,period_month:e.target.value}))} style={S.input}>
+                {MONTHS.map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}
+              </select>
+            </F>
+            <F label="Booking Ref / PNR">
+              <input style={S.input} value={form.booking_ref} onChange={e=>setForm(f=>({...f,booking_ref:e.target.value}))} placeholder="e.g. ABC123" />
+            </F>
+            <F label="Ticket Number">
+              <input style={S.input} value={form.ticket_number} onChange={e=>setForm(f=>({...f,ticket_number:e.target.value}))} placeholder="e.g. 065-1234567890" />
+            </F>
+            <F label="Travel Date">
+              <input type="date" style={S.input} value={form.travel_date} onChange={e=>setForm(f=>({...f,travel_date:e.target.value}))} />
+            </F>
+            <F label="Route">
+              <input style={S.input} value={form.route} onChange={e=>setForm(f=>({...f,route:e.target.value}))} placeholder="e.g. RUH-DXB" />
+            </F>
+            <F label="Pax Name">
+              <input style={S.input} value={form.pax_name} onChange={e=>setForm(f=>({...f,pax_name:e.target.value}))} placeholder="Passenger name" />
+            </F>
+            <F label="Pax Count">
+              <input type="number" style={S.input} value={form.pax_count} min={1}
+                onChange={e=>setForm(f=>({...f,pax_count:e.target.value}))} />
             </F>
           </div>
-        </div>
+        )}
 
-        {err && <div style={{ color:'#c62828', fontSize:12, marginTop:8 }}>{err}</div>}
-        <div style={{ display:'flex', gap:8, marginTop:16, justifyContent:'flex-end' }}>
-          <button onClick={onClose} style={{ background:'#f0f4f8', color:'#546e7a', border:'none', borderRadius:8, padding:'8px 16px', fontWeight:700, cursor:'pointer' }}>Cancel</button>
-          <button onClick={save} disabled={saving} style={S.btn('#1565C0')}>{saving?'Saving…':'Save Commission'}</button>
-        </div>
+        {/* ── Step 2: Supplier & Agent ── */}
+        {wizardStep === 2 && (
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <F label="Supplier Code (Airline/Hotel)">
+              <input style={S.input} value={form.supplier_code} onChange={e=>setForm(f=>({...f,supplier_code:e.target.value.toUpperCase()}))} placeholder="e.g. SV, EK" />
+            </F>
+            <F label="Supplier Name">
+              <input style={S.input} value={form.supplier_name} onChange={e=>setForm(f=>({...f,supplier_name:e.target.value}))} placeholder="Saudi Airlines, etc." />
+            </F>
+            {form.commission_type==='AIRLINE' && (
+              <F label="BSP File Reference">
+                <input style={S.input} value={form.bsp_file_ref} onChange={e=>setForm(f=>({...f,bsp_file_ref:e.target.value}))} placeholder="BSP memo ref" />
+              </F>
+            )}
+            {(form.direction==='PAID'||form.commission_type==='STAFF') && (
+              <>
+                <F label="Staff Agent">
+                  <select value={form.agent_id} onChange={e=>{
+                    const emp = employees.find(x=>x.id===e.target.value)
+                    setForm(f=>({...f,agent_id:e.target.value,agent_name:emp?.full_name||'',department:emp?.department||''}))
+                  }} style={S.input}>
+                    <option value="">— Select agent —</option>
+                    {employees.map(e=><option key={e.id} value={e.id}>{e.full_name}</option>)}
+                  </select>
+                </F>
+                <F label="Department">
+                  <input style={S.input} value={form.department} onChange={e=>setForm(f=>({...f,department:e.target.value}))} placeholder="Department" />
+                </F>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ── Step 3: Commission & Settlement ── */}
+        {wizardStep === 3 && (
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <F label="Rate Card (optional)">
+              <select onChange={e=>applyRate(e.target.value)} style={S.input} defaultValue="">
+                <option value="">— Apply a rate card —</option>
+                {rateCards.filter(r=>r.is_active).map(r=>(
+                  <option key={r.id} value={r.id}>{r.supplier_name||r.commission_type} — {r.rate_value}{r.rate_type==='PERCENTAGE'?'%':' SAR flat'}</option>
+                ))}
+              </select>
+            </F>
+            <F label="Booking Amount (gross)">
+              <input type="number" style={S.input} value={form.booking_amount}
+                onChange={e=>handleBookingChange(e.target.value)} placeholder="0.00" step="0.01" />
+            </F>
+            <F label="Commission Rate %">
+              <input type="number" style={S.input} value={form.commission_rate}
+                onChange={e=>handleRateChange(e.target.value)} placeholder="e.g. 3" step="0.01" />
+            </F>
+            <F label="Commission Amount *">
+              <input type="number" style={{ ...S.input, fontWeight:700, color:L3, fontSize:14 }}
+                value={form.commission_amount}
+                onChange={e=>setForm(f=>({...f,commission_amount:e.target.value}))} placeholder="0.00" step="0.01" />
+            </F>
+            <F label="Currency">
+              <select value={form.currency} onChange={e=>setForm(f=>({...f,currency:e.target.value}))} style={S.input}>
+                {['SAR','USD','AED','EUR','GBP','BHD','KWD','OMR','QAR'].map(c=><option key={c}>{c}</option>)}
+              </select>
+            </F>
+            {form.currency!=='SAR' && (
+              <F label="Exchange Rate to SAR">
+                <input type="number" style={S.input} value={form.exchange_rate}
+                  onChange={e=>setForm(f=>({...f,exchange_rate:e.target.value}))} step="0.0001" />
+              </F>
+            )}
+            <F label="Settlement Date">
+              <input type="date" style={S.input} value={form.settlement_date} onChange={e=>setForm(f=>({...f,settlement_date:e.target.value}))} />
+            </F>
+            <F label="Settlement Reference">
+              <input style={S.input} value={form.settlement_ref} onChange={e=>setForm(f=>({...f,settlement_ref:e.target.value}))} />
+            </F>
+            <F label="GL Income Account">
+              <input style={S.input} value={form.gl_account_income} onChange={e=>setForm(f=>({...f,gl_account_income:e.target.value}))} placeholder="Income account code" />
+            </F>
+            <F label="GL Bank/BSP Account">
+              <input style={S.input} value={form.gl_account_bank} onChange={e=>setForm(f=>({...f,gl_account_bank:e.target.value}))} placeholder="Bank account code" />
+            </F>
+            <div style={{ gridColumn:'1/-1' }}>
+              <F label="Notes">
+                <input style={S.input} value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} />
+              </F>
+            </div>
+            {err && <div style={{ gridColumn:'1/-1', color:'#c62828', fontSize:12 }}>{err}</div>}
+          </div>
+        )}
+
       </div>
-    </div>
+    </FormShell>
   )
 }
 
@@ -416,7 +429,8 @@ function EarnedTab({ entityId, employees, rateCards, onRefresh }) {
   const now = new Date()
   const [rows,     setRows]     = useState([])
   const [loading,  setLoading]  = useState(true)
-  const [modal,    setModal]    = useState(null)  // null | 'new' | {row}
+  const [modal,      setModal]      = useState(null)  // null | 'new' | {row}
+  const [showBanner, setShowBanner] = useState(false)
   const [filterY,  setFilterY]  = useState(now.getFullYear())
   const [filterM,  setFilterM]  = useState(0)  // 0 = all
   const [filterT,  setFilterT]  = useState('')
@@ -502,7 +516,7 @@ function EarnedTab({ entityId, employees, rateCards, onRefresh }) {
           <label style={S.label}>Search</label>
           <input style={S.input} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Ticket, booking, pax, supplier…" />
         </div>
-        <button onClick={()=>setModal('new')} style={S.btn()}>+ Add Commission</button>
+        <button onClick={()=>setShowBanner(true)} style={S.btn()}>+ Add Commission</button>
         <button onClick={csvExport} style={{ ...S.btn('#546e7a') }}>⬇ CSV</button>
       </div>
 
@@ -547,6 +561,17 @@ function EarnedTab({ entityId, employees, rateCards, onRefresh }) {
         </table>
       </div>
 
+      <PageBanner
+        isOpen={showBanner}
+        onClose={() => setShowBanner(false)}
+        onStart={() => { setShowBanner(false); setModal('new') }}
+        chapterName="Planning"
+        formTitle={['New', 'Commission', 'Entry']}
+        heading="Record agency commission earned from a supplier"
+        iconLabel="Commission Tracker"
+        workflowSteps={['Transaction', 'Supplier & Agent', 'Commission & Settlement']}
+        description="Log airline, hotel, car, or other commissions received from travel suppliers via BSP or direct billing."
+      />
       {modal && (
         <CommissionModal
           entityId={entityId}
@@ -567,7 +592,8 @@ function AgentTab({ entityId, employees, rateCards, onRefresh }) {
   const now = new Date()
   const [rows,    setRows]    = useState([])
   const [loading, setLoading] = useState(true)
-  const [modal,   setModal]   = useState(null)
+  const [modal,      setModal]      = useState(null)
+  const [showBanner, setShowBanner] = useState(false)
   const [filterY, setFilterY] = useState(now.getFullYear())
   const [filterM, setFilterM] = useState(0)
   const [filterA, setFilterA] = useState('')
@@ -654,7 +680,7 @@ function AgentTab({ entityId, employees, rateCards, onRefresh }) {
             {STATUSES.map(s=><option key={s}>{s}</option>)}
           </select>
         </div>
-        <button onClick={()=>setModal('new')} style={S.btn('#795548')}>+ Add Agent Commission</button>
+        <button onClick={()=>setShowBanner(true)} style={S.btn()}>+ Add Agent Commission</button>
       </div>
 
       <div style={{ background:'#fff', borderRadius:14, overflow:'auto', boxShadow:'0 2px 10px rgba(0,0,0,0.07)' }}>
@@ -678,6 +704,17 @@ function AgentTab({ entityId, employees, rateCards, onRefresh }) {
         </table>
       </div>
 
+      <PageBanner
+        isOpen={showBanner}
+        onClose={() => setShowBanner(false)}
+        onStart={() => { setShowBanner(false); setModal('new') }}
+        chapterName="Planning"
+        formTitle={['Agent', 'Commission', 'Entry']}
+        heading="Record staff or agent incentive commission paid"
+        iconLabel="Agent Commissions"
+        workflowSteps={['Transaction', 'Supplier & Agent', 'Commission & Settlement']}
+        description="Log commissions paid to internal staff or external agents for travel bookings."
+      />
       {modal && (
         <CommissionModal
           entityId={entityId}

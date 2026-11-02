@@ -17,6 +17,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import PageBanner from '../components/PageBanner'
+import FormShell from '../components/FormShell'
 
 // ── Role options ──────────────────────────────────────────────────────────────
 
@@ -562,59 +563,32 @@ export default function QRManager({ entityId, entityCode, isAr }) {
         isOpen={showBanner}
         onClose={()=>setShowBanner(false)}
         onStart={()=>{ setShowBanner(false); resetGen(); setShowGen(true) }}
-        chapterL1="#AAAED0"
-        chapterL2="#F0F1FA"
-        moduleColor="#454D9B"
-        chapterLabel="Administration"
+        chapterName="Administration"
         formTitle={['Generate', 'QR Access', 'Token']}
-        steps={['Select Employee & Role', 'Token Generated']}
-        icon="🔑"
+        heading="Manage employee field-access tokens"
         description="Create a secure QR token for an employee to access field forms. Choose role, set optional expiry, and share the link via WhatsApp or Telegram."
+        icon="🔑"
+        iconLabel={'QR Code\nManager'}
+        workflowSteps={['Select Employee & Role', 'Token Generated']}
+        steps={['Select Employee & Role', 'Token Generated']}
       />
 
-      {/* ── GENERATE MODAL — 6-layer Admin style ─────────────────────────── */}
-      {showGen && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:16, fontFamily:"'Poppins','Segoe UI',sans-serif" }}>
-          {/* L1 frame */}
-          <div style={{ background:'#AAAED0', borderRadius:20, padding:20, width:'100%', maxWidth:820, boxShadow:'0 24px 70px rgba(0,0,0,0.40)', position:'relative', border:'4px solid #AAAED0' }}>
-            {/* L3 accent */}
-            <div style={{ position:'absolute', top:0, right:0, width:220, height:110, background:'#454D9B', borderRadius:'0 20px 0 60px', zIndex:1 }} />
-            {/* L2 root */}
-            <div style={{ background:'#F0F1FA', borderRadius:14, display:'flex', overflow:'hidden', position:'relative', zIndex:2, minHeight:480 }}>
-              {/* Sidebar */}
-              <div style={{ width:200, flexShrink:0, padding:'24px 18px 18px', display:'flex', flexDirection:'column', background:'#F0F1FA' }}>
-                <div style={{ fontSize:9, fontWeight:800, color:'#53666F', letterSpacing:1.8, textTransform:'uppercase', marginBottom:3 }}>Ratal Advanced Technologies</div>
-                <div style={{ fontSize:11, fontWeight:900, color:'#454D9B', letterSpacing:1, textTransform:'uppercase', marginBottom:16 }}><strong>Administration</strong></div>
-                <div style={{ fontSize:18, fontWeight:900, color:'#172D37', lineHeight:1.1, marginBottom:6 }}>{genResult?'Token Created':'Generate QR Token'}</div>
-                <div style={{ fontSize:11, color:'#53666F', lineHeight:1.5, marginBottom:20 }}>{genResult?'Share the QR code or link with the employee':'Assign field access role, expiry and notes'}</div>
-                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                  {['Token Details','Share & Done'].map((n,i)=>(
-                    <div key={i} style={{ display:'flex', alignItems:'center', gap:8 }}>
-                      <div style={{ width:22, height:22, borderRadius:'50%', background:(i===0&&!genResult)||(i===1&&genResult)?'#454D9B':'#C8C8D8', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:800, color:'#fff', flexShrink:0 }}>{i+1}</div>
-                      <div style={{ fontSize:11, fontWeight:(i===0&&!genResult)||(i===1&&genResult)?800:500, color:(i===0&&!genResult)||(i===1&&genResult)?'#454D9B':'#6b7c93' }}>{n}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {/* White card */}
-              <div style={{ flex:1, background:'#fff', borderRadius:'0 14px 14px 0', display:'flex', flexDirection:'column', overflow:'hidden' }}>
-                {/* Gradient banner */}
-                <div style={{ background:'linear-gradient(120deg,#2d3580 0%,#454D9B 55%,#6b74c8 100%)', padding:'18px 22px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', position:'relative', overflow:'hidden' }}>
-                  <div style={{ position:'absolute', right:-30, top:-30, width:110, height:110, borderRadius:'50%', background:'rgba(255,255,255,0.07)' }} />
-                  <div style={{ display:'flex', alignItems:'center', gap:12, position:'relative', zIndex:1 }}>
-                    <div style={{ width:42, height:42, borderRadius:10, background:'rgba(255,255,255,0.18)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22 }}>🔑</div>
-                    <div>
-                      <div style={{ fontSize:10, color:'rgba(255,255,255,0.70)', letterSpacing:1.3, textTransform:'uppercase', marginBottom:2 }}>Step {genResult?2:1} of 2 · Administration</div>
-                      <div style={{ fontSize:15, fontWeight:900, color:'#fff' }}>{genResult?'Token Generated — Share Now':'QR Access Token Setup'}</div>
-                    </div>
-                  </div>
-                  <div style={{ display:'flex', gap:7, position:'relative', zIndex:1 }}>
-                    {[0,1].map(i=><div key={i} style={{ width:28, height:8, borderRadius:4, background:(i===0&&!genResult)||(i===1&&genResult)?'#fff':'rgba(255,255,255,0.3)' }} />)}
-                  </div>
-                </div>
-                {/* Scrollable form body */}
-                <div style={{ flex:1, overflowY:'auto', padding:'20px 22px' }}>
-
+      {/* ── GENERATE MODAL — FormShell ────────────────────────────────────── */}
+      <FormShell
+        isOpen={showGen}
+        onClose={() => { setShowGen(false); resetGen() }}
+        chapterName="Administration"
+        title={['Generate', 'QR Access', 'Token']}
+        description="Create a secure QR token for an employee to access field forms."
+        steps={['Token Details', 'Share & Done']}
+        currentStep={genResult ? 2 : 1}
+        onBack={genResult ? () => resetGen() : () => { setShowGen(false); resetGen() }}
+        backLabel={genResult ? '← New Token' : 'Cancel'}
+        onNext={genResult ? () => { setShowGen(false); resetGen() } : handleGenerate}
+        nextLabel={genResult ? 'Done ✓' : (genBusy ? '⏳ Generating…' : '🔑 Generate')}
+        nextDisabled={genBusy || (!genResult && !genEmp)}
+      >
+        <div>
             {genResult ? (
               /* SUCCESS STATE — show QR + links */
               <div>
@@ -637,14 +611,6 @@ export default function QRManager({ entityId, entityCode, isAr }) {
                   <button onClick={() => shareWhatsApp(genResult.token, genResult.employee_name)} style={{ ...t.btn('#25d366'), textAlign:'center' }}>💬 WhatsApp</button>
                   <button onClick={() => shareTelegram(genResult.token, genResult.employee_name)} style={{ ...t.btn('#229ed9'), textAlign:'center' }}>✈️ Telegram</button>
                 </div>
-                <button
-                  onClick={() => { resetGen() }}
-                  style={{ ...t.btn('#f0f4f8','#1a2e3d'), width:'100%', marginBottom:8 }}
-                >Generate Another</button>
-                <button
-                  onClick={() => { setShowGen(false); resetGen() }}
-                  style={{ ...t.btn('#e8f5e9','#2e7d32'), width:'100%' }}
-                >Done ✓</button>
               </div>
             ) : (
               /* FORM STATE */
@@ -758,28 +724,12 @@ export default function QRManager({ entityId, entityCode, isAr }) {
                     ⚠️ {genErr}
                   </div>
                 )}
-
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-                  <button
-                    onClick={() => { setShowGen(false); resetGen() }}
-                    style={t.btn('#f0f4f8','#546e7a')}
-                  >Cancel</button>
-                  <button
-                    onClick={handleGenerate}
-                    disabled={genBusy || !genEmp}
-                    style={{ ...t.btn('#1a2540'), opacity: genBusy || !genEmp ? 0.5 : 1 }}
-                  >{genBusy ? '⏳ Generating…' : '🔑 Generate'}</button>
-                </div>
               </div>
                 ) /* end return */
               })() /* end IIFE */
             )}
-                </div>{/* end form body */}
-              </div>{/* end white card */}
-            </div>{/* end L2 root */}
-          </div>{/* end L1 frame */}
         </div>
-      )}
+      </FormShell>
 
       {/* ── QR VIEW MODAL ──────────────────────────────────────────────────── */}
       {showQR && (

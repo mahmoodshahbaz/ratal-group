@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth'
+import FormShell from '../components/FormShell'
+import PageBanner from '../components/PageBanner'
+
+const L3 = '#AF3564'  // Planning accent
 
 // ═══════════════════════════════════════════════════════════════════
 // Cost Center Allocation — Phase 23
@@ -17,10 +21,10 @@ const fmt     = n => (+n||0).toLocaleString('en-US',{minimumFractionDigits:2,max
 const fmtD    = d => d ? new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—'
 
 const S = {
-  card:  { background:'#fff', borderRadius:14, padding:'16px 20px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)', marginBottom:12 },
-  input: { padding:'8px 10px', borderRadius:8, border:'1px solid #dde3ec', fontSize:12, outline:'none', background:'#fff', width:'100%', boxSizing:'border-box' },
-  label: { display:'block', fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4 },
-  btn:   (c='#1565C0') => ({ background:c, color:'#fff', border:'none', borderRadius:8, padding:'8px 14px', fontSize:12, fontWeight:700, cursor:'pointer' }),
+  card:  { background:'#fff', borderRadius:4, padding:'16px 20px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)', marginBottom:12 },
+  input: { padding:'8px 10px', borderRadius:4, border:'1px solid #dde3ec', fontSize:12, outline:'none', background:'#fff', width:'100%', boxSizing:'border-box', fontFamily:"'Poppins',sans-serif" },
+  label: { display:'block', fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4, fontFamily:"'Poppins',sans-serif" },
+  btn:   (c=L3) => ({ background:c, color:'#fff', border:'none', borderRadius:4, padding:'8px 14px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:"'Poppins',sans-serif" }),
 }
 
 // ── Fetch source account GL balance for a period ─────────────────
@@ -53,8 +57,9 @@ function RuleModal({ entityId, item, coa, onClose, onSaved }) {
   const [lines, setLines] = useState(item?.lines||[
     { cost_center_type:'DEPARTMENT', cost_center_name:'', target_account_code:'', target_account_name:'', percentage:'', sort_order:0 },
   ])
-  const [saving, setSaving] = useState(false)
-  const [err,    setErr]    = useState('')
+  const [saving,     setSaving]     = useState(false)
+  const [err,        setErr]        = useState('')
+  const [wizardStep, setWizardStep] = useState(1)
 
   const totalPct = lines.reduce((s,l)=>s+(+l.percentage||0),0)
   const balanced = Math.abs(totalPct - 100) < 0.01
@@ -125,91 +130,119 @@ function RuleModal({ entityId, item, coa, onClose, onSaved }) {
   )
 
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-      <div style={{ background:'#fff', borderRadius:16, width:'100%', maxWidth:780, maxHeight:'92vh', overflow:'auto', padding:28 }}>
-        <div style={{ fontWeight:800, fontSize:16, color:'#1a2e3d', marginBottom:20 }}>
-          {item?.id?'Edit':'New'} Allocation Rule
-        </div>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
-          <F label="Rule Name *" col="1/-1">
-            <input style={{ ...S.input, fontSize:14 }} value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="e.g. Office Rent Allocation, Shared IT Costs" />
-          </F>
-          <F label="Source Account (shared cost to allocate) *">
-            <select style={S.input} value={form.source_account_code}
-              onChange={e=>setForm(f=>({...f,source_account_code:e.target.value}))}>
-              <option value="">— Select account —</option>
-              {coa.filter(a=>['EXPENSE','CLEARING'].includes((a.account_type||'').toUpperCase())).map(a=>(
-                <option key={a.account_code} value={a.account_code}>{a.account_code} — {a.account_name}</option>
-              ))}
-            </select>
-          </F>
-          <F label="Frequency">
-            <select style={S.input} value={form.frequency} onChange={e=>setForm(f=>({...f,frequency:e.target.value}))}>
-              <option value="MONTHLY">Monthly</option>
-              <option value="QUARTERLY">Quarterly</option>
-              <option value="MANUAL">Manual (on demand)</option>
-            </select>
-          </F>
-          <F label="Notes">
-            <input style={S.input} value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} />
-          </F>
-          <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, cursor:'pointer', gridColumn:'1/-1' }}>
-            <input type="checkbox" checked={form.is_active} onChange={e=>setForm(f=>({...f,is_active:e.target.checked}))} />
-            Active rule (will appear in Run Allocations)
-          </label>
-        </div>
+    <FormShell
+      isOpen={true}
+      onClose={onClose}
+      chapterName="Planning"
+      title={item?.id ? ['Edit', 'Allocation', 'Rule'] : ['Cost', 'Allocation', 'Rule']}
+      steps={['Rule Details', 'Allocation Lines']}
+      currentStep={wizardStep}
+      onBack={wizardStep===1 ? onClose : () => setWizardStep(1)}
+      backLabel={wizardStep===1 ? 'Cancel' : 'Back'}
+      onNext={wizardStep===1 ? () => { if (!form.name||!form.source_account_code) { setErr('Rule name and source account required'); return } setErr(''); setWizardStep(2) } : save}
+      nextLabel={wizardStep===1 ? 'Next →' : (saving ? 'Saving…' : '✓ Save Rule')}
+      nextDisabled={saving}
+    >
+      <div style={{ fontFamily:"'Poppins',sans-serif" }}>
 
-        {/* Lines */}
-        <div style={{ fontWeight:700, fontSize:12, color:'#6b7c93', marginBottom:10, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <span>ALLOCATION LINES</span>
-          <span style={{ fontWeight:800, fontSize:13, color:balanced?'#2e7d32':'#c62828' }}>
-            Total: {totalPct.toFixed(2)}% {balanced?'✅':'⚠️ must = 100%'}
-          </span>
-        </div>
-
-        {lines.map((l,i)=>(
-          <div key={i} style={{ display:'grid', gridTemplateColumns:'1fr 1.5fr 1.5fr 80px 36px', gap:8, marginBottom:8, alignItems:'flex-end' }}>
-            <div>
-              {i===0 && <label style={S.label}>Type</label>}
-              <select style={S.input} value={l.cost_center_type} onChange={e=>updateLine(i,'cost_center_type',e.target.value)}>
-                <option value="DEPARTMENT">Department</option>
-                <option value="PROJECT">Project</option>
-              </select>
-            </div>
-            <div>
-              {i===0 && <label style={S.label}>Cost Center Name</label>}
-              <input style={S.input} value={l.cost_center_name}
-                onChange={e=>updateLine(i,'cost_center_name',e.target.value)} placeholder="e.g. IT, HR, Project-001" />
-            </div>
-            <div>
-              {i===0 && <label style={S.label}>Target GL Account</label>}
-              <select style={S.input} value={l.target_account_code}
-                onChange={e=>{ updateLine(i,'target_account_code',e.target.value); applyAccountName(i,e.target.value) }}>
+        {/* ── Step 1: Rule Details ── */}
+        {wizardStep === 1 && (
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <F label="Rule Name *" col="1/-1">
+              <input style={{ ...S.input, fontSize:13 }} value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="e.g. Office Rent Allocation, Shared IT Costs" />
+            </F>
+            <F label="Description" col="1/-1">
+              <input style={S.input} value={form.description||''} onChange={e=>setForm(f=>({...f,description:e.target.value}))} placeholder="Optional description" />
+            </F>
+            <F label="Source Account (shared cost to allocate) *">
+              <select style={S.input} value={form.source_account_code}
+                onChange={e=>setForm(f=>({...f,source_account_code:e.target.value}))}>
                 <option value="">— Select account —</option>
-                {coa.map(a=><option key={a.account_code} value={a.account_code}>{a.account_code} — {a.account_name}</option>)}
+                {coa.filter(a=>['EXPENSE','CLEARING'].includes((a.account_type||'').toUpperCase())).map(a=>(
+                  <option key={a.account_code} value={a.account_code}>{a.account_code} — {a.account_name}</option>
+                ))}
               </select>
+            </F>
+            <F label="Frequency">
+              <select style={S.input} value={form.frequency} onChange={e=>setForm(f=>({...f,frequency:e.target.value}))}>
+                <option value="MONTHLY">Monthly</option>
+                <option value="QUARTERLY">Quarterly</option>
+                <option value="MANUAL">Manual (on demand)</option>
+              </select>
+            </F>
+            <F label="Basis">
+              <select style={S.input} value={form.basis} onChange={e=>setForm(f=>({...f,basis:e.target.value}))}>
+                <option value="FIXED_PCT">Fixed Percentage</option>
+                <option value="HEADCOUNT">Headcount-based</option>
+                <option value="REVENUE">Revenue-based</option>
+              </select>
+            </F>
+            <F label="Notes">
+              <input style={S.input} value={form.notes||''} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="Optional notes" />
+            </F>
+            <div style={{ gridColumn:'1/-1' }}>
+              <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, cursor:'pointer', fontFamily:"'Poppins',sans-serif" }}>
+                <input type="checkbox" checked={form.is_active} onChange={e=>setForm(f=>({...f,is_active:e.target.checked}))} />
+                Active rule (will appear in Run Allocations)
+              </label>
             </div>
-            <div>
-              {i===0 && <label style={S.label}>% Share</label>}
-              <input type="number" style={{ ...S.input, fontWeight:700, color:'#1565C0' }} value={l.percentage}
-                onChange={e=>updateLine(i,'percentage',e.target.value)} placeholder="%" min="0" max="100" step="0.01" />
-            </div>
-            <div style={{ display:'flex', alignItems:'flex-end' }}>
-              <button onClick={()=>removeLine(i)} style={{ background:'#ffebee', color:'#c62828', border:'none', borderRadius:6, width:32, height:32, cursor:'pointer', fontSize:14 }}>✕</button>
-            </div>
+            {err && <div style={{ gridColumn:'1/-1', color:'#c62828', fontSize:12 }}>{err}</div>}
           </div>
-        ))}
-        <button onClick={addLine} style={{ background:'#f0f4f8', color:'#546e7a', border:'1px dashed #cfd8dc', borderRadius:8, padding:'8px 14px', fontSize:12, cursor:'pointer', width:'100%', marginBottom:12 }}>
-          + Add Line
-        </button>
+        )}
 
-        {err && <div style={{ color:'#c62828', fontSize:12, marginBottom:8 }}>{err}</div>}
-        <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
-          <button onClick={onClose} style={{ background:'#f0f4f8', color:'#546e7a', border:'none', borderRadius:8, padding:'8px 14px', fontWeight:700, cursor:'pointer' }}>Cancel</button>
-          <button onClick={save} disabled={saving} style={S.btn()}>{saving?'Saving…':'Save Rule'}</button>
-        </div>
+        {/* ── Step 2: Allocation Lines ── */}
+        {wizardStep === 2 && (
+          <div>
+            <div style={{ fontWeight:700, fontSize:12, color:'#6b7c93', marginBottom:10, display:'flex', justifyContent:'space-between', alignItems:'center', fontFamily:"'Poppins',sans-serif" }}>
+              <span>ALLOCATION LINES</span>
+              <span style={{ fontWeight:800, fontSize:13, color:balanced?'#2e7d32':'#c62828' }}>
+                Total: {totalPct.toFixed(2)}% {balanced?'✅':'⚠️ must = 100%'}
+              </span>
+            </div>
+
+            {lines.map((l,i)=>(
+              <div key={i} style={{ display:'grid', gridTemplateColumns:'1fr 1.5fr 1.5fr 80px 36px', gap:8, marginBottom:8, alignItems:'flex-end' }}>
+                <div>
+                  {i===0 && <label style={S.label}>Type</label>}
+                  <select style={S.input} value={l.cost_center_type} onChange={e=>updateLine(i,'cost_center_type',e.target.value)}>
+                    <option value="DEPARTMENT">Department</option>
+                    <option value="PROJECT">Project</option>
+                  </select>
+                </div>
+                <div>
+                  {i===0 && <label style={S.label}>Cost Center Name</label>}
+                  <input style={S.input} value={l.cost_center_name}
+                    onChange={e=>updateLine(i,'cost_center_name',e.target.value)} placeholder="e.g. IT, HR, Project-001" />
+                </div>
+                <div>
+                  {i===0 && <label style={S.label}>Target GL Account</label>}
+                  <select style={S.input} value={l.target_account_code}
+                    onChange={e=>{ updateLine(i,'target_account_code',e.target.value); applyAccountName(i,e.target.value) }}>
+                    <option value="">— Select account —</option>
+                    {coa.map(a=><option key={a.account_code} value={a.account_code}>{a.account_code} — {a.account_name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  {i===0 && <label style={S.label}>% Share</label>}
+                  <input type="number" style={{ ...S.input, fontWeight:700, color:L3 }} value={l.percentage}
+                    onChange={e=>updateLine(i,'percentage',e.target.value)} placeholder="%" min="0" max="100" step="0.01" />
+                </div>
+                <div style={{ display:'flex', alignItems:'flex-end' }}>
+                  <button onClick={()=>removeLine(i)} style={{ background:'#ffebee', color:'#c62828', border:'none', borderRadius:4, width:32, height:32, cursor:'pointer', fontSize:14 }}>✕</button>
+                </div>
+              </div>
+            ))}
+
+            <button onClick={addLine} style={{ background:'#f0f4f8', color:'#546e7a', border:'1px dashed #cfd8dc', borderRadius:4, padding:'8px 14px', fontSize:12, cursor:'pointer', width:'100%', marginBottom:12, fontFamily:"'Poppins',sans-serif" }}>
+              + Add Line
+            </button>
+
+            {err && <div style={{ color:'#c62828', fontSize:12, marginBottom:8 }}>{err}</div>}
+          </div>
+        )}
+
       </div>
-    </div>
+    </FormShell>
   )
 }
 
@@ -224,8 +257,9 @@ export default function CostAllocation({ entityId }) {
   const [lines,   setLines]   = useState({})  // ruleId → lines[]
   const [runs,    setRuns]    = useState([])
   const [coa,     setCoa]     = useState([])
-  const [modal,   setModal]   = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [modal,      setModal]      = useState(null)
+  const [showBanner, setShowBanner] = useState(false)
+  const [loading,    setLoading]    = useState(true)
   const [expanded,setExpanded]= useState(new Set())
 
   // Run form state
@@ -391,7 +425,7 @@ export default function CostAllocation({ entityId }) {
         /* ── Rules tab ───────────────────────────────────────────── */
         <div>
           <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:10 }}>
-            <button onClick={()=>setModal('new')} style={S.btn()}>+ New Rule</button>
+            <button onClick={()=>setShowBanner(true)} style={S.btn()}>+ New Rule</button>
           </div>
           {rules.length===0 ? (
             <div style={{ ...S.card, textAlign:'center', padding:60, color:'#6b7c93' }}>
@@ -599,6 +633,17 @@ export default function CostAllocation({ entityId }) {
         </div>
       )}
 
+      <PageBanner
+        isOpen={showBanner}
+        onClose={() => setShowBanner(false)}
+        onStart={() => { setShowBanner(false); setModal('new') }}
+        chapterName="Planning"
+        formTitle={['Cost', 'Allocation', 'Rule']}
+        heading="Define how shared costs are split across departments"
+        iconLabel="Cost Allocation"
+        workflowSteps={['Rule Details', 'Allocation Lines']}
+        description="Set up percentage-based allocation rules for shared GL accounts. Allocations post automatically as journal entries to the ledger."
+      />
       {modal && (
         <RuleModal
           entityId={entityId}

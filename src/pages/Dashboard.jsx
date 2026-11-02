@@ -171,7 +171,7 @@ export default function Dashboard({ entityId, entityCode, isAr, onNavigate }) {
 
   // Fetch entity list once
   useEffect(() => {
-    supabase.from('entities').select('id,code,name').then(({ data:rows, error }) => {
+    supabase.from('entities').select('id,entity_code,entity_name').then(({ data:rows, error }) => {
       setAllEntities(rows || [])
       setEntitiesReady(true)
     })
@@ -183,7 +183,7 @@ export default function Dashboard({ entityId, entityCode, isAr, onNavigate }) {
     try {
       const targetIds = entityFilter==='ALL'
         ? allEntities.map(e=>e.id)
-        : allEntities.filter(e=>e.code===entityFilter).map(e=>e.id)
+        : allEntities.filter(e=>e.entity_code===entityFilter).map(e=>e.id)
 
       // If no entity IDs resolved (e.g. entities table is empty), show empty state
       if (targetIds.length===0) { setData({ payrollRuns:[],employees:[],invoices:[],arRows:[],totalAR:0,totalInvoiced:0,receipts:[],projects:[],expenses:[],loans:[],vacations:[],compDocs:[],payrollByMonth:Array(12).fill(0),expByMonth:Array(12).fill(0),invByMonth:Array(12).fill(0),recByMonth:Array(12).fill(0) }); setLoading(false); return }

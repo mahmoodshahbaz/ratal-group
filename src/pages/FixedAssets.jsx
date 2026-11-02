@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import FormShell from '../components/FormShell'
+import PageBanner from '../components/PageBanner'
 
 // ═══════════════════════════════════════════════════════════════════
 // Fixed Assets Register — Phase 8
@@ -14,12 +16,14 @@ const STATUSES   = ['ACTIVE','FULLY_DEPRECIATED','DISPOSED','IDLE']
 const CAT_ICONS  = { VEHICLE:'🚗', EQUIPMENT:'⚙️', FURNITURE:'🪑', IT:'💻', BUILDING:'🏢', LAND:'🌍', OTHER:'📦' }
 const STATUS_COLOR = { ACTIVE:'#2e7d32', FULLY_DEPRECIATED:'#1565C0', DISPOSED:'#c62828', IDLE:'#e65100' }
 
+const L3 = '#AF3564'
+
 const S = {
-  card:  { background:'#fff', borderRadius:14, padding:'16px 20px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)', marginBottom:10 },
-  btn:   (c='#1a2e3d') => ({ background:c, color:'#fff', border:'none', borderRadius:8, padding:'8px 16px', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }),
-  btnO:  (c='#1a2e3d') => ({ background:'transparent', color:c, border:`1.5px solid ${c}`, borderRadius:8, padding:'7px 15px', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }),
-  inp:   { padding:'7px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:12, outline:'none', background:'#fff', width:'100%', boxSizing:'border-box', fontFamily:'inherit' },
-  lbl:   { display:'block', fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4 },
+  card:  { background:'#fff', borderRadius:4, padding:'16px 20px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)', marginBottom:10 },
+  btn:   (c='#1a2e3d') => ({ background:c, color:'#fff', border:'none', borderRadius:4, padding:'8px 16px', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap', fontFamily:"'Poppins',sans-serif" }),
+  btnO:  (c='#1a2e3d') => ({ background:'transparent', color:c, border:`1.5px solid ${c}`, borderRadius:4, padding:'7px 15px', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap', fontFamily:"'Poppins',sans-serif" }),
+  inp:   { padding:'7px 10px', borderRadius:4, border:'1px solid #dde3ec', fontSize:12, outline:'none', background:'#fff', width:'100%', boxSizing:'border-box', fontFamily:"'Poppins',sans-serif" },
+  lbl:   { display:'block', fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4, fontFamily:"'Poppins',sans-serif" },
 }
 
 const fmt    = n  => (+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
@@ -139,15 +143,19 @@ const BLANK = {
 // Tab 1 — Asset Register
 // ═══════════════════════════════════════════════════════════════════
 function AssetRegister({ entityId, assets, reload }) {
-  const [modal,  setModal]  = useState(null)   // null | 'add' | {asset}
-  const [form,   setForm]   = useState(BLANK)
-  const [saving, setSaving] = useState(false)
-  const [catF,   setCatF]   = useState('ALL')
-  const [statF,  setStatF]  = useState('ALL')
-  const [search, setSearch] = useState('')
-  const [asOf,   setAsOf]   = useState(new Date().toISOString().slice(0,10))
+  const [modal,      setModal]      = useState(null)   // null | 'add' | {asset}
+  const [form,       setForm]       = useState(BLANK)
+  const [saving,     setSaving]     = useState(false)
+  const [catF,       setCatF]       = useState('ALL')
+  const [statF,      setStatF]      = useState('ALL')
+  const [search,     setSearch]     = useState('')
+  const [asOf,       setAsOf]       = useState(new Date().toISOString().slice(0,10))
+  const [showBanner, setShowBanner] = useState(false)
+  const [wizardStep, setWizardStep] = useState(1)
 
-  function openAdd()  { setForm({ ...BLANK }); setModal('add') }
+  function resetForm() { setForm({...BLANK}); setWizardStep(1) }
+
+  function openAdd()  { resetForm(); setShowBanner(true) }
   function openEdit(a){ setForm({ ...BLANK, ...a,
     purchase_date:     a.purchase_date||'',
     disposal_date:     a.disposal_date||'',
@@ -156,7 +164,7 @@ function AssetRegister({ entityId, assets, reload }) {
     useful_life_months:a.useful_life_months||'60',
     depreciation_rate: a.depreciation_rate||'',
     disposal_proceeds: a.disposal_proceeds||'',
-  }); setModal(a) }
+  }); setWizardStep(1); setModal(a) }
 
   async function save() {
     if (!form.asset_name || !form.purchase_date || !form.purchase_cost) return
@@ -193,7 +201,7 @@ function AssetRegister({ entityId, assets, reload }) {
     } else {
       await supabase.from('fixed_assets').update(payload).eq('id', modal.id)
     }
-    setSaving(false); setModal(null); reload()
+    setSaving(false); setModal(null); setWizardStep(1); reload()
   }
 
   const visible = assets.filter(a => {
@@ -236,7 +244,7 @@ function AssetRegister({ entityId, assets, reload }) {
           <label style={S.lbl}>NBV as-of</label>
           <input type="date" value={asOf} onChange={e=>setAsOf(e.target.value)} style={{ ...S.inp, width:140 }} />
         </div>
-        <button onClick={openAdd} style={{ ...S.btn('#2e7d32'), marginLeft:'auto' }}>+ Add Asset</button>
+        <button onClick={openAdd} style={{ ...S.btn(L3), marginLeft:'auto' }}>+ Add Asset</button>
       </div>
 
       {/* KPIs */}
@@ -247,7 +255,7 @@ function AssetRegister({ entityId, assets, reload }) {
           { label:'Accumulated Depr', val:totalAccum,  color:'#c62828' },
           { label:'Net Book Value',val:totalNBV,       color:'#2e7d32' },
         ].map(k=>(
-          <div key={k.label} style={{ background:'#fff', borderRadius:12, padding:'12px 14px', boxShadow:'0 1px 6px rgba(0,0,0,0.07)', borderLeft:`4px solid ${k.color}` }}>
+          <div key={k.label} style={{ background:'#fff', borderRadius:4, padding:'12px 14px', boxShadow:'0 1px 6px rgba(0,0,0,0.07)', borderLeft:`4px solid ${k.color}` }}>
             <div style={{ fontSize:10, color:'#6b7c93' }}>{k.label}</div>
             <div style={{ fontWeight:800, fontSize:18, color:k.color }}>
               {k.plain ? k.val : fmt(k.val)}
@@ -297,7 +305,7 @@ function AssetRegister({ entityId, assets, reload }) {
                     {a.depreciation_method !== 'NONE' && a.category !== 'LAND' ? `${a.useful_life_months}m` : '—'}
                   </td>
                   <td style={{ padding:'8px 12px' }}>
-                    <span style={{ padding:'2px 8px', borderRadius:10, fontSize:10, fontWeight:700,
+                    <span style={{ padding:'2px 8px', borderRadius:4, fontSize:10, fontWeight:700,
                       background: STATUS_COLOR[a.status]+'22', color: STATUS_COLOR[a.status] }}>
                       {a.status.replace('_',' ')}
                     </span>
@@ -312,18 +320,40 @@ function AssetRegister({ entityId, assets, reload }) {
         </table>
       </div>
 
-      {/* Modal */}
-      {modal && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-          <div style={{ background:'#fff', borderRadius:16, width:'100%', maxWidth:680, maxHeight:'90vh', overflowY:'auto', padding:24 }}>
-            <div style={{ fontSize:18, fontWeight:800, marginBottom:20 }}>
-              {modal==='add' ? '➕ Add Fixed Asset' : `✏️ Edit: ${modal.asset_name}`}
-            </div>
+      {/* PageBanner — Add Asset */}
+      <PageBanner
+        isOpen={showBanner}
+        onClose={() => setShowBanner(false)}
+        onStart={() => { setShowBanner(false); setModal('add') }}
+        chapterName="Planning"
+        formTitle={['Add', 'Asset', 'Record']}
+        heading="Register a fixed asset for depreciation tracking"
+        iconLabel="Fixed Assets"
+        workflowSteps={['Asset Identity', 'Financials', 'Notes & Disposal']}
+        description="Track fixed assets with straight-line or declining-balance depreciation, NBV, and GL posting."
+      />
 
+      {/* FormShell — Add / Edit Asset */}
+      <FormShell
+        isOpen={!!modal}
+        onClose={() => { setModal(null); setWizardStep(1) }}
+        chapterName="Planning"
+        title={modal==='add' ? ['Add', 'Asset', 'Record'] : ['Edit', 'Asset', 'Record']}
+        steps={['Asset Identity', 'Financials', 'Notes & Disposal']}
+        currentStep={wizardStep}
+        onBack={wizardStep===1 ? () => { setModal(null); setWizardStep(1) } : () => setWizardStep(s=>s-1)}
+        backLabel={wizardStep===1 ? 'Cancel' : 'Back'}
+        onNext={wizardStep<3 ? () => setWizardStep(s=>s+1) : save}
+        nextLabel={wizardStep<3 ? 'Next →' : (saving ? 'Saving…' : '✓ Save Asset')}
+        nextDisabled={saving}
+      >
+        <div style={{ flex:1, overflowY:'auto', padding:'14px 18px', fontFamily:"'Poppins',sans-serif" }}>
+
+          {/* Step 1 — Asset Identity */}
+          {wizardStep === 1 && (
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
               <FRow label="Asset Code"><input value={form.asset_code} onChange={e=>setForm(f=>({...f,asset_code:e.target.value}))} style={S.inp} placeholder="Auto-generated if blank" /></FRow>
               <FRow label="Asset Name" required><input value={form.asset_name} onChange={e=>setForm(f=>({...f,asset_name:e.target.value}))} style={S.inp} /></FRow>
-
               <FRow label="Category">
                 <select value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))} style={S.inp}>
                   {CATEGORIES.map(c=><option key={c} value={c}>{CAT_ICONS[c]} {c}</option>)}
@@ -334,31 +364,31 @@ function AssetRegister({ entityId, assets, reload }) {
                   {STATUSES.map(s=><option key={s} value={s}>{s}</option>)}
                 </select>
               </FRow>
+              <FRow label="Department"><input value={form.department} onChange={e=>setForm(f=>({...f,department:e.target.value}))} style={S.inp} /></FRow>
+              <FRow label="Location"><input value={form.location} onChange={e=>setForm(f=>({...f,location:e.target.value}))} style={S.inp} /></FRow>
+              <FRow label="Assigned To"><input value={form.assigned_to} onChange={e=>setForm(f=>({...f,assigned_to:e.target.value}))} style={S.inp} /></FRow>
+              <FRow label="Serial Number"><input value={form.serial_number} onChange={e=>setForm(f=>({...f,serial_number:e.target.value}))} style={S.inp} /></FRow>
+            </div>
+          )}
 
+          {/* Step 2 — Financials & Depreciation */}
+          {wizardStep === 2 && (
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
               <FRow label="Purchase Date" required><input type="date" value={form.purchase_date} onChange={e=>setForm(f=>({...f,purchase_date:e.target.value}))} style={S.inp} /></FRow>
               <FRow label="Purchase Cost (SAR)" required><input type="number" min="0" step="0.01" value={form.purchase_cost} onChange={e=>setForm(f=>({...f,purchase_cost:e.target.value}))} style={S.inp} /></FRow>
-
               <FRow label="Residual / Salvage Value (SAR)"><input type="number" min="0" step="0.01" value={form.residual_value} onChange={e=>setForm(f=>({...f,residual_value:e.target.value}))} style={S.inp} /></FRow>
               <FRow label="Depreciation Method">
                 <select value={form.depreciation_method} onChange={e=>setForm(f=>({...f,depreciation_method:e.target.value}))} style={S.inp}>
                   {METHODS.map(m=><option key={m} value={m}>{m.replace('_',' ')}</option>)}
                 </select>
               </FRow>
-
               <FRow label="Useful Life (months)"><input type="number" min="1" value={form.useful_life_months} onChange={e=>setForm(f=>({...f,useful_life_months:e.target.value}))} style={S.inp} /></FRow>
               {form.depreciation_method === 'DECLINING_BALANCE' && (
                 <FRow label="Declining Rate (e.g. 0.20 = 20%)"><input type="number" min="0" max="1" step="0.01" value={form.depreciation_rate} onChange={e=>setForm(f=>({...f,depreciation_rate:e.target.value}))} style={S.inp} /></FRow>
               )}
-
               <FRow label="Supplier"><input value={form.supplier_name} onChange={e=>setForm(f=>({...f,supplier_name:e.target.value}))} style={S.inp} /></FRow>
               <FRow label="Invoice / PO Reference"><input value={form.invoice_reference} onChange={e=>setForm(f=>({...f,invoice_reference:e.target.value}))} style={S.inp} /></FRow>
-
-              <FRow label="Department"><input value={form.department} onChange={e=>setForm(f=>({...f,department:e.target.value}))} style={S.inp} /></FRow>
-              <FRow label="Location"><input value={form.location} onChange={e=>setForm(f=>({...f,location:e.target.value}))} style={S.inp} /></FRow>
-              <FRow label="Assigned To"><input value={form.assigned_to} onChange={e=>setForm(f=>({...f,assigned_to:e.target.value}))} style={S.inp} /></FRow>
-              <FRow label="Serial Number"><input value={form.serial_number} onChange={e=>setForm(f=>({...f,serial_number:e.target.value}))} style={S.inp} /></FRow>
-
-              <div style={{ gridColumn:'1/-1', background:'#f5f7fa', borderRadius:8, padding:12, marginTop:4 }}>
+              <div style={{ gridColumn:'1/-1', background:'#f5f7fa', borderRadius:4, padding:12 }}>
                 <div style={{ fontWeight:700, fontSize:11, color:'#6b7c93', marginBottom:8 }}>GL ACCOUNT CODES (optional)</div>
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
                   <FRow label="Asset Account"><input value={form.asset_account_code} onChange={e=>setForm(f=>({...f,asset_account_code:e.target.value}))} style={S.inp} placeholder="e.g. 1500" /></FRow>
@@ -366,9 +396,15 @@ function AssetRegister({ entityId, assets, reload }) {
                   <FRow label="Depr. Expense Account"><input value={form.depr_expense_account} onChange={e=>setForm(f=>({...f,depr_expense_account:e.target.value}))} style={S.inp} placeholder="e.g. 6100" /></FRow>
                 </div>
               </div>
+            </div>
+          )}
 
-              {(form.status === 'DISPOSED') && (
-                <div style={{ gridColumn:'1/-1', background:'#ffebee', borderRadius:8, padding:12 }}>
+          {/* Step 3 — Notes & Disposal */}
+          {wizardStep === 3 && (
+            <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:12 }}>
+              <FRow label="Notes"><textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} style={{ ...S.inp, height:80, resize:'vertical' }} /></FRow>
+              {form.status === 'DISPOSED' && (
+                <div style={{ background:'#ffebee', borderRadius:4, padding:12 }}>
                   <div style={{ fontWeight:700, fontSize:11, color:'#c62828', marginBottom:8 }}>DISPOSAL DETAILS</div>
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                     <FRow label="Disposal Date"><input type="date" value={form.disposal_date} onChange={e=>setForm(f=>({...f,disposal_date:e.target.value}))} style={S.inp} /></FRow>
@@ -377,21 +413,11 @@ function AssetRegister({ entityId, assets, reload }) {
                   </div>
                 </div>
               )}
-
-              <div style={{ gridColumn:'1/-1' }}>
-                <FRow label="Notes"><textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} style={{ ...S.inp, height:60, resize:'vertical' }} /></FRow>
-              </div>
             </div>
+          )}
 
-            <div style={{ display:'flex', gap:8, justifyContent:'flex-end', marginTop:20 }}>
-              <button onClick={()=>setModal(null)} style={S.btnO()}>Cancel</button>
-              <button onClick={save} disabled={saving} style={S.btn('#2e7d32')}>
-                {saving ? 'Saving…' : modal==='add' ? '✓ Save Asset' : '✓ Update Asset'}
-              </button>
-            </div>
-          </div>
         </div>
-      )}
+      </FormShell>
     </>
   )
 }
@@ -500,7 +526,7 @@ function DepreciationSchedule({ entityId, assets, reload }) {
               </div>
 
               {postMsg && (
-                <div style={{ marginTop:10, padding:'8px 12px', borderRadius:8, background: postMsg.startsWith('✓')?'#e8f5e9':'#ffebee', fontSize:12, color: postMsg.startsWith('✓')?'#2e7d32':'#c62828' }}>
+                <div style={{ marginTop:10, padding:'8px 12px', borderRadius:4, background: postMsg.startsWith('✓')?'#e8f5e9':'#ffebee', fontSize:12, color: postMsg.startsWith('✓')?'#2e7d32':'#c62828' }}>
                   {postMsg}
                 </div>
               )}
@@ -513,7 +539,7 @@ function DepreciationSchedule({ entityId, assets, reload }) {
                   { label:`NBV at ${fmtD(asOf)}`, val:currentNBV,       color:'#2e7d32' },
                   { label:'Monthly Depr',   val:calcMonthlyDepr(selected,asOf), color:'#e65100' },
                 ].map(k=>(
-                  <div key={k.label} style={{ background:'#f5f7fa', borderRadius:8, padding:'10px 12px', borderLeft:`3px solid ${k.color}` }}>
+                  <div key={k.label} style={{ background:'#f5f7fa', borderRadius:4, padding:'10px 12px', borderLeft:`3px solid ${k.color}` }}>
                     <div style={{ fontSize:9, color:'#6b7c93' }}>{k.label}</div>
                     <div style={{ fontWeight:800, fontSize:14, color:k.color }}>{fmt(k.val)}</div>
                   </div>
@@ -611,7 +637,7 @@ function NBVSummary({ assets }) {
       {/* Category cards */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))', gap:10, marginBottom:14 }}>
         {byCategory.map(g=>(
-          <div key={g.cat} style={{ background:'#fff', borderRadius:12, padding:'14px 16px', boxShadow:'0 1px 6px rgba(0,0,0,0.07)' }}>
+          <div key={g.cat} style={{ background:'#fff', borderRadius:4, padding:'14px 16px', boxShadow:'0 1px 6px rgba(0,0,0,0.07)' }}>
             <div style={{ fontSize:22, marginBottom:4 }}>{CAT_ICONS[g.cat]}</div>
             <div style={{ fontSize:11, color:'#6b7c93', fontWeight:700 }}>{g.cat} ({g.count})</div>
             <div style={{ fontWeight:800, fontSize:16, color:'#2e7d32', marginTop:4 }}>{fmt(g.nbv)} SAR</div>
@@ -690,16 +716,12 @@ export default function FixedAssets({ entityId }) {
   ]
 
   return (
-    <div>
-      <div style={{ fontSize:12, color:'#6b7c93', marginBottom:18 }}>
-        Asset register with straight-line & declining-balance depreciation · NBV tracking · GL posting
-      </div>
-
+    <div style={{ fontFamily:"'Poppins',sans-serif" }}>
       {/* Tabs */}
       <div style={{ display:'flex', gap:4, marginBottom:14 }}>
         {TABS.map(t=>(
           <button key={t.key} onClick={()=>setTab(t.key)}
-            style={tab===t.key ? S.btn('#1a2e3d') : S.btnO('#546e7a')}>
+            style={tab===t.key ? S.btn(L3) : S.btnO('#546e7a')}>
             {t.label}
           </button>
         ))}

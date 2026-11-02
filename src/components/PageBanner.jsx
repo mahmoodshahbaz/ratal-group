@@ -1,266 +1,321 @@
 /**
- * PageBanner.jsx — Step 0 entry banner
+ * PageBanner.jsx — Step 0 Entry Banner (Sign-Style)
  *
- * Uses the SAME 6-layer structure as all form modals:
- *   L1 outer frame  → chapterL1 color (e.g. #70A5A6 for Operations)
- *   L2 inner area   → chapterL2 color (e.g. #EAF3F2)
- *   L3 accent block → top-right corner, chapterL3 / moduleColor
- *   Left info panel → company name, chapter label, form title, steps, START
- *   Right panel     → L3 colored, icon + description
+ * Sign-style layout matching approved mockup:
+ *   • Top branding strip  — "Ratal Advanced Technologies" + chapter name
+ *   • Main body           — big form title (left) | vertical divider | circle icon (right)
+ *   • Description block   — bold heading + paragraph below divider line on left
+ *   • Bottom strip (L3)   — 3 workflow steps + START button
  *
  * Usage:
  *   <PageBanner
  *     isOpen={showBanner}
  *     onClose={() => setShowBanner(false)}
  *     onStart={() => { setShowBanner(false); setShowForm(true) }}
- *     chapterL1="#70A5A6"
- *     chapterL2="#EAF3F2"
- *     moduleColor="#0079BC"
- *     chapterLabel="Chapter 01 · Operations"
- *     formTitle={['New', 'Money', 'Request']}
- *     steps={['Request Details', 'Attachments']}
+ *     chapterName="Operations"
+ *     formTitle={['NEW', 'LOI', 'REQUEST']}
+ *     heading="Record Letter of Intent details"
+ *     description="Even if you receive a verbal notification or via WhatsApp, fill this in for your own records and to safeguard yourself. Goes through DH approval before filing."
  *     icon={<svg .../>}
- *     description="Request cash funds for field operations."
+ *     iconLabel="DH Approval Required"
+ *     workflowSteps={['Fill Details', 'DH Approval', 'Filed & Saved']}
+ *     steps={['Request Details', 'Attachments']}
  *   />
+ *
+ * Backward-compat: still accepts chapterL1/chapterL2/moduleColor/chapterLabel props.
  */
 
 import React from 'react'
+import { CHAPTER_PALETTES, FORM } from '../styles/appStyles'
 
-const PP = "'Poppins', sans-serif"
+const PP   = "'Poppins', sans-serif"
+const MAIN = '#172D37'
+const SUB  = '#53666F'
+
+function darken(hex, amount = 0.18) {
+  const n = parseInt((hex || '#70A5A6').replace('#', ''), 16)
+  const r = Math.max(0, Math.round(((n >> 16) & 0xff) * (1 - amount)))
+  const g = Math.max(0, Math.round(((n >>  8) & 0xff) * (1 - amount)))
+  const b = Math.max(0, Math.round(( n        & 0xff) * (1 - amount)))
+  return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('')
+}
 
 export default function PageBanner({
   isOpen,
   onClose,
   onStart,
-  onStartAlt      = null,   // optional secondary CTA (e.g. "Import from PDF")
-  startAltLabel   = 'Import from PDF',
-  chapterL1    = '#70A5A6',
-  chapterL2    = '#EAF3F2',
-  moduleColor  = '#0079BC',     // L3 accent
-  chapterLabel = 'Chapter',
-  formTitle    = ['New Form'],  // array of lines
-  steps        = [],
-  icon         = null,
-  description  = '',
+  onStartAlt    = null,
+  startAltLabel = 'Import from PDF',
+
+  // Preferred: derive colors from chapter name
+  chapterName   = 'Operations',
+
+  // Legacy / override props (still accepted)
+  chapterL1,
+  chapterL2,
+  moduleColor,
+  chapterLabel,
+
+  formTitle      = ['NEW', 'Form'],   // array of title lines
+  heading        = '',                 // bold heading above description
+  description    = '',                 // paragraph text
+  icon           = null,               // JSX element shown in circle
+  iconLabel      = 'DH Approval\nRequired',
+  workflowSteps  = null,               // 3-item array for bottom strip
+  steps          = [],                 // form step names (used as fallback for workflowSteps)
 }) {
   if (!isOpen) return null
 
+  const pal     = CHAPTER_PALETTES[chapterName] || CHAPTER_PALETTES.Operations
+  const L1      = chapterL1   || pal.L1
+  const L2      = chapterL2   || pal.L2
+  const L3      = moduleColor || pal.L3
+  const chapter = chapterLabel || chapterName
+
   const titleLines = Array.isArray(formTitle) ? formTitle : [formTitle]
+  const wfSteps    = (workflowSteps || steps).slice(0, 3)
+
+  // Bottom strip step icons
+  const icons = [
+    // Step 1 — clipboard with tick
+    <svg key="i1" width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <rect x="4" y="3" width="16" height="20" rx="2" fill="white" opacity="0.9"/>
+      <rect x="7" y="8" width="10" height="2" rx="1" fill={L3}/>
+      <rect x="7" y="12" width="7" height="2" rx="1" fill={L3}/>
+      <rect x="7" y="16" width="8" height="2" rx="1" fill={L3}/>
+      <circle cx="20" cy="20" r="6" fill="rgba(255,255,255,0.35)"/>
+      <path d="M17 20l2.5 2.5 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>,
+    // Step 2 — checkmark circle
+    <svg key="i2" width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <circle cx="14" cy="14" r="10" fill="white" opacity="0.9"/>
+      <path d="M9 14l3.5 3.5L19 10" stroke={L3} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>,
+    // Step 3 — document filed
+    <svg key="i3" width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <rect x="5" y="4" width="18" height="22" rx="2" fill="white" opacity="0.9"/>
+      <rect x="9" y="9"  width="10" height="2" rx="1" fill={L3}/>
+      <rect x="9" y="13" width="7"  height="2" rx="1" fill={L3}/>
+      <rect x="9" y="17" width="8"  height="2" rx="1" fill={L3}/>
+    </svg>,
+  ]
+
+  // Default icon (document + checkmark) if none provided
+  const defaultIcon = (
+    <svg width="70" height="70" viewBox="0 0 64 64" fill="none">
+      <rect x="10" y="6" width="36" height="44" rx="3" fill="white" opacity="0.9"/>
+      <rect x="16" y="14" width="24" height="3" rx="1.5" fill={L3}/>
+      <rect x="16" y="21" width="18" height="3" rx="1.5" fill={L3}/>
+      <rect x="16" y="28" width="20" height="3" rx="1.5" fill={L3}/>
+      <circle cx="46" cy="46" r="12" fill="rgba(255,255,255,0.35)"/>
+      <path d="M40 46l6 6 8-10" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
 
   return (
     <div
       onClick={e => { if (e.target === e.currentTarget) onClose?.() }}
       style={{
         position: 'fixed', inset: 0,
-        background: 'rgba(15,23,42,0.62)',
-        backdropFilter: 'blur(6px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(10,20,30,0.55)',
+        backdropFilter: 'blur(4px)',
         zIndex: 1000,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontFamily: PP,
       }}
     >
-      {/* ── L1 outer teal frame ── */}
-      <div style={{
-        background: chapterL1,
-        borderRadius: 18,
-        padding: 8,
-        width: 860,
-        maxWidth: '97vw',
-        boxShadow: '0 28px 80px rgba(0,0,0,0.35)',
-        display: 'flex',
-        flexDirection: 'column',
-      }} onClick={e => e.stopPropagation()}>
-
-        {/* ── L2 inner area ── */}
-        <div style={{
-          background: chapterL2,
-          borderRadius: 12,
+      {/* ── L1 OUTER FRAME ── */}
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: L1,
+          borderRadius: 4,
+          padding: 12,
+          border: `3px solid ${darken(L1)}`,
+          width: `min(${FORM.WIDTH}px, 97vw)`,
+          height: 'min(90vh, 680px)',   /* same fixed height as FormShell */
           display: 'flex',
-          flexDirection: 'row',
+          flexDirection: 'column',
+          boxShadow: '0 28px 80px rgba(0,0,0,0.35)',
+        }}
+      >
+        {/* ── INNER WHITE PANEL ── */}
+        <div style={{
+          background: '#fff',
+          border: `2px solid ${L3}`,
+          borderRadius: 0,
+          display: 'flex',
+          flexDirection: 'column',
           overflow: 'hidden',
-          position: 'relative',
-          minHeight: 580,
+          flex: 1,
+          minHeight: 0,
         }}>
 
-          {/* ── L3 accent block — top right ── */}
+          {/* TOP BRANDING STRIP */}
           <div style={{
-            position: 'absolute', top: 0, right: 0,
-            width: 220, height: 160,
-            background: moduleColor,
-            borderRadius: '0 12px 0 90px',
-            zIndex: 0,
-            pointerEvents: 'none',
-          }} />
-
-          {/* ── LEFT INFO PANEL ── */}
-          <div style={{
-            width: 270, flexShrink: 0,
-            padding: '32px 24px 28px',
-            display: 'flex', flexDirection: 'column',
-            justifyContent: 'center',
-            zIndex: 1, position: 'relative',
+            background: L2,
+            padding: '10px 28px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            borderBottom: `1px solid ${darken(L2, 0.08)}`,
+            flexShrink: 0,
           }}>
-            {/* company name */}
             <div style={{
-              fontSize: 9, fontWeight: 800, color: '#53666F',
-              letterSpacing: 1.8, textTransform: 'uppercase',
-              marginBottom: 3, fontFamily: PP,
+              fontSize: 10, fontWeight: 800, color: MAIN,
+              letterSpacing: 1, whiteSpace: 'nowrap', fontFamily: PP,
             }}>
               Ratal Advanced Technologies
             </div>
-
-            {/* chapter label */}
             <div style={{
-              fontSize: 9, fontWeight: 800, color: moduleColor,
-              letterSpacing: 1.8, textTransform: 'uppercase',
-              marginBottom: 20, fontFamily: PP,
+              fontSize: 9, fontWeight: 800, color: L3,
+              letterSpacing: 2.5, textTransform: 'uppercase', fontFamily: PP,
             }}>
-              {chapterLabel}
-            </div>
-
-            {/* big form title */}
-            <div style={{
-              fontSize: 30, fontWeight: 900, color: '#172D37',
-              lineHeight: 1.15, marginBottom: 18,
-              fontFamily: PP, letterSpacing: '-0.3px',
-              fontStyle: 'italic',
-            }}>
-              {titleLines.map((line, i) => (
-                <span key={i} style={{ display: 'block' }}>
-                  {i === 1
-                    ? <em style={{ color: moduleColor, fontStyle: 'italic' }}>{line}</em>
-                    : line}
-                </span>
-              ))}
-            </div>
-
-            {/* step pills */}
-            {steps.length > 0 && (
-              <div style={{
-                display: 'flex', gap: 6, flexWrap: 'wrap',
-                marginBottom: 24,
-              }}>
-                {steps.map((s, i) => (
-                  <div key={i} style={{
-                    padding: '5px 13px', borderRadius: 20,
-                    background: i === 0 ? moduleColor : 'rgba(0,0,0,0.07)',
-                    color: i === 0 ? '#fff' : '#53666F',
-                    fontSize: 10, fontWeight: 700,
-                    fontFamily: PP, whiteSpace: 'nowrap',
-                  }}>
-                    {i + 1}. {s}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* START button */}
-            <div style={{ display:'flex', flexDirection:'column', gap:10, alignItems:'center' }}>
-              <button
-                onClick={onStart}
-                style={{
-                  display: 'inline-flex', alignItems: 'center',
-                  background: '#fff',
-                  borderRadius: 50, border: '2px solid rgba(0,121,188,0.2)',
-                  cursor: 'pointer', padding: 6,
-                  boxShadow: '0 4px 18px rgba(0,0,0,0.13)',
-                  fontFamily: PP,
-                }}
-              >
-                <div style={{
-                  width: 42, height: 42, borderRadius: '50%',
-                  background: moduleColor,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 16, color: '#fff', flexShrink: 0, marginRight: 12,
-                }}>▼</div>
-                <div style={{
-                  fontSize: 14, fontWeight: 800,
-                  color: '#172D37', letterSpacing: 1.5, paddingRight: 8,
-                }}>START</div>
-                <div style={{ width: 1, height: 26, background: 'rgba(0,0,0,0.10)', marginRight: 8 }} />
-                <div style={{
-                  width: 38, height: 38, borderRadius: '50%',
-                  background: moduleColor,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 15, color: '#fff', flexShrink: 0,
-                }}>→</div>
-              </button>
-              {onStartAlt && (
-                <button onClick={onStartAlt} style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 7,
-                  background: 'transparent', border: `1.5px solid ${moduleColor}55`,
-                  borderRadius: 50, padding: '7px 16px',
-                  color: moduleColor, fontSize: 11, fontWeight: 700,
-                  cursor: 'pointer', fontFamily: PP, letterSpacing: 0.5,
-                  whiteSpace: 'nowrap',
-                }}>
-                  <span style={{ fontSize: 13 }}>📎</span>
-                  {startAltLabel}
-                </button>
-              )}
+              {chapter}
             </div>
           </div>
 
-          {/* ── RIGHT ILLUSTRATION PANEL ── */}
+          {/* MAIN BODY */}
           <div style={{
             flex: 1,
-            background: moduleColor,
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            padding: '32px 28px',
-            position: 'relative', overflow: 'hidden',
-            zIndex: 0,
+            display: 'flex', alignItems: 'center',
+            padding: '0 44px',
+            overflow: 'hidden',
           }}>
-            {/* decorative circles */}
-            <div style={{
-              position: 'absolute', right: -60, top: -60,
-              width: 260, height: 260, borderRadius: '50%',
-              background: 'rgba(255,255,255,0.07)', pointerEvents: 'none',
-            }} />
-            <div style={{
-              position: 'absolute', left: -50, bottom: -50,
-              width: 200, height: 200, borderRadius: '50%',
-              background: 'rgba(255,255,255,0.05)', pointerEvents: 'none',
-            }} />
 
-            {/* company top-right */}
-            <div style={{
-              position: 'absolute', top: 14, right: 14,
-              fontSize: 9, fontWeight: 700,
-              color: 'rgba(255,255,255,0.32)',
-              letterSpacing: 0.5, zIndex: 2,
-            }}>
-              Ratal Advanced Technologies
+            {/* LEFT: big title + description */}
+            <div style={{ flex: 1, paddingRight: 40, textAlign: 'left' }}>
+              {titleLines.map((line, i) => (
+                <div key={i} style={{
+                  fontSize:      i === 1 ? 68 : 14,
+                  fontWeight:    900,
+                  color:         L3,
+                  textTransform: 'uppercase',
+                  lineHeight:    i === 1 ? 0.9 : 1.3,
+                  letterSpacing: i === 1 ? '-3px' : '0.3px',
+                  fontFamily:    PP,
+                }}>
+                  {line}
+                </div>
+              ))}
+              <div style={{
+                height: 2, background: L3, width: '100%',
+                margin: '14px 0', opacity: 0.2,
+              }} />
+              {heading && (
+                <div style={{
+                  fontSize: 12, fontWeight: 700, color: MAIN,
+                  marginBottom: 8, fontFamily: PP,
+                }}>
+                  {heading}
+                </div>
+              )}
+              {description && (
+                <div style={{
+                  fontSize: 10.5, fontWeight: 400, color: SUB,
+                  lineHeight: 1.75, fontFamily: PP,
+                }}>
+                  {description}
+                </div>
+              )}
             </div>
 
-            {/* icon */}
+            {/* VERTICAL DIVIDER */}
             <div style={{
-              position: 'relative', zIndex: 2,
+              width: 2, height: 200,
+              background: L3, opacity: 0.15, flexShrink: 0,
+            }} />
+
+            {/* RIGHT: circle icon */}
+            <div style={{
+              flexShrink: 0, paddingLeft: 40,
               display: 'flex', flexDirection: 'column',
-              alignItems: 'center', gap: 16, textAlign: 'center',
+              alignItems: 'center', gap: 14,
             }}>
               <div style={{
-                fontSize: 90, lineHeight: 1,
-                filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.3))',
+                width: 140, height: 140, borderRadius: '50%',
+                background: L3,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                {icon}
+                {icon
+                  ? <div style={{ fontSize: 64, lineHeight: 1 }}>{icon}</div>
+                  : defaultIcon
+                }
               </div>
-
               <div style={{
-                width: 40, height: 2, borderRadius: 2,
-                background: 'rgba(255,255,255,0.3)',
-              }} />
-
-              <div style={{
-                fontSize: 15, fontWeight: 700,
-                fontStyle: 'italic',
-                color: 'rgba(255,255,255,0.95)',
-                lineHeight: 1.65, maxWidth: 260,
-                fontFamily: PP,
-                textShadow: '0 1px 8px rgba(0,0,0,0.18)',
+                fontSize: 9, fontWeight: 700, color: SUB,
+                letterSpacing: 1, textTransform: 'uppercase',
+                textAlign: 'center', fontFamily: PP,
+                whiteSpace: 'pre-line',
               }}>
-                {description}
+                {iconLabel}
               </div>
+            </div>
+
+          </div>
+
+          {/* BOTTOM WORKFLOW STRIP */}
+          <div style={{ background: L3, display: 'flex', flexShrink: 0 }}>
+            {wfSteps.map((step, i) => (
+              <div key={i} style={{
+                flex: 1, padding: '14px 18px',
+                display: 'flex', alignItems: 'center', gap: 12,
+                borderRight: i < wfSteps.length - 1
+                  ? '1px solid rgba(255,255,255,0.2)' : 'none',
+              }}>
+                {icons[i] || icons[0]}
+                <div>
+                  <div style={{
+                    fontSize: 8, fontWeight: 800,
+                    color: 'rgba(255,255,255,0.6)',
+                    letterSpacing: 1, textTransform: 'uppercase', fontFamily: PP,
+                  }}>
+                    Step {i + 1}
+                  </div>
+                  <div style={{
+                    fontSize: 11, fontWeight: 700,
+                    color: '#fff', textTransform: 'uppercase', fontFamily: PP,
+                  }}>
+                    {step}
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* START button (+ optional secondary CTA) */}
+            <div style={{
+              padding: '10px 22px',
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              gap: 8, flexShrink: 0,
+              borderLeft: '1px solid rgba(255,255,255,0.2)',
+            }}>
+              <button
+                onClick={onStart}
+                style={{
+                  background: '#fff', color: L3,
+                  border: 'none', borderRadius: 4,
+                  padding: '11px 28px',
+                  fontSize: 12, fontWeight: 800,
+                  cursor: 'pointer', letterSpacing: 0.5,
+                  whiteSpace: 'nowrap', fontFamily: PP,
+                }}
+              >
+                START →
+              </button>
+              {onStartAlt && (
+                <button
+                  onClick={onStartAlt}
+                  style={{
+                    background: 'rgba(255,255,255,0.15)',
+                    color: '#fff',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    borderRadius: 4, padding: '6px 16px',
+                    fontSize: 10, fontWeight: 700,
+                    cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: PP,
+                  }}
+                >
+                  {startAltLabel}
+                </button>
+              )}
             </div>
           </div>
 

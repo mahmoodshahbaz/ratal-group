@@ -1,5 +1,6 @@
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
+import FormShell from '../components/FormShell'
 import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
 const MC = GROUP_COLORS.Finance
 import React, { useState, useEffect } from 'react'
@@ -9,7 +10,7 @@ import { postReceiptJE } from '../lib/autoPost'
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const S = {
   overlay: { position:'fixed', inset:0, background:'rgba(0,0,0,0.52)', zIndex:1000, display:'flex', alignItems:'flex-start', justifyContent:'center', padding:'20px 10px', overflowY:'auto' },
-  modal:   { background:'#fff', borderRadius:16, width:840, maxWidth:'96vw', boxShadow:'0 8px 40px rgba(0,0,0,0.2)', marginTop:'auto', marginBottom:'auto', overflow:'hidden' },
+  modal:   { background:'#fff', borderRadius:4, width:840, maxWidth:'96vw', boxShadow:'0 8px 40px rgba(0,0,0,0.2)', marginTop:'auto', marginBottom:'auto', overflow:'hidden' },
   inp:     { width:'100%', padding:'8px 11px', borderRadius:7, border:'1px solid #dde3ec', fontSize:13, outline:'none', fontFamily:'inherit', boxSizing:'border-box' },
   label:   { display:'block', fontSize:11, color:'#6b7c93', fontWeight:700, marginBottom:4, textTransform:'uppercase', letterSpacing:0.4 },
   row:     { display:'flex', gap:12, marginBottom:14 },
@@ -77,6 +78,7 @@ export default function PaymentReceipts({ entityId, entityName, entityNameEn, en
         .select('id,contractor_name,contractor_code,vendor_type')
         .eq('entity_id', entityId)
         .eq('status','ACTIVE')
+        .like('contractor_code', 'CONT-%')
         .order('contractor_name'),
     ])
     setReceipts(recs || [])
@@ -589,60 +591,36 @@ export default function PaymentReceipts({ entityId, entityName, entityNameEn, en
         isOpen={showBanner}
         onClose={() => setShowBanner(false)}
         onStart={() => { setShowBanner(false); setOpen(true) }}
-        chapterL1="#C1A1A9"
-        chapterL2="#FAF0F2"
-        moduleColor="#8C354B"
-        chapterLabel="Finance"
+        chapterName="Finance"
         formTitle={['Record', 'Receipt']}
-        steps={['Receipt Details', 'Invoices Covered']}
-        icon="💰"
+        heading="Record payments received from clients"
         description="Record client payment receipts and allocate to outstanding invoices."
+        icon="💰"
+        iconLabel={'Payment\nReceipts'}
+        workflowSteps={['Receipt Details', 'Invoices Covered']}
+        steps={['Receipt Details', 'Invoices Covered']}
       />
 
-      {/* ══════════════════════════════════════════════════════════════
-          CREATE RECEIPT MODAL — 4-Layer Finance Design
-      ══════════════════════════════════════════════════════════════ */}
-      {open && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.52)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:'20px 10px' }}>
-          {/* L1 — mauve border frame */}
-          <div style={{ background:'#C1A1A9', borderRadius:16, width:700, maxWidth:'96vw', height:'86vh', padding:10, display:'flex', boxShadow:'0 24px 64px rgba(0,0,0,0.35)', fontFamily:"'Poppins', sans-serif" }}>
-            {/* L2 — light pink inner */}
-            <div style={{ flex:1, background:'#FAF0F2', borderRadius:8, display:'flex', overflow:'visible', position:'relative' }}>
-
-              {/* ── Sidebar ── */}
-              <div style={{ width:152, flexShrink:0, padding:'16px 14px 16px', display:'flex', flexDirection:'column', alignItems:'flex-start' }}>
-                <div style={{ fontSize:13, fontWeight:900, color:'#3e1020', lineHeight:1.2, whiteSpace:'nowrap', position:'relative', zIndex:10 }}>
-                  {entityName || entityNameEn || 'Ratal Group'}
-                </div>
-                <div style={{ marginTop:80, width:'100%', textAlign:'center' }}>
-                  <div style={{ fontSize:12, fontWeight:800, color:'#8C354B', marginBottom:2 }}>Finance</div>
-                  <div style={{ fontSize:24, fontWeight:900, color:'#3e1020', letterSpacing:0.2, lineHeight:1.15 }}>Record Receipt</div>
-                </div>
-                <div style={{ flex:1 }} />
-                <div style={{ alignSelf:'flex-start', width:'100%' }}>
-                  {[{num:1,label:'Receipt Details'},{num:2,label:'Invoices Covered'}].map(s=>(
-                    <div key={s.num} onClick={()=>s.num<wizardStep&&setWizardStep(s.num)}
-                      style={{ fontSize:11, marginBottom:12, paddingLeft:8, textAlign:'left', width:'100%', boxSizing:'border-box',
-                        borderLeft: wizardStep===s.num?'3px solid #8C354B':'3px solid transparent',
-                        color: wizardStep===s.num?'#8C354B':s.num<wizardStep?'#5a2030':'#b08090',
-                        fontWeight: wizardStep===s.num?700:400,
-                        cursor: s.num<wizardStep?'pointer':'default',
-                        opacity: s.num>wizardStep?0.5:1, transition:'all 0.15s' }}>
-                      {s.label}
-                    </div>
-                  ))}
-                </div>
-                <div style={{ flex:1 }} />
-              </div>
-
-              {/* ── Right column ── */}
-              <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
-                {/* L3 — maroon top-right corner, no text */}
-                <div style={{ position:'absolute', top:0, right:0, width:'55%', height:200, background:'#8C354B', borderRadius:'0 8px 0 0', zIndex:1 }} />
-
-                {/* L4 — white card */}
-                <div style={{ position:'absolute', top:52, left:12, right:12, bottom:12, background:'#fff', borderRadius:12, boxShadow:'0 4px 24px rgba(0,0,0,0.15)', display:'flex', flexDirection:'column', overflow:'hidden', zIndex:2 }}>
-                  <div style={{ flex:1, overflowY:'auto', padding:'14px 16px' }}>
+      {/* ── FormShell section marker ── */}
+      <FormShell
+        isOpen={open}
+        onClose={() => { setOpen(false); setWizardStep(1) }}
+        chapterName="Finance"
+        title={['Record', 'Payment', 'Receipt']}
+        description="Record payments received from clients against outstanding invoices."
+        steps={['Receipt Details', 'Invoices Covered']}
+        currentStep={wizardStep}
+        onBack={wizardStep===1 ? () => { setOpen(false); setWizardStep(1) } : () => setWizardStep(s=>s-1)}
+        backLabel={wizardStep===1 ? 'Cancel' : 'Back'}
+        onNext={wizardStep<2 ? () => {
+          if(!form.customer_id){alert('Please select a customer first.');return}
+          if(!form.gross_amount||parseFloat(form.gross_amount)<=0){alert('Please enter a valid gross amount.');return}
+          setWizardStep(s=>s+1)
+        } : saveReceipt}
+        nextLabel={wizardStep<2 ? 'Save & Next' : (saving ? '⏳ Saving…' : '💰 Post Receipt')}
+        nextDisabled={saving && wizardStep===2}
+      >
+        <div style={{ fontFamily:"'Poppins', sans-serif" }}>
 
                     {/* ─── STEP 1: RECEIPT DETAILS ─── */}
                     {wizardStep===1 && (<>
@@ -653,12 +631,12 @@ export default function PaymentReceipts({ entityId, entityName, entityNameEn, en
                             value={form.receipt_date} onChange={e=>setForm(f=>({...f, receipt_date:e.target.value}))} />
                         </div>
                         <div style={{ flex:2 }}>
-                          <label style={{ fontSize:10, fontWeight:600, color:'#9b6070', display:'block', marginBottom:3 }}>Customer / Client *</label>
+                          <label style={{ fontSize:10, fontWeight:600, color:'#9b6070', display:'block', marginBottom:3 }}>Client *</label>
                           <select style={{ width:'100%', padding:'7px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:12, fontFamily:'inherit', boxSizing:'border-box', outline:'none' }}
                             value={form.customer_id} onChange={e=>onCustomerChange(e.target.value)}>
                             <option value="">— Select Customer —</option>
                             {contractors.map(c=>(
-                              <option key={c.id} value={c.id}>{c.contractor_code?`[${c.contractor_code}] `:''}{c.contractor_name} [{c.vendor_type||'CLIENT'}]</option>
+                              <option key={c.id} value={c.id}>{c.contractor_code?`[${c.contractor_code}] `:''}{c.contractor_name}</option>
                             ))}
                           </select>
                         </div>
@@ -801,39 +779,8 @@ export default function PaymentReceipts({ entityId, entityName, entityNameEn, en
                       </>)}
                     </>)}
 
-                  </div>{/* end scrollable content */}
-
-                  {/* Footer buttons */}
-                  <div style={{ padding:'10px 16px', borderTop:'1px solid #f0e6e9', display:'flex', gap:8, justifyContent:'flex-end', alignItems:'center' }}>
-                    <button
-                      onClick={wizardStep===1 ? ()=>{setOpen(false);setWizardStep(1)} : ()=>setWizardStep(s=>s-1)}
-                      style={{ background:'#888', color:'#fff', border:'none', borderRadius:8, padding:'8px 20px', fontWeight:700, fontSize:12, cursor:'pointer' }}>
-                      {wizardStep===1 ? 'Cancel' : '← Back'}
-                    </button>
-                    {wizardStep<2&&(
-                      <button onClick={()=>{
-                        if(!form.customer_id){alert('Please select a customer first.');return}
-                        if(!form.gross_amount||parseFloat(form.gross_amount)<=0){alert('Please enter a valid gross amount.');return}
-                        setWizardStep(s=>s+1)
-                      }}
-                        style={{ background:'#8C354B', color:'#fff', border:'none', borderRadius:8, padding:'8px 20px', cursor:'pointer', fontSize:12, fontWeight:700 }}>
-                        Save & Next →
-                      </button>
-                    )}
-                    {wizardStep===2&&(
-                      <button onClick={saveReceipt} disabled={saving}
-                        style={{ background:saving?'#C1A1A9':'#8C354B', color:'#fff', border:'none', borderRadius:8, padding:'8px 20px', cursor:saving?'default':'pointer', fontSize:12, fontWeight:700 }}>
-                        {saving?'⏳ Saving…':'💰 Post Receipt'}
-                      </button>
-                    )}
-                  </div>
-
-                </div>{/* end L4 white card */}
-              </div>{/* end right column */}
-            </div>{/* end L2 */}
-          </div>{/* end L1 */}
         </div>
-      )}
+      </FormShell>
     </ChapterPage>
   )
 }

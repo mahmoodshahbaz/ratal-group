@@ -1,5 +1,6 @@
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
+import FormShell from '../components/FormShell'
 import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
 const MC = GROUP_COLORS.Finance
 import { useState, useEffect } from 'react'
@@ -533,66 +534,31 @@ export default function ExpensesPage({ entityId, entityName, isAr }) {
         isOpen={showBanner}
         onClose={() => setShowBanner(false)}
         onStart={() => { setShowBanner(false); setOpen(true) }}
-        chapterL1="#C1A1A9"
-        chapterL2="#FAF0F2"
-        moduleColor="#8C354B"
-        chapterLabel="Finance"
-        formTitle={['New', 'Expense']}
-        steps={['Basic Info', 'Expense Details', 'Project & Refs']}
+        chapterName="Finance"
+        formTitle={['New', 'Expense', 'Record']}
+        heading="Record office and government-related expenditures"
+        iconLabel={'Expenses'}
+        workflowSteps={['Scan Receipt', 'Basic Info', 'Expense Details', 'Project & Submit']}
         icon="🧾"
         description="Record office and government-related expenditures. For field expenses use the Shareable Form."
       />
 
-      {/* ══ 4-LAYER FINANCE WIZARD ══ */}
-      {open && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(15,23,42,0.62)', backdropFilter:'blur(6px)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:16, fontFamily:"'Poppins',sans-serif" }}
-          onClick={e=>{ if(e.target===e.currentTarget){ setOpen(false); resetForm() }}}>
-
-          {/* L1 — mauve border */}
-          <div style={{ background:'#C1A1A9', borderRadius:18, padding:8, width:860, maxWidth:'98vw', maxHeight:'94vh', display:'flex', flexDirection:'column', boxShadow:'0 28px 80px rgba(0,0,0,0.35)' }}
-            onClick={e=>e.stopPropagation()}>
-
-            {/* L2 — light pink */}
-            <div style={{ background:'#FAF0F2', borderRadius:12, flex:1, display:'flex', flexDirection:'row', overflow:'hidden', minHeight:520 }}>
-
-              {/* ── LEFT SIDEBAR ── */}
-              <div style={{ width:148, flexShrink:0, padding:'16px 14px', display:'flex', flexDirection:'column', alignItems:'flex-start' }}>
-                <div style={{ fontSize:12, fontWeight:900, color:'#3e1020', lineHeight:1.2, whiteSpace:'nowrap', position:'relative', zIndex:10 }}>
-                  {entityName || 'Ratal Group'}
-                </div>
-                <div style={{ marginTop:72, width:'100%', textAlign:'center' }}>
-                  <div style={{ fontSize:11, fontWeight:800, color:'#8C354B', marginBottom:2 }}>Finance</div>
-                  <div style={{ fontSize:19, fontWeight:900, color:'#3e1020', letterSpacing:0.2, lineHeight:1.15 }}>New Expense</div>
-                </div>
-                <div style={{ flex:1 }} />
-                {/* Step nav */}
-                <div style={{ alignSelf:'flex-start', width:'100%' }}>
-                  {[{num:1,label:'Scan Receipt'},{num:2,label:'Basic Info'},{num:3,label:'Expense Details'},{num:4,label:'Project & Submit'}].map(s=>(
-                    <div key={s.num} style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 0',
-                      borderLeft: wizardStep===s.num ? '3px solid #8C354B' : '3px solid transparent',
-                      paddingLeft:8, marginLeft:-11 }}>
-                      <div style={{ width:20, height:20, borderRadius:'50%',
-                        background: wizardStep===s.num ? '#8C354B' : '#C1A1A9',
-                        color:'#fff', fontSize:10, fontWeight:800,
-                        display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{s.num}</div>
-                      <span style={{ fontSize:10, fontWeight: wizardStep===s.num ? 800 : 500,
-                        color: wizardStep===s.num ? '#8C354B' : '#94a3b8', lineHeight:1.2 }}>{s.label}</span>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ flex:1 }} />
-              </div>
-
-              {/* ── RIGHT COLUMN ── */}
-              <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
-                {/* L3 — maroon decorative corner */}
-                <div style={{ position:'absolute', top:0, right:0, width:'55%', height:180, background:'#8C354B', borderRadius:'0 8px 0 0', zIndex:1 }} />
-
-                {/* L4 — white card */}
-                <div style={{ position:'absolute', top:44, left:12, right:12, bottom:12, background:'#fff', borderRadius:12, boxShadow:'0 4px 24px rgba(0,0,0,0.15)', display:'flex', flexDirection:'column', overflow:'hidden', zIndex:2 }}>
-
-                  {/* Step content */}
-                  <div style={{ flex:1, overflowY:'auto', padding:'14px 18px' }}>
+      {/* ══ NEW EXPENSE WIZARD — FormShell ══ */}
+      <FormShell
+        isOpen={open}
+        onClose={() => { setOpen(false); resetForm() }}
+        chapterName="Finance"
+        title={['New', 'Expense', 'Record']}
+        description="Record office and government-related expenditures. For field expenses use the Shareable Form."
+        steps={['Scan Receipt', 'Basic Info', 'Expense Details', 'Project & Submit']}
+        currentStep={wizardStep}
+        onBack={wizardStep===1 ? () => { setOpen(false); resetForm() } : () => setWizardStep(s=>s-1)}
+        backLabel={wizardStep===1 ? 'Cancel' : '← Back'}
+        onNext={wizardStep<4 ? () => setWizardStep(s=>s+1) : save}
+        nextLabel={wizardStep<4 ? 'Next →' : (saving ? '⏳ Saving…' : '✅ Submit Expense')}
+        nextDisabled={(wizardStep===1 && (rcptStatus==='scanning'||rcptStatus==='ocr')) || (wizardStep===4 && saving)}
+      >
+        <div style={{ flex:1, overflowY:'auto', padding:'14px 18px' }}>
 
                     {/* ══ STEP 1: Scan Receipt ══ */}
                     {wizardStep===1 && (() => {
@@ -835,41 +801,7 @@ export default function ExpensesPage({ entityId, entityName, isAr }) {
                     )}
                   </div>
 
-                  {/* Footer */}
-                  <div style={{ padding:'10px 16px', borderTop:'1px solid #f1f5f9', background:'#fafafa', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
-                    <div style={{ fontSize:12, fontWeight:800, color:'#8C354B' }}>Total: SAR {totalAmount.toFixed(2)}</div>
-                    <div style={{ display:'flex', gap:8 }}>
-                      {wizardStep>1 && (
-                        <button onClick={()=>setWizardStep(s=>s-1)}
-                          style={{ background:'#f0f4f8', color:'#374151', border:'none', borderRadius:8, padding:'8px 18px', cursor:'pointer', fontSize:12, fontWeight:700 }}>
-                          ← Back
-                        </button>
-                      )}
-                      <button onClick={()=>{ setOpen(false); resetForm() }}
-                        style={{ background:'#f0f4f8', color:'#555', border:'none', borderRadius:8, padding:'8px 16px', cursor:'pointer', fontSize:12 }}>
-                        Cancel
-                      </button>
-                      {wizardStep<4 ? (
-                        <button onClick={()=>setWizardStep(s=>s+1)}
-                          disabled={rcptStatus==='scanning'||rcptStatus==='ocr'}
-                          style={{ background:'#8C354B', color:'#fff', border:'none', borderRadius:8, padding:'8px 22px', cursor:'pointer', fontSize:12, fontWeight:700,
-                            opacity:(rcptStatus==='scanning'||rcptStatus==='ocr')?0.5:1 }}>
-                          Next →
-                        </button>
-                      ) : (
-                        <button onClick={save} disabled={saving}
-                          style={{ background:'linear-gradient(135deg,#8C354B,#C1A1A9)', color:'#fff', border:'none', borderRadius:8, padding:'8px 22px', cursor:'pointer', fontSize:12, fontWeight:700, opacity:saving?0.7:1 }}>
-                          {saving?'⏳ Saving…':'✅ Submit Expense'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      </FormShell>
     </div>
   )
 }

@@ -3,8 +3,8 @@ import { supabase } from '../lib/supabase'
 import { printDocument } from '../lib/templatePrint'
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
-import FormWizard from '../components/FormWizard'
-import { GROUP_COLORS, getChapterPalette, BACK_BTN_COLOR, btn, inputStyle, labelStyle, sectionLabel, fieldRow, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
+import FormShell from '../components/FormShell'
+import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, fieldRow, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
 
 const MC = GROUP_COLORS.Operations   // Money Requests lives in Operations chapter
 
@@ -1014,14 +1014,14 @@ export default function MoneyRequests({ entityId, currentUser }) {
       isOpen={showBanner}
       onClose={() => setShowBanner(false)}
       onStart={() => { setShowBanner(false); setShowCreate(true) }}
-      chapterL1="#70A5A6"
-      chapterL2="#EAF3F2"
-      moduleColor={MC}
-      chapterLabel="Operations"
+      chapterName="Operations"
       formTitle={['New', 'Money', 'Request']}
-      steps={['Request Details', 'Attachments']}
+      heading="Request cash funds for field operations"
+      description="Goes through DH → Accounts → Finance approval before funds are issued."
       icon="💰"
-      description="Request cash funds for field operations. Goes through DH → Accounts → Finance approval before funds are issued."
+      iconLabel={'Finance\nApproval'}
+      workflowSteps={['Request Details', 'DH Approval', 'Funds Issued']}
+      steps={['Request Details', 'Attachments']}
     />
 
     <ChapterPage
@@ -1351,93 +1351,22 @@ export default function MoneyRequests({ entityId, currentUser }) {
         const fLbl = { display:'block', fontSize:10, fontWeight:800, color:'#8a9ab5',
           textTransform:'uppercase', letterSpacing:0.7, marginBottom:5 }
 
-        const { L1, L2 } = getChapterPalette(MC)
-
         return (
-          <div style={S.overlay} onClick={() => { setShowCreate(false); resetCreate() }}>
-            {/* ── Layer 1: muted chapter-colour outer frame ── */}
-            <div style={{
-              borderRadius:22, width:'min(1100px,97vw)', height:'min(660px,95vh)',
-              boxShadow:'0 32px 100px rgba(0,0,0,0.28)',
-              background:L1, padding:10, boxSizing:'border-box',
-            }} onClick={e => e.stopPropagation()}>
-
-              {/* ── Layer 2: light tint inner area ── */}
-              <div style={{ background:L2, borderRadius:10, position:'relative',
-                display:'flex', flexDirection:'row', overflow:'hidden', height:'100%' }}>
-
-              {/* ── Layer 3: accent block — top-right corner ── */}
-              <div style={{ position:'absolute', top:0, right:0, width:210, height:60,
-                background:MC, borderBottomLeftRadius:18, zIndex:1, pointerEvents:'none' }} />
-
-              {/* ── LEFT INFO PANEL — sits on Layer 2 background ── */}
-              <div style={{ width:190, flexShrink:0, padding:'20px 16px 18px',
-                display:'flex', flexDirection:'column', zIndex:2, position:'relative' }}>
-                {/* company name */}
-                <div style={{ fontSize:8, fontWeight:800, letterSpacing:0.8, textTransform:'uppercase',
-                  color:MC, marginBottom:3 }}>
-                  Ratal Advanced Technologies
-                </div>
-                {/* module label */}
-                <div style={{ fontSize:8, fontWeight:900, letterSpacing:2.2, textTransform:'uppercase',
-                  color:MC, marginBottom:20 }}>
-                  Operations
-                </div>
-                {/* icon + title */}
-                <div style={{ fontSize:28, marginBottom:8, lineHeight:1 }}>💰</div>
-                <div style={{ fontSize:18, fontWeight:900, color:'#1a2a26', lineHeight:1.2,
-                  letterSpacing:'-0.3px', marginBottom:8 }}>
-                  {editingMR ? 'Edit Money Request' : 'New Money Request'}
-                </div>
-                {editingMR && (
-                  <div style={{ fontSize:10, color:MC, marginBottom:6, fontWeight:700 }}>
-                    {editingMR.request_number}
-                  </div>
-                )}
-                {/* divider */}
-                <div style={{ height:1, background:`${MC}33`, margin:'4px 0 12px' }} />
-                {/* description */}
-                <div style={{ fontSize:10, color:'#4a6560', lineHeight:1.65, marginBottom:14 }}>
-                  Fill in the details below — the DH will be notified for approval
-                </div>
-                {/* Step indicator */}
-                <div style={{ fontSize:9, fontWeight:800, color:MC, marginBottom:8, letterSpacing:0.5 }}>
-                  STEP {mrStep} OF 2
-                </div>
-                {[['Request Details','Lines & amounts'],['Attachments','Files (optional)']].map(([name,desc],idx)=>{
-                  const sn=idx+1, isAct=mrStep===sn, isDone=mrStep>sn
-                  return (
-                    <div key={sn} onClick={()=>isDone&&setMrStep(sn)}
-                      style={{ display:'flex', flexDirection:'column', padding:'6px 0 6px 10px', cursor:isDone?'pointer':'default',
-                        borderLeft:isAct?`3px solid ${MC}`:isDone?`3px solid ${MC}55`:'3px solid rgba(0,0,0,0.08)', marginBottom:3 }}>
-                      <span style={{ fontSize:11, fontWeight:isAct?700:500, color:isAct?'#172D37':isDone?MC:'#8a9ab5' }}>
-                        {name} {isDone&&'✓'}
-                      </span>
-                      <span style={{ fontSize:10, color:'#aab2bd' }}>{desc}</span>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* ── Layer 4: WHITE CARD ── */}
-              <div style={{ flex:1, background:'#fff', borderRadius:12,
-                margin:'48px 10px 10px 0', display:'flex', flexDirection:'column',
-                overflow:'hidden', zIndex:2, boxShadow:'0 2px 20px rgba(0,0,0,0.10)' }}>
-
-              {/* card header */}
-              <div style={{ padding:'10px 18px 8px', borderBottom:'1px solid #f1f5f9',
-                display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
-                <div style={{ fontSize:13, fontWeight:800, color:'#1e293b' }}>
-                  {mrStep===1 ? (editingMR ? `✏️ Edit — ${editingMR.request_number}` : 'Request Details') : 'Attachments (Optional)'}
-                </div>
-                <button onClick={() => { setShowCreate(false); resetCreate() }}
-                  style={{ width:26, height:26, borderRadius:'50%', background:'#f1f5f9', border:'none',
-                    fontSize:12, color:'#64748b', cursor:'pointer', display:'flex',
-                    alignItems:'center', justifyContent:'center' }}>✕</button>
-              </div>
-
-              {/* ── Scrollable body ── */}
-              <div style={{ flex:1, overflowY:'auto', padding:'14px 18px 6px' }}>
+          <FormShell
+            isOpen={showCreate}
+            onClose={() => { setShowCreate(false); resetCreate() }}
+            chapterName="Operations"
+            title={['New', 'Money', 'Request']}
+            description="Request cash funds for field operations."
+            steps={['Request Details', 'Attachments']}
+            currentStep={mrStep}
+            onBack={mrStep===1 ? () => { setShowCreate(false); resetCreate() } : () => setMrStep(1)}
+            backLabel={mrStep===1 ? 'Cancel' : 'Back'}
+            onNext={mrStep===1 ? () => setMrStep(2) : createMR}
+            nextLabel={mrStep===1 ? 'Save & Next →' : (saving ? '⏳ Saving…' : editingMR ? `↩ Resubmit — SAR ${totalAmt > 0 ? totalAmt.toLocaleString() : '0'}` : `💰 Submit${totalAmt > 0 ? ` — SAR ${totalAmt.toLocaleString()}` : ''}`)}
+            nextDisabled={mrStep===1 ? totalAmt <= 0 : saving}
+          >
+          <div style={{ fontFamily:"'Poppins','Inter',sans-serif" }}>
 
               {mrStep===1 && <>
                 {/* ── STICKY HEADER: Info row (compact single line) + REQUEST LINES + column headers ── */}
@@ -1784,59 +1713,7 @@ export default function MoneyRequests({ entityId, currentUser }) {
               )}
               </div>
 
-              {/* ── Sticky footer — Layer 5 buttons ── */}
-              <div style={{ padding:'10px 18px 12px', borderTop:'1px solid #eaeff6',
-                flexShrink:0, background:'#fff', borderRadius:'0 0 12px 12px',
-                display:'flex', alignItems:'center', gap:12 }}>
-                {mrStep===1 && (
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:10, fontWeight:800, color:'#8a9ab5', textTransform:'uppercase', letterSpacing:0.7 }}>
-                      {activeLines} line{activeLines !== 1 ? 's' : ''} · Grand Total
-                    </div>
-                    <div style={{ fontSize:24, fontWeight:900, color: totalAmt > 0 ? '#1349a0' : '#c0cdd8', letterSpacing:-1, lineHeight:1 }}>
-                      SAR {totalAmt > 0 ? totalAmt.toLocaleString() : '0'}
-                    </div>
-                  </div>
-                )}
-                {mrStep===2 && (
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:10, fontWeight:800, color:'#8a9ab5', textTransform:'uppercase', letterSpacing:0.7 }}>Attachments</div>
-                    <div style={{ fontSize:13, color:'#53666F' }}>{mrAttachments.length} file{mrAttachments.length!==1?'s':''} selected</div>
-                  </div>
-                )}
-                {/* Layer 5 Back — universal grey pill */}
-                <button
-                  onClick={() => mrStep===1 ? (setShowCreate(false), resetCreate()) : setMrStep(1)}
-                  style={{ padding:'10px 24px', borderRadius:20, border:'none',
-                    background:BACK_BTN_COLOR, color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer' }}>
-                  {mrStep===1 ? 'Cancel' : '← Back'}
-                </button>
-                {/* Layer 5 Action — chapter accent (MC) pill */}
-                {mrStep===1 ? (
-                  <button onClick={() => setMrStep(2)} disabled={totalAmt <= 0}
-                    style={{ padding:'10px 28px', borderRadius:20, border:'none', fontSize:13, fontWeight:800,
-                      cursor: totalAmt > 0 ? 'pointer' : 'default',
-                      background: totalAmt > 0 ? MC : '#cfd8dc',
-                      color:'#fff', boxShadow: totalAmt > 0 ? `0 4px 16px ${MC}55` : 'none' }}>
-                    Save & Next →
-                  </button>
-                ) : (
-                  <button onClick={createMR} disabled={saving}
-                    style={{ padding:'10px 28px', borderRadius:20, border:'none', fontSize:13, fontWeight:800,
-                      cursor: !saving ? 'pointer' : 'default',
-                      background: !saving ? MC : '#cfd8dc',
-                      color:'#fff', boxShadow: !saving ? `0 4px 16px ${MC}55` : 'none' }}>
-                    {saving ? '⏳ Saving…' : editingMR
-                      ? `↩ Resubmit to Accounts — SAR ${totalAmt > 0 ? totalAmt.toLocaleString() : '0'}`
-                      : `💰 Submit${totalAmt > 0 ? ` — SAR ${totalAmt.toLocaleString()}` : ''}`}
-                  </button>
-                )}
-              </div>
-
-              </div>{/* end WHITE CARD (Layer 4) */}
-              </div>{/* end Layer 2 inner tint */}
-            </div>{/* end Layer 1 frame */}
-          </div>
+          </FormShell>
         )
       })()}
 

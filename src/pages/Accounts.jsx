@@ -1,21 +1,23 @@
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
-import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
+import FormShell from '../components/FormShell'
+import { GROUP_COLORS } from '../styles/appStyles'
 const MC = GROUP_COLORS.Accounting
+const L3 = '#606D2C'
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const S = {
-  overlay: { position:'fixed', inset:0, background:'rgba(0,0,0,0.52)', zIndex:1000, display:'flex', alignItems:'flex-start', justifyContent:'center', padding:'20px 10px', overflowY:'auto' },
-  modal:   { background:'#fff', borderRadius:16, width:720, maxWidth:'96vw', boxShadow:'0 8px 40px rgba(0,0,0,0.2)', marginTop:'auto', marginBottom:'auto', overflow:'hidden' },
-  inp:     { width:'100%', padding:'8px 11px', borderRadius:7, border:'1px solid #dde3ec', fontSize:13, outline:'none', fontFamily:'inherit', boxSizing:'border-box' },
-  label:   { display:'block', fontSize:11, color:'#6b7c93', fontWeight:700, marginBottom:4, textTransform:'uppercase', letterSpacing:0.4 },
-  row:     { display:'flex', gap:12, marginBottom:14 },
-  col:     { flex:1 },
-  btn:     (bg, fg='#fff') => ({ background:bg, color:fg, border:'none', borderRadius:9, padding:'9px 20px', cursor:'pointer', fontSize:13, fontWeight:700 }),
-  th:      { padding:'9px 10px', textAlign:'left', fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:0.4, background:MC, color:'#fff', borderBottom:'2px solid #e8edf2', whiteSpace:'nowrap' },
-  td:      { padding:'9px 10px', fontSize:12, color:'#2d3a45', borderBottom:'1px solid #f0f4f8', verticalAlign:'middle' },
+  inp:   { width:'100%', padding:'11px 13px', borderRadius:4, border:'1.5px solid #dde3ec', fontSize:14, outline:'none', fontFamily:"'Poppins',sans-serif", boxSizing:'border-box', marginBottom:14 },
+  label: { display:'block', fontSize:11, color:'#6b7c93', fontWeight:700, marginBottom:5, textTransform:'uppercase', letterSpacing:0.4 },
+  row:   { display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 },
+  row3:  { display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 },
+  btn:   (bg, fg='#fff') => ({ background:bg, color:fg, border:'none', borderRadius:4, padding:'9px 20px', cursor:'pointer', fontSize:13, fontWeight:700, fontFamily:"'Poppins',sans-serif" }),
+  addBtn:{ background:L3, color:'#fff', border:'none', borderRadius:4, padding:'10px 20px', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:"'Poppins',sans-serif" },
+  th:    { padding:'9px 10px', textAlign:'left', fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:0.4, background:MC, color:'#fff', borderBottom:'2px solid #e8edf2', whiteSpace:'nowrap' },
+  td:    { padding:'9px 10px', fontSize:12, color:'#2d3a45', borderBottom:'1px solid #f0f4f8', verticalAlign:'middle' },
+  err:   { background:'#ffebee', color:'#c62828', borderRadius:4, padding:'10px 13px', fontSize:13, marginBottom:12 },
 }
 
 function fmt(n) {
@@ -27,19 +29,21 @@ function fmt(n) {
 // ─────────────────────────────────────────────────────────────────────────────
 const EMPTY_BANK = {
   account_name:'', bank_name:'', account_number:'',
-  account_type:'BANK', currency:'SAR',
+  account_type:'BANK', currency:'SAR', is_active:true,
   opening_balance:'0', opening_date: new Date().toISOString().split('T')[0],
   notes:'',
 }
 
 function BankAccountsTab({ entityId }) {
-  const [rows, setRows]     = useState([])
-  const [loading, setLoading] = useState(true)
-  const [showModal, setShowModal] = useState(false)
-  const [form, setForm]     = useState(EMPTY_BANK)
-  const [editId, setEditId] = useState(null)
-  const [saving, setSaving] = useState(false)
-  const [err, setErr]       = useState('')
+  const [rows, setRows]         = useState([])
+  const [loading, setLoading]   = useState(true)
+  const [showBanner, setShowBanner] = useState(false)
+  const [showModal, setShowModal]   = useState(false)
+  const [wizardStep, setWizardStep] = useState(1)
+  const [form, setForm]         = useState(EMPTY_BANK)
+  const [editId, setEditId]     = useState(null)
+  const [saving, setSaving]     = useState(false)
+  const [err, setErr]           = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -51,17 +55,19 @@ function BankAccountsTab({ entityId }) {
 
   useEffect(() => { load() }, [load])
 
-  function openNew() { setForm(EMPTY_BANK); setEditId(null); setErr(''); setShowModal(true) }
+  function openNew() { setForm(EMPTY_BANK); setEditId(null); setErr(''); setShowBanner(true) }
   function openEdit(r) {
     setForm({
       account_name: r.account_name||'', bank_name: r.bank_name||'',
       account_number: r.account_number||'', account_type: r.account_type||'BANK',
-      currency: r.currency||'SAR', opening_balance: r.opening_balance||'0',
+      currency: r.currency||'SAR', is_active: r.is_active!==false,
+      opening_balance: r.opening_balance||'0',
       opening_date: r.opening_date||new Date().toISOString().split('T')[0],
       notes: r.notes||'',
     })
-    setEditId(r.id); setErr(''); setShowModal(true)
+    setEditId(r.id); setErr(''); setWizardStep(1); setShowModal(true)
   }
+  function closeModal() { setShowModal(false); setErr(''); setWizardStep(1) }
 
   async function save() {
     if (!form.account_name.trim()) { setErr('Account name is required'); return }
@@ -75,7 +81,7 @@ function BankAccountsTab({ entityId }) {
     }
     setSaving(false)
     if (error) { setErr(error.message); return }
-    setShowModal(false); load()
+    closeModal(); load()
   }
 
   async function toggleActive(r) {
@@ -84,12 +90,13 @@ function BankAccountsTab({ entityId }) {
   }
 
   const typeLabel = { BANK:'Bank', CASH:'Cash', PETTY_CASH:'Petty Cash' }
+  const STEPS = ['Account Details', 'Opening Balance']
 
   return (
     <div>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
         <div style={{ fontSize:13, color:'#6b7c93' }}>{rows.length} account{rows.length!==1?'s':''}</div>
-        <button style={S.btn('#1a7f4b')} onClick={openNew}>+ Add Bank Account</button>
+        <button style={S.addBtn} onClick={openNew}>+ Add Bank Account</button>
       </div>
 
       {loading ? <div style={{ padding:40, textAlign:'center', color:'#aab2bd' }}>Loading…</div> : (
@@ -132,66 +139,98 @@ function BankAccountsTab({ entityId }) {
         </div>
       )}
 
-      {showModal && (
-        <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&setShowModal(false)}>
-          <div style={S.modal}>
-            <div style={{ background:'#1a2e3d', color:'#fff', padding:'18px 24px', fontWeight:800, fontSize:15 }}>
-              {editId ? 'Edit Bank Account' : 'Add Bank Account'}
+      <PageBanner
+        isOpen={showBanner}
+        onClose={() => setShowBanner(false)}
+        onStart={() => { setShowBanner(false); setWizardStep(1); setShowModal(true) }}
+        chapterName="Accounting"
+        formTitle={['Add', 'Bank', 'Account']}
+        workflowSteps={STEPS}
+        iconLabel="Bank Accounts"
+        description="Register a new bank, cash, or petty cash account with its opening balance and GL mapping."
+      />
+
+      <FormShell
+        isOpen={showModal}
+        onClose={closeModal}
+        chapterName="Accounting"
+        title={editId ? ['Edit', 'Bank', 'Account'] : ['Add', 'Bank', 'Account']}
+        steps={STEPS}
+        currentStep={wizardStep}
+        onBack={() => setWizardStep(s => s - 1)}
+        backLabel="Back"
+        onNext={() => {
+          if (wizardStep < STEPS.length) {
+            if (!form.account_name.trim()) { setErr('Account name is required'); return }
+            setErr(''); setWizardStep(s => s + 1)
+          } else { save() }
+        }}
+        nextLabel={wizardStep < STEPS.length ? 'Next →' : (saving ? 'Saving…' : editId ? 'Save Changes' : 'Add Account')}
+        nextDisabled={saving}
+      >
+        {err && <div style={S.err}>{err}</div>}
+
+        {wizardStep === 1 && (
+          <div>
+            <div style={S.row}>
+              <div>
+                <label style={S.label}>Account Name *</label>
+                <input style={S.inp} value={form.account_name} onChange={e=>setForm(f=>({...f,account_name:e.target.value}))} placeholder="e.g. ANB Main Operations" />
+              </div>
+              <div>
+                <label style={S.label}>Account Type</label>
+                <select style={S.inp} value={form.account_type} onChange={e=>setForm(f=>({...f,account_type:e.target.value}))}>
+                  <option value="BANK">Bank</option>
+                  <option value="CASH">Cash</option>
+                  <option value="PETTY_CASH">Petty Cash</option>
+                </select>
+              </div>
             </div>
-            <div style={{ padding:24 }}>
-              {err && <div style={{ background:'#fdecea', color:'#c0392b', borderRadius:8, padding:'10px 14px', marginBottom:14, fontSize:13 }}>{err}</div>}
-              <div style={S.row}>
-                <div style={S.col}>
-                  <label style={S.label}>Account Name *</label>
-                  <input style={S.inp} value={form.account_name} onChange={e=>setForm(f=>({...f,account_name:e.target.value}))} placeholder="e.g. ANB Main Operations" />
-                </div>
-                <div style={S.col}>
-                  <label style={S.label}>Account Type</label>
-                  <select style={S.inp} value={form.account_type} onChange={e=>setForm(f=>({...f,account_type:e.target.value}))}>
-                    <option value="BANK">Bank</option>
-                    <option value="CASH">Cash</option>
-                    <option value="PETTY_CASH">Petty Cash</option>
-                  </select>
-                </div>
+            <div style={S.row}>
+              <div>
+                <label style={S.label}>Bank Name</label>
+                <input style={S.inp} value={form.bank_name} onChange={e=>setForm(f=>({...f,bank_name:e.target.value}))} placeholder="Arab National Bank" />
               </div>
-              <div style={S.row}>
-                <div style={S.col}>
-                  <label style={S.label}>Bank Name</label>
-                  <input style={S.inp} value={form.bank_name} onChange={e=>setForm(f=>({...f,bank_name:e.target.value}))} placeholder="Arab National Bank" />
-                </div>
-                <div style={S.col}>
-                  <label style={S.label}>Account / IBAN Number</label>
-                  <input style={S.inp} value={form.account_number} onChange={e=>setForm(f=>({...f,account_number:e.target.value}))} placeholder="SA00 0000 0000 0000" />
-                </div>
+              <div>
+                <label style={S.label}>Account / IBAN Number</label>
+                <input style={S.inp} value={form.account_number} onChange={e=>setForm(f=>({...f,account_number:e.target.value}))} placeholder="SA00 0000 0000 0000" />
               </div>
-              <div style={S.row}>
-                <div style={S.col}>
-                  <label style={S.label}>Opening Balance (SAR)</label>
-                  <input style={S.inp} type="number" value={form.opening_balance} onChange={e=>setForm(f=>({...f,opening_balance:e.target.value}))} />
-                </div>
-                <div style={S.col}>
-                  <label style={S.label}>Opening Date</label>
-                  <input style={S.inp} type="date" value={form.opening_date} onChange={e=>setForm(f=>({...f,opening_date:e.target.value}))} />
-                </div>
-                <div style={{ width:100 }}>
-                  <label style={S.label}>Currency</label>
-                  <select style={S.inp} value={form.currency} onChange={e=>setForm(f=>({...f,currency:e.target.value}))}>
-                    <option>SAR</option><option>USD</option><option>EUR</option><option>GBP</option>
-                  </select>
-                </div>
+            </div>
+            <div style={S.row}>
+              <div>
+                <label style={S.label}>Currency</label>
+                <select style={S.inp} value={form.currency} onChange={e=>setForm(f=>({...f,currency:e.target.value}))}>
+                  <option>SAR</option><option>USD</option><option>EUR</option><option>GBP</option>
+                </select>
               </div>
-              <div style={{ marginBottom:14 }}>
-                <label style={S.label}>Notes</label>
-                <textarea style={{ ...S.inp, height:60, resize:'vertical' }} value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} />
-              </div>
-              <div style={{ display:'flex', justifyContent:'flex-end', gap:10 }}>
-                <button style={S.btn('#e8edf5','#2d3a45')} onClick={()=>setShowModal(false)}>Cancel</button>
-                <button style={S.btn('#1a7f4b')} onClick={save} disabled={saving}>{saving?'Saving…':'Save Account'}</button>
+              <div style={{ display:'flex', alignItems:'center', paddingTop:22 }}>
+                <label onClick={() => setForm(f=>({...f, is_active: !f.is_active}))}
+                  style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:13, fontWeight:600, color: form.is_active ? L3 : '#aab2bd' }}>
+                  <span style={{ fontSize:18 }}>{form.is_active ? '✅' : '⬜'}</span>
+                  Active account
+                </label>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {wizardStep === 2 && (
+          <div>
+            <div style={S.row}>
+              <div>
+                <label style={S.label}>Opening Balance (SAR)</label>
+                <input style={S.inp} type="number" value={form.opening_balance} onChange={e=>setForm(f=>({...f,opening_balance:e.target.value}))} />
+              </div>
+              <div>
+                <label style={S.label}>Opening Date</label>
+                <input style={S.inp} type="date" value={form.opening_date} onChange={e=>setForm(f=>({...f,opening_date:e.target.value}))} />
+              </div>
+            </div>
+            <label style={S.label}>Notes</label>
+            <textarea style={{ ...S.inp, height:80, resize:'vertical' }} value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} />
+          </div>
+        )}
+      </FormShell>
     </div>
   )
 }
@@ -208,13 +247,15 @@ const EMPTY_ASSET = {
 }
 
 function FixedAssetsTab({ entityId }) {
-  const [rows, setRows]       = useState([])
-  const [loading, setLoading] = useState(true)
-  const [showModal, setShowModal] = useState(false)
-  const [form, setForm]       = useState(EMPTY_ASSET)
-  const [editId, setEditId]   = useState(null)
-  const [saving, setSaving]   = useState(false)
-  const [err, setErr]         = useState('')
+  const [rows, setRows]         = useState([])
+  const [loading, setLoading]   = useState(true)
+  const [showBanner, setShowBanner] = useState(false)
+  const [showModal, setShowModal]   = useState(false)
+  const [wizardStep, setWizardStep] = useState(1)
+  const [form, setForm]         = useState(EMPTY_ASSET)
+  const [editId, setEditId]     = useState(null)
+  const [saving, setSaving]     = useState(false)
+  const [err, setErr]           = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -226,7 +267,7 @@ function FixedAssetsTab({ entityId }) {
 
   useEffect(() => { load() }, [load])
 
-  function openNew() { setForm(EMPTY_ASSET); setEditId(null); setErr(''); setShowModal(true) }
+  function openNew() { setForm(EMPTY_ASSET); setEditId(null); setErr(''); setShowBanner(true) }
   function openEdit(r) {
     setForm({
       asset_code: r.asset_code||'', asset_name: r.asset_name||'',
@@ -236,8 +277,9 @@ function FixedAssetsTab({ entityId }) {
       useful_life_years: r.useful_life_years||'3', salvage_value: r.salvage_value||'0',
       current_value: r.current_value||'', notes: r.notes||'',
     })
-    setEditId(r.id); setErr(''); setShowModal(true)
+    setEditId(r.id); setErr(''); setWizardStep(1); setShowModal(true)
   }
+  function closeModal() { setShowModal(false); setErr(''); setWizardStep(1) }
 
   async function save() {
     if (!form.asset_name.trim()) { setErr('Asset name is required'); return }
@@ -261,21 +303,23 @@ function FixedAssetsTab({ entityId }) {
     }
     setSaving(false)
     if (error) { setErr(error.message); return }
-    setShowModal(false); load()
+    closeModal(); load()
   }
 
   const catLabel = c => c.replace(/_/g,' ')
-  const statusBadge = s => {
+  const assetBadge = s => {
     const map = { ACTIVE:['#e8f5e9','#2e7d32'], DISPOSED:['#fce4ec','#c62828'], FULLY_DEPRECIATED:['#f3e5f5','#6a1b9a'] }
     const [bg,fg] = map[s]||['#f5f5f5','#555']
     return <span style={{ background:bg, color:fg, padding:'2px 8px', borderRadius:12, fontSize:11, fontWeight:700 }}>{s?.replace(/_/g,' ')}</span>
   }
 
+  const STEPS = ['Asset Identity', 'Financials']
+
   return (
     <div>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
         <div style={{ fontSize:13, color:'#6b7c93' }}>{rows.length} asset{rows.length!==1?'s':''}</div>
-        <button style={S.btn('#1a7f4b')} onClick={openNew}>+ Add Asset</button>
+        <button style={S.addBtn} onClick={openNew}>+ Add Asset</button>
       </div>
 
       {loading ? <div style={{ padding:40, textAlign:'center', color:'#aab2bd' }}>Loading…</div> : (
@@ -301,7 +345,7 @@ function FixedAssetsTab({ entityId }) {
                   <td style={{ ...S.td, textAlign:'right', fontFamily:'monospace' }}>{fmt(r.purchase_value)}</td>
                   <td style={{ ...S.td, textAlign:'center' }}>{r.depreciation_rate}%</td>
                   <td style={{ ...S.td, textAlign:'right', fontFamily:'monospace', color: +r.current_value < +r.purchase_value * 0.2 ? '#e74c3c':'#2d3a45' }}>{fmt(r.current_value)}</td>
-                  <td style={S.td}>{statusBadge(r.status)}</td>
+                  <td style={S.td}>{assetBadge(r.status)}</td>
                   <td style={S.td}>
                     <button onClick={()=>openEdit(r)} style={{ ...S.btn('#e8edf5','#2d3a45'), padding:'4px 12px', fontSize:11 }}>Edit</button>
                   </td>
@@ -312,83 +356,106 @@ function FixedAssetsTab({ entityId }) {
         </div>
       )}
 
-      {showModal && (
-        <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&setShowModal(false)}>
-          <div style={S.modal}>
-            <div style={{ background:'#1a2e3d', color:'#fff', padding:'18px 24px', fontWeight:800, fontSize:15 }}>
-              {editId ? 'Edit Fixed Asset' : 'Add Fixed Asset'}
+      <PageBanner
+        isOpen={showBanner}
+        onClose={() => setShowBanner(false)}
+        onStart={() => { setShowBanner(false); setWizardStep(1); setShowModal(true) }}
+        chapterName="Accounting"
+        formTitle={['Add', 'Fixed', 'Asset']}
+        workflowSteps={STEPS}
+        iconLabel="Fixed Assets"
+        description="Register a new fixed asset with its purchase details, depreciation method, and current book value."
+      />
+
+      <FormShell
+        isOpen={showModal}
+        onClose={closeModal}
+        chapterName="Accounting"
+        title={editId ? ['Edit', 'Fixed', 'Asset'] : ['Add', 'Fixed', 'Asset']}
+        steps={STEPS}
+        currentStep={wizardStep}
+        onBack={() => setWizardStep(s => s - 1)}
+        backLabel="Back"
+        onNext={() => {
+          if (wizardStep < STEPS.length) {
+            if (!form.asset_name.trim()) { setErr('Asset name is required'); return }
+            setErr(''); setWizardStep(s => s + 1)
+          } else { save() }
+        }}
+        nextLabel={wizardStep < STEPS.length ? 'Next →' : (saving ? 'Saving…' : editId ? 'Save Changes' : 'Add Asset')}
+        nextDisabled={saving}
+      >
+        {err && <div style={S.err}>{err}</div>}
+
+        {wizardStep === 1 && (
+          <div>
+            <div style={S.row}>
+              <div>
+                <label style={S.label}>Asset Code</label>
+                <input style={S.inp} value={form.asset_code} onChange={e=>setForm(f=>({...f,asset_code:e.target.value}))} placeholder="PC-001" />
+              </div>
+              <div>
+                <label style={S.label}>Asset Name *</label>
+                <input style={S.inp} value={form.asset_name} onChange={e=>setForm(f=>({...f,asset_name:e.target.value}))} placeholder="Dell Laptop i7" />
+              </div>
             </div>
-            <div style={{ padding:24 }}>
-              {err && <div style={{ background:'#fdecea', color:'#c0392b', borderRadius:8, padding:'10px 14px', marginBottom:14, fontSize:13 }}>{err}</div>}
-              <div style={S.row}>
-                <div style={{ width:140 }}>
-                  <label style={S.label}>Asset Code</label>
-                  <input style={S.inp} value={form.asset_code} onChange={e=>setForm(f=>({...f,asset_code:e.target.value}))} placeholder="PC-001" />
-                </div>
-                <div style={S.col}>
-                  <label style={S.label}>Asset Name *</label>
-                  <input style={S.inp} value={form.asset_name} onChange={e=>setForm(f=>({...f,asset_name:e.target.value}))} placeholder="Dell Laptop i7" />
-                </div>
+            <div style={S.row}>
+              <div>
+                <label style={S.label}>Category</label>
+                <select style={S.inp} value={form.asset_category} onChange={e=>setForm(f=>({...f,asset_category:e.target.value}))}>
+                  {ASSET_CATEGORIES.map(c=><option key={c} value={c}>{catLabel(c)}</option>)}
+                </select>
               </div>
-              <div style={S.row}>
-                <div style={S.col}>
-                  <label style={S.label}>Category</label>
-                  <select style={S.inp} value={form.asset_category} onChange={e=>setForm(f=>({...f,asset_category:e.target.value}))}>
-                    {ASSET_CATEGORIES.map(c=><option key={c} value={c}>{catLabel(c)}</option>)}
-                  </select>
-                </div>
-                <div style={S.col}>
-                  <label style={S.label}>Purchase Date</label>
-                  <input style={S.inp} type="date" value={form.asset_date} onChange={e=>setForm(f=>({...f,asset_date:e.target.value}))} />
-                </div>
-              </div>
-              <div style={S.row}>
-                <div style={S.col}>
-                  <label style={S.label}>Purchase Value (SAR) *</label>
-                  <input style={S.inp} type="number" value={form.purchase_value} onChange={e=>{
-                    const pv = +e.target.value||0
-                    const sv = +form.salvage_value||0
-                    const life = +form.useful_life_years||1
-                    const annualDep = (pv-sv)/life
-                    const cv = Math.max(0, pv - annualDep)
-                    setForm(f=>({...f, purchase_value:e.target.value, current_value: String(cv.toFixed(2)) }))
-                  }} />
-                </div>
-                <div style={S.col}>
-                  <label style={S.label}>Salvage Value (SAR)</label>
-                  <input style={S.inp} type="number" value={form.salvage_value} onChange={e=>setForm(f=>({...f,salvage_value:e.target.value}))} />
-                </div>
-              </div>
-              <div style={S.row}>
-                <div style={S.col}>
-                  <label style={S.label}>Useful Life (Years)</label>
-                  <input style={S.inp} type="number" value={form.useful_life_years} onChange={e=>{
-                    const life = +e.target.value||1
-                    const rate = +(100/life).toFixed(2)
-                    setForm(f=>({...f,useful_life_years:e.target.value, depreciation_rate:String(rate)}))
-                  }} />
-                </div>
-                <div style={S.col}>
-                  <label style={S.label}>Depreciation Rate (% p.a.)</label>
-                  <input style={S.inp} type="number" value={form.depreciation_rate} onChange={e=>setForm(f=>({...f,depreciation_rate:e.target.value}))} />
-                </div>
-                <div style={S.col}>
-                  <label style={S.label}>Current Book Value</label>
-                  <input style={S.inp} type="number" value={form.current_value} onChange={e=>setForm(f=>({...f,current_value:e.target.value}))} />
-                </div>
-              </div>
-              <div style={{ marginBottom:14 }}>
-                <label style={S.label}>Notes</label>
-                <textarea style={{ ...S.inp, height:50, resize:'vertical' }} value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} />
-              </div>
-              <div style={{ display:'flex', justifyContent:'flex-end', gap:10 }}>
-                <button style={S.btn('#e8edf5','#2d3a45')} onClick={()=>setShowModal(false)}>Cancel</button>
-                <button style={S.btn('#1a7f4b')} onClick={save} disabled={saving}>{saving?'Saving…':'Save Asset'}</button>
+              <div>
+                <label style={S.label}>Purchase Date</label>
+                <input style={S.inp} type="date" value={form.asset_date} onChange={e=>setForm(f=>({...f,asset_date:e.target.value}))} />
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {wizardStep === 2 && (
+          <div>
+            <div style={S.row}>
+              <div>
+                <label style={S.label}>Purchase Value (SAR) *</label>
+                <input style={S.inp} type="number" value={form.purchase_value} onChange={e=>{
+                  const pv = +e.target.value||0
+                  const sv = +form.salvage_value||0
+                  const life = +form.useful_life_years||1
+                  const annualDep = (pv-sv)/life
+                  const cv = Math.max(0, pv - annualDep)
+                  setForm(f=>({...f, purchase_value:e.target.value, current_value: String(cv.toFixed(2)) }))
+                }} />
+              </div>
+              <div>
+                <label style={S.label}>Salvage Value (SAR)</label>
+                <input style={S.inp} type="number" value={form.salvage_value} onChange={e=>setForm(f=>({...f,salvage_value:e.target.value}))} />
+              </div>
+            </div>
+            <div style={S.row3}>
+              <div>
+                <label style={S.label}>Useful Life (Years)</label>
+                <input style={S.inp} type="number" value={form.useful_life_years} onChange={e=>{
+                  const life = +e.target.value||1
+                  const rate = +(100/life).toFixed(2)
+                  setForm(f=>({...f,useful_life_years:e.target.value, depreciation_rate:String(rate)}))
+                }} />
+              </div>
+              <div>
+                <label style={S.label}>Dep. Rate (% p.a.)</label>
+                <input style={S.inp} type="number" value={form.depreciation_rate} onChange={e=>setForm(f=>({...f,depreciation_rate:e.target.value}))} />
+              </div>
+              <div>
+                <label style={S.label}>Current Book Value</label>
+                <input style={S.inp} type="number" value={form.current_value} onChange={e=>setForm(f=>({...f,current_value:e.target.value}))} />
+              </div>
+            </div>
+            <label style={S.label}>Notes</label>
+            <textarea style={{ ...S.inp, height:70, resize:'vertical' }} value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} />
+          </div>
+        )}
+      </FormShell>
     </div>
   )
 }
@@ -399,13 +466,15 @@ function FixedAssetsTab({ entityId }) {
 const EMPTY_CAPITAL = { capital_name:'', opening_balance:'0', notes:'' }
 
 function CapitalAccountsTab({ entityId }) {
-  const [rows, setRows]       = useState([])
-  const [loading, setLoading] = useState(true)
-  const [showModal, setShowModal] = useState(false)
-  const [form, setForm]       = useState(EMPTY_CAPITAL)
-  const [editId, setEditId]   = useState(null)
-  const [saving, setSaving]   = useState(false)
-  const [err, setErr]         = useState('')
+  const [rows, setRows]         = useState([])
+  const [loading, setLoading]   = useState(true)
+  const [showBanner, setShowBanner] = useState(false)
+  const [showModal, setShowModal]   = useState(false)
+  const [wizardStep, setWizardStep] = useState(1)
+  const [form, setForm]         = useState(EMPTY_CAPITAL)
+  const [editId, setEditId]     = useState(null)
+  const [saving, setSaving]     = useState(false)
+  const [err, setErr]           = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -417,11 +486,12 @@ function CapitalAccountsTab({ entityId }) {
 
   useEffect(() => { load() }, [load])
 
-  function openNew() { setForm(EMPTY_CAPITAL); setEditId(null); setErr(''); setShowModal(true) }
+  function openNew() { setForm(EMPTY_CAPITAL); setEditId(null); setErr(''); setShowBanner(true) }
   function openEdit(r) {
     setForm({ capital_name: r.capital_name||'', opening_balance: r.opening_balance||'0', notes: r.notes||'' })
-    setEditId(r.id); setErr(''); setShowModal(true)
+    setEditId(r.id); setErr(''); setWizardStep(1); setShowModal(true)
   }
+  function closeModal() { setShowModal(false); setErr(''); setWizardStep(1) }
 
   async function save() {
     if (!form.capital_name.trim()) { setErr('Capital name is required'); return }
@@ -435,16 +505,17 @@ function CapitalAccountsTab({ entityId }) {
     }
     setSaving(false)
     if (error) { setErr(error.message); return }
-    setShowModal(false); load()
+    closeModal(); load()
   }
 
   const total = rows.reduce((s,r) => s + (+r.opening_balance||0), 0)
+  const STEPS = ['Partner Details', 'Opening Balance']
 
   return (
     <div>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
         <div style={{ fontSize:13, color:'#6b7c93' }}>Total Capital: <strong style={{ color:'#1a2e3d' }}>SAR {fmt(total)}</strong></div>
-        <button style={S.btn('#1a7f4b')} onClick={openNew}>+ Add Capital Account</button>
+        <button style={S.addBtn} onClick={openNew}>+ Add Capital Account</button>
       </div>
 
       {loading ? <div style={{ padding:40, textAlign:'center', color:'#aab2bd' }}>Loading…</div> : (
@@ -474,34 +545,53 @@ function CapitalAccountsTab({ entityId }) {
         </table>
       )}
 
-      {showModal && (
-        <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&setShowModal(false)}>
-          <div style={{ ...S.modal, width:480 }}>
-            <div style={{ background:'#1a2e3d', color:'#fff', padding:'18px 24px', fontWeight:800, fontSize:15 }}>
-              {editId ? 'Edit Capital Account' : 'Add Capital Account'}
-            </div>
-            <div style={{ padding:24 }}>
-              {err && <div style={{ background:'#fdecea', color:'#c0392b', borderRadius:8, padding:'10px 14px', marginBottom:14, fontSize:13 }}>{err}</div>}
-              <div style={{ marginBottom:14 }}>
-                <label style={S.label}>Capital / Partner Name *</label>
-                <input style={S.inp} value={form.capital_name} onChange={e=>setForm(f=>({...f,capital_name:e.target.value}))} placeholder="e.g. Share Capital – Ratal Group" />
-              </div>
-              <div style={{ marginBottom:14 }}>
-                <label style={S.label}>Opening Balance (SAR)</label>
-                <input style={S.inp} type="number" value={form.opening_balance} onChange={e=>setForm(f=>({...f,opening_balance:e.target.value}))} />
-              </div>
-              <div style={{ marginBottom:20 }}>
-                <label style={S.label}>Notes</label>
-                <textarea style={{ ...S.inp, height:60, resize:'vertical' }} value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} />
-              </div>
-              <div style={{ display:'flex', justifyContent:'flex-end', gap:10 }}>
-                <button style={S.btn('#e8edf5','#2d3a45')} onClick={()=>setShowModal(false)}>Cancel</button>
-                <button style={S.btn('#1a7f4b')} onClick={save} disabled={saving}>{saving?'Saving…':'Save'}</button>
-              </div>
-            </div>
+      <PageBanner
+        isOpen={showBanner}
+        onClose={() => setShowBanner(false)}
+        onStart={() => { setShowBanner(false); setWizardStep(1); setShowModal(true) }}
+        chapterName="Accounting"
+        formTitle={['Add', 'Capital', 'Account']}
+        workflowSteps={STEPS}
+        iconLabel="Capital Accounts"
+        description="Register a capital or partner account with its opening equity balance."
+      />
+
+      <FormShell
+        isOpen={showModal}
+        onClose={closeModal}
+        chapterName="Accounting"
+        title={editId ? ['Edit', 'Capital', 'Account'] : ['Add', 'Capital', 'Account']}
+        steps={STEPS}
+        currentStep={wizardStep}
+        onBack={() => setWizardStep(s => s - 1)}
+        backLabel="Back"
+        onNext={() => {
+          if (wizardStep < STEPS.length) {
+            if (!form.capital_name.trim()) { setErr('Capital name is required'); return }
+            setErr(''); setWizardStep(s => s + 1)
+          } else { save() }
+        }}
+        nextLabel={wizardStep < STEPS.length ? 'Next →' : (saving ? 'Saving…' : editId ? 'Save Changes' : 'Add Account')}
+        nextDisabled={saving}
+      >
+        {err && <div style={S.err}>{err}</div>}
+
+        {wizardStep === 1 && (
+          <div>
+            <label style={S.label}>Capital / Partner Name *</label>
+            <input style={S.inp} value={form.capital_name} onChange={e=>setForm(f=>({...f,capital_name:e.target.value}))} placeholder="e.g. Share Capital – Ratal Group" />
           </div>
-        </div>
-      )}
+        )}
+
+        {wizardStep === 2 && (
+          <div>
+            <label style={S.label}>Opening Balance (SAR)</label>
+            <input style={S.inp} type="number" value={form.opening_balance} onChange={e=>setForm(f=>({...f,opening_balance:e.target.value}))} />
+            <label style={S.label}>Notes</label>
+            <textarea style={{ ...S.inp, height:80, resize:'vertical' }} value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} />
+          </div>
+        )}
+      </FormShell>
     </div>
   )
 }
@@ -517,13 +607,15 @@ const EMPTY_LOAN = {
 }
 
 function LoanAccountsTab({ entityId }) {
-  const [rows, setRows]       = useState([])
-  const [loading, setLoading] = useState(true)
-  const [showModal, setShowModal] = useState(false)
-  const [form, setForm]       = useState(EMPTY_LOAN)
-  const [editId, setEditId]   = useState(null)
-  const [saving, setSaving]   = useState(false)
-  const [err, setErr]         = useState('')
+  const [rows, setRows]         = useState([])
+  const [loading, setLoading]   = useState(true)
+  const [showBanner, setShowBanner] = useState(false)
+  const [showModal, setShowModal]   = useState(false)
+  const [wizardStep, setWizardStep] = useState(1)
+  const [form, setForm]         = useState(EMPTY_LOAN)
+  const [editId, setEditId]     = useState(null)
+  const [saving, setSaving]     = useState(false)
+  const [err, setErr]           = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -535,7 +627,7 @@ function LoanAccountsTab({ entityId }) {
 
   useEffect(() => { load() }, [load])
 
-  function openNew() { setForm(EMPTY_LOAN); setEditId(null); setErr(''); setShowModal(true) }
+  function openNew() { setForm(EMPTY_LOAN); setEditId(null); setErr(''); setShowBanner(true) }
   function openEdit(r) {
     setForm({
       loan_name: r.loan_name||'', lender_name: r.lender_name||'',
@@ -544,8 +636,9 @@ function LoanAccountsTab({ entityId }) {
       start_date: r.start_date||new Date().toISOString().split('T')[0],
       maturity_date: r.maturity_date||'', status: r.status||'ACTIVE', notes: r.notes||'',
     })
-    setEditId(r.id); setErr(''); setShowModal(true)
+    setEditId(r.id); setErr(''); setWizardStep(1); setShowModal(true)
   }
+  function closeModal() { setShowModal(false); setErr(''); setWizardStep(1) }
 
   async function save() {
     if (!form.loan_name.trim()) { setErr('Loan name is required'); return }
@@ -567,22 +660,23 @@ function LoanAccountsTab({ entityId }) {
     }
     setSaving(false)
     if (error) { setErr(error.message); return }
-    setShowModal(false); load()
+    closeModal(); load()
   }
 
-  const statusBadge = s => {
+  const loanBadge = s => {
     const map = { ACTIVE:['#e3f2fd','#1565c0'], SETTLED:['#e8f5e9','#2e7d32'], WRITTEN_OFF:['#fce4ec','#c62828'] }
     const [bg,fg] = map[s]||['#f5f5f5','#555']
     return <span style={{ background:bg, color:fg, padding:'2px 8px', borderRadius:12, fontSize:11, fontWeight:700 }}>{s}</span>
   }
 
   const totalOutstanding = rows.filter(r=>r.status==='ACTIVE').reduce((s,r)=>s+(+r.outstanding_balance||0),0)
+  const STEPS = ['Loan Details', 'Dates & Status']
 
   return (
     <div>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
         <div style={{ fontSize:13, color:'#6b7c93' }}>Outstanding: <strong style={{ color:'#c0392b' }}>SAR {fmt(totalOutstanding)}</strong></div>
-        <button style={S.btn('#1a7f4b')} onClick={openNew}>+ Add Loan</button>
+        <button style={S.addBtn} onClick={openNew}>+ Add Loan</button>
       </div>
 
       {loading ? <div style={{ padding:40, textAlign:'center', color:'#aab2bd' }}>Loading…</div> : (
@@ -608,7 +702,7 @@ function LoanAccountsTab({ entityId }) {
                   <td style={{ ...S.td, textAlign:'center' }}>{r.interest_rate}%</td>
                   <td style={S.td}>{r.start_date||'—'}</td>
                   <td style={S.td}>{r.maturity_date||'—'}</td>
-                  <td style={S.td}>{statusBadge(r.status)}</td>
+                  <td style={S.td}>{loanBadge(r.status)}</td>
                   <td style={S.td}>
                     <button onClick={()=>openEdit(r)} style={{ ...S.btn('#e8edf5','#2d3a45'), padding:'4px 12px', fontSize:11 }}>Edit</button>
                   </td>
@@ -619,68 +713,92 @@ function LoanAccountsTab({ entityId }) {
         </div>
       )}
 
-      {showModal && (
-        <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&setShowModal(false)}>
-          <div style={S.modal}>
-            <div style={{ background:'#1a2e3d', color:'#fff', padding:'18px 24px', fontWeight:800, fontSize:15 }}>
-              {editId ? 'Edit Loan' : 'Add Loan Account'}
+      <PageBanner
+        isOpen={showBanner}
+        onClose={() => setShowBanner(false)}
+        onStart={() => { setShowBanner(false); setWizardStep(1); setShowModal(true) }}
+        chapterName="Accounting"
+        formTitle={['Add', 'Loan', 'Account']}
+        workflowSteps={STEPS}
+        iconLabel="Loan Accounts"
+        description="Record a new loan facility with its lender, interest rate, schedule, and outstanding balance."
+      />
+
+      <FormShell
+        isOpen={showModal}
+        onClose={closeModal}
+        chapterName="Accounting"
+        title={editId ? ['Edit', 'Loan', 'Account'] : ['Add', 'Loan', 'Account']}
+        steps={STEPS}
+        currentStep={wizardStep}
+        onBack={() => setWizardStep(s => s - 1)}
+        backLabel="Back"
+        onNext={() => {
+          if (wizardStep < STEPS.length) {
+            if (!form.loan_name.trim()) { setErr('Loan name is required'); return }
+            if (!form.loan_amount)      { setErr('Loan amount is required'); return }
+            setErr(''); setWizardStep(s => s + 1)
+          } else { save() }
+        }}
+        nextLabel={wizardStep < STEPS.length ? 'Next →' : (saving ? 'Saving…' : editId ? 'Save Changes' : 'Add Loan')}
+        nextDisabled={saving}
+      >
+        {err && <div style={S.err}>{err}</div>}
+
+        {wizardStep === 1 && (
+          <div>
+            <div style={S.row}>
+              <div>
+                <label style={S.label}>Loan Name *</label>
+                <input style={S.inp} value={form.loan_name} onChange={e=>setForm(f=>({...f,loan_name:e.target.value}))} placeholder="ANB Working Capital Facility" />
+              </div>
+              <div>
+                <label style={S.label}>Lender</label>
+                <input style={S.inp} value={form.lender_name} onChange={e=>setForm(f=>({...f,lender_name:e.target.value}))} placeholder="Arab National Bank" />
+              </div>
             </div>
-            <div style={{ padding:24 }}>
-              {err && <div style={{ background:'#fdecea', color:'#c0392b', borderRadius:8, padding:'10px 14px', marginBottom:14, fontSize:13 }}>{err}</div>}
-              <div style={S.row}>
-                <div style={S.col}>
-                  <label style={S.label}>Loan Name *</label>
-                  <input style={S.inp} value={form.loan_name} onChange={e=>setForm(f=>({...f,loan_name:e.target.value}))} placeholder="ANB Working Capital Facility" />
-                </div>
-                <div style={S.col}>
-                  <label style={S.label}>Lender</label>
-                  <input style={S.inp} value={form.lender_name} onChange={e=>setForm(f=>({...f,lender_name:e.target.value}))} placeholder="Arab National Bank" />
-                </div>
+            <div style={S.row}>
+              <div>
+                <label style={S.label}>Loan Amount (SAR) *</label>
+                <input style={S.inp} type="number" value={form.loan_amount} onChange={e=>setForm(f=>({...f,loan_amount:e.target.value, outstanding_balance:e.target.value}))} />
               </div>
-              <div style={S.row}>
-                <div style={S.col}>
-                  <label style={S.label}>Loan Amount (SAR) *</label>
-                  <input style={S.inp} type="number" value={form.loan_amount} onChange={e=>setForm(f=>({...f,loan_amount:e.target.value, outstanding_balance:e.target.value}))} />
-                </div>
-                <div style={S.col}>
-                  <label style={S.label}>Outstanding Balance (SAR)</label>
-                  <input style={S.inp} type="number" value={form.outstanding_balance} onChange={e=>setForm(f=>({...f,outstanding_balance:e.target.value}))} />
-                </div>
-                <div style={{ width:120 }}>
-                  <label style={S.label}>Interest Rate %</label>
-                  <input style={S.inp} type="number" step="0.01" value={form.interest_rate} onChange={e=>setForm(f=>({...f,interest_rate:e.target.value}))} />
-                </div>
+              <div>
+                <label style={S.label}>Outstanding Balance (SAR)</label>
+                <input style={S.inp} type="number" value={form.outstanding_balance} onChange={e=>setForm(f=>({...f,outstanding_balance:e.target.value}))} />
               </div>
-              <div style={S.row}>
-                <div style={S.col}>
-                  <label style={S.label}>Start Date</label>
-                  <input style={S.inp} type="date" value={form.start_date} onChange={e=>setForm(f=>({...f,start_date:e.target.value}))} />
-                </div>
-                <div style={S.col}>
-                  <label style={S.label}>Maturity Date</label>
-                  <input style={S.inp} type="date" value={form.maturity_date} onChange={e=>setForm(f=>({...f,maturity_date:e.target.value}))} />
-                </div>
-                <div style={{ width:140 }}>
-                  <label style={S.label}>Status</label>
-                  <select style={S.inp} value={form.status} onChange={e=>setForm(f=>({...f,status:e.target.value}))}>
-                    <option value="ACTIVE">Active</option>
-                    <option value="SETTLED">Settled</option>
-                    <option value="WRITTEN_OFF">Written Off</option>
-                  </select>
-                </div>
-              </div>
-              <div style={{ marginBottom:20 }}>
-                <label style={S.label}>Notes</label>
-                <textarea style={{ ...S.inp, height:50, resize:'vertical' }} value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} />
-              </div>
-              <div style={{ display:'flex', justifyContent:'flex-end', gap:10 }}>
-                <button style={S.btn('#e8edf5','#2d3a45')} onClick={()=>setShowModal(false)}>Cancel</button>
-                <button style={S.btn('#1a7f4b')} onClick={save} disabled={saving}>{saving?'Saving…':'Save Loan'}</button>
-              </div>
+            </div>
+            <div>
+              <label style={S.label}>Interest Rate %</label>
+              <input style={{ ...S.inp, width:180 }} type="number" step="0.01" value={form.interest_rate} onChange={e=>setForm(f=>({...f,interest_rate:e.target.value}))} />
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {wizardStep === 2 && (
+          <div>
+            <div style={S.row}>
+              <div>
+                <label style={S.label}>Start Date</label>
+                <input style={S.inp} type="date" value={form.start_date} onChange={e=>setForm(f=>({...f,start_date:e.target.value}))} />
+              </div>
+              <div>
+                <label style={S.label}>Maturity Date</label>
+                <input style={S.inp} type="date" value={form.maturity_date} onChange={e=>setForm(f=>({...f,maturity_date:e.target.value}))} />
+              </div>
+            </div>
+            <div>
+              <label style={S.label}>Status</label>
+              <select style={{ ...S.inp, width:180 }} value={form.status} onChange={e=>setForm(f=>({...f,status:e.target.value}))}>
+                <option value="ACTIVE">Active</option>
+                <option value="SETTLED">Settled</option>
+                <option value="WRITTEN_OFF">Written Off</option>
+              </select>
+            </div>
+            <label style={S.label}>Notes</label>
+            <textarea style={{ ...S.inp, height:70, resize:'vertical' }} value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} />
+          </div>
+        )}
+      </FormShell>
     </div>
   )
 }
@@ -699,7 +817,7 @@ export default function Accounts({ entityId }) {
   const [tab, setTab] = useState('bank')
 
   return (
-    <div style={{ padding:24, maxWidth:1200, margin:'0 auto' }}>
+    <div style={{ padding:24, maxWidth:1200, margin:'0 auto', fontFamily:"'Poppins',sans-serif" }}>
       {/* Header */}
       <div style={{ marginBottom:24 }}>
         <div style={{ fontSize:12, color:'#64748b' }}>Manage your bank accounts, fixed assets, capital, and loans</div>
@@ -710,9 +828,10 @@ export default function Accounts({ entityId }) {
         {TABS.map(t=>(
           <button key={t.key} onClick={()=>setTab(t.key)} style={{
             padding:'10px 20px', border:'none', background:'none', cursor:'pointer',
+            fontFamily:"'Poppins',sans-serif",
             fontSize:13, fontWeight: tab===t.key ? 800 : 500,
-            color: tab===t.key ? '#1a7f4b' : '#6b7c93',
-            borderBottom: tab===t.key ? '2px solid #1a7f4b' : '2px solid transparent',
+            color: tab===t.key ? L3 : '#6b7c93',
+            borderBottom: tab===t.key ? `2px solid ${L3}` : '2px solid transparent',
             marginBottom:-2, transition:'all 0.15s',
           }}>
             {t.label}
@@ -721,11 +840,11 @@ export default function Accounts({ entityId }) {
       </div>
 
       {/* Tab content */}
-      <div style={{ background:'#fff', borderRadius:12, border:'1.5px solid #e8edf5', padding:24 }}>
-        {tab==='bank'    && <BankAccountsTab  entityId={entityId} />}
-        {tab==='assets'  && <FixedAssetsTab   entityId={entityId} />}
+      <div style={{ background:'#fff', borderRadius:4, border:'1.5px solid #e8edf5', padding:24 }}>
+        {tab==='bank'    && <BankAccountsTab    entityId={entityId} />}
+        {tab==='assets'  && <FixedAssetsTab     entityId={entityId} />}
         {tab==='capital' && <CapitalAccountsTab entityId={entityId} />}
-        {tab==='loans'   && <LoanAccountsTab  entityId={entityId} />}
+        {tab==='loans'   && <LoanAccountsTab    entityId={entityId} />}
       </div>
     </div>
   )

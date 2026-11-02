@@ -1,5 +1,6 @@
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
+import FormShell from '../components/FormShell'
 import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
 const MC = GROUP_COLORS.Masters  // Masters chapter (Ch02)
 import { useState, useEffect, useRef } from 'react'
@@ -83,7 +84,7 @@ function Avatar({ url, name, size=36 }) {
 }
 
 // ─── Print Templates ────────────────────────────────────────────
-function printEmployee(emp, template) {
+function printEmployee(emp, template, deps=[]) {
   const pkg = (emp.basic_salary||0)+(emp.housing_allowance||0)+(emp.transport_allowance||0)+(emp.mobile_allowance||0)+(emp.medical_allowance||0)+(emp.technical_allowance||0)+(emp.other_allowance||0)
   const photoHtml = emp.photo_url ? `<img src="${emp.photo_url}" style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid #6a1b9a;" />` : `<div style="width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,#6a1b9a,#8e24aa);display:flex;align-items:center;justify-content:center;font-size:36px;color:#fff;font-weight:800;">${(emp.full_name_en||'').split(' ').slice(0,2).map(w=>w[0]).join('')}</div>`
 
@@ -108,70 +109,202 @@ function printEmployee(emp, template) {
       </div>
     </div>`
 
-  const profile = `
-    <div style="width:680px;font-family:Arial,sans-serif;border:1px solid #ddd;border-radius:12px;overflow:hidden;">
-      <div style="background:linear-gradient(135deg,#6a1b9a,#8e24aa);padding:24px 28px;color:#fff;display:flex;align-items:center;gap:20px;">
-        ${photoHtml}
-        <div>
-          <div style="font-size:11px;opacity:0.7;letter-spacing:2px;">${emp.employee_number||emp.employee_code||''} · ${(emp.employee_type||'REGULAR').replace(/_/g,' ')}</div>
-          <div style="font-size:22px;font-weight:800;margin:4px 0;">${emp.full_name_en||''}</div>
-          ${emp.full_name_ar?`<div style="font-size:14px;opacity:0.8;direction:rtl;">${emp.full_name_ar}</div>`:''}
-          <div style="font-size:13px;opacity:0.9;margin-top:4px;">${emp.designation||''} ${emp.job_title&&emp.job_title!==emp.designation?'· '+emp.job_title:''}</div>
-        </div>
+  const cash = pkg - (emp.bank_portion||0)
+  const empNo = emp.employee_number||emp.employee_code||''
+  const empType = emp.employee_category ? (({'01':'ACCSYS-LOCAL','02':'ACCSYS-EXPAT','03':'OUTSOURCED','04':'CONTRACT'})[emp.employee_category]||emp.employee_type||'') : (emp.employee_type||'REGULAR').replace(/_/g,' ')
+  const qrPayload = [`Employee Profile`,`Name: ${emp.full_name_en||''}`,`ID: ${empNo}`,`Iqama: ${emp.iqama_number||''}`,`Nationality: ${emp.nationality||''}`,`Designation: ${emp.designation||''}`,`Department: ${emp._deptName||''}`,`Employer: Ratal Advanced Technologies`,`Status: ${emp.is_active?'Active':'Inactive'}`].join('\\n')
+
+  function fRow(lbl,val,mono=false,warn=false){
+    const color = warn&&val ? '#b71c1c' : '#111'
+    return `<tr><td style="color:#aaa;font-size:9px;font-weight:600;padding:4px 0;white-space:nowrap;">${lbl}</td><td style="font-size:10px;font-weight:600;color:${color};text-align:right;${mono?'font-family:monospace;font-size:9px;':''}">${val||'—'}</td></tr>`
+  }
+  function secCard(dot,title,rows){
+    return `<div style="background:#fafafa;border-radius:8px;padding:10px 12px;border:1px solid #f0f0f0;">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid #eee;">
+        <div style="width:8px;height:8px;border-radius:50%;background:${dot};flex-shrink:0;"></div>
+        <span style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:1.3px;color:${dot};">${title}</span>
       </div>
-      <div style="padding:24px 28px;display:grid;grid-template-columns:1fr 1fr;gap:24px;">
-        <div>
-          <div style="font-size:10px;font-weight:800;color:#9c27b0;letter-spacing:1px;margin-bottom:12px;border-bottom:1px solid #f3e5f5;padding-bottom:6px;">PERSONAL</div>
-          <table style="width:100%;font-size:12px;border-collapse:collapse;">
-            <tr><td style="color:#9e9e9e;padding:4px 0;">Nationality</td><td style="font-weight:600;">${emp.nationality||'—'}</td></tr>
-            <tr><td style="color:#9e9e9e;padding:4px 0;">Email</td><td style="font-weight:600;">${emp.email||'—'}</td></tr>
-            <tr><td style="color:#9e9e9e;padding:4px 0;">Mobile</td><td style="font-weight:600;">${emp.phone||'—'}</td></tr>
-            <tr><td style="color:#9e9e9e;padding:4px 0;">Iqama / ID</td><td style="font-weight:600;">${emp.iqama_number||'—'}</td></tr>
-            <tr><td style="color:#9e9e9e;padding:4px 0;">Iqama Expiry</td><td style="font-weight:600;color:${emp.iqama_expiry?'#c62828':'inherit'}">${emp.iqama_expiry||'—'}</td></tr>
-            <tr><td style="color:#9e9e9e;padding:4px 0;">Passport</td><td style="font-weight:600;">${emp.passport_number||'—'}</td></tr>
-            <tr><td style="color:#9e9e9e;padding:4px 0;">Passport Expiry</td><td style="font-weight:600;color:${emp.passport_expiry?'#c62828':'inherit'}">${emp.passport_expiry||'—'}</td></tr>
-          </table>
-          <div style="font-size:10px;font-weight:800;color:#9c27b0;letter-spacing:1px;margin:16px 0 12px;border-bottom:1px solid #f3e5f5;padding-bottom:6px;">EMPLOYMENT</div>
-          <table style="width:100%;font-size:12px;border-collapse:collapse;">
-            <tr><td style="color:#9e9e9e;padding:4px 0;">Department</td><td style="font-weight:600;">${emp._deptName||'—'}</td></tr>
-            <tr><td style="color:#9e9e9e;padding:4px 0;">Hire Date</td><td style="font-weight:600;">${emp.hire_date||'—'}</td></tr>
-            <tr><td style="color:#9e9e9e;padding:4px 0;">Contract End</td><td style="font-weight:600;">${emp.contract_end_date||'—'}</td></tr>
-          </table>
-        </div>
-        <div>
-          <div style="font-size:10px;font-weight:800;color:#9c27b0;letter-spacing:1px;margin-bottom:12px;border-bottom:1px solid #f3e5f5;padding-bottom:6px;">SALARY (SAR)</div>
-          <table style="width:100%;font-size:12px;border-collapse:collapse;">
-            <tr><td style="color:#9e9e9e;padding:4px 0;">Basic</td><td style="font-weight:600;">${(emp.basic_salary||0).toLocaleString()}</td></tr>
-            <tr><td style="color:#9e9e9e;padding:4px 0;">Housing</td><td style="font-weight:600;">${(emp.housing_allowance||0).toLocaleString()}</td></tr>
-            <tr><td style="color:#9e9e9e;padding:4px 0;">Transport</td><td style="font-weight:600;">${(emp.transport_allowance||0).toLocaleString()}</td></tr>
-            ${(emp.mobile_allowance||0)>0?`<tr><td style="color:#9e9e9e;padding:4px 0;">Mobile</td><td style="font-weight:600;">${(emp.mobile_allowance||0).toLocaleString()}</td></tr>`:''}
-            ${(emp.medical_allowance||0)>0?`<tr><td style="color:#9e9e9e;padding:4px 0;">Medical</td><td style="font-weight:600;">${(emp.medical_allowance||0).toLocaleString()}</td></tr>`:''}
-            ${(emp.technical_allowance||0)>0?`<tr><td style="color:#9e9e9e;padding:4px 0;">Technical</td><td style="font-weight:600;">${(emp.technical_allowance||0).toLocaleString()}</td></tr>`:''}
-            ${(emp.other_allowance||0)>0?`<tr><td style="color:#9e9e9e;padding:4px 0;">Other</td><td style="font-weight:600;">${(emp.other_allowance||0).toLocaleString()}</td></tr>`:''}
-            <tr style="border-top:2px solid #6a1b9a;"><td style="color:#6a1b9a;padding:6px 0;font-weight:800;">TOTAL PACKAGE</td><td style="font-weight:800;color:#6a1b9a;font-size:15px;">SAR ${pkg.toLocaleString()}</td></tr>
-          </table>
-          <div style="font-size:10px;font-weight:800;color:#9c27b0;letter-spacing:1px;margin:16px 0 12px;border-bottom:1px solid #f3e5f5;padding-bottom:6px;">BANKING</div>
-          <table style="width:100%;font-size:12px;border-collapse:collapse;">
-            <tr><td style="color:#9e9e9e;padding:4px 0;">Bank</td><td style="font-weight:600;">${emp.bank_name||'—'}</td></tr>
-            <tr><td style="color:#9e9e9e;padding:4px 0;">Account</td><td style="font-weight:600;">${emp.bank_account_number||'—'}</td></tr>
-            <tr><td style="color:#9e9e9e;padding:4px 0;">IBAN</td><td style="font-weight:600;font-size:11px;font-family:monospace;">${emp.iban||'—'}</td></tr>
-          </table>
-        </div>
-      </div>
-      <div style="background:#f9f5ff;padding:12px 28px;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid #e1bee7;">
-        ${emp.has_car?'<span style="background:#e3f2fd;color:#1565c0;border-radius:4px;padding:3px 10px;font-size:11px;font-weight:700;">🚗 Company Car</span>':''}
-        ${emp.ot_eligible?'<span style="background:#e8eaf6;color:#283593;border-radius:4px;padding:3px 10px;font-size:11px;font-weight:700;">OT Eligible</span>':''}
-        ${emp.fa_eligible?'<span style="background:#fff3e0;color:#e65100;border-radius:4px;padding:3px 10px;font-size:11px;font-weight:700;">Food Allowance</span>':''}
-        ${emp.loan_eligible?'<span style="background:#e8f5e9;color:#2e7d32;border-radius:4px;padding:3px 10px;font-size:11px;font-weight:700;">Loan Eligible</span>':''}
-        ${emp.wps_allowed?'<span style="background:#e0f2f1;color:#00695c;border-radius:4px;padding:3px 10px;font-size:11px;font-weight:700;">WPS</span>':''}
-        ${emp.has_dependents?`<span style="background:#fce4ec;color:#880e4f;border-radius:4px;padding:3px 10px;font-size:11px;font-weight:700;">👨‍👩‍👧 ${emp.num_dependents} Dependents</span>`:''}
-      </div>
-      <div style="padding:10px 28px;text-align:right;font-size:10px;color:#ccc;">Printed: ${new Date().toLocaleDateString()} · Ratal Group ERP</div>
+      <table style="width:100%;border-collapse:collapse;">${rows}</table>
     </div>`
+  }
+
+  const photoBlock = emp.photo_url
+    ? `<img src="${emp.photo_url}" style="width:72px;height:72px;border-radius:10px;object-fit:cover;border:2px solid #b2dfdb;flex-shrink:0;" />`
+    : `<div style="width:72px;height:72px;border-radius:10px;background:linear-gradient(135deg,#00897b,#26c6da);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:#fff;flex-shrink:0;">${(emp.full_name_en||'').split(' ').slice(0,2).map(w=>w[0]||'').join('')}</div>`
+
+  const flags = [
+    emp.has_car?'🚗 Company Car':'',
+    emp.ot_eligible?'OT Eligible':'',
+    emp.fa_eligible?'Food Allowance':'',
+    emp.loan_eligible?'Loan Eligible':'',
+    emp.wps_allowed?'WPS':'',
+    emp.has_dependents?`${emp.num_dependents} Dependents`:'',
+  ].filter(Boolean)
+
+  const profile = `
+<div style="width:740px;font-family:'Segoe UI',Arial,sans-serif;background:#fff;border:1px solid #ddd;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+
+  <!-- TOP BAR -->
+  <div style="height:6px;background:linear-gradient(90deg,#00897b,#26c6da,#4dd0e1);"></div>
+
+  <!-- HEADER -->
+  <div style="padding:16px 20px 12px;border-bottom:1px solid #f0f0f0;display:flex;gap:14px;align-items:flex-start;">
+    ${photoBlock}
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:9px;font-weight:700;color:#00897b;letter-spacing:1.8px;text-transform:uppercase;margin-bottom:3px;">${empNo} &nbsp;·&nbsp; Employee Profile</div>
+      <div style="font-size:17px;font-weight:700;color:#111;line-height:1.2;">${emp.full_name_en||''}</div>
+      ${emp.full_name_ar?`<div style="font-size:9px;color:#aaa;direction:rtl;text-align:left;margin-top:1px;">${emp.full_name_ar}</div>`:''}
+      <div style="font-size:10px;color:#00897b;font-weight:600;margin-top:3px;">${emp.designation||''}${emp.job_title&&emp.job_title!==emp.designation?' &nbsp;·&nbsp; '+emp.job_title:''} &nbsp;·&nbsp; ${emp._deptName||''}</div>
+      <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap;">
+        <span style="font-size:8px;font-weight:700;padding:3px 9px;border-radius:10px;background:${emp.is_active?'#e8f5e9':'#ffebee'};color:${emp.is_active?'#2e7d32':'#c62828'};">${emp.is_active?'● Active':'○ Inactive'}</span>
+        <span style="font-size:8px;font-weight:700;padding:3px 9px;border-radius:10px;background:#e0f2f1;color:#00695c;">${empType}</span>
+        ${emp.nationality?`<span style="font-size:8px;font-weight:700;padding:3px 9px;border-radius:10px;background:#f3e5f5;color:#6a1b9a;">${emp.nationality}</span>`:''}
+        ${emp.hire_date?`<span style="font-size:8px;font-weight:600;padding:3px 9px;border-radius:10px;background:#f5f5f5;color:#666;">Hired ${emp.hire_date}</span>`:''}
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;">
+      <div id="qr-emp" style="width:72px;height:72px;background:#f5f5f5;border-radius:4px;border:1px solid #eee;display:flex;align-items:center;justify-content:center;overflow:hidden;"></div>
+      <div style="font-size:7px;color:#aaa;font-weight:600;letter-spacing:0.5px;">Scan to verify</div>
+    </div>
+  </div>
+
+  <!-- PERSONAL + EMPLOYMENT -->
+  <div style="padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px;border-bottom:1px solid #f0f0f0;">
+    ${secCard('#00897b','Personal',
+      fRow('Nationality', emp.nationality)+
+      fRow('Iqama / National ID', emp.iqama_number, true)+
+      fRow('Iqama Expiry', emp.iqama_expiry, false, true)+
+      fRow('Passport No.', emp.passport_number, true)+
+      fRow('Passport Expiry', emp.passport_expiry, false, true)+
+      fRow('Date of Birth', emp.date_of_birth)+
+      fRow('Mobile', emp.phone)+
+      fRow('Email', emp.email)
+    )}
+    ${secCard('#0288d1','Employment',
+      fRow('Designation', emp.designation)+
+      fRow('Job Title', emp.job_title)+
+      fRow('Department', emp._deptName)+
+      fRow('Entity', emp.entity_code||'RATAL')+
+      fRow('Employee Type', empType)+
+      fRow('Hire Date', emp.hire_date)+
+      fRow('Contract End', emp.contract_end_date)+
+      fRow('GOSI Number', emp.gosi_number, true)
+    )}
+  </div>
+
+  <!-- SALARY FULL WIDTH -->
+  <div style="margin:12px 16px;background:#f0fdf8;border-radius:8px;padding:10px 12px;border:1px solid #b2dfdb;">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+      <div style="width:8px;height:8px;border-radius:50%;background:#00897b;"></div>
+      <span style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:1.3px;color:#00695c;">Salary Breakdown (SAR)</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;">
+      ${[['Basic Salary',emp.basic_salary],['Housing Allow.',emp.housing_allowance],['Transport',emp.transport_allowance],['Mobile Allow.',emp.mobile_allowance],['Medical Allow.',emp.medical_allowance],['Technical Allow.',emp.technical_allowance],['Other Allow.',emp.other_allowance]].filter(([,v])=>(v||0)>0).slice(0,8).map(([l,v])=>`<div style="background:#fff;border-radius:5px;padding:5px 7px;text-align:center;border:1px solid #e0f2f1;"><div style="font-size:7px;color:#80cbc4;font-weight:700;">${l}</div><div style="font-size:11px;color:#00695c;font-weight:800;">${(v||0).toLocaleString()}</div></div>`).join('')}
+    </div>
+    <div style="background:#00897b;border-radius:6px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:8px;font-weight:800;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;">Total Package</div>
+        <div style="font-size:8px;color:rgba(255,255,255,0.65);margin-top:2px;">Bank (WPS): SAR ${(emp.bank_portion||0).toLocaleString()} &nbsp;·&nbsp; Cash: SAR ${cash.toLocaleString()}</div>
+      </div>
+      <div style="font-size:15px;font-weight:800;color:#fff;">SAR ${pkg.toLocaleString()}</div>
+    </div>
+  </div>
+
+  <!-- BANKING + COMPLIANCE -->
+  <div style="padding:0 16px 12px;display:grid;grid-template-columns:1fr 1fr;gap:10px;border-bottom:1px solid #f0f0f0;">
+    ${secCard('#00897b','Banking',
+      fRow('Bank', emp.bank_name)+
+      fRow('Account No.', emp.bank_account_number, true)+
+      fRow('IBAN', emp.iban, true)+
+      fRow('WPS Transfer (SAR)', emp.bank_portion?(emp.bank_portion).toLocaleString():'')
+    )}
+    ${secCard('#7b1fa2','Compliance & Insurance',
+      fRow('GOSI Start', emp.gosi_start_date)+
+      fRow('Insurance Policy #', emp.insurance_policy_no, true)+
+      fRow('Insurance Expiry', emp.insurance_expiry_date, false, true)+
+      fRow('SCE Number', emp.sce_number, true)+
+      fRow('SCE Category', emp.sce_category)+
+      fRow('SCE Expiry', emp.sce_expiry_date, false, true)
+    )}
+  </div>
+
+  ${flags.length>0?`<div style="padding:8px 16px;display:flex;gap:5px;flex-wrap:wrap;border-bottom:1px solid #f0f0f0;">${flags.map(f=>`<span style="font-size:8px;font-weight:700;padding:3px 9px;border-radius:10px;background:#e0f2f1;color:#00695c;">${f}</span>`).join('')}</div>`:''}
+
+  ${deps&&deps.length>0?`
+  <!-- DEPENDANTS -->
+  <div style="margin:10px 16px 8px;border-radius:8px;overflow:hidden;border:1px solid #e0f2f1;">
+    <div style="background:#00897b;padding:7px 12px;display:flex;align-items:center;gap:7px;">
+      <div style="width:7px;height:7px;border-radius:50%;background:#fff;flex-shrink:0;"></div>
+      <span style="font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:1.3px;color:#fff;">Registered Dependants (${deps.length})</span>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:8px;">
+      <thead>
+        <tr style="background:#e0f2f1;">
+          <th style="padding:5px 8px;text-align:left;font-size:7px;font-weight:800;color:#00695c;letter-spacing:0.5px;white-space:nowrap;">#</th>
+          <th style="padding:5px 8px;text-align:left;font-size:7px;font-weight:800;color:#00695c;letter-spacing:0.5px;white-space:nowrap;">Name</th>
+          <th style="padding:5px 8px;text-align:left;font-size:7px;font-weight:800;color:#00695c;letter-spacing:0.5px;white-space:nowrap;">Relation</th>
+          <th style="padding:5px 8px;text-align:left;font-size:7px;font-weight:800;color:#00695c;letter-spacing:0.5px;white-space:nowrap;">DOB / Gender</th>
+          <th style="padding:5px 8px;text-align:left;font-size:7px;font-weight:800;color:#00695c;letter-spacing:0.5px;white-space:nowrap;">Nationality</th>
+          <th style="padding:5px 8px;text-align:left;font-size:7px;font-weight:800;color:#00695c;letter-spacing:0.5px;white-space:nowrap;">Iqama #</th>
+          <th style="padding:5px 8px;text-align:left;font-size:7px;font-weight:800;color:#00695c;letter-spacing:0.5px;white-space:nowrap;">Passport #</th>
+          <th style="padding:5px 8px;text-align:left;font-size:7px;font-weight:800;color:#00695c;letter-spacing:0.5px;white-space:nowrap;">Insurance Policy #</th>
+          <th style="padding:5px 8px;text-align:left;font-size:7px;font-weight:800;color:#00695c;letter-spacing:0.5px;white-space:nowrap;">Ins. Expiry</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${deps.map((d,i)=>`
+        <tr style="background:${i%2===0?'#fff':'#f8fdfc'};border-bottom:1px solid #e0f2f1;">
+          <td style="padding:5px 8px;color:#666;font-weight:600;">${i+1}</td>
+          <td style="padding:5px 8px;color:#1a2332;font-weight:700;">${d.full_name_en||d.name||'—'}</td>
+          <td style="padding:5px 8px;color:#333;">${d.relationship||d.relation||'—'}</td>
+          <td style="padding:5px 8px;color:#333;white-space:nowrap;">${d.date_of_birth||'—'} ${d.gender?`/ ${d.gender}`:''}</td>
+          <td style="padding:5px 8px;color:#333;">${d.nationality||'—'}</td>
+          <td style="padding:5px 8px;color:#333;font-family:monospace;">${d.iqama_number||'—'}</td>
+          <td style="padding:5px 8px;color:#333;font-family:monospace;">${d.passport_number||'—'}</td>
+          <td style="padding:5px 8px;color:#333;font-family:monospace;">${d.insurance_policy_no||'—'}</td>
+          <td style="padding:5px 8px;color:${d.insurance_expiry_date&&new Date(d.insurance_expiry_date)<new Date()?'#b71c1c':'#333'};">${d.insurance_expiry_date||'—'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>
+  `:''}
+
+  <!-- FOOTER -->
+  <div style="padding:10px 16px;display:flex;justify-content:space-between;align-items:flex-end;">
+    <div style="display:flex;gap:24px;">
+      <div style="display:flex;flex-direction:column;gap:3px;"><div style="height:24px;"></div><div style="width:100px;border-top:1px dashed #ccc;padding-top:3px;font-size:7px;color:#aaa;font-weight:600;letter-spacing:0.5px;">AUTHORIZED SIGNATORY</div></div>
+      <div style="display:flex;flex-direction:column;gap:3px;"><div style="height:24px;"></div><div style="width:100px;border-top:1px dashed #ccc;padding-top:3px;font-size:7px;color:#aaa;font-weight:600;letter-spacing:0.5px;">HR MANAGER</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+      <div style="width:60px;height:44px;border:1.5px dashed #ccc;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:7px;color:#ccc;font-weight:600;text-align:center;">COMPANY<br>STAMP</div>
+      <div style="font-size:7px;color:#ccc;">Printed: ${new Date().toLocaleDateString()} &nbsp;·&nbsp; Ratal Group ERP &nbsp;·&nbsp; Confidential</div>
+    </div>
+  </div>
+</div>`
 
   const html = template==='id_card' ? idCard : profile
-  const win = window.open('','_blank','width=800,height=700')
-  win.document.write(`<!DOCTYPE html><html><head><title>Employee - ${emp.full_name_en}</title><style>body{margin:0;padding:30px;background:#f5f5f5;display:flex;justify-content:center;} @media print{body{background:#fff;padding:0;}}</style></head><body>${html}<br><br><div style="text-align:center;"><button onclick="window.print()" style="background:#6a1b9a;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;margin-right:8px;">🖨️ Print</button><button onclick="window.close()" style="background:#eee;color:#333;border:none;padding:10px 20px;border-radius:8px;font-size:14px;cursor:pointer;">Close</button></div></body></html>`)
+  const win = window.open('','_blank','width=860,height=900')
+  win.document.write(`<!DOCTYPE html><html><head><title>Employee Profile - ${emp.full_name_en||''}</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;padding:24px;background:#f0f4f8;display:flex;flex-direction:column;align-items:center;font-family:'Segoe UI',Arial,sans-serif;}
+  @media print{body{background:#fff;padding:0;}.no-print{display:none!important;}}
+</style>
+</head><body>
+${html}
+<div class="no-print" style="margin-top:18px;display:flex;gap:10px;">
+  <button onclick="window.print()" style="background:#00897b;color:#fff;border:none;padding:10px 28px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">🖨️ Print / Save PDF</button>
+  <button onclick="window.close()" style="background:#eee;color:#555;border:none;padding:10px 20px;border-radius:8px;font-size:13px;cursor:pointer;">Close</button>
+</div>
+<script>
+(function(){
+  var el=document.getElementById('qr-emp');
+  if(!el||typeof QRCode==='undefined')return;
+  try{new QRCode(el,{text:${JSON.stringify(qrPayload.replace(/\\n/g,'\n'))},width:68,height:68,colorDark:'#00695c',colorLight:'#ffffff'});}catch(e){}
+})();
+<\/script>
+</body></html>`)
   win.document.close()
 }
 
@@ -207,6 +340,20 @@ export default function Employees({ entityId, entityCode }) {
   const [showPrint,    setShowPrint]    = useState(false)
   const [photoUploading, setPhotoUploading] = useState(false)
   const photoRef = useRef()
+
+  // ── Dependents state ────────────────────────────────────────
+  const [deps,         setDeps]         = useState([])
+  const [depsLoading,  setDepsLoading]  = useState(false)
+  const [showDepForm,  setShowDepForm]  = useState(false)
+  const [editDep,      setEditDep]      = useState(null)
+  const [depSaving,    setDepSaving]    = useState(false)
+  const [viewDepForm,  setViewDepForm]  = useState({
+    full_name:'', gender:'Male', relationship:'Wife',
+    id_type:'Iqama', id_number:'', nationality:'',
+    birth_date:'', marital_status:'Single', mobile:'',
+    insurance_scheme:'', iqama_expiry:'',
+    passport_number:'', passport_expiry:'', insurance_expiry:'',
+  })
 
   // ── Form state ──────────────────────────────────────────────
   const [empType,    setEmpType]    = useState(() => empTypes(entityCode)[0] || 'LOCAL')
@@ -245,13 +392,17 @@ export default function Employees({ entityId, entityCode }) {
   const [sceReg,      setSceReg]      = useState(false)
   const [sceNum,      setSceNum]      = useState('')
   const [sceExpiry,   setSceExpiry]   = useState('')
-  const [qiwaReg,     setQiwaReg]     = useState(false)
-  const [qiwaExpiry,  setQiwaExpiry]  = useState('')
+  const [qiwaReg,           setQiwaReg]           = useState(false)
+  const [qiwaExpiry,        setQiwaExpiry]        = useState('')
+  // Employee insurance (current policy year)
+  const [insurancePolicyNo, setInsurancePolicyNo] = useState('')
+  const [insuranceExpiry,   setInsuranceExpiry]   = useState('')
   // Dependents
   const [depsData,       setDepsData]       = useState([])
   const [showDepsModal,  setShowDepsModal]  = useState(false)
   const [editingDepIdx,  setEditingDepIdx]  = useState(null)
-  const [depForm,        setDepForm]        = useState({ full_name:'', gender:'', relation:'', date_of_birth:'', iqama_number:'', passport_number:'', passport_expiry:'', nationality:'' })
+  const EMPTY_DEP = { full_name:'', gender:'', relation:'', date_of_birth:'', iqama_number:'', passport_number:'', passport_expiry:'', nationality:'', insurance_policy_no:'', insurance_expiry_date:'' }
+  const [depForm,        setDepForm]        = useState(EMPTY_DEP)
   const [iban,       setIban]       = useState('')
   const [hasCar,     setHasCar]     = useState(false)
   const [hasDep,     setHasDep]     = useState(false)
@@ -263,6 +414,26 @@ export default function Employees({ entityId, entityCode }) {
   const [wpsAllowed, setWpsAllowed] = useState(true)
   const [bankCode,   setBankCode]   = useState('1060')
   const [photoUrl,   setPhotoUrl]   = useState('')
+
+  // ── Vacation Ticket ──────────────────────────────────────────
+  const [vacTicketElig, setVacTicketElig] = useState(false)
+  const [ticketCycle,   setTicketCycle]   = useState('EVERY_YEAR')
+
+  // ── Family Status ────────────────────────────────────────────
+  const [familyStatus,  setFamilyStatus]  = useState(false)
+  const [spouseCount,   setSpouseCount]   = useState(0)
+  const [childCount,    setChildCount]    = useState(0)
+  const [otherDepCount, setOtherDepCount] = useState(0)
+  const [famTicketElig, setFamTicketElig] = useState(false)
+  const [famInsurElig,  setFamInsurElig]  = useState(false)
+
+  // ── Home Address & Emergency Contact ─────────────────────────
+  const [homeCountry,   setHomeCountry]   = useState('')
+  const [homeCity,      setHomeCity]      = useState('')
+  const [homePhone,     setHomePhone]     = useState('')
+  const [emergName,     setEmergName]     = useState('')
+  const [emergRelation, setEmergRelation] = useState('Father')
+  const [emergPhone,    setEmergPhone]    = useState('')
 
   // ── Payroll category & payment mode ─────────────────────────
   const [empCategory,    setEmpCategory]    = useState('02')       // '01'|'02'|'03'|'04'
@@ -337,6 +508,23 @@ export default function Employees({ entityId, entityCode }) {
     setLoanElig(emp.loan_eligible||false); setOtElig(emp.ot_eligible!==false); setFaElig(emp.fa_eligible||false); setFaAmount(emp.fa_amount||'')
     setPhotoUrl(emp.photo_url||emp.photo_path||'')
     setDob(emp.date_of_birth||''); setSceReg(emp.sce_required||emp.sce_registered||false)
+    // Vacation ticket
+    setVacTicketElig(emp.vacation_ticket_eligible||false)
+    setTicketCycle(emp.ticket_cycle||'EVERY_YEAR')
+    // Family status
+    setFamilyStatus(emp.family_status||emp.has_dependents||false)
+    setSpouseCount(emp.family_spouse_count||0)
+    setChildCount(emp.family_children_count||0)
+    setOtherDepCount(emp.family_other_count||0)
+    setFamTicketElig(emp.family_ticket_eligible||false)
+    setFamInsurElig(emp.family_insurance_eligible||false)
+    // Home address & emergency contact
+    setHomeCountry(emp.home_country||'')
+    setHomeCity(emp.home_city||'')
+    setHomePhone(emp.home_phone||'')
+    setEmergName(emp.emergency_contact_name||'')
+    setEmergRelation(emp.emergency_contact_relation||'Father')
+    setEmergPhone(emp.emergency_contact_phone||'')
     setSceNum(emp.sce_number||''); setSceExpiry(emp.sce_expiry_date||emp.sce_expiry||'')
     setSceCategory(emp.sce_category||''); setSceIssueDate(emp.sce_issue_date||'')
     setSceStatusField(emp.sce_status||'NOT_APPLICABLE')
@@ -348,6 +536,7 @@ export default function Employees({ entityId, entityCode }) {
     setInitialBasic(emp.initial_basic_salary||'')
     setGosiNum(emp.gosi_number||''); setGosiStart(emp.gosi_start_date||''); setGosiEnd(emp.gosi_end_date||'')
     setOutsourceAgency(emp.outsource_agency||''); setEntityCodeEmp(emp.entity_code||'RATAL')
+    setInsurancePolicyNo(emp.insurance_policy_no||''); setInsuranceExpiry(emp.insurance_expiry_date||'')
     // Load dependents async
     supabase.from('employee_dependents').select('*').eq('employee_id', emp.id).order('sort_order')
       .then(({ data }) => setDepsData(data || []))
@@ -368,7 +557,16 @@ export default function Employees({ entityId, entityCode }) {
     setQiwaReg(false); setQiwaExpiry('')
     setEmpCategory('02'); setPaymentMode('BANK_ONLY'); setBankFixedAmt(''); setBankPctAmt(''); setInitialBasic('')
     setGosiNum(''); setGosiStart(''); setGosiEnd(''); setOutsourceAgency(''); setEntityCodeEmp('RATAL')
-    setDepsData([]); setDepForm({ full_name:'', gender:'', relation:'', date_of_birth:'', iqama_number:'', passport_number:'', passport_expiry:'', nationality:'' })
+    setInsurancePolicyNo(''); setInsuranceExpiry('')
+    setDepsData([]); setDepForm({ full_name:'', gender:'', relation:'', date_of_birth:'', iqama_number:'', passport_number:'', passport_expiry:'', nationality:'', insurance_policy_no:'', insurance_expiry_date:'' })
+    // Vacation ticket
+    setVacTicketElig(false); setTicketCycle('EVERY_YEAR')
+    // Family status
+    setFamilyStatus(false); setSpouseCount(0); setChildCount(0); setOtherDepCount(0)
+    setFamTicketElig(false); setFamInsurElig(false)
+    // Home address & emergency contact
+    setHomeCountry(''); setHomeCity(''); setHomePhone('')
+    setEmergName(''); setEmergRelation('Father'); setEmergPhone('')
     setStep(1)
   }
 
@@ -438,6 +636,8 @@ export default function Employees({ entityId, entityCode }) {
       sce_status: sceReg ? (sceStatusField||'VALID') : 'NOT_APPLICABLE',
       qiwa_registered: qiwaReg,
       qiwa_expiry: qiwaReg ? qiwaExpiry||null : null,
+      insurance_policy_no:   insurancePolicyNo || null,
+      insurance_expiry_date: insuranceExpiry   || null,
       // Payroll category & payment fields
       employee_category: empCategory||'02',
       entity_code: entityCodeEmp||'RATAL',
@@ -449,6 +649,26 @@ export default function Employees({ entityId, entityCode }) {
       gosi_start_date: gosiStart||null,
       gosi_end_date: gosiEnd||null,
       outsource_agency: empCategory==='03' ? outsourceAgency||null : null,
+      // Vacation ticket
+      vacation_ticket_eligible: vacTicketElig,
+      ticket_cycle: vacTicketElig ? ticketCycle : 'EVERY_YEAR',
+      // Family status
+      family_status:             familyStatus,
+      family_spouse_count:       familyStatus ? parseInt(spouseCount)||0  : 0,
+      family_children_count:     familyStatus ? parseInt(childCount)||0   : 0,
+      family_other_count:        familyStatus ? parseInt(otherDepCount)||0 : 0,
+      family_ticket_eligible:    familyStatus ? famTicketElig   : false,
+      family_insurance_eligible: familyStatus ? famInsurElig    : false,
+      // Keep legacy columns in sync
+      has_dependents: familyStatus && (parseInt(spouseCount)||0)+(parseInt(childCount)||0)+(parseInt(otherDepCount)||0) > 0,
+      num_dependents: familyStatus ? (parseInt(spouseCount)||0)+(parseInt(childCount)||0)+(parseInt(otherDepCount)||0) : 0,
+      // Home address & emergency contact
+      home_country:               homeCountry||null,
+      home_city:                  homeCity||null,
+      home_phone:                 homePhone||null,
+      emergency_contact_name:     emergName||null,
+      emergency_contact_relation: emergRelation||null,
+      emergency_contact_phone:    emergPhone||null,
     }
     // employee_code: only set on create — never overwrite on update to avoid length constraint issues
     const payload = editing
@@ -746,6 +966,137 @@ export default function Employees({ entityId, entityCode }) {
     XL.writeFile(wb, `${entityLabel}_Payroll_${monLabel}.xlsx`)
   }
 
+  // ── Dependents CRUD ─────────────────────────────────────────
+  const BLANK_DEP = {
+    full_name:'', gender:'Male', relationship:'Wife',
+    id_type:'Iqama', id_number:'', nationality:'',
+    birth_date:'', marital_status:'Single', mobile:'',
+    insurance_scheme:'', iqama_expiry:'',
+    passport_number:'', passport_expiry:'', insurance_expiry:'',
+  }
+
+  async function loadDeps(empId) {
+    if (!empId) return
+    setDepsLoading(true)
+    const { data } = await supabase
+      .from('employee_dependents')
+      .select('*')
+      .eq('employee_id', empId)
+      .eq('entity_id', entityId)
+      .order('created_at')
+    setDeps(data || [])
+    setDepsLoading(false)
+  }
+
+  async function saveDep() {
+    if (!viewDepForm.full_name) return alert('Full name is required')
+    setDepSaving(true)
+    const payload = {
+      ...viewDepForm,
+      employee_id: viewEmp?.id,
+      entity_id: entityId,
+      birth_date:       viewDepForm.birth_date       || null,
+      iqama_expiry:     viewDepForm.iqama_expiry     || null,
+      passport_expiry:  viewDepForm.passport_expiry  || null,
+      insurance_expiry: viewDepForm.insurance_expiry || null,
+    }
+    if (editDep) {
+      await supabase.from('employee_dependents').update(payload).eq('id', editDep.id)
+    } else {
+      await supabase.from('employee_dependents').insert(payload)
+    }
+    setDepSaving(false)
+    setShowDepForm(false)
+    setEditDep(null)
+    setViewDepForm(BLANK_DEP)
+    loadDeps(viewEmp?.id)
+  }
+
+  async function deleteDep(id) {
+    if (!window.confirm('Delete this dependent?')) return
+    await supabase.from('employee_dependents').delete().eq('id', id)
+    loadDeps(viewEmp?.id)
+  }
+
+  async function exportInsuranceList() {
+    if (!window._XLSX) {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script')
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+        s.onload = () => { window._XLSX = window.XLSX; resolve() }
+        s.onerror = reject
+        document.head.appendChild(s)
+      })
+    }
+    const XL = window._XLSX
+
+    // Fetch all active employees
+    const { data: emps } = await supabase
+      .from('employees')
+      .select('id,full_name_en,employee_number,iqama_number,gender,nationality,birth_date,marital_status,mobile,department_id')
+      .eq('entity_id', entityId)
+      .eq('is_active', true)
+      .order('employee_number')
+
+    // Fetch all active dependents
+    const { data: allDeps } = await supabase
+      .from('employee_dependents')
+      .select('*')
+      .eq('entity_id', entityId)
+      .eq('is_active', true)
+
+    const depsByEmpId = {}
+    ;(allDeps || []).forEach(d => {
+      if (!depsByEmpId[d.employee_id]) depsByEmpId[d.employee_id] = []
+      depsByEmpId[d.employee_id].push(d)
+    })
+
+    const HDRS = ['SR No.','Full Name','Gender','Relationship','ID Type','ID Number','Sponsor ID','Nationality','Birth Date','Marital Status','Mobile No#','Scheme']
+    const rows = [HDRS]
+    let sr = 1
+
+    ;(emps || []).forEach(emp => {
+      // Employee row (relationship = 'Employee')
+      rows.push([
+        sr++,
+        emp.full_name_en || '',
+        emp.gender || '',
+        'Employee',
+        'Iqama',
+        emp.iqama_number || '',
+        emp.iqama_number || '',   // sponsor of self
+        emp.nationality || '',
+        emp.birth_date || '',
+        emp.marital_status || '',
+        emp.mobile || '',
+        '',
+      ])
+      // Dependent rows
+      ;(depsByEmpId[emp.id] || []).forEach(dep => {
+        rows.push([
+          sr++,
+          dep.full_name || '',
+          dep.gender || '',
+          dep.relationship || '',
+          dep.id_type || '',
+          dep.id_number || '',
+          emp.iqama_number || '',   // sponsor = parent employee iqama
+          dep.nationality || '',
+          dep.birth_date || '',
+          dep.marital_status || '',
+          dep.mobile || '',
+          dep.insurance_scheme || '',
+        ])
+      })
+    })
+
+    const ws = XL.utils.aoa_to_sheet(rows)
+    ws['!cols'] = [5,30,8,12,12,20,20,18,12,14,16,8].map(w=>({wch:w}))
+    const wb = XL.utils.book_new()
+    XL.utils.book_append_sheet(wb, ws, 'Insurance List')
+    XL.writeFile(wb, `Insurance_List_${new Date().toISOString().slice(0,10)}.xlsx`)
+  }
+
   const _s = search.toLowerCase()
   const filtered = employees.filter(e =>
     (showInactive || e.is_active) &&
@@ -934,6 +1285,10 @@ export default function Employees({ entityId, entityCode }) {
             style={{ background:'#2e7d32', color:'#fff', border:'none', borderRadius:9, padding:'9px 16px', cursor:'pointer', fontSize:12, fontWeight:700, whiteSpace:'nowrap', opacity:exporting?0.7:1 }}>
             {exporting ? '⏳…' : '📊 Export'}
           </button>
+          <button onClick={exportInsuranceList}
+            style={{ background:'#0277bd', color:'#fff', border:'none', borderRadius:9, padding:'9px 16px', cursor:'pointer', fontSize:12, fontWeight:700, whiteSpace:'nowrap' }}>
+            🏥 Insurance List
+          </button>
           {/* Salary view toggle */}
           <div style={{ display:'flex', borderRadius:8, overflow:'hidden', border:'1px solid #ce93d8' }}>
             {[['total','💼 Total'],['bank','🏦 Bank (WPS)'],['cash','💵 Cash']].map(([v,l])=>(
@@ -1081,199 +1436,408 @@ export default function Employees({ entityId, entityCode }) {
       </div>
 
       {/* ══ VIEW MODAL ══════════════════════════════════════════ */}
-      {viewEmp && (
-        <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&setViewEmp(null)}>
-          <div style={S.modal}>
-            {/* Header */}
-            <div style={{ display:'flex', gap:16, alignItems:'center', marginBottom:20 }}>
-              <Avatar url={viewEmp.photo_url||viewEmp.photo_path} name={viewEmp.full_name_en} size={64} />
-              <div style={{ flex:1 }}>
-                <div style={{ fontSize:11, color:'#9c27b0', fontWeight:800, letterSpacing:1 }}>{viewEmp.employee_number||viewEmp.employee_code}</div>
-                <div style={{ fontSize:20, fontWeight:800, color:'#1a2332', lineHeight:1.2 }}>{viewEmp.full_name_en}</div>
-                {viewEmp.full_name_ar && <div style={{ fontSize:12, color:'#999', direction:'rtl', textAlign:'left' }}>{viewEmp.full_name_ar}</div>}
-                <div style={{ fontSize:13, color:'#6a1b9a', fontWeight:600, marginTop:2 }}>{viewEmp.designation}{viewEmp.job_title&&viewEmp.job_title!==viewEmp.designation?' · '+viewEmp.job_title:''}</div>
+      {viewEmp && (()=>{
+        function VCard({ icon, title, accent='#6a1b9a', children }) {
+          return (
+            <div style={{ background:'#fff', borderRadius:12, border:'1px solid #ede9f8', marginBottom:14, overflow:'hidden', boxShadow:'0 1px 6px rgba(106,27,154,0.06)' }}>
+              <div style={{ background:`linear-gradient(90deg,${accent}18,#fff)`, padding:'9px 14px', display:'flex', alignItems:'center', gap:8, borderBottom:'1px solid #f3ebff' }}>
+                <span style={{ fontSize:13 }}>{icon}</span>
+                <span style={{ fontSize:10, fontWeight:800, color:accent, letterSpacing:1.3, textTransform:'uppercase' }}>{title}</span>
               </div>
-              <div style={{ display:'flex', flexDirection:'column', gap:6, alignItems:'flex-end' }}>
-                <span style={{ background:viewEmp.is_active?'#e8f5e9':'#ffebee', color:viewEmp.is_active?'#2e7d32':'#c62828', borderRadius:20, padding:'4px 14px', fontSize:11, fontWeight:800 }}>
-                  {viewEmp.is_active?'● Active':'○ Inactive'}
-                </span>
-                {viewEmp.employee_category && (
-                  <span style={{ background:CAT_BG[viewEmp.employee_category]||'#ede7f6', color:CAT_COLORS[viewEmp.employee_category]||'#6a1b9a', borderRadius:8, padding:'3px 10px', fontSize:11, fontWeight:800 }}>
-                    {viewEmp.employee_category} — {CAT_LABELS[viewEmp.employee_category]||(viewEmp.employee_type||'REGULAR').replace(/_/g,' ')}
-                  </span>
-                )}
-                <span style={{ background:'#ede7f6', color:'#6a1b9a', borderRadius:8, padding:'3px 10px', fontSize:11, fontWeight:800 }}>
-                  {(viewEmp.employee_type||'REGULAR').replace(/_/g,' ')}
-                </span>
-              </div>
+              <div style={{ padding:'8px 14px' }}>{children}</div>
             </div>
-
-            {/* Tab bar */}
-            <div style={{ display:'flex', gap:4, marginBottom:16, borderBottom:'2px solid #f3e5f5' }}>
-              {[['details','📋 Details'],['docs','📎 Documents']].map(([k,l])=>(
-                <button key={k} onClick={()=>setViewEmpTab(k)} style={{ background:'none', border:'none', padding:'8px 16px', fontSize:12, fontWeight:700, cursor:'pointer', color:viewEmpTab===k?'#6a1b9a':'#9e9e9e', borderBottom:viewEmpTab===k?'3px solid #6a1b9a':'3px solid transparent', marginBottom:-2 }}>
-                  {l}
-                </button>
-              ))}
+          )
+        }
+        function VField({ label, value, mono, highlight }) {
+          return (
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', padding:'5px 0', borderBottom:'1px solid #faf5ff' }}>
+              <span style={{ fontSize:10, color:'#b0bcc8', fontWeight:600, flexShrink:0, marginRight:8, minWidth:90 }}>{label}</span>
+              <span style={{ fontSize:12, color:highlight||(value?'#1a2332':'#ccc'), fontFamily:mono?'monospace':'inherit', fontWeight:value?600:400, textAlign:'right', wordBreak:'break-all' }}>{value||'—'}</span>
             </div>
+          )
+        }
+        const pkg = empPkg(viewEmp)
+        const cash = empCash(viewEmp)
+        return (
+          <div style={{ position:'fixed', inset:0, background:'rgba(15,15,35,0.60)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:12, fontFamily:POPPINS }}
+            onClick={e=>e.target===e.currentTarget&&setViewEmp(null)}>
+            <div onClick={e=>e.stopPropagation()} style={{ background:'#fff', borderRadius:20, width:'min(880px,98vw)', height:'min(90vh,820px)', display:'flex', flexDirection:'column', boxShadow:'0 28px 64px rgba(0,0,0,0.30)', overflow:'hidden' }}>
 
-            {/* Details tab */}
-            {viewEmpTab === 'details' && <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0 28px' }}>
-              <div>
-                <div style={S.sec}>Personal</div>
-                <Field label="Nationality" value={viewEmp.nationality} />
-                <Field label="Email" value={viewEmp.email} />
-                <Field label="Mobile" value={viewEmp.phone} />
-                <Field label="Iqama / National ID" value={viewEmp.iqama_number} />
-                <Field label="Iqama Expiry" value={viewEmp.iqama_expiry} />
-                <Field label="Passport No" value={viewEmp.passport_number} />
-                <Field label="Passport Expiry" value={viewEmp.passport_expiry} />
-                <div style={S.sec}>Employment</div>
-                <Field label="Designation" value={viewEmp.designation} />
-                <Field label="Job Title" value={viewEmp.job_title} />
-                <Field label="Department" value={getDeptName(viewEmp.department_id)} />
-                <Field label="Hire Date" value={viewEmp.hire_date} />
-                <Field label="Contract End" value={viewEmp.contract_end_date} />
-              </div>
-              <div>
-                <div style={S.sec}>Salary (SAR)</div>
-                {[['Basic Salary',viewEmp.basic_salary],['Housing Allowance',viewEmp.housing_allowance],['Conveyance / Transport',viewEmp.transport_allowance],['Mobile Allowance',viewEmp.mobile_allowance],['Medical Allowance',viewEmp.medical_allowance],['Technical Allowance',viewEmp.technical_allowance],['Other Allowance',viewEmp.other_allowance]].map(([l,v])=>(
-                  (v||0)>0 && <Field key={l} label={l} value={(v||0).toLocaleString()} />
-                ))}
-                <div style={{ background:'#f3e5f5', borderRadius:8, padding:'8px 14px', marginBottom:6, display:'flex', justifyContent:'space-between' }}>
-                  <span style={{ fontWeight:700, fontSize:12, color:'#6a1b9a' }}>Total Package</span>
-                  <span style={{ fontWeight:800, fontSize:15, color:'#6a1b9a' }}>SAR {empPkg(viewEmp).toLocaleString()} <span style={{ fontSize:10, fontWeight:400, color:'#9c27b0' }}>(🏦 {(viewEmp.bank_portion||0).toLocaleString()} + 💵 {empCash(viewEmp).toLocaleString()})</span></span>
+              {/* ── HERO BANNER ─────────────────────────── */}
+              <div style={{ background:'linear-gradient(135deg,#6a1b9a 0%,#9c27b0 60%,#ba68c8 100%)', padding:'20px 24px 18px', flexShrink:0, position:'relative' }}>
+                <button onClick={()=>setViewEmp(null)} style={{ position:'absolute', top:12, right:14, background:'rgba(255,255,255,0.2)', border:'none', borderRadius:'50%', width:28, height:28, color:'#fff', fontSize:14, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
+                <div style={{ display:'flex', gap:16, alignItems:'center' }}>
+                  <div style={{ width:78, height:78, borderRadius:'50%', padding:3, background:'rgba(255,255,255,0.25)', flexShrink:0 }}>
+                    <Avatar url={viewEmp.photo_url||viewEmp.photo_path} name={viewEmp.full_name_en} size={72} />
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:10, color:'rgba(255,255,255,0.65)', fontWeight:700, letterSpacing:1.8, marginBottom:3 }}>{viewEmp.employee_number||viewEmp.employee_code}</div>
+                    <div style={{ fontSize:21, fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:2 }}>{viewEmp.full_name_en}</div>
+                    {viewEmp.full_name_ar && <div style={{ fontSize:11, color:'#e1bee7', direction:'rtl', textAlign:'left', marginBottom:3 }}>{viewEmp.full_name_ar}</div>}
+                    <div style={{ fontSize:12, color:'#e1bee7', fontWeight:600 }}>{viewEmp.designation}{viewEmp.job_title&&viewEmp.job_title!==viewEmp.designation?' · '+viewEmp.job_title:''}</div>
+                  </div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:5, alignItems:'flex-end', flexShrink:0 }}>
+                    <span style={{ background:viewEmp.is_active?'#43a047':'#e53935', color:'#fff', borderRadius:20, padding:'4px 14px', fontSize:11, fontWeight:800 }}>
+                      {viewEmp.is_active?'● Active':'○ Inactive'}
+                    </span>
+                    <span style={{ background:'rgba(255,255,255,0.2)', color:'#fff', borderRadius:8, padding:'3px 10px', fontSize:11, fontWeight:700 }}>
+                      {viewEmp.employee_category
+                        ? CAT_LABELS[viewEmp.employee_category] || (viewEmp.employee_type||'REGULAR').replace(/_/g,' ')
+                        : (viewEmp.employee_type||'REGULAR').replace(/_/g,' ')}
+                    </span>
+                  </div>
                 </div>
-                {/* Payment split */}
-                {(viewEmp.bank_portion||0)>0 && (
-                  <div style={{ background:'#e3f2fd', borderRadius:8, padding:'8px 14px', marginBottom:13, display:'flex', gap:16, flexWrap:'wrap', fontSize:12 }}>
-                    <span>🏦 <strong>Bank (WPS):</strong> SAR {(viewEmp.bank_portion||0).toLocaleString()}</span>
-                    <span>💵 <strong>Cash:</strong> SAR {empCash(viewEmp).toLocaleString()}</span>
+              </div>
+
+              {/* ── TAB BAR ─────────────────────────────── */}
+              <div style={{ display:'flex', background:'#fff', borderBottom:'2px solid #f3e5f5', flexShrink:0, paddingLeft:8 }}>
+                {[['details','📋 Details'],['docs','📎 Documents'],['dependents','👨‍👩‍👧 Dependents']].map(([k,l])=>(
+                  <button key={k}
+                    onClick={()=>{
+                      setViewEmpTab(k)
+                      if (k==='dependents') loadDeps(viewEmp?.id)
+                    }}
+                    style={{ background:'none', border:'none', padding:'11px 20px', fontSize:12, fontWeight:700, cursor:'pointer', color:viewEmpTab===k?'#6a1b9a':'#9e9e9e', borderBottom:viewEmpTab===k?'3px solid #6a1b9a':'3px solid transparent', marginBottom:-2, whiteSpace:'nowrap' }}>
+                    {l}
+                    {k==='dependents' && deps.length>0 && (
+                      <span style={{ marginLeft:5, background:'#6a1b9a', color:'#fff', borderRadius:10, padding:'1px 6px', fontSize:10 }}>{deps.length}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* ── SCROLLABLE BODY ──────────────────────── */}
+              <div style={{ flex:1, overflowY:'auto', padding:'18px 20px', background:'#faf7ff' }}>
+
+                {viewEmpTab === 'details' && (
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0 18px' }}>
+                    {/* LEFT */}
+                    <div>
+                      <VCard icon="👤" title="Personal">
+                        <VField label="Nationality"        value={viewEmp.nationality} />
+                        <VField label="Email"              value={viewEmp.email} />
+                        <VField label="Mobile"             value={viewEmp.phone} />
+                        <VField label="Iqama / National ID" value={viewEmp.iqama_number} />
+                        <VField label="Iqama Expiry"       value={viewEmp.iqama_expiry} />
+                        <VField label="Passport No."       value={viewEmp.passport_number} mono />
+                        <VField label="Passport Expiry"    value={viewEmp.passport_expiry} />
+                      </VCard>
+                      <VCard icon="💼" title="Employment" accent="#1565c0">
+                        <VField label="Designation"   value={viewEmp.designation} />
+                        <VField label="Job Title"     value={viewEmp.job_title} />
+                        <VField label="Department"    value={getDeptName(viewEmp.department_id)} />
+                        <VField label="Hire Date"     value={viewEmp.hire_date} />
+                        <VField label="Contract End"  value={viewEmp.contract_end_date} />
+                      </VCard>
+                      <VCard icon="🏷️" title="Eligibility" accent="#2e7d32">
+                        <Flags emp={viewEmp} />
+                        {viewEmp.has_dependents && <div style={{ fontSize:11, color:'#546e7a', marginTop:6 }}>Dependents: {viewEmp.num_dependents}</div>}
+                      </VCard>
+                    </div>
+                    {/* RIGHT */}
+                    <div>
+                      <VCard icon="💰" title="Salary (SAR)" accent="#e65100">
+                        {[['Basic Salary',viewEmp.basic_salary],['Housing Allowance',viewEmp.housing_allowance],['Conveyance / Transport',viewEmp.transport_allowance],['Mobile Allowance',viewEmp.mobile_allowance],['Medical Allowance',viewEmp.medical_allowance],['Technical Allowance',viewEmp.technical_allowance],['Other Allowance',viewEmp.other_allowance]].map(([l,v])=>(
+                          (v||0)>0 && <VField key={l} label={l} value={(v||0).toLocaleString()} />
+                        ))}
+                        <div style={{ background:'linear-gradient(90deg,#f3e5f5,#ede7f6)', borderRadius:8, padding:'10px 12px', marginTop:8, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                          <span style={{ fontWeight:800, fontSize:10, color:'#6a1b9a', textTransform:'uppercase', letterSpacing:1 }}>Total Package</span>
+                          <span style={{ fontWeight:900, fontSize:16, color:'#6a1b9a' }}>SAR {pkg.toLocaleString()}</span>
+                        </div>
+                        {(viewEmp.bank_portion||0)>0 && (
+                          <div style={{ background:'#e3f2fd', borderRadius:8, padding:'8px 12px', marginTop:6, display:'flex', gap:16, flexWrap:'wrap', fontSize:11 }}>
+                            <span>🏦 <strong>Bank (WPS):</strong> SAR {(viewEmp.bank_portion||0).toLocaleString()}</span>
+                            <span>💵 <strong>Cash:</strong> SAR {cash.toLocaleString()}</span>
+                          </div>
+                        )}
+                      </VCard>
+                      <VCard icon="🏦" title="Banking" accent="#01579b">
+                        <VField label="Bank"              value={viewEmp.bank_name} />
+                        <VField label="Account Number"    value={viewEmp.bank_account_number} mono />
+                        <VField label="IBAN"              value={viewEmp.iban} mono />
+                        <VField label="WPS Transfer (SAR)" value={viewEmp.bank_portion} />
+                      </VCard>
+                      {viewEmp.employee_category && (
+                        <VCard icon="📊" title="Payroll Details" accent="#4527a0">
+                          <VField label="Category" value={`${viewEmp.employee_category} — ${CAT_LABELS[viewEmp.employee_category]||''}`} />
+                          <VField label="Entity"   value={viewEmp.entity_code||'RATAL'} />
+                          {viewEmp.outsource_agency && <VField label="Agency" value={viewEmp.outsource_agency} />}
+                          {viewEmp.payment_mode && ['01','02'].includes(viewEmp.employee_category) && <VField label="Payment Mode" value={viewEmp.payment_mode.replace(/_/g,' ')} />}
+                          {viewEmp.bank_fixed_amount>0 && <VField label="Bank Fixed Amt" value={`SAR ${Number(viewEmp.bank_fixed_amount).toLocaleString()}`} />}
+                          {viewEmp.bank_portion_pct>0 && <VField label="Bank Portion %" value={`${viewEmp.bank_portion_pct}%`} />}
+                          {viewEmp.initial_basic_salary>0 && <VField label="Initial Basic" value={`SAR ${Number(viewEmp.initial_basic_salary).toLocaleString()}`} />}
+                        </VCard>
+                      )}
+                      {(viewEmp.gosi_number||viewEmp.gosi_start_date) && (
+                        <VCard icon="🛡️" title="GOSI" accent="#00695c">
+                          <VField label="GOSI #"      value={viewEmp.gosi_number} />
+                          <VField label="GOSI Start"  value={viewEmp.gosi_start_date} />
+                          {viewEmp.gosi_end_date && <VField label="GOSI End" value={viewEmp.gosi_end_date} />}
+                        </VCard>
+                      )}
+                      {viewEmp.sce_required && (
+                        <VCard icon="🔧" title="SCE (Engineering Council)" accent="#bf360c">
+                          <VField label="SCE #"      value={viewEmp.sce_number} />
+                          <VField label="Category"   value={viewEmp.sce_category} />
+                          <VField label="Status"     value={viewEmp.sce_status} />
+                          <VField label="Issue Date" value={viewEmp.sce_issue_date} />
+                          {viewEmp.sce_expiry_date && (()=>{
+                            const d=new Date(viewEmp.sce_expiry_date), n=new Date(), diff=Math.ceil((d-n)/86400000)
+                            const col = diff<0?'#c62828':diff<=60?'#e65100':diff<=90?'#f57f17':'#2e7d32'
+                            const tag = diff<0?' ⛔ EXPIRED':diff<=60?` ⚠️ ${diff}d`:diff<=90?` 🟡 ${diff}d`:''
+                            return <VField label="SCE Expiry" value={viewEmp.sce_expiry_date+tag} highlight={col} />
+                          })()}
+                        </VCard>
+                      )}
+                    </div>
                   </div>
                 )}
-                <div style={S.sec}>Banking</div>
-                <Field label="Bank" value={viewEmp.bank_name} />
-                <Field label="Account Number" value={viewEmp.bank_account_number} />
-                <Field label="IBAN" value={viewEmp.iban} mono />
-                <Field label="WPS Transfer (SAR)" value={viewEmp.bank_portion} />
-                <div style={S.sec}>Eligibility</div>
-                <Flags emp={viewEmp} />
-                {viewEmp.has_dependents && <div style={{ fontSize:12, color:'#546e7a', marginTop:6 }}>Dependents: {viewEmp.num_dependents}</div>}
 
-                {/* Payroll / GOSI / SCE panel */}
-                {viewEmp.employee_category && (
-                  <>
-                    <div style={S.sec}>Payroll Details</div>
-                    <Field label="Category" value={`${viewEmp.employee_category} — ${CAT_LABELS[viewEmp.employee_category]||''}`} />
-                    <Field label="Entity" value={viewEmp.entity_code||'RATAL'} />
-                    {viewEmp.outsource_agency && <Field label="Agency" value={viewEmp.outsource_agency} />}
-                    {viewEmp.payment_mode && ['01','02'].includes(viewEmp.employee_category) && (
-                      <Field label="Payment Mode" value={viewEmp.payment_mode.replace(/_/g,' ')} />
-                    )}
-                    {viewEmp.bank_fixed_amount>0 && <Field label="Bank Fixed Amt" value={`SAR ${Number(viewEmp.bank_fixed_amount).toLocaleString()}`} />}
-                    {viewEmp.bank_portion_pct>0 && <Field label="Bank Portion %" value={`${viewEmp.bank_portion_pct}%`} />}
-                    {viewEmp.initial_basic_salary>0 && <Field label="Initial Basic (joining)" value={`SAR ${Number(viewEmp.initial_basic_salary).toLocaleString()}`} />}
-                  </>
+                {viewEmpTab === 'docs' && (
+                  <div style={{ padding:'4px 0' }}>
+                    <EntityDocs
+                      entityId={entityId}
+                      linkedType="EMPLOYEE"
+                      linkedId={viewEmp.id}
+                      linkedName={viewEmp.full_name_en}
+                      accentColor="#6a1b9a"
+                    />
+                  </div>
                 )}
 
-                {(viewEmp.gosi_number||viewEmp.gosi_start_date) && (
-                  <>
-                    <div style={S.sec}>GOSI</div>
-                    <Field label="GOSI #" value={viewEmp.gosi_number} />
-                    <Field label="GOSI Start" value={viewEmp.gosi_start_date} />
-                    {viewEmp.gosi_end_date && <Field label="GOSI End" value={viewEmp.gosi_end_date} />}
-                  </>
-                )}
+                {viewEmpTab === 'dependents' && (
+                  <div style={{ padding:'4px 0' }}>
+                    {/* ── Header row ── */}
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+                      <div style={{ fontSize:12, color:'#546e7a' }}>
+                        <strong style={{ color:'#6a1b9a' }}>Family / Dependents</strong>
+                        {' — '}Sponsor: <strong>{viewEmp.full_name_en}</strong>
+                        {viewEmp.iqama_number && <> · Iqama <code style={{ fontSize:11, background:'#f3e5f5', borderRadius:4, padding:'1px 5px' }}>{viewEmp.iqama_number}</code></>}
+                      </div>
+                      <button
+                        onClick={()=>{ setEditDep(null); setViewDepForm(BLANK_DEP); setShowDepForm(true) }}
+                        style={{ background:'linear-gradient(135deg,#6a1b9a,#8e24aa)', color:'#fff', border:'none', borderRadius:8, padding:'7px 16px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                        + Add Dependent
+                      </button>
+                    </div>
 
-                {viewEmp.sce_required && (
-                  <>
-                    <div style={S.sec}>SCE (Engineering Council)</div>
-                    <Field label="SCE #" value={viewEmp.sce_number} />
-                    <Field label="Category" value={viewEmp.sce_category} />
-                    <Field label="Status" value={viewEmp.sce_status} />
-                    <Field label="Issue Date" value={viewEmp.sce_issue_date} />
-                    {viewEmp.sce_expiry_date && (
-                      <div style={{ display:'flex', justifyContent:'space-between', padding:'4px 0', borderBottom:'1px solid #f0e6ff', fontSize:12 }}>
-                        <span style={{ color:'#9e9e9e', fontWeight:600 }}>SCE Expiry</span>
-                        <span style={{
-                          fontWeight:700,
-                          color: (() => {
-                            const d=new Date(viewEmp.sce_expiry_date), n=new Date(), diff=Math.ceil((d-n)/86400000)
-                            return diff<0?'#c62828':diff<=60?'#e65100':diff<=90?'#f57f17':'#2e7d32'
-                          })()
-                        }}>
-                          {viewEmp.sce_expiry_date}
-                          {(() => {
-                            const d=new Date(viewEmp.sce_expiry_date), n=new Date(), diff=Math.ceil((d-n)/86400000)
-                            if(diff<0) return ' ⛔ EXPIRED'
-                            if(diff<=60) return ` ⚠️ ${diff}d`
-                            if(diff<=90) return ` 🟡 ${diff}d`
-                            return ''
-                          })()}
-                        </span>
+                    {/* ── Add / Edit inline form ── */}
+                    {showDepForm && (
+                      <div style={{ background:'#f8f0ff', border:'1.5px solid #ce93d8', borderRadius:12, padding:'14px 16px', marginBottom:14 }}>
+                        <div style={{ fontSize:12, fontWeight:800, color:'#6a1b9a', marginBottom:10 }}>{editDep ? '✏️ Edit Dependent' : '➕ New Dependent'}</div>
+                        {/* Row 1 — Name, Gender, Relationship */}
+                        <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr', gap:8, marginBottom:8 }}>
+                          <div>
+                            <label style={{ fontSize:10, color:'#9575cd', fontWeight:700, display:'block', marginBottom:3 }}>Full Name *</label>
+                            <input value={viewDepForm.full_name} onChange={e=>setViewDepForm(f=>({...f,full_name:e.target.value}))}
+                              placeholder="Full name as on ID" style={{ width:'100%', padding:'7px 10px', border:'1px solid #ce93d8', borderRadius:7, fontSize:12, boxSizing:'border-box' }} />
+                          </div>
+                          <div>
+                            <label style={{ fontSize:10, color:'#9575cd', fontWeight:700, display:'block', marginBottom:3 }}>Gender</label>
+                            <select value={viewDepForm.gender} onChange={e=>setViewDepForm(f=>({...f,gender:e.target.value}))}
+                              style={{ width:'100%', padding:'7px 10px', border:'1px solid #ce93d8', borderRadius:7, fontSize:12, boxSizing:'border-box' }}>
+                              <option>Male</option><option>Female</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={{ fontSize:10, color:'#9575cd', fontWeight:700, display:'block', marginBottom:3 }}>Relationship</label>
+                            <select value={viewDepForm.relationship} onChange={e=>setViewDepForm(f=>({...f,relationship:e.target.value}))}
+                              style={{ width:'100%', padding:'7px 10px', border:'1px solid #ce93d8', borderRadius:7, fontSize:12, boxSizing:'border-box' }}>
+                              {['Wife','Husband','Son','Daughter','Father','Mother','Other'].map(r=><option key={r}>{r}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                        {/* Row 2 — ID Type, ID Number, Nationality */}
+                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1.5fr 1.5fr', gap:8, marginBottom:8 }}>
+                          <div>
+                            <label style={{ fontSize:10, color:'#9575cd', fontWeight:700, display:'block', marginBottom:3 }}>ID Type</label>
+                            <select value={viewDepForm.id_type} onChange={e=>setViewDepForm(f=>({...f,id_type:e.target.value}))}
+                              style={{ width:'100%', padding:'7px 10px', border:'1px solid #ce93d8', borderRadius:7, fontSize:12, boxSizing:'border-box' }}>
+                              {['Iqama','National Id','Passport'].map(t=><option key={t}>{t}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label style={{ fontSize:10, color:'#9575cd', fontWeight:700, display:'block', marginBottom:3 }}>ID Number</label>
+                            <input value={viewDepForm.id_number} onChange={e=>setViewDepForm(f=>({...f,id_number:e.target.value}))}
+                              placeholder="ID / Iqama number" style={{ width:'100%', padding:'7px 10px', border:'1px solid #ce93d8', borderRadius:7, fontSize:12, boxSizing:'border-box' }} />
+                          </div>
+                          <div>
+                            <label style={{ fontSize:10, color:'#9575cd', fontWeight:700, display:'block', marginBottom:3 }}>Nationality</label>
+                            <input value={viewDepForm.nationality} onChange={e=>setViewDepForm(f=>({...f,nationality:e.target.value}))}
+                              placeholder="e.g. Indian" style={{ width:'100%', padding:'7px 10px', border:'1px solid #ce93d8', borderRadius:7, fontSize:12, boxSizing:'border-box' }} />
+                          </div>
+                        </div>
+                        {/* Row 3 — Birth Date, Marital Status, Mobile, Scheme */}
+                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:8, marginBottom:8 }}>
+                          <div>
+                            <label style={{ fontSize:10, color:'#9575cd', fontWeight:700, display:'block', marginBottom:3 }}>Birth Date</label>
+                            <input type="date" value={viewDepForm.birth_date} onChange={e=>setViewDepForm(f=>({...f,birth_date:e.target.value}))}
+                              style={{ width:'100%', padding:'7px 10px', border:'1px solid #ce93d8', borderRadius:7, fontSize:12, boxSizing:'border-box' }} />
+                          </div>
+                          <div>
+                            <label style={{ fontSize:10, color:'#9575cd', fontWeight:700, display:'block', marginBottom:3 }}>Marital Status</label>
+                            <select value={viewDepForm.marital_status} onChange={e=>setViewDepForm(f=>({...f,marital_status:e.target.value}))}
+                              style={{ width:'100%', padding:'7px 10px', border:'1px solid #ce93d8', borderRadius:7, fontSize:12, boxSizing:'border-box' }}>
+                              {['Single','Married','Divorced','Widowed'].map(s=><option key={s}>{s}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label style={{ fontSize:10, color:'#9575cd', fontWeight:700, display:'block', marginBottom:3 }}>Mobile</label>
+                            <input value={viewDepForm.mobile} onChange={e=>setViewDepForm(f=>({...f,mobile:e.target.value}))}
+                              placeholder="+966..." style={{ width:'100%', padding:'7px 10px', border:'1px solid #ce93d8', borderRadius:7, fontSize:12, boxSizing:'border-box' }} />
+                          </div>
+                          <div>
+                            <label style={{ fontSize:10, color:'#9575cd', fontWeight:700, display:'block', marginBottom:3 }}>Insurance Scheme</label>
+                            <select value={viewDepForm.insurance_scheme} onChange={e=>setViewDepForm(f=>({...f,insurance_scheme:e.target.value}))}
+                              style={{ width:'100%', padding:'7px 10px', border:'1px solid #ce93d8', borderRadius:7, fontSize:12, boxSizing:'border-box' }}>
+                              <option value="">—</option>
+                              {['A','B','C','D'].map(s=><option key={s}>{s}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                        {/* Row 4 — Expiry dates */}
+                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:8, marginBottom:12 }}>
+                          <div>
+                            <label style={{ fontSize:10, color:'#9575cd', fontWeight:700, display:'block', marginBottom:3 }}>Iqama Expiry</label>
+                            <input type="date" value={viewDepForm.iqama_expiry} onChange={e=>setViewDepForm(f=>({...f,iqama_expiry:e.target.value}))}
+                              style={{ width:'100%', padding:'7px 10px', border:'1px solid #ce93d8', borderRadius:7, fontSize:12, boxSizing:'border-box' }} />
+                          </div>
+                          <div>
+                            <label style={{ fontSize:10, color:'#9575cd', fontWeight:700, display:'block', marginBottom:3 }}>Passport No.</label>
+                            <input value={viewDepForm.passport_number} onChange={e=>setViewDepForm(f=>({...f,passport_number:e.target.value}))}
+                              placeholder="Passport #" style={{ width:'100%', padding:'7px 10px', border:'1px solid #ce93d8', borderRadius:7, fontSize:12, boxSizing:'border-box' }} />
+                          </div>
+                          <div>
+                            <label style={{ fontSize:10, color:'#9575cd', fontWeight:700, display:'block', marginBottom:3 }}>Passport Expiry</label>
+                            <input type="date" value={viewDepForm.passport_expiry} onChange={e=>setViewDepForm(f=>({...f,passport_expiry:e.target.value}))}
+                              style={{ width:'100%', padding:'7px 10px', border:'1px solid #ce93d8', borderRadius:7, fontSize:12, boxSizing:'border-box' }} />
+                          </div>
+                          <div>
+                            <label style={{ fontSize:10, color:'#9575cd', fontWeight:700, display:'block', marginBottom:3 }}>Insurance Expiry</label>
+                            <input type="date" value={viewDepForm.insurance_expiry} onChange={e=>setViewDepForm(f=>({...f,insurance_expiry:e.target.value}))}
+                              style={{ width:'100%', padding:'7px 10px', border:'1px solid #ce93d8', borderRadius:7, fontSize:12, boxSizing:'border-box' }} />
+                          </div>
+                        </div>
+                        {/* Form actions */}
+                        <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
+                          <button onClick={()=>{ setShowDepForm(false); setEditDep(null); setViewDepForm(BLANK_DEP) }}
+                            style={{ background:'#f5f5f5', color:'#666', border:'none', borderRadius:7, padding:'8px 16px', fontSize:12, cursor:'pointer' }}>Cancel</button>
+                          <button onClick={saveDep} disabled={depSaving}
+                            style={{ background:'linear-gradient(135deg,#6a1b9a,#8e24aa)', color:'#fff', border:'none', borderRadius:7, padding:'8px 20px', fontSize:12, fontWeight:700, cursor:'pointer', opacity:depSaving?0.7:1 }}>
+                            {depSaving ? 'Saving…' : editDep ? '✓ Update' : '✓ Save Dependent'}
+                          </button>
+                        </div>
                       </div>
                     )}
-                  </>
-                )}
-              </div>
-            </div>}
 
-            {/* Documents tab */}
-            {viewEmpTab === 'docs' && (
-              <div style={{ padding:'4px 0' }}>
-                <EntityDocs
-                  entityId={entityId}
-                  linkedType="EMPLOYEE"
-                  linkedId={viewEmp.id}
-                  linkedName={viewEmp.full_name_en}
-                  accentColor="#6a1b9a"
-                />
-              </div>
-            )}
-
-            {/* Footer actions */}
-            <div style={{ display:'flex', gap:8, justifyContent:'flex-end', marginTop:16, paddingTop:14, borderTop:'1px solid #f3e5f5' }}>
-              <button onClick={()=>setViewEmp(null)} style={{ background:'#f5f5f5', color:'#666', border:'none', borderRadius:9, padding:'9px 18px', cursor:'pointer', fontSize:13 }}>Close</button>
-              {/* Print dropdown */}
-              <div style={{ position:'relative' }}>
-                <button onClick={()=>setShowPrint(p=>!p)} style={{ background:'#e8f5e9', color:'#2e7d32', border:'none', borderRadius:9, padding:'9px 16px', cursor:'pointer', fontSize:13, fontWeight:700 }}>
-                  🖨️ Print ▾
-                </button>
-                {showPrint && (
-                  <div style={{ position:'absolute', bottom:'110%', right:0, background:'#fff', borderRadius:10, boxShadow:'0 4px 20px rgba(0,0,0,0.15)', padding:8, minWidth:200, zIndex:10 }}>
-                    <div style={{ fontSize:10, color:'#9e9e9e', fontWeight:700, padding:'4px 10px', letterSpacing:1 }}>SELECT TEMPLATE</div>
-                    {[['id_card','🪪 Employee ID Card'],['profile','📄 Full Profile Sheet']].map(([t,l])=>(
-                      <button key={t} onClick={()=>{ printEmployee({...viewEmp, _deptName: getDeptName(viewEmp.department_id)},t); setShowPrint(false) }}
-                        style={{ display:'block', width:'100%', background:'none', border:'none', padding:'9px 12px', textAlign:'left', cursor:'pointer', fontSize:13, borderRadius:7, color:'#37474f' }}
-                        onMouseEnter={e=>e.target.style.background='#f3e5f5'}
-                        onMouseLeave={e=>e.target.style.background='none'}>
-                        {l}
-                      </button>
-                    ))}
+                    {/* ── Dependent cards ── */}
+                    {depsLoading ? (
+                      <div style={{ textAlign:'center', padding:'20px', color:'#9575cd', fontSize:13 }}>Loading dependents…</div>
+                    ) : deps.length === 0 ? (
+                      <div style={{ textAlign:'center', padding:'30px 20px', color:'#bdbdbd', fontSize:13 }}>
+                        <div style={{ fontSize:36, marginBottom:8 }}>👨‍👩‍👧</div>
+                        No dependents registered yet.
+                      </div>
+                    ) : (
+                      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                        {deps.map(dep => {
+                          const today = new Date()
+                          const expiryDays = d => d ? Math.ceil((new Date(d)-today)/86400000) : null
+                          const iqamaDays = expiryDays(dep.iqama_expiry)
+                          const passportDays = expiryDays(dep.passport_expiry)
+                          const insuranceDays = expiryDays(dep.insurance_expiry)
+                          const expiryBadge = (label, days, date) => {
+                            if (!date) return null
+                            const col = days < 0 ? '#c62828' : days <= 30 ? '#e65100' : days <= 90 ? '#f57f17' : '#2e7d32'
+                            const tag = days < 0 ? '⛔ EXPIRED' : days <= 30 ? `⚠️ ${days}d` : days <= 90 ? `🟡 ${days}d` : '✓'
+                            return <span key={label} style={{ fontSize:10, background: days < 0 ? '#ffebee' : days <= 90 ? '#fff8e1' : '#e8f5e9', color:col, borderRadius:6, padding:'2px 6px', marginLeft:4, fontWeight:700 }}>{label}: {tag}</span>
+                          }
+                          return (
+                            <div key={dep.id} style={{ background:'#fff', border:'1px solid #e8d5f5', borderRadius:10, padding:'12px 14px', display:'flex', alignItems:'flex-start', gap:12 }}>
+                              <div style={{ width:36, height:36, borderRadius:'50%', background:'linear-gradient(135deg,#ce93d8,#9c27b0)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>
+                                {dep.gender==='Female' ? '👩' : '👦'}
+                              </div>
+                              <div style={{ flex:1, minWidth:0 }}>
+                                <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap', marginBottom:4 }}>
+                                  <strong style={{ fontSize:13, color:'#1a2332' }}>{dep.full_name}</strong>
+                                  <span style={{ fontSize:10, background:'#f3e5f5', color:'#6a1b9a', borderRadius:6, padding:'2px 7px', fontWeight:700 }}>{dep.relationship}</span>
+                                  {dep.insurance_scheme && <span style={{ fontSize:10, background:'#e3f2fd', color:'#1565c0', borderRadius:6, padding:'2px 7px', fontWeight:700 }}>Scheme {dep.insurance_scheme}</span>}
+                                </div>
+                                <div style={{ fontSize:11, color:'#78909c' }}>
+                                  {dep.nationality} · {dep.id_type}: <code style={{ fontSize:11 }}>{dep.id_number||'—'}</code>
+                                  {dep.birth_date && ` · Born: ${dep.birth_date}`}
+                                  {dep.mobile && ` · ${dep.mobile}`}
+                                </div>
+                                <div style={{ marginTop:4, display:'flex', flexWrap:'wrap', gap:2 }}>
+                                  {expiryBadge('Iqama', iqamaDays, dep.iqama_expiry)}
+                                  {expiryBadge('Passport', passportDays, dep.passport_expiry)}
+                                  {expiryBadge('Insurance', insuranceDays, dep.insurance_expiry)}
+                                </div>
+                              </div>
+                              <div style={{ display:'flex', gap:4, flexShrink:0 }}>
+                                <button onClick={()=>{ setEditDep(dep); setViewDepForm({
+                                  full_name: dep.full_name||'', gender: dep.gender||'Male', relationship: dep.relationship||'Wife',
+                                  id_type: dep.id_type||'Iqama', id_number: dep.id_number||'', nationality: dep.nationality||'',
+                                  birth_date: dep.birth_date||'', marital_status: dep.marital_status||'Single', mobile: dep.mobile||'',
+                                  insurance_scheme: dep.insurance_scheme||'', iqama_expiry: dep.iqama_expiry||'',
+                                  passport_number: dep.passport_number||'', passport_expiry: dep.passport_expiry||'', insurance_expiry: dep.insurance_expiry||'',
+                                }); setShowDepForm(true) }}
+                                  style={{ background:'#f3e5f5', color:'#6a1b9a', border:'none', borderRadius:6, padding:'5px 10px', fontSize:11, cursor:'pointer', fontWeight:700 }}>✏️</button>
+                                <button onClick={()=>deleteDep(dep.id)}
+                                  style={{ background:'#ffebee', color:'#c62828', border:'none', borderRadius:6, padding:'5px 10px', fontSize:11, cursor:'pointer', fontWeight:700 }}>🗑</button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-              <button onClick={()=>openEdit(viewEmp)} style={{ background:'linear-gradient(135deg,#6a1b9a,#8e24aa)', color:'#fff', border:'none', borderRadius:9, padding:'9px 22px', cursor:'pointer', fontSize:13, fontWeight:700 }}>
-                ✏ Edit
-              </button>
+
+              {/* ── FOOTER ──────────────────────────────── */}
+              <div style={{ display:'flex', gap:8, justifyContent:'flex-end', padding:'12px 20px', borderTop:'1px solid #f3e5f5', background:'#fff', flexShrink:0, flexWrap:'wrap' }}>
+                <button onClick={()=>setViewEmp(null)} style={{ background:'#f5f5f5', color:'#666', border:'none', borderRadius:9, padding:'9px 18px', cursor:'pointer', fontSize:13 }}>Close</button>
+                <div style={{ position:'relative' }}>
+                  <button onClick={()=>setShowPrint(p=>!p)} style={{ background:'#e8f5e9', color:'#2e7d32', border:'none', borderRadius:9, padding:'9px 16px', cursor:'pointer', fontSize:13, fontWeight:700 }}>
+                    🖨️ Print ▾
+                  </button>
+                  {showPrint && (
+                    <div style={{ position:'absolute', bottom:'110%', right:0, background:'#fff', borderRadius:10, boxShadow:'0 4px 20px rgba(0,0,0,0.15)', padding:8, minWidth:200, zIndex:10 }}>
+                      <div style={{ fontSize:10, color:'#9e9e9e', fontWeight:700, padding:'4px 10px', letterSpacing:1 }}>SELECT TEMPLATE</div>
+                      {[['id_card','🪪 Employee ID Card'],['profile','📄 Full Profile Sheet']].map(([t,l])=>(
+                        <button key={t} onClick={()=>{ printEmployee({...viewEmp, _deptName: getDeptName(viewEmp.department_id)},t,depsData); setShowPrint(false) }}
+                          style={{ display:'block', width:'100%', background:'none', border:'none', padding:'9px 12px', textAlign:'left', cursor:'pointer', fontSize:13, borderRadius:7, color:'#37474f' }}
+                          onMouseEnter={e=>e.target.style.background='#f3e5f5'}
+                          onMouseLeave={e=>e.target.style.background='none'}>
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button onClick={()=>openEdit(viewEmp)} style={{ background:'linear-gradient(135deg,#6a1b9a,#8e24aa)', color:'#fff', border:'none', borderRadius:9, padding:'9px 22px', cursor:'pointer', fontSize:13, fontWeight:700 }}>
+                  ✏ Edit
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* ── PageBanner ── */}
       <PageBanner
         isOpen={showBanner}
         onClose={() => setShowBanner(false)}
         onStart={() => { setShowBanner(false); setStep(1); setOpen(true) }}
-        chapterL1="#C8B48F"
-        chapterL2="#FAF5E9"
-        moduleColor="#8C601B"
-        chapterLabel="Masters"
+        chapterName="Masters"
         formTitle={['Employee', 'Registration', 'Form']}
-        steps={['Identity', 'Personal', 'Employment', 'Salary', 'Banking', 'Compliance']}
+        heading="Register sponsored, outsourced or contract employees"
+        description="Employee number is automatically assigned."
         icon="👤"
-        description="Register sponsored, outsourced or contract employees. Employee number is automatically assigned."
+        iconLabel={'HR\nRegistration'}
+        workflowSteps={['Identity', 'Employment', 'Compliance', 'Family', 'Home']}
+        steps={['Identity', 'Personal', 'Employment', 'Salary', 'Banking', 'Compliance', 'Family', 'Home Country']}
       />
 
       {/* ══ EDIT / ADD MODAL (multi-step wizard — PDF layout) ═══ */}
@@ -1282,62 +1846,27 @@ export default function Employees({ entityId, entityCode }) {
         const L1  = '#C8B48F'   // Masters outer frame
         const L2  = '#FAF5E9'   // Masters inner background
         const BLUE = PRI
-        const STEP_NAMES = ['','Identity','Personal','Employment','Salary','Banking','Compliance']
-        const STEP_DESC  = ['','Photo, type & employee name','Contact, ID & personal docs','Job title, dept & category','Salary & allowances (SAR)','Payment mode, GOSI & bank','Eligibility flags & compliance']
+        const STEP_NAMES = ['','Identity','Personal','Employment','Salary','Banking','Compliance','Family','Home Country']
+        const STEP_DESC  = ['','Photo, type & employee name','Contact, ID & personal docs','Job title, dept & category','Salary & allowances (SAR)','Payment mode, GOSI & bank','Eligibility flags & compliance','Family status & dependents','Home address & emergency contact']
         const inp = (extra={}) => ({ ...S.inp, borderRadius:20, fontSize:13, ...extra })
         const inpLk = (extra={}) => ({ ...S.inpLock, borderRadius:20, fontSize:13, ...extra })
         const sec = { fontSize:10, fontWeight:800, color:PRI, letterSpacing:1.5, textTransform:'uppercase', marginBottom:10, marginTop:14, paddingBottom:5, borderBottom:`1.5px solid ${PRI}33` }
         return (
-        <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&(setOpen(false),resetForm())}>
-          <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap'); *{box-sizing:border-box}`}</style>
-          <div style={{ width:900, maxWidth:'calc(100vw - 24px)', borderRadius:18, overflow:'hidden', boxShadow:'0 28px 64px rgba(0,0,0,0.32)', fontFamily:POPPINS, background:L1, padding:8 }}>
-
-            {/* ── STEPS 1–6 — 6-layer layout ── */}
-            {step>=1 && (
-              <div style={{ background:L2, borderRadius:12, display:'flex', minHeight:560, position:'relative', overflow:'hidden' }}>
-
-                  {/* L3 accent corner */}
-                  <div style={{ position:'absolute', top:0, right:0, width:'55%', height:'36%', background:PRI, borderRadius:'0 12px 0 90px', zIndex:1 }} />
-
-                  {/* ── Left sidebar ── */}
-                  <div style={{ width:220, flexShrink:0, padding:'20px 16px 16px', display:'flex', flexDirection:'column', fontFamily:POPPINS, position:'relative', zIndex:2 }}>
-                    <div style={{ fontSize:9, fontWeight:800, color:'#53666F', letterSpacing:1.8, textTransform:'uppercase', marginBottom:3 }}>Ratal Advanced Technologies</div>
-                    <div style={{ fontSize:9, fontWeight:800, color:PRI, letterSpacing:1.8, textTransform:'uppercase', marginBottom:16 }}><strong>Masters</strong></div>
-                    <div style={{ fontSize:24, fontWeight:900, color:'#172D37', lineHeight:1.1, marginBottom:6 }}>{STEP_NAMES[step]}</div>
-                    <div style={{ fontSize:11, color:'#53666F', lineHeight:1.5, marginBottom:8 }}>{STEP_DESC[step]}</div>
-                    <div style={{ fontSize:9, fontWeight:800, color:PRI, letterSpacing:1, marginBottom:14 }}>STEP {step} OF 6</div>
-                    {/* Step list — text only with left bars */}
-                    <div style={{ flex:1, display:'flex', flexDirection:'column', gap:1 }}>
-                      {['Identity','Personal','Employment','Salary','Banking','Compliance'].map((name,idx)=>{
-                        const sn=idx+1, isAct=step===sn, isDone=step>sn
-                        return (
-                          <div key={sn} onClick={()=>isDone&&setStep(sn)} style={{ display:'flex', alignItems:'center', padding:'8px 0 8px 12px', cursor:isDone?'pointer':'default', borderLeft: isAct ? `3px solid ${PRI}` : isDone ? `3px solid ${PRI}55` : '3px solid rgba(0,0,0,0.08)' }}>
-                            <span style={{ fontSize:12, fontWeight:isAct?700:500, color:isAct?'#172D37':isDone?PRI:'#b09070' }}>{name}</span>
-                            {isDone && <span style={{ marginLeft:6, fontSize:10, color:PRI }}>✓</span>}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  {/* ── White card (L4) ── */}
-                  <div style={{ position:'absolute', top:22, right:22, bottom:22, left:258, background:'#fff', borderRadius:16, display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:`0 6px 24px ${PRI}22`, zIndex:3 }}>
-
-                    {/* Card header: title + close */}
-                    <div style={{ padding:'20px 24px 0', flexShrink:0 }}>
-                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
-                        <div>
-                          <div style={{ fontSize:19, fontWeight:700, color:'#172D37', marginBottom:14 }}>
-                            {['','Identity details','Personal details','Employment details','Salary & allowances','Banking & payment','Compliance & eligibility'][step]}
-                          </div>
-                        </div>
-                        <button onClick={()=>{setOpen(false);resetForm()}} style={{ background:`${PRI}18`, border:'none', color:PRI, borderRadius:8, width:28, height:28, cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>✕</button>
-                      </div>
-                      <div style={{ height:1, background:`${PRI}22`, marginBottom:0 }} />
-                    </div>
-
-                    {/* Scrollable form content */}
-                    <div style={{ flex:1, overflowY:'auto', padding:'16px 24px 14px', fontFamily:POPPINS }}>
+          <FormShell
+            isOpen={open}
+            onClose={() => { setOpen(false); resetForm() }}
+            chapterName="Masters"
+            title={['Employee', 'Registration', 'Form']}
+            description="Register sponsored, outsourced or contract employees."
+            steps={['Identity', 'Personal', 'Employment', 'Salary', 'Banking', 'Compliance', 'Family', 'Home Country']}
+            currentStep={step}
+            onBack={step===1 ? () => { setOpen(false); resetForm() } : () => setStep(s=>s-1)}
+            backLabel={step===1 ? 'Cancel' : 'Back'}
+            onNext={step<8 ? () => setStep(s=>s+1) : save}
+            nextLabel={step<8 ? 'Save & Next' : (saving ? 'Saving…' : editing ? '✓ Update Employee' : '✓ Add Employee')}
+            nextDisabled={saving && step===8}
+          >
+          <div style={{ fontFamily:"'Poppins','Inter',sans-serif" }}>
 
                     {/* ── STEP 1 — Identity ── */}
                     {step===1 && <>
@@ -1549,37 +2078,44 @@ export default function Employees({ entityId, entityCode }) {
                         <label style={S.toggle}><input type="checkbox" checked={otElig} onChange={e=>setOtElig(e.target.checked)} /> ⏱️ OT Eligible</label>
                         <label style={S.toggle}><input type="checkbox" checked={loanElig} onChange={e=>setLoanElig(e.target.checked)} /> 💳 Loan Eligible</label>
                         <label style={S.toggle}><input type="checkbox" checked={faElig} onChange={e=>setFaElig(e.target.checked)} /> 🍽️ Food Allowance Eligible</label>
-                        <label style={S.toggle}><input type="checkbox" checked={hasDep} onChange={e=>setHasDep(e.target.checked)} /> 👨‍👩‍👧 Has Dependents</label>
                         <label style={S.toggle}><input type="checkbox" checked={wpsAllowed} onChange={e=>setWpsAllowed(e.target.checked)} /> 🏦 WPS Eligible</label>
                       </div>
                       {faElig && <div style={S.row}><div style={S.col}><label style={S.label}>FA Daily Rate (SAR)</label><input type="number" step="0.01" style={inp()} value={faAmount} onChange={e=>setFaAmount(e.target.value)} /></div></div>}
-                      {hasDep && (
-                        <div style={{ background:'#f0f9ff', borderRadius:12, padding:'10px 14px', marginBottom:12, border:'1px solid #bae6fd' }}>
-                          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-                            <span style={{ fontWeight:700, fontSize:12, color:BLUE }}>👨‍👩‍👧 Dependents — {depsData.length} registered</span>
-                            <button type="button" onClick={()=>{setDepForm({full_name:'',gender:'',relation:'',date_of_birth:'',iqama_number:'',passport_number:'',passport_expiry:'',nationality:''});setEditingDepIdx(null);setShowDepsModal(true)}} style={{ background:BLUE, color:'#fff', border:'none', borderRadius:16, padding:'5px 12px', cursor:'pointer', fontSize:12, fontWeight:700 }}>+ Add Dependent</button>
+
+                      {/* ── Vacation Ticket ── */}
+                      <div style={sec}>✈️ Vacation Ticket</div>
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom: vacTicketElig ? 8 : 12 }}>
+                        <label style={S.toggle}><input type="checkbox" checked={vacTicketElig} onChange={e=>setVacTicketElig(e.target.checked)} /> ✈️ Vacation Ticket Eligible</label>
+                      </div>
+                      {vacTicketElig && (
+                        <div style={{ background:'#f0f9ff', borderRadius:10, padding:'10px 14px', marginBottom:12, border:'1px solid #bae6fd' }}>
+                          <label style={{ ...S.label, marginBottom:6 }}>Self Ticket Cycle</label>
+                          <div style={{ display:'flex', gap:8 }}>
+                            {[['EVERY_YEAR','Every Year'],['EVERY_2_YEARS','Every 2 Years'],['EVERY_6_MONTHS','Every 6 Months']].map(([val,lbl])=>(
+                              <label key={val} style={{ display:'flex', alignItems:'center', gap:5, cursor:'pointer', fontSize:13, fontWeight: ticketCycle===val ? 700 : 400, color: ticketCycle===val ? BLUE : '#546e7a', background: ticketCycle===val ? '#e3f2fd' : '#f5f7fa', padding:'6px 14px', borderRadius:20, border:`1.5px solid ${ticketCycle===val ? BLUE : '#dde3ea'}`, transition:'all .15s' }}>
+                                <input type="radio" name="ticketCycle" value={val} checked={ticketCycle===val} onChange={()=>setTicketCycle(val)} style={{ display:'none' }} />
+                                {lbl}
+                              </label>
+                            ))}
                           </div>
-                          {depsData.length>0 && (
-                            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:11 }}>
-                              <thead><tr style={{ background:'#e0f2fe' }}>{['Name','Relation','Gender','DOB',''].map(h=><th key={h} style={{ padding:'5px 8px', textAlign:'left', color:BLUE, fontWeight:700 }}>{h}</th>)}</tr></thead>
-                              <tbody>
-                                {depsData.map((d,i)=>(
-                                  <tr key={i} style={{ borderBottom:'1px solid #bae6fd' }}>
-                                    <td style={{ padding:'5px 8px', fontWeight:600 }}>{d.full_name}</td>
-                                    <td style={{ padding:'5px 8px' }}>{d.relation}</td>
-                                    <td style={{ padding:'5px 8px' }}>{d.gender}</td>
-                                    <td style={{ padding:'5px 8px' }}>{d.date_of_birth||'—'}</td>
-                                    <td style={{ padding:'5px 8px', whiteSpace:'nowrap' }}>
-                                      <button type="button" onClick={()=>{setDepForm({...d});setEditingDepIdx(i);setShowDepsModal(true)}} style={{ background:'#e3f2fd', color:'#0277bd', border:'none', borderRadius:5, padding:'3px 8px', cursor:'pointer', fontSize:11, marginRight:4 }}>✏</button>
-                                      <button type="button" onClick={()=>setDepsData(prev=>prev.filter((_,j)=>j!==i))} style={{ background:'#ffebee', color:'#c62828', border:'none', borderRadius:5, padding:'3px 8px', cursor:'pointer', fontSize:11 }}>✕</button>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          )}
+                          <div style={{ fontSize:11, color:'#546e7a', marginTop:6 }}>
+                            {ticketCycle==='EVERY_6_MONTHS' ? 'Eligible twice a year — employee selects when to use.' : ticketCycle==='EVERY_2_YEARS' ? 'One ticket entitlement every 2 years of service.' : 'One ticket entitlement per year of service.'}
+                          </div>
                         </div>
                       )}
+
+                      <div style={sec}>🏥 Medical Insurance</div>
+                      <div style={S.row}>
+                        <div style={S.col}>
+                          <label style={S.label}>Insurance Policy #</label>
+                          <input style={inp()} value={insurancePolicyNo} onChange={e=>setInsurancePolicyNo(e.target.value)} placeholder="Employee's policy number under bulk scheme" />
+                        </div>
+                        <div style={S.col}>
+                          <label style={S.label}>Policy Expiry Date</label>
+                          <input type="date" style={inp()} value={insuranceExpiry} onChange={e=>setInsuranceExpiry(e.target.value)} />
+                        </div>
+                      </div>
+                      {insuranceExpiry && (()=>{ const d=(new Date(insuranceExpiry)-new Date())/86400000|0; return d<=90?(<div style={{ background:d<=0?'#ffebee':'#fff3e0', border:`1px solid ${d<=0?'#e53935':'#fb8c00'}`, borderRadius:8, padding:'8px 12px', marginBottom:8, fontSize:12, fontWeight:700, color:d<=0?'#b71c1c':'#e65100' }}>{d<=0?'🔴 Insurance EXPIRED — renew immediately':`⚠️ Insurance expires in ${d} days`}</div>):null })()}
                       <div style={sec}>Certifications &amp; Compliance</div>
                       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
                         <label style={S.toggle}><input type="checkbox" checked={sceReg} onChange={e=>setSceReg(e.target.checked)} /> 🏛 Saudi Engineering Council (SCE)</label>
@@ -1614,32 +2150,128 @@ export default function Employees({ entityId, entityCode }) {
                       {qiwaReg && <div style={S.row}><div style={S.col}><label style={S.label}>QIWA Expiry Date</label><input type="date" style={inp()} value={qiwaExpiry} onChange={e=>setQiwaExpiry(e.target.value)} /></div><div style={S.col} /></div>}
                     </>}
 
-                  </div>{/* end scrollable */}
+                    {/* ── STEP 7 — Family ── */}
+                    {step===7 && <>
+                      <div style={sec}>👨‍👩‍👧 Family Status</div>
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom: familyStatus ? 8 : 16 }}>
+                        <label style={S.toggle}><input type="checkbox" checked={familyStatus} onChange={e=>{setFamilyStatus(e.target.checked);setHasDep(e.target.checked)}} /> 👨‍👩‍👧 Has Family in KSA (Sponsored)</label>
+                      </div>
+                      {!familyStatus && (
+                        <div style={{ fontSize:12, color:'#78909c', marginBottom:10 }}>
+                          No dependents registered — tick the checkbox above if the employee has a sponsored family.
+                        </div>
+                      )}
+                      {familyStatus && (<>
+                        <div style={{ background:'#fce4ec', borderRadius:10, padding:'12px 14px', marginBottom:12, border:'1px solid #f48fb1' }}>
+                          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10, marginBottom:10 }}>
+                            <div>
+                              <label style={{ ...S.label, color:'#880e4f' }}>Spouse</label>
+                              <select style={inp()} value={spouseCount} onChange={e=>setSpouseCount(e.target.value)}>
+                                <option value={0}>0</option>
+                                <option value={1}>1</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label style={{ ...S.label, color:'#880e4f' }}>Children</label>
+                              <input type="number" min={0} max={20} style={inp()} value={childCount} onChange={e=>setChildCount(Math.max(0,parseInt(e.target.value)||0))} />
+                            </div>
+                            <div>
+                              <label style={{ ...S.label, color:'#880e4f' }}>Other Dependents</label>
+                              <input type="number" min={0} max={10} style={inp()} value={otherDepCount} onChange={e=>setOtherDepCount(Math.max(0,parseInt(e.target.value)||0))} />
+                            </div>
+                          </div>
+                          <div style={{ fontSize:12, fontWeight:700, color:'#880e4f', marginBottom:10 }}>
+                            Total: {(parseInt(spouseCount)||0)+(parseInt(childCount)||0)+(parseInt(otherDepCount)||0)} dependent(s) — {(parseInt(spouseCount)||0)+(parseInt(childCount)||0)+(parseInt(otherDepCount)||0)} Iqama renewal slots to budget
+                          </div>
+                          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                            <label style={S.toggle}><input type="checkbox" checked={famTicketElig} onChange={e=>setFamTicketElig(e.target.checked)} /> ✈️ Family Ticket Eligible</label>
+                            <label style={S.toggle}><input type="checkbox" checked={famInsurElig} onChange={e=>setFamInsurElig(e.target.checked)} /> 🏥 Family Insurance Eligible</label>
+                          </div>
+                          {famTicketElig && (
+                            <div style={{ fontSize:11, color:'#546e7a', marginTop:6, padding:'6px 10px', background:'#fff', borderRadius:6 }}>
+                              Family ticket cycle is <strong>Every Year</strong> per policy. Budget per person is configured in Employee Categories.
+                            </div>
+                          )}
+                        </div>
+                        <div style={sec}>📋 Dependent Records</div>
+                        <div style={{ background:'#f0f9ff', borderRadius:12, padding:'10px 14px', marginBottom:12, border:'1px solid #bae6fd' }}>
+                          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+                            <span style={{ fontWeight:700, fontSize:12, color:BLUE }}>👨‍👩‍👧 Dependent Records — {depsData.length} added</span>
+                            <button type="button" onClick={()=>{setDepForm({ full_name:'', gender:'', relation:'', date_of_birth:'', iqama_number:'', passport_number:'', passport_expiry:'', nationality:'', insurance_policy_no:'', insurance_expiry_date:'' });setEditingDepIdx(null);setShowDepsModal(true)}} style={{ background:BLUE, color:'#fff', border:'none', borderRadius:16, padding:'5px 12px', cursor:'pointer', fontSize:12, fontWeight:700 }} disabled={depsData.length>=8}>+ Add Dependent{depsData.length>=8?' (max 8)':''}</button>
+                          </div>
+                          {depsData.length>0 && (
+                            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:11 }}>
+                              <thead><tr style={{ background:'#e0f2fe' }}>{['Name','Relation','Nationality','Policy #','Expiry',''].map(h=><th key={h} style={{ padding:'5px 8px', textAlign:'left', color:BLUE, fontWeight:700 }}>{h}</th>)}</tr></thead>
+                              <tbody>
+                                {depsData.map((d,i)=>(
+                                  <tr key={i} style={{ borderBottom:'1px solid #bae6fd' }}>
+                                    <td style={{ padding:'5px 8px', fontWeight:600 }}>{d.full_name}<div style={{ fontSize:10, color:'#78909c' }}>{d.gender}{d.date_of_birth?' · '+d.date_of_birth:''}</div></td>
+                                    <td style={{ padding:'5px 8px' }}>{d.relation||'—'}</td>
+                                    <td style={{ padding:'5px 8px' }}>{d.nationality||'—'}</td>
+                                    <td style={{ padding:'5px 8px', fontFamily:'monospace', fontSize:11 }}>{d.insurance_policy_no||'—'}</td>
+                                    <td style={{ padding:'5px 8px', fontSize:11, color: d.insurance_expiry_date && (new Date(d.insurance_expiry_date)-new Date())/86400000<30 ? '#c62828' : '#546e7a' }}>{d.insurance_expiry_date||'—'}</td>
+                                    <td style={{ padding:'5px 8px', whiteSpace:'nowrap' }}>
+                                      <button type="button" onClick={()=>{setDepForm({...d});setEditingDepIdx(i);setShowDepsModal(true)}} style={{ background:'#e3f2fd', color:'#0277bd', border:'none', borderRadius:5, padding:'3px 8px', cursor:'pointer', fontSize:11, marginRight:4 }}>✏</button>
+                                      <button type="button" onClick={()=>setDepsData(prev=>prev.filter((_,j)=>j!==i))} style={{ background:'#ffebee', color:'#c62828', border:'none', borderRadius:5, padding:'3px 8px', cursor:'pointer', fontSize:11 }}>✕</button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                          <div style={{ fontSize:11, color:'#ad1457', marginTop:8 }}>
+                            Full document uploads (Iqama, passport scans) can be added via Document Valet after saving the employee record.
+                          </div>
+                        </div>
+                      </>)}
+                    </>}
 
-                  {/* ── Footer INSIDE white card ── */}
-                  <div style={{ flexShrink:0, padding:'12px 24px 16px', borderTop:`1px solid ${PRI}22`, display:'flex', justifyContent:'space-between', alignItems:'center', fontFamily:POPPINS }}>
-                    <button
-                      onClick={step===1?()=>{setOpen(false);resetForm()}:()=>setStep(s=>s-1)}
-                      style={{ background:'#747474', color:'#fff', border:'none', borderRadius:24, padding:'9px 26px', cursor:'pointer', fontSize:13, fontWeight:600 }}>
-                      {step===1?'Cancel':'Back'}
-                    </button>
-                    <div style={{ textAlign:'center', fontSize:10, color:'#53666F', fontFamily:POPPINS }}>Employee number is automatically assigned</div>
-                    {step<6 ? (
-                      <button onClick={()=>setStep(s=>s+1)} style={{ background:PRI, color:'#fff', border:'none', borderRadius:24, padding:'9px 30px', cursor:'pointer', fontSize:13, fontWeight:700, boxShadow:`0 4px 14px ${PRI}44` }}>
-                        Save &amp; Next
-                      </button>
-                    ) : (
-                      <button onClick={save} disabled={saving} style={{ background:saving?'#c7c7c7':PRI, color:'#fff', border:'none', borderRadius:24, padding:'9px 30px', cursor:saving?'not-allowed':'pointer', fontSize:13, fontWeight:700, boxShadow:saving?'none':`0 4px 14px ${PRI}44` }}>
-                        {saving?'Saving…':editing?'✓ Update Employee':'✓ Add Employee'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
+                    {/* ── STEP 8 — Home Country ── */}
+                    {step===8 && <>
+                      <div style={sec}>🏠 Home Country Address</div>
+                      <div style={S.row}>
+                        <div style={S.col}>
+                          <label style={S.label}>Home Country</label>
+                          <select style={inp()} value={homeCountry} onChange={e=>setHomeCountry(e.target.value)}>
+                            <option value="">— Select —</option>
+                            {NATIONALITIES.map(n=><option key={n} value={n}>{n}</option>)}
+                          </select>
+                        </div>
+                        <div style={S.col}>
+                          <label style={S.label}>Home City / Area</label>
+                          <input style={inp()} value={homeCity} onChange={e=>setHomeCity(e.target.value)} placeholder="e.g. Lahore, Chennai, Dhaka…" />
+                        </div>
+                        <div style={S.col}>
+                          <label style={S.label}>Home Phone Number</label>
+                          <input style={inp()} value={homePhone} onChange={e=>setHomePhone(e.target.value)} placeholder="+92 300 0000000" />
+                        </div>
+                      </div>
+                      <div style={sec}>🆘 Emergency Contact</div>
+                      <div style={{ background:'#fff3e0', borderRadius:10, padding:'12px 14px', border:'1px solid #ffcc80', marginBottom:12 }}>
+                        <div style={S.row}>
+                          <div style={S.col}>
+                            <label style={{ ...S.label, color:'#e65100' }}>Contact Name</label>
+                            <input style={inp()} value={emergName} onChange={e=>setEmergName(e.target.value)} placeholder="Full name of next-of-kin" />
+                          </div>
+                          <div style={S.col}>
+                            <label style={{ ...S.label, color:'#e65100' }}>Relationship</label>
+                            <select style={inp()} value={emergRelation} onChange={e=>setEmergRelation(e.target.value)}>
+                              {['Father','Mother','Wife','Husband','Brother','Sister','Son','Daughter','Other'].map(r=><option key={r} value={r}>{r}</option>)}
+                            </select>
+                          </div>
+                          <div style={S.col}>
+                            <label style={{ ...S.label, color:'#e65100' }}>Contact Phone</label>
+                            <input style={inp()} value={emergPhone} onChange={e=>setEmergPhone(e.target.value)} placeholder="+92 300 0000000" />
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ background:'#e8f5e9', borderRadius:8, padding:'10px 14px', fontSize:12, color:'#2e7d32', border:'1px solid #a5d6a7' }}>
+                        <strong>ℹ️ Usage:</strong> Home Country is used by the Vacations module to pre-fill the ticket destination and calculate ticket budget eligibility. Emergency contact is used for repatriation and medical emergencies.
+                      </div>
+                    </>}
 
           </div>
-        </div>
+          </FormShell>
         )
       })()}
 
@@ -1669,69 +2301,138 @@ export default function Employees({ entityId, entityCode }) {
         </div>
       )}
 
-      {/* ══ DEPENDENTS SUB-MODAL ═══════════════════════════════ */}
-      {showDepsModal && (
-        <div style={{ ...S.overlay, zIndex:1100 }} onClick={e=>e.target===e.currentTarget&&setShowDepsModal(false)}>
-          <div style={{ background:'#fff', borderRadius:16, padding:24, width:560, maxWidth:'100%', maxHeight:'90vh', overflowY:'auto', boxShadow:'0 12px 48px rgba(0,0,0,0.25)' }}>
-            <h3 style={{ margin:'0 0 16px', fontSize:15, fontWeight:800, color:'#6a1b9a' }}>
-              👨‍👩‍👧 {editingDepIdx===null ? 'Add Dependent' : 'Edit Dependent'}
-            </h3>
-            <div style={S.row}>
-              <div style={{ ...S.col, flex:2 }}>
-                <label style={S.label}>Full Name <span style={{ color:'#c62828' }}>*</span></label>
-                <input style={S.inp} value={depForm.full_name} onChange={e=>setDepForm(p=>({...p,full_name:e.target.value}))} />
+      {/* ══ DEPENDENTS SUB-MODAL — FormShell style ══════════════ */}
+      {showDepsModal && (()=>{
+        const dPRI='#8C601B'; const dL1='#C8B48F'; const dL2='#FAF5E9'
+        const dInp = { width:'100%', padding:'8px 13px', borderRadius:18, border:`1px solid ${dPRI}44`, fontSize:12, color:'#172D37', background:'#fdfcf9', outline:'none', fontFamily:"'Poppins',sans-serif", boxSizing:'border-box' }
+        const dLbl = { display:'block', fontSize:10, fontWeight:600, color:'#53666F', marginBottom:3 }
+        const dSec = { fontSize:9, fontWeight:800, color:dPRI, letterSpacing:1.5, textTransform:'uppercase', marginBottom:8, marginTop:12, paddingBottom:4, borderBottom:`1.5px solid ${dPRI}33` }
+        const dRow = { display:'flex', gap:10, marginBottom:10, flexWrap:'wrap' }
+        const dCol = { flex:1, minWidth:130 }
+        const setD = (k,v) => setDepForm(p=>({...p,[k]:v}))
+        function confirmDep() {
+          if (!depForm.full_name.trim()) { alert('Full name is required'); return }
+          if (editingDepIdx===null) {
+            setDepsData(prev=>[...prev, { ...depForm }])
+            setNumDep(prev => (parseInt(prev)||0)+1)
+          } else {
+            setDepsData(prev=>prev.map((d,i)=>i===editingDepIdx?{...depForm}:d))
+          }
+          setShowDepsModal(false)
+        }
+        return (
+          <div onClick={e=>e.target===e.currentTarget&&setShowDepsModal(false)} style={{ position:'fixed', inset:0, background:'rgba(10,20,30,0.55)', backdropFilter:'blur(4px)', zIndex:1100, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'Poppins',sans-serif" }}>
+            {/* L1 */}
+            <div onClick={e=>e.stopPropagation()} style={{ background:dL1, borderRadius:4, padding:12, border:`3px solid #a07830`, width:'min(760px,97vw)', height:'min(90vh,640px)', display:'flex', flexDirection:'column', boxShadow:'0 28px 80px rgba(0,0,0,0.35)' }}>
+              {/* L2 */}
+              <div style={{ background:dL2, flex:1, minHeight:0, display:'flex', flexDirection:'row', position:'relative', overflow:'hidden' }}>
+                {/* L3 accent */}
+                <div style={{ position:'absolute', top:0, right:0, width:220, height:185, background:dPRI, borderRadius:'0 0 0 90px', zIndex:0, pointerEvents:'none' }} />
+                {/* Sidebar */}
+                <div style={{ width:200, flexShrink:0, padding:'14px 14px 18px 14px', display:'flex', flexDirection:'column', zIndex:1, position:'relative' }}>
+                  <div style={{ fontSize:13, fontWeight:800, color:'#172D37', whiteSpace:'nowrap', lineHeight:1.2, marginBottom:4 }}>Ratal Advanced Technologies</div>
+                  <div style={{ fontSize:9, fontWeight:800, color:dPRI, letterSpacing:2.2, textTransform:'uppercase', marginTop:4, marginBottom:14 }}>Masters · HR</div>
+                  <div style={{ marginBottom:12 }}>
+                    <div style={{ fontSize:12, fontWeight:900, color:'#172D37', textTransform:'uppercase', lineHeight:1.25 }}>{editingDepIdx===null?'ADD':'EDIT'}</div>
+                    <div style={{ fontSize:22, fontWeight:900, color:dPRI, textTransform:'uppercase', lineHeight:1.05 }}>DEPENDENT</div>
+                  </div>
+                  <div style={{ height:1, background:`${dPRI}30`, marginBottom:10 }} />
+                  <div style={{ fontSize:10, color:'#53666F', lineHeight:1.6, marginBottom:14 }}>
+                    Fill in the dependent's personal details, ID documents and insurance policy number.
+                  </div>
+                  {depForm.full_name && (
+                    <div style={{ background:`${dPRI}12`, borderRadius:8, padding:'8px 10px', marginBottom:10 }}>
+                      <div style={{ fontSize:11, fontWeight:700, color:'#172D37' }}>{depForm.full_name}</div>
+                      {depForm.relation && <div style={{ fontSize:10, color:dPRI }}>{depForm.relation}</div>}
+                    </div>
+                  )}
+                  <div style={{ marginTop:'auto', fontSize:10, color:'#8a96a3' }}>
+                    Dependent {editingDepIdx===null ? depsData.length+1 : editingDepIdx+1} of up to 8
+                  </div>
+                </div>
+                {/* L4 white card */}
+                <div style={{ flex:1, background:'#fff', margin:'30px 20px 12px 0', display:'flex', flexDirection:'column', overflow:'hidden', zIndex:1, boxShadow:'0 2px 24px rgba(0,0,0,0.09)', border:'1px solid #e2e8f0' }}>
+                  {/* Card header */}
+                  <div style={{ padding:'10px 18px 8px', borderBottom:'1px solid #f0f4f8', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
+                    <div style={{ fontSize:13, fontWeight:800, color:'#172D37' }}>Dependent Details</div>
+                    <button onClick={()=>setShowDepsModal(false)} style={{ width:26, height:26, borderRadius:'50%', background:'#f1f5f9', border:'none', fontSize:12, color:'#64748b', cursor:'pointer' }}>✕</button>
+                  </div>
+                  {/* Scrollable body */}
+                  <div style={{ flex:1, overflowY:'auto', padding:'14px 18px', fontFamily:"'Poppins',sans-serif" }}>
+                    <div style={dSec}>Identity</div>
+                    <div style={dRow}>
+                      <div style={{ ...dCol, flex:2 }}>
+                        <label style={dLbl}>Full Name *</label>
+                        <input style={dInp} value={depForm.full_name} onChange={e=>setD('full_name',e.target.value)} placeholder="As on passport/Iqama" />
+                      </div>
+                      <div style={dCol}>
+                        <label style={dLbl}>Gender</label>
+                        <select style={dInp} value={depForm.gender} onChange={e=>setD('gender',e.target.value)}>
+                          <option value="">--</option>
+                          {['Male','Female'].map(g=><option key={g} value={g}>{g}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div style={dRow}>
+                      <div style={dCol}>
+                        <label style={dLbl}>Relation</label>
+                        <select style={dInp} value={depForm.relation} onChange={e=>setD('relation',e.target.value)}>
+                          <option value="">-- Select --</option>
+                          {['Son','Daughter','Wife','Other'].map(r=><option key={r} value={r}>{r}</option>)}
+                        </select>
+                      </div>
+                      <div style={dCol}>
+                        <label style={dLbl}>Date of Birth</label>
+                        <input type="date" style={dInp} value={depForm.date_of_birth} onChange={e=>setD('date_of_birth',e.target.value)} />
+                      </div>
+                      <div style={dCol}>
+                        <label style={dLbl}>Nationality</label>
+                        <select style={dInp} value={depForm.nationality} onChange={e=>setD('nationality',e.target.value)}>
+                          <option value="">-- Select --</option>
+                          {NATIONALITIES.map(n=><option key={n} value={n}>{n}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div style={dSec}>ID Documents</div>
+                    <div style={dRow}>
+                      <div style={dCol}>
+                        <label style={dLbl}>Iqama No.</label>
+                        <input style={dInp} value={depForm.iqama_number} onChange={e=>setD('iqama_number',e.target.value)} placeholder="Resident ID" />
+                      </div>
+                      <div style={dCol}>
+                        <label style={dLbl}>Passport No.</label>
+                        <input style={dInp} value={depForm.passport_number} onChange={e=>setD('passport_number',e.target.value)} />
+                      </div>
+                      <div style={dCol}>
+                        <label style={dLbl}>Passport Expiry</label>
+                        <input type="date" style={dInp} value={depForm.passport_expiry} onChange={e=>setD('passport_expiry',e.target.value)} />
+                      </div>
+                    </div>
+                    <div style={dSec}>🏥 Insurance</div>
+                    <div style={dRow}>
+                      <div style={{ ...dCol, flex:2 }}>
+                        <label style={dLbl}>Insurance Policy #</label>
+                        <input style={dInp} value={depForm.insurance_policy_no} onChange={e=>setD('insurance_policy_no',e.target.value)} placeholder="Policy number assigned to this dependent" />
+                      </div>
+                      <div style={dCol}>
+                        <label style={dLbl}>Policy Expiry Date</label>
+                        <input type="date" style={dInp} value={depForm.insurance_expiry_date} onChange={e=>setD('insurance_expiry_date',e.target.value)} />
+                      </div>
+                    </div>
+                  </div>
+                  {/* Footer */}
+                  <div style={{ padding:'10px 18px', borderTop:'1px solid #f0f4f8', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
+                    <button type="button" onClick={()=>setShowDepsModal(false)} style={{ background:'#747474', color:'#fff', border:'none', borderRadius:4, padding:'9px 22px', fontSize:12, fontWeight:700, cursor:'pointer' }}>Cancel</button>
+                    <button type="button" onClick={confirmDep} style={{ background:dPRI, color:'#fff', border:'none', borderRadius:4, padding:'9px 26px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                      {editingDepIdx===null ? '+ Add Dependent' : '✓ Update Dependent'}
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div style={S.col}>
-                <label style={S.label}>Gender</label>
-                <select style={S.inp} value={depForm.gender} onChange={e=>setDepForm(p=>({...p,gender:e.target.value}))}>
-                  <option value="">-- Select --</option>
-                  {['Male','Female'].map(g=><option key={g} value={g}>{g}</option>)}
-                </select>
-              </div>
-            </div>
-            <div style={S.row}>
-              <div style={S.col}>
-                <label style={S.label}>Relation</label>
-                <select style={S.inp} value={depForm.relation} onChange={e=>setDepForm(p=>({...p,relation:e.target.value}))}>
-                  <option value="">-- Select --</option>
-                  {['Son','Daughter','Wife','Other'].map(r=><option key={r} value={r}>{r}</option>)}
-                </select>
-              </div>
-              <div style={S.col}>
-                <label style={S.label}>Date of Birth</label>
-                <input type="date" style={S.inp} value={depForm.date_of_birth} onChange={e=>setDepForm(p=>({...p,date_of_birth:e.target.value}))} />
-              </div>
-              <div style={S.col}>
-                <label style={S.label}>Nationality</label>
-                <select style={S.inp} value={depForm.nationality} onChange={e=>setDepForm(p=>({...p,nationality:e.target.value}))}>
-                  <option value="">-- Select --</option>
-                  {NATIONALITIES.map(n=><option key={n} value={n}>{n}</option>)}
-                </select>
-              </div>
-            </div>
-            <div style={S.row}>
-              <div style={S.col}><label style={S.label}>Iqama No.</label><input style={S.inp} value={depForm.iqama_number} onChange={e=>setDepForm(p=>({...p,iqama_number:e.target.value}))} /></div>
-              <div style={S.col}><label style={S.label}>Passport No.</label><input style={S.inp} value={depForm.passport_number} onChange={e=>setDepForm(p=>({...p,passport_number:e.target.value}))} /></div>
-              <div style={S.col}><label style={S.label}>Passport Expiry</label><input type="date" style={S.inp} value={depForm.passport_expiry} onChange={e=>setDepForm(p=>({...p,passport_expiry:e.target.value}))} /></div>
-            </div>
-            <div style={{ display:'flex', gap:10, justifyContent:'flex-end', marginTop:12 }}>
-              <button type="button" onClick={()=>setShowDepsModal(false)} style={{ background:'#f0f4f8', color:'#555', border:'none', borderRadius:9, padding:'9px 18px', cursor:'pointer', fontSize:13 }}>Cancel</button>
-              <button type="button" onClick={()=>{
-                if (!depForm.full_name) { alert('Full name is required'); return }
-                if (editingDepIdx===null) {
-                  setDepsData(prev=>[...prev, { ...depForm }])
-                } else {
-                  setDepsData(prev=>prev.map((d,i)=>i===editingDepIdx?{...depForm}:d))
-                }
-                setNumDep(prev => editingDepIdx===null ? (parseInt(prev)||0)+1 : prev)
-                setShowDepsModal(false)
-              }} style={{ background:'#6a1b9a', color:'#fff', border:'none', borderRadius:9, padding:'9px 22px', cursor:'pointer', fontSize:13, fontWeight:700 }}>
-                {editingDepIdx===null ? 'Add' : 'Update'}
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* ══ EXPORT DIALOG ══════════════════════════════════════ */}
       {showExportDialog && (

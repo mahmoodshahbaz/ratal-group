@@ -15,6 +15,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase }     from '../lib/supabase'
 import { GROUP_COLORS } from '../styles/appStyles'
 import { printDocument, openPrintWindow } from '../lib/templatePrint'
+import FormShell from '../components/FormShell'
 
 const MC  = GROUP_COLORS.Finance   // #8C354B maroon
 const MC2 = '#FAF0F2'              // light pink
@@ -87,7 +88,7 @@ const S = {
   linesTd: { padding:'6px 8px', borderBottom:'1px solid #f0f4f8' },
   actions: { display:'flex', gap:10, flexWrap:'wrap', marginTop:16, paddingTop:14, borderTop:`1px solid ${MC2}` },
   btn:    (bg,color,border) => ({ padding:'9px 18px', borderRadius:8, border:border||'none', background:bg, color, fontWeight:700, fontSize:12, cursor:'pointer', fontFamily:"'Poppins',sans-serif", transition:'opacity .15s' }),
-  modal:  { background:'#fff', borderRadius:14, padding:24, width:460, maxWidth:'100%', boxShadow:'0 8px 40px rgba(0,0,0,0.22)' },
+  modal:  { background:'#fff', borderRadius:4, padding:24, width:460, maxWidth:'100%', boxShadow:'0 8px 40px rgba(0,0,0,0.22)' },
   lbl:    { fontSize:11, fontWeight:700, color:'#6b7c93', display:'block', marginBottom:6 },
   inp:    { width:'100%', padding:'9px 11px', borderRadius:7, border:'1px solid #dde3ec', fontSize:12, fontFamily:'inherit', outline:'none', resize:'vertical', minHeight:80, boxSizing:'border-box' },
   alert:  (color,bg) => ({ background:bg, border:`1px solid ${color}40`, borderRadius:8, padding:'12px 16px', marginBottom:14, fontSize:12, color }),
@@ -1311,7 +1312,7 @@ export default function ExpenseClaims({ entityId, entityName, role, profile }) {
       {/* ══ Claim Detail Modal — 4-layer Finance style ════════════ */}
       {selected && (
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:'16px'}} onClick={closeDrawer}>
-          <div style={{background:'#fff',borderRadius:16,width:'100%',maxWidth:960,maxHeight:'94vh',display:'flex',flexDirection:'column',boxShadow:'0 20px 60px rgba(0,0,0,0.3)',overflow:'hidden'}} onClick={e=>e.stopPropagation()}>
+          <div style={{background:'#fff',borderRadius:4,width:'100%',maxWidth:960,maxHeight:'94vh',display:'flex',flexDirection:'column',boxShadow:'0 20px 60px rgba(0,0,0,0.3)',overflow:'hidden',fontFamily:"'Poppins',sans-serif"}} onClick={e=>e.stopPropagation()}>
 
             {/* ── L1: Maroon gradient header ── */}
             <div style={{background:`linear-gradient(135deg,${MC} 0%,#6b2339 100%)`,padding:'18px 24px',flexShrink:0,display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
@@ -1669,93 +1670,89 @@ export default function ExpenseClaims({ entityId, entityName, role, profile }) {
       )}
 
       {/* ══ Generate Claims modal ══════════════════════════════ */}
-      {genOpen && (
-        <div style={S.overlay} onClick={()=>{setGenOpen(false);setGenResult(null)}}>
-          <div style={{...S.modal,maxWidth:620}} onClick={e=>e.stopPropagation()}>
-            <div style={{fontWeight:800,fontSize:16,color:'#1a3a6b',marginBottom:4}}>⚡ Generate Claims — {periodLabel(filterPeriod)}</div>
-            <div style={{fontSize:12,color:'#6b7c93',marginBottom:16}}>One claim per employee per project — uses rolling period (26th–25th)</div>
+      <FormShell
+        isOpen={genOpen}
+        onClose={() => { setGenOpen(false); setGenResult(null) }}
+        chapterName="Finance"
+        title={['Generate', 'Expense', 'Claims']}
+        description={`One claim per employee per project — period: ${periodLabel(filterPeriod)}`}
+        steps={['Preview', 'Done']}
+        currentStep={genResult ? 2 : 1}
+        onBack={genResult ? () => setGenResult(null) : () => { setGenOpen(false); setGenResult(null) }}
+        backLabel={genResult ? '← New Period' : 'Cancel'}
+        onNext={genResult ? () => { setGenOpen(false); setGenResult(null) } : runGenerate}
+        nextLabel={genResult ? 'Done ✓' : (genBusy ? 'Generating…' : `⚡ Generate ${genPreview.filter(r=>!r.has_claim).length} Claims`)}
+        nextDisabled={genBusy || (!genResult && genPreview.filter(r=>!r.has_claim).length===0)}
+      >
 
-            {genPreview.length === 0 && !genResult && (
-              <div style={{textAlign:'center',padding:24,color:'#aab2bd'}}>
-                {genBusy ? 'Loading preview…' : '⚠️ No expense or food allowance records found for this period. Nothing to generate.'}
-              </div>
-            )}
-
-            {genPreview.length > 0 && genPreview.every(r=>r.has_claim) && !genResult && (
-              <div style={{textAlign:'center',padding:24}}>
-                <div style={{fontSize:32,marginBottom:8}}>✅</div>
-                <div style={{fontWeight:700,fontSize:14,color:'#2e7d32',marginBottom:4}}>
-                  All {genPreview.length} employee(s) already have claims for {periodLabel(filterPeriod)}.
-                </div>
-                <div style={{fontSize:12,color:'#555',marginBottom:16}}>
-                  Nothing new to generate. To reset and re-generate, run the debug reset SQL.
-                </div>
-                <button style={S.btn('#f5f5f5','#333')} onClick={()=>setGenOpen(false)}>Close</button>
-              </div>
-            )}
-
-            {genPreview.length > 0 && !genPreview.every(r=>r.has_claim) && !genResult && (
-              <>
-                <div style={{fontSize:12,fontWeight:700,color:'#1a3a6b',marginBottom:8}}>
-                  {genPreview.filter(r=>!r.has_claim).length} claim(s) will be generated:
-                </div>
-                <table style={{width:'100%',borderCollapse:'collapse',fontSize:12,marginBottom:16}}>
-                  <thead>
-                    <tr>{['Employee','Dept','Project','Records','Total (SAR)','Status'].map(h=>(
-                      <th key={h} style={{padding:'7px 8px',background:'#1a3a6b',color:'#fff',fontWeight:700,textAlign:'left',fontSize:11}}>{h}</th>
-                    ))}</tr>
-                  </thead>
-                  <tbody>
-                    {genPreview.map((r,i)=>(
-                      <tr key={`${r.employee_id}-${r.project_id||'none'}`} style={{background:r.has_claim?'#f5f5f5':i%2===0?'#fff':'#fafbfc'}}>
-                        <td style={S.linesTd}>{r.full_name_en}</td>
-                        <td style={S.linesTd}><span style={{fontSize:11,fontWeight:700,color:'#1a3a6b'}}>{r.department}</span></td>
-                        <td style={S.linesTd}>
-                          {r.project_no && r.project_no !== '—'
-                            ? <span style={{fontSize:10,fontWeight:700,color:'#0F6E56',background:'#e8f5e9',padding:'2px 6px',borderRadius:4}}>{r.project_no}</span>
-                            : <span style={{color:'#aab2bd',fontSize:11}}>—</span>
-                          }
-                        </td>
-                        <td style={{...S.linesTd,textAlign:'center'}}>{r.record_count}</td>
-                        <td style={{...S.linesTd,textAlign:'right',fontWeight:600}}>{fmtSAR(r.total_amount)}</td>
-                        <td style={S.linesTd}>
-                          {r.has_claim
-                            ? <span style={{fontSize:10,background:'#e8f5e9',color:'#2e7d32',padding:'2px 8px',borderRadius:20,fontWeight:700}}>Already claimed</span>
-                            : <span style={{fontSize:10,background:'#fff8e1',color:'#f57f17',padding:'2px 8px',borderRadius:20,fontWeight:700}}>Will generate</span>
-                          }
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
-                  <button style={S.btn('#f5f5f5','#333')} onClick={()=>setGenOpen(false)}>Cancel</button>
-                  <button
-                    style={S.btn('#1a3a6b','#fff')}
-                    onClick={runGenerate}
-                    disabled={genBusy||genPreview.filter(r=>!r.has_claim).length===0}
-                  >
-                    {genBusy?'Generating…':`⚡ Generate ${genPreview.filter(r=>!r.has_claim).length} Claims`}
-                  </button>
-                </div>
-              </>
-            )}
-
-            {genResult && (
-              <div>
-                {genResult.error
-                  ? <div style={S.alert('#c62828','#fce4ec')}>❌ {genResult.error}</div>
-                  : <div style={S.alert('#2e7d32','#e8f5e9')}>
-                      ✅ Generated <strong>{genResult.generated}</strong> claim(s). Skipped <strong>{genResult.skipped}</strong> (already claimed).
-                      {genResult.from_date && <div style={{marginTop:4,fontSize:11,color:'#2e7d32'}}>Period: {genResult.from_date} → {genResult.to_date}</div>}
-                    </div>
-                }
-                <button style={{...S.btn('#1a3a6b','#fff'),marginTop:12}} onClick={()=>{setGenOpen(false);setGenResult(null)}}>Close</button>
-              </div>
-            )}
+        {genPreview.length === 0 && !genResult && (
+          <div style={{textAlign:'center',padding:24,color:'#aab2bd'}}>
+            {genBusy ? 'Loading preview…' : '⚠️ No expense or food allowance records found for this period. Nothing to generate.'}
           </div>
-        </div>
-      )}
+        )}
+
+        {genPreview.length > 0 && genPreview.every(r=>r.has_claim) && !genResult && (
+          <div style={{textAlign:'center',padding:24}}>
+            <div style={{fontSize:32,marginBottom:8}}>✅</div>
+            <div style={{fontWeight:700,fontSize:14,color:'#2e7d32',marginBottom:4}}>
+              All {genPreview.length} employee(s) already have claims for {periodLabel(filterPeriod)}.
+            </div>
+            <div style={{fontSize:12,color:'#555'}}>
+              Nothing new to generate. To reset and re-generate, run the debug reset SQL.
+            </div>
+          </div>
+        )}
+
+        {genPreview.length > 0 && !genPreview.every(r=>r.has_claim) && !genResult && (
+          <>
+            <div style={{fontSize:12,fontWeight:700,color:'#8C354B',marginBottom:8}}>
+              {genPreview.filter(r=>!r.has_claim).length} claim(s) will be generated:
+            </div>
+            <table style={{width:'100%',borderCollapse:'collapse',fontSize:12,marginBottom:8}}>
+              <thead>
+                <tr>{['Employee','Dept','Project','Records','Total (SAR)','Status'].map(h=>(
+                  <th key={h} style={{padding:'7px 8px',background:'#8C354B',color:'#fff',fontWeight:700,textAlign:'left',fontSize:11}}>{h}</th>
+                ))}</tr>
+              </thead>
+              <tbody>
+                {genPreview.map((r,i)=>(
+                  <tr key={`${r.employee_id}-${r.project_id||'none'}`} style={{background:r.has_claim?'#f5f5f5':i%2===0?'#fff':'#fafbfc'}}>
+                    <td style={S.linesTd}>{r.full_name_en}</td>
+                    <td style={S.linesTd}><span style={{fontSize:11,fontWeight:700,color:'#8C354B'}}>{r.department}</span></td>
+                    <td style={S.linesTd}>
+                      {r.project_no && r.project_no !== '—'
+                        ? <span style={{fontSize:10,fontWeight:700,color:'#0F6E56',background:'#e8f5e9',padding:'2px 6px',borderRadius:4}}>{r.project_no}</span>
+                        : <span style={{color:'#aab2bd',fontSize:11}}>—</span>
+                      }
+                    </td>
+                    <td style={{...S.linesTd,textAlign:'center'}}>{r.record_count}</td>
+                    <td style={{...S.linesTd,textAlign:'right',fontWeight:600}}>{fmtSAR(r.total_amount)}</td>
+                    <td style={S.linesTd}>
+                      {r.has_claim
+                        ? <span style={{fontSize:10,background:'#e8f5e9',color:'#2e7d32',padding:'2px 8px',borderRadius:20,fontWeight:700}}>Already claimed</span>
+                        : <span style={{fontSize:10,background:'#fff8e1',color:'#f57f17',padding:'2px 8px',borderRadius:20,fontWeight:700}}>Will generate</span>
+                      }
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
+
+        {genResult && (
+          <div>
+            {genResult.error
+              ? <div style={S.alert('#c62828','#fce4ec')}>❌ {genResult.error}</div>
+              : <div style={S.alert('#2e7d32','#e8f5e9')}>
+                  ✅ Generated <strong>{genResult.generated}</strong> claim(s). Skipped <strong>{genResult.skipped}</strong> (already claimed).
+                  {genResult.from_date && <div style={{marginTop:4,fontSize:11,color:'#2e7d32'}}>Period: {genResult.from_date} → {genResult.to_date}</div>}
+                </div>
+            }
+          </div>
+        )}
+
+      </FormShell>
 
     </div>
   )

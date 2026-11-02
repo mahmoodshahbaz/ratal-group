@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import FormShell from '../components/FormShell'
+import PageBanner from '../components/PageBanner'
+
+const L3 = '#606D2C'
 
 // ═══════════════════════════════════════════════════════════════════
 // Cheque Register — Phase 12
@@ -64,8 +68,9 @@ const daysUntil = d => {
 }
 
 // ── Cheque Form Modal ────────────────────────────────────────────────────────
-function ChequeModal({ cheque_type, entityId, existing, onClose, onSaved, coaList }) {
+function ChequeModal({ isOpen, cheque_type, entityId, existing, onClose, onSaved, coaList }) {
   const isEdit = !!existing
+  const isIssued = cheque_type === 'ISSUED'
   const blank = {
     cheque_number:'', cheque_date:today(), due_date:today(),
     amount:'', currency:'SAR', bank_name:'', bank_account:'',
@@ -73,16 +78,21 @@ function ChequeModal({ cheque_type, entityId, existing, onClose, onSaved, coaLis
     gl_account_code:'', reference:'', description:'', department:'',
     status:'PENDING',
   }
-  const [form, setForm] = useState(isEdit ? { ...existing } : blank)
+  const [form, setForm] = useState(blank)
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
+  const [wizardStep, setWizardStep] = useState(1)
+
+  useEffect(() => {
+    if (isOpen) {
+      setForm(isEdit && existing ? { ...existing } : blank)
+      setErr(''); setWizardStep(1)
+    }
+  }, [isOpen])
 
   const set = (k,v) => setForm(f=>({...f,[k]:v}))
 
   async function save() {
-    if (!form.cheque_number || !form.amount || !form.due_date) {
-      setErr('Cheque number, amount, and due date are required.'); return
-    }
     setSaving(true); setErr('')
     const payload = { ...form, entity_id: entityId, cheque_type, amount: +form.amount }
     const res = isEdit
@@ -93,84 +103,97 @@ function ChequeModal({ cheque_type, entityId, existing, onClose, onSaved, coaLis
     onSaved()
   }
 
-  const isIssued = cheque_type === 'ISSUED'
+  const step1Valid = !!(form.cheque_number && form.amount && form.due_date)
+  const inpStyle = { padding:'8px 10px', borderRadius:4, border:'1px solid #dde3ec', fontSize:12, outline:'none', width:'100%', boxSizing:'border-box', fontFamily:'Poppins,sans-serif' }
+  const lblStyle = { display:'block', fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4, fontFamily:'Poppins,sans-serif' }
 
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}
-      onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{ background:'#fff', borderRadius:16, padding:28, width:560, maxHeight:'90vh', overflowY:'auto', boxShadow:'0 20px 60px rgba(0,0,0,0.25)' }}>
-        <div style={{ fontWeight:800, fontSize:16, color:'#1a2e3d', marginBottom:20 }}>
-          {isEdit ? 'Edit' : 'New'} {isIssued ? 'Issued' : 'Received'} Cheque
-        </div>
-
-        {err && <div style={{ background:'#ffebee', color:'#c62828', borderRadius:8, padding:'8px 12px', fontSize:12, marginBottom:12 }}>{err}</div>}
-
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-          <div>
-            <label style={S.lbl}>Cheque No. *</label>
-            <input style={S.inp} value={form.cheque_number} onChange={e=>set('cheque_number',e.target.value)} placeholder="e.g. 001234" />
-          </div>
-          <div>
-            <label style={S.lbl}>Amount (SAR) *</label>
-            <input style={S.inp} type="number" value={form.amount} onChange={e=>set('amount',e.target.value)} placeholder="0.00" />
-          </div>
-          <div>
-            <label style={S.lbl}>Cheque Date</label>
-            <input style={S.inp} type="date" value={form.cheque_date} onChange={e=>set('cheque_date',e.target.value)} />
-          </div>
-          <div>
-            <label style={S.lbl}>Due / Value Date *</label>
-            <input style={S.inp} type="date" value={form.due_date} onChange={e=>set('due_date',e.target.value)} />
-          </div>
-          <div>
-            <label style={S.lbl}>{isIssued ? 'Payee Name' : 'Drawer Name'}</label>
-            <input style={S.inp} value={isIssued ? form.payee_name : form.drawer_name}
-              onChange={e=>set(isIssued?'payee_name':'drawer_name',e.target.value)}
-              placeholder={isIssued ? 'Who are we paying?' : 'Who gave us this cheque?'} />
-          </div>
-          <div>
-            <label style={S.lbl}>Bank Name</label>
-            <input style={S.inp} value={form.bank_name} onChange={e=>set('bank_name',e.target.value)} placeholder="e.g. Al Rajhi Bank" />
-          </div>
-          <div>
-            <label style={S.lbl}>Our Bank Account</label>
-            <input style={S.inp} value={form.bank_account} onChange={e=>set('bank_account',e.target.value)} placeholder="Account number" />
-          </div>
-          <div>
-            <label style={S.lbl}>Party GL Account</label>
-            <select style={S.inp} value={form.party_account_code} onChange={e=>set('party_account_code',e.target.value)}>
-              <option value="">— select —</option>
-              {coaList.map(a=><option key={a.account_code} value={a.account_code}>{a.account_code} {a.account_name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={S.lbl}>Bank / Clearing GL Account</label>
-            <select style={S.inp} value={form.gl_account_code} onChange={e=>set('gl_account_code',e.target.value)}>
-              <option value="">— select —</option>
-              {coaList.filter(a=>['BANK','CASH'].includes(a.account_type)).map(a=>(
-                <option key={a.account_code} value={a.account_code}>{a.account_code} {a.account_name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label style={S.lbl}>Reference (Invoice/PO)</label>
-            <input style={S.inp} value={form.reference} onChange={e=>set('reference',e.target.value)} placeholder="INV-001 / PO-005" />
-          </div>
-          <div style={{ gridColumn:'1/-1' }}>
-            <label style={S.lbl}>Description</label>
-            <input style={S.inp} value={form.description} onChange={e=>set('description',e.target.value)} placeholder="Purpose / notes" />
+    <FormShell
+      isOpen={isOpen}
+      onClose={onClose}
+      chapterName="Accounting"
+      title={isEdit
+        ? ['Edit','Cheque','Details']
+        : isIssued ? ['Add','Issued','Cheque'] : ['Add','Received','Cheque']}
+      steps={['Cheque Details','GL & Reference']}
+      currentStep={wizardStep}
+      onBack={() => setWizardStep(w => w - 1)}
+      backLabel="Back"
+      onNext={() => wizardStep < 2 ? setWizardStep(w => w + 1) : save()}
+      nextLabel={wizardStep === 2 ? (saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Cheque') : 'Next →'}
+      nextDisabled={saving || (wizardStep === 1 && !step1Valid)}
+    >
+      {wizardStep === 1 && (
+        <div style={{ fontFamily:'Poppins,sans-serif' }}>
+          {err && <div style={{ background:'#ffebee', color:'#c62828', borderRadius:4, padding:'8px 12px', fontSize:12, marginBottom:14 }}>{err}</div>}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+            <div>
+              <label style={lblStyle}>Cheque No. *</label>
+              <input style={inpStyle} value={form.cheque_number} onChange={e=>set('cheque_number',e.target.value)} placeholder="e.g. 001234" />
+            </div>
+            <div>
+              <label style={lblStyle}>Amount (SAR) *</label>
+              <input style={inpStyle} type="number" value={form.amount} onChange={e=>set('amount',e.target.value)} placeholder="0.00" />
+            </div>
+            <div>
+              <label style={lblStyle}>Cheque Date</label>
+              <input style={inpStyle} type="date" value={form.cheque_date} onChange={e=>set('cheque_date',e.target.value)} />
+            </div>
+            <div>
+              <label style={lblStyle}>Due / Value Date *</label>
+              <input style={inpStyle} type="date" value={form.due_date} onChange={e=>set('due_date',e.target.value)} />
+            </div>
+            <div>
+              <label style={lblStyle}>{isIssued ? 'Payee Name' : 'Drawer Name'}</label>
+              <input style={inpStyle}
+                value={isIssued ? form.payee_name : form.drawer_name}
+                onChange={e=>set(isIssued?'payee_name':'drawer_name',e.target.value)}
+                placeholder={isIssued ? 'Who are we paying?' : 'Who gave us this cheque?'} />
+            </div>
+            <div>
+              <label style={lblStyle}>Bank Name</label>
+              <input style={inpStyle} value={form.bank_name} onChange={e=>set('bank_name',e.target.value)} placeholder="e.g. Al Rajhi Bank" />
+            </div>
           </div>
         </div>
+      )}
 
-        <div style={{ display:'flex', gap:8, justifyContent:'flex-end', marginTop:20 }}>
-          <button onClick={onClose} style={S.btnO()}>Cancel</button>
-          <button onClick={save} disabled={saving}
-            style={S.btn(isIssued?'#c62828':'#1565C0')}>
-            {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Cheque'}
-          </button>
+      {wizardStep === 2 && (
+        <div style={{ fontFamily:'Poppins,sans-serif' }}>
+          {err && <div style={{ background:'#ffebee', color:'#c62828', borderRadius:4, padding:'8px 12px', fontSize:12, marginBottom:14 }}>{err}</div>}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+            <div>
+              <label style={lblStyle}>Our Bank Account</label>
+              <input style={inpStyle} value={form.bank_account} onChange={e=>set('bank_account',e.target.value)} placeholder="Account number" />
+            </div>
+            <div>
+              <label style={lblStyle}>Reference (Invoice/PO)</label>
+              <input style={inpStyle} value={form.reference} onChange={e=>set('reference',e.target.value)} placeholder="INV-001 / PO-005" />
+            </div>
+            <div>
+              <label style={lblStyle}>Party GL Account</label>
+              <select style={inpStyle} value={form.party_account_code} onChange={e=>set('party_account_code',e.target.value)}>
+                <option value="">— select —</option>
+                {coaList.map(a=><option key={a.account_code} value={a.account_code}>{a.account_code} {a.account_name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={lblStyle}>Bank / Clearing GL Account</label>
+              <select style={inpStyle} value={form.gl_account_code} onChange={e=>set('gl_account_code',e.target.value)}>
+                <option value="">— select —</option>
+                {coaList.filter(a=>['BANK','CASH'].includes(a.account_type)).map(a=>(
+                  <option key={a.account_code} value={a.account_code}>{a.account_code} {a.account_name}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ gridColumn:'1/-1' }}>
+              <label style={lblStyle}>Description</label>
+              <input style={inpStyle} value={form.description} onChange={e=>set('description',e.target.value)} placeholder="Purpose / notes" />
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      )}
+    </FormShell>
   )
 }
 
@@ -300,13 +323,14 @@ function StatusModal({ cheque, onClose, onSaved }) {
 
 // ── Cheque List Tab ──────────────────────────────────────────────────────────
 function ChequeList({ cheque_type, entityId, coa }) {
-  const [cheques,   setCheques]   = useState([])
-  const [loading,   setLoading]   = useState(true)
-  const [search,    setSearch]    = useState('')
-  const [statusF,   setStatusF]   = useState('ALL')
-  const [showModal, setShowModal] = useState(false)
-  const [editing,   setEditing]   = useState(null)
-  const [statusC,   setStatusC]   = useState(null)
+  const [cheques,    setCheques]    = useState([])
+  const [loading,    setLoading]    = useState(true)
+  const [search,     setSearch]     = useState('')
+  const [statusF,    setStatusF]    = useState('ALL')
+  const [showBanner, setShowBanner] = useState(false)
+  const [showModal,  setShowModal]  = useState(false)
+  const [editing,    setEditing]    = useState(null)
+  const [statusC,    setStatusC]    = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -375,7 +399,7 @@ function ChequeList({ cheque_type, entityId, coa }) {
           {Object.entries(STATUS_COLOR).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
         </select>
         <button onClick={exportCSV} style={{ ...S.btnO(), marginLeft:'auto' }}>⬇ CSV</button>
-        <button onClick={()=>{ setEditing(null); setShowModal(true) }} style={S.btn(accentColor)}>
+        <button onClick={()=>{ setEditing(null); setShowBanner(true) }} style={S.btn(L3)}>
           + Add {isIssued?'Issued':'Received'} Cheque
         </button>
       </div>
@@ -472,16 +496,28 @@ function ChequeList({ cheque_type, entityId, coa }) {
         </table>
       </div>
 
-      {showModal && (
-        <ChequeModal
-          cheque_type={cheque_type}
-          entityId={entityId}
-          existing={editing}
-          coaList={coa}
-          onClose={()=>{ setShowModal(false); setEditing(null) }}
-          onSaved={()=>{ setShowModal(false); setEditing(null); load() }}
-        />
-      )}
+      <PageBanner
+        isOpen={showBanner}
+        onClose={() => setShowBanner(false)}
+        onStart={() => { setShowBanner(false); setShowModal(true) }}
+        chapterName="Accounting"
+        formTitle={isIssued ? ['Add','Issued','Cheque'] : ['Add','Received','Cheque']}
+        iconLabel={isIssued ? '📤' : '📥'}
+        heading={isIssued ? 'Issue a new cheque' : 'Record a received cheque'}
+        description={isIssued
+          ? 'Log a cheque issued to a payee — capture cheque details, GL accounts, and track to clearance.'
+          : 'Record a cheque received from a party — track deposit status and GL posting.'}
+        workflowSteps={['Cheque Details','GL & Reference']}
+      />
+      <ChequeModal
+        isOpen={showModal}
+        cheque_type={cheque_type}
+        entityId={entityId}
+        existing={editing}
+        coaList={coa}
+        onClose={()=>{ setShowModal(false); setEditing(null) }}
+        onSaved={()=>{ setShowModal(false); setEditing(null); load() }}
+      />
       {statusC && (
         <StatusModal
           cheque={statusC}
@@ -630,8 +666,8 @@ export default function Cheques({ entityId }) {
         {TABS.map(t=>(
           <button key={t.key} onClick={()=>setTab(t.key)}
             style={{ padding:'8px 18px', fontSize:12, fontWeight:700, cursor:'pointer', border:'none',
-              background:'transparent', borderBottom: tab===t.key?'3px solid #1a2e3d':'3px solid transparent',
-              color: tab===t.key?'#1a2e3d':'#6b7c93', marginBottom:-2 }}>
+              background:'transparent', borderBottom: tab===t.key?`3px solid ${L3}`:'3px solid transparent',
+              color: tab===t.key?L3:'#6b7c93', marginBottom:-2 }}>
             {t.label}
           </button>
         ))}

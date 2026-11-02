@@ -22,6 +22,7 @@ import { supabase }       from '../lib/supabase'
 import { uploadToDrive }  from '../hooks/useDriveUpload'
 import { useFieldAuth }   from '../lib/useFieldAuth'
 import { COA }            from '../lib/autoPost'
+import { MP }             from './formTheme'
 
 // ─── Expense categories (exported — used by ExpenseClaims.jsx) ─────────────────
 export const EXPENSE_CATEGORIES = [
@@ -46,14 +47,15 @@ const STEPS = [
   { id:'summary',  icon:'✅', label:'Review',   num:null }, // not shown in progress bar
 ]
 
-// ─── Per-step color themes ─────────────────────────────────────────────────────
+// ─── Per-step color themes (new MP palette) ────────────────────────────────────
+// variant 'light' = cream screen; variant 'dark' = charcoal screen (summary only)
 const T = {
-  scan:     { grad:'linear-gradient(135deg,#0f172a,#1e3a5f)', color:'#0ea5e9', light:'#e0f2fe', dark:'#0c4a6e' },
-  invoice:  { grad:'linear-gradient(135deg,#7c2d12,#ea580c)', color:'#f97316', light:'#fff7ed', dark:'#7c2d12' },
-  classify: { grad:'linear-gradient(135deg,#312e81,#4f46e5)', color:'#818cf8', light:'#eef2ff', dark:'#312e81' },
-  notes:    { grad:'linear-gradient(135deg,#14532d,#15803d)', color:'#22c55e', light:'#f0fdf4', dark:'#14532d' },
-  summary:  { grad:'linear-gradient(135deg,#1e3a8a,#2563eb)', color:'#60a5fa', light:'#eff6ff', dark:'#1e3a8a' },
-  success:  { grad:'linear-gradient(135deg,#134e4a,#0f766e)', color:'#2dd4bf', light:'#f0fdfa', dark:'#134e4a' },
+  scan:     { variant:'light', bg:MP.cream,    hdrBg:MP.lightCard, color:'#3B6FE8', light:'#EBF0FD', dark:'#1D3A8A', accent:MP.yellow },
+  invoice:  { variant:'light', bg:MP.cream,    hdrBg:MP.lightCard, color:'#D4763B', light:'#FDF3EC', dark:'#7C3A12', accent:MP.yellow },
+  classify: { variant:'light', bg:MP.cream,    hdrBg:MP.lightCard, color:'#5E9E5A', light:'#EDF7EC', dark:'#285424', accent:MP.yellow },
+  notes:    { variant:'light', bg:MP.cream,    hdrBg:MP.lightCard, color:'#9B72CF', light:'#F3EEF9', dark:'#4A1D8C', accent:MP.yellow },
+  summary:  { variant:'dark',  bg:MP.charcoal, hdrBg:MP.darkCard,  color:MP.yellow, light:'rgba(247,210,99,0.15)', dark:MP.darkCard, accent:MP.green },
+  success:  { variant:'light', bg:MP.cream,    hdrBg:MP.lightCard, color:'#4CAF82', light:'#EAF7F0', dark:'#1A5C38', accent:MP.yellow },
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -529,72 +531,87 @@ function loadTesseract() {
 }
 
 // ─── UI primitives ─────────────────────────────────────────────────────────────
+// PAGE is a function so each step can apply its own bg color
+function getPage(t) {
+  return {
+    maxWidth:480, margin:'0 auto', padding:'0 0 90px',
+    fontFamily: MP.font,
+    background: t.bg || MP.cream, minHeight:'100vh', boxSizing:'border-box',
+  }
+}
+// Backward compat alias (some render paths use PAGE directly)
 const PAGE = {
   maxWidth:480, margin:'0 auto', padding:'0 0 90px',
-  fontFamily:"'SF Pro Display',-apple-system,'Segoe UI',system-ui,sans-serif",
-  background:'#f5f6fa', minHeight:'100vh', boxSizing:'border-box',
+  fontFamily: MP.font,
+  background: MP.cream, minHeight:'100vh', boxSizing:'border-box',
 }
 
-function SCard({ children, style={} }) {
+function SCard({ children, style={}, dark=false }) {
   return (
-    <div style={{ background:'#fff', borderRadius:20, border:'1px solid rgba(0,0,0,0.06)',
-      marginBottom:12, overflow:'hidden', boxShadow:'0 2px 20px rgba(0,0,0,0.07)', ...style }}>
+    <div style={{
+      background: dark ? MP.darkCard : MP.lightCard,
+      borderRadius:20, border:`1px solid ${dark ? '#3A3D35' : '#E4E0D3'}`,
+      marginBottom:12, overflow:'hidden', ...style }}>
       {children}
     </div>
   )
 }
-function SSection({ title, accent, children }) {
+function SSection({ title, accent, children, dark=false }) {
+  const labelColor = dark ? MP.textMutedDark : MP.textMutedLight
   return (
     <div style={{ padding:'16px 18px' }}>
       {title && (
-        <div style={{ fontSize:10, fontWeight:700, color:accent||'#64748b', textTransform:'uppercase',
-          letterSpacing:1, marginBottom:14, display:'flex', alignItems:'center', gap:6 }}>
-          <div style={{ width:22, height:2, background:accent||'#64748b', borderRadius:2 }} />{title}
+        <div style={{ fontSize:10, fontWeight:700, color:accent||labelColor, textTransform:'uppercase', letterSpacing:1, marginBottom:14, display:'flex', alignItems:'center', gap:6, fontFamily:MP.font }}>
+          <div style={{ width:22, height:2, background:accent||labelColor, borderRadius:2 }} />{title}
         </div>
       )}
       {children}
     </div>
   )
 }
-function FLabel({ children, accent }) {
+function FLabel({ children, accent, dark=false }) {
   return (
-    <div style={{ fontSize:10, fontWeight:700, color:accent||'#94a3b8', textTransform:'uppercase',
-      letterSpacing:.9, marginBottom:6 }}>
+    <div style={{ fontSize:10, fontWeight:600, color:accent||(dark?MP.textMutedDark:MP.textMutedLight), textTransform:'uppercase', letterSpacing:.9, marginBottom:6, fontFamily:MP.font }}>
       {children}
     </div>
   )
 }
-function FInp({ accent, style={}, ...props }) {
+function FInp({ accent, style={}, dark=false, ...props }) {
+  const bg     = dark ? MP.darkCard : MP.lightCard
+  const border = dark ? '#3A3D35'   : '#D5D2C5'
+  const clr    = dark ? MP.textOnDark : MP.textDark
+  const focusBg  = dark ? '#363830'  : '#FFFFFF'
+  const focusBdr = accent || MP.yellow
   return (
     <input
-      style={{ padding:'13px 15px', border:`1.5px solid ${accent?accent+'30':'#e8ecf0'}`,
-        borderRadius:13, fontSize:14, outline:'none', width:'100%', boxSizing:'border-box',
-        minHeight:48, fontFamily:'inherit', background:'#fafbfc', WebkitAppearance:'none',
-        transition:'border-color .15s', ...style }}
-      onFocus={e=>{ e.target.style.borderColor=accent||'#94a3b8'; e.target.style.background='#fff' }}
-      onBlur={e=>{ e.target.style.borderColor=accent?accent+'30':'#e8ecf0'; e.target.style.background='#fafbfc' }}
+      style={{ padding:'12px 14px', border:`1.5px solid ${border}`, borderRadius:12, fontSize:14, outline:'none', width:'100%', boxSizing:'border-box', minHeight:46, fontFamily:MP.font, background:bg, color:clr, WebkitAppearance:'none', transition:'border-color .15s', ...style }}
+      onFocus={e=>{ e.target.style.borderColor=focusBdr; e.target.style.background=focusBg }}
+      onBlur={e=>{ e.target.style.borderColor=border; e.target.style.background=bg }}
       {...props}
     />
   )
 }
-function FSel({ accent, style={}, children, ...props }) {
+function FSel({ accent, style={}, dark=false, children, ...props }) {
+  const bg     = dark ? MP.darkCard : '#F8F7F2'
+  const border = dark ? '#3A3D35'   : '#D5D2C5'
+  const clr    = dark ? MP.textOnDark : MP.textDark
   return (
-    <select style={{ padding:'13px 15px', border:`1.5px solid ${accent?accent+'30':'#e8ecf0'}`,
-      borderRadius:13, fontSize:14, outline:'none', width:'100%', boxSizing:'border-box',
-      minHeight:48, fontFamily:'inherit', background:'#fafbfc', WebkitAppearance:'none', ...style }} {...props}>
+    <select style={{ padding:'12px 14px', border:`1.5px solid ${border}`, borderRadius:12, fontSize:14, outline:'none', width:'100%', boxSizing:'border-box', minHeight:46, fontFamily:MP.font, background:bg, color:clr, WebkitAppearance:'none', ...style }} {...props}>
       {children}
     </select>
   )
 }
-function FArea({ accent, style={}, ...props }) {
+function FArea({ accent, style={}, dark=false, ...props }) {
+  const bg     = dark ? MP.darkCard : MP.lightCard
+  const border = dark ? '#3A3D35'   : '#D5D2C5'
+  const clr    = dark ? MP.textOnDark : MP.textDark
+  const focusBg  = dark ? '#363830'  : '#FFFFFF'
+  const focusBdr = accent || MP.yellow
   return (
     <textarea
-      style={{ padding:'13px 15px', border:`1.5px solid ${accent?accent+'30':'#e8ecf0'}`,
-        borderRadius:13, fontSize:14, outline:'none', width:'100%', boxSizing:'border-box',
-        fontFamily:'inherit', background:'#fafbfc', resize:'none',
-        transition:'border-color .15s', ...style }}
-      onFocus={e=>{ e.target.style.borderColor=accent||'#94a3b8'; e.target.style.background='#fff' }}
-      onBlur={e=>{ e.target.style.borderColor=accent?accent+'30':'#e8ecf0'; e.target.style.background='#fafbfc' }}
+      style={{ padding:'12px 14px', border:`1.5px solid ${border}`, borderRadius:12, fontSize:14, outline:'none', width:'100%', boxSizing:'border-box', fontFamily:MP.font, background:bg, color:clr, resize:'none', transition:'border-color .15s', ...style }}
+      onFocus={e=>{ e.target.style.borderColor=focusBdr; e.target.style.background=focusBg }}
+      onBlur={e=>{ e.target.style.borderColor=border; e.target.style.background=bg }}
       {...props}
     />
   )
@@ -602,30 +619,35 @@ function FArea({ accent, style={}, ...props }) {
 
 // ─── Progress bar ──────────────────────────────────────────────────────────────
 function ProgressBar({ stepId, t }) {
-  const active = STEPS.filter(s => s.num !== null)
-  const cur = active.findIndex(s => s.id === stepId)
+  const active  = STEPS.filter(s => s.num !== null)
+  const cur     = active.findIndex(s => s.id === stepId)
+  const isDark  = t.variant === 'dark'
+  const dotDone = MP.yellow
+  const dotCur  = t.color
+  const dotIdle = isDark ? '#3A3D35' : '#D5D2C5'
+  const lineOn  = MP.yellow
+  const lineOff = isDark ? '#3A3D35' : '#D5D2C5'
   return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:0, padding:'14px 20px 0' }}>
       {active.map((s, i) => (
         <div key={s.id} style={{ display:'flex', alignItems:'center', flex: i < active.length-1 ? 1 : 'none' }}>
           {/* Dot */}
           <div style={{
-            width: i <= cur ? 30 : 26, height: i <= cur ? 30 : 26,
+            width: i === cur ? 32 : 26, height: i === cur ? 32 : 26,
             borderRadius:'50%', flexShrink:0,
-            background: i < cur ? t.color : i === cur ? '#fff' : 'rgba(255,255,255,0.2)',
-            border: i === cur ? `2.5px solid ${t.color}` : 'none',
+            background: i < cur ? dotDone : i === cur ? 'transparent' : dotIdle,
+            border: i === cur ? `2.5px solid ${dotCur}` : 'none',
             display:'flex', alignItems:'center', justifyContent:'center',
             fontSize: i < cur ? 13 : 12,
-            color: i < cur ? '#fff' : i === cur ? t.color : 'rgba(255,255,255,0.5)',
-            fontWeight:800, transition:'all .2s',
-            boxShadow: i === cur ? `0 0 0 4px ${t.color}30` : 'none',
+            color: i < cur ? MP.textDark : i === cur ? dotCur : (isDark ? MP.textMutedDark : MP.textMutedLight),
+            fontWeight: 700, transition:'all .2s', fontFamily: MP.font,
+            boxShadow: i === cur ? `0 0 0 4px ${dotCur}25` : 'none',
           }}>
             {i < cur ? '✓' : s.num}
           </div>
           {/* Connector */}
           {i < active.length - 1 && (
-            <div style={{ flex:1, height:2, margin:'0 4px',
-              background: i < cur ? t.color : 'rgba(255,255,255,0.2)', borderRadius:2 }} />
+            <div style={{ flex:1, height:2, margin:'0 4px', background: i < cur ? lineOn : lineOff, borderRadius:2 }} />
           )}
         </div>
       ))}
@@ -635,21 +657,30 @@ function ProgressBar({ stepId, t }) {
 
 // ─── Step header ───────────────────────────────────────────────────────────────
 function StepHeader({ stepId, t, emp, devMode, onBack, children }) {
-  const s = STEPS.find(x => x.id === stepId) || {}
+  const s       = STEPS.find(x => x.id === stepId) || {}
+  const isDark  = t.variant === 'dark'
+  const textClr = isDark ? MP.textOnDark : MP.textDark
+  const mutedClr= isDark ? MP.textMutedDark : MP.textMutedLight
+  const btnBg   = isDark ? 'rgba(247,210,99,0.1)' : 'transparent'
+  const btnBorder = isDark ? `1px solid rgba(247,210,99,0.25)` : `1.5px solid #D5D2C5`
+  const btnClr  = isDark ? MP.yellow : MP.textMutedLight
   return (
-    <div style={{ background:t.grad, padding:'20px 22px 26px', borderRadius:'0 0 30px 30px',
-      boxShadow:'0 8px 40px rgba(0,0,0,0.35)', marginBottom:20 }}>
-      {/* DEV badge + back */}
+    <div style={{
+      background: t.hdrBg,
+      padding: '20px 20px 22px',
+      borderBottom: `1px solid ${isDark ? '#3A3D35' : '#E4E0D3'}`,
+      marginBottom: 16,
+      fontFamily: MP.font,
+    }}>
+      {/* Back + DEV badge row */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
         {onBack
-          ? <button onClick={onBack} style={{ background:'rgba(255,255,255,.12)', border:'none',
-              color:'rgba(255,255,255,.8)', borderRadius:8, padding:'5px 12px', cursor:'pointer', fontSize:12 }}>
+          ? <button onClick={onBack} style={{ background:btnBg, border:btnBorder, color:btnClr, borderRadius:20, padding:'6px 14px', cursor:'pointer', fontSize:12, fontWeight:600, fontFamily:MP.font }}>
               ← Back
             </button>
           : <div/>}
         {devMode && (
-          <div style={{ background:'rgba(255,214,0,.15)', border:'1px solid rgba(255,214,0,.3)',
-            borderRadius:8, padding:'3px 10px', fontSize:10, color:'#fde68a', fontWeight:700, letterSpacing:.5 }}>
+          <div style={{ background:'rgba(247,210,99,0.15)', border:'1px solid rgba(247,210,99,0.35)', borderRadius:8, padding:'3px 10px', fontSize:10, color:MP.yellow, fontWeight:700, letterSpacing:.5, fontFamily:MP.font }}>
             🛠 DEV
           </div>
         )}
@@ -658,10 +689,10 @@ function StepHeader({ stepId, t, emp, devMode, onBack, children }) {
       {s.num && <ProgressBar stepId={stepId} t={t} />}
       {/* Title area */}
       <div style={{ marginTop:14 }}>
-        <div style={{ fontSize:22, fontWeight:900, color:'#fff', letterSpacing:-.3 }}>
+        <div style={{ fontSize:22, fontWeight:700, color:textClr, fontFamily:MP.font }}>
           {s.icon} {s.label}
         </div>
-        <div style={{ fontSize:12, color:'rgba(255,255,255,.55)', marginTop:4 }}>
+        <div style={{ fontSize:12, color:mutedClr, marginTop:4, fontFamily:MP.font }}>
           {emp?.full_name_en || 'Loading employee…'}
         </div>
         {children && <div style={{ marginTop:10 }}>{children}</div>}
@@ -688,29 +719,52 @@ function Banner({ type='info', children }) {
   )
 }
 
-// ─── Category tiles ────────────────────────────────────────────────────────────
-const CAT_COLORS = {
-  FUEL:'#b45309', ACCOMMODATION:'#0369a1', MEALS:'#15803d', TRANSPORT:'#7c3aed',
-  MATERIALS:'#b91c1c', COMMUNICATION:'#0284c7', OFFICE:'#475569', GOVT_FEES:'#065f46',
-  PARKING:'#4338ca', MISC:'#374151',
+// ─── Category tile config — pastel bg + dark icon color per category ──────────
+const CAT_STYLE = {
+  FUEL:          { bg:'#FFF3D4', iconBg:'#F7D263', color:'#7A5C00' },
+  ACCOMMODATION: { bg:'#D6EAF8', iconBg:'#85C1E9', color:'#1A5276' },
+  MEALS:         { bg:'#D5F5E3', iconBg:'#82E0AA', color:'#1D6A3A' },
+  TRANSPORT:     { bg:'#E8DAEF', iconBg:'#C39BD3', color:'#5B2C6F' },
+  MATERIALS:     { bg:'#FADBD8', iconBg:'#F1948A', color:'#7B241C' },
+  COMMUNICATION: { bg:'#D6EEF8', iconBg:'#7FB3D3', color:'#1A4F6E' },
+  OFFICE:        { bg:'#EAEDED', iconBg:'#AEB6BF', color:'#2E4053' },
+  GOVT_FEES:     { bg:'#D4EFDF', iconBg:'#76B891', color:'#1E5C38' },
+  PARKING:       { bg:'#E8E0F0', iconBg:'#A98CC4', color:'#4A235A' },
+  MISC:          { bg:'#F0ECE3', iconBg:'#C8BB9A', color:'#4A3B2A' },
 }
-function CategoryPicker({ categories, value, onChange, accent }) {
+function CategoryPicker({ categories, value, onChange }) {
   return (
-    <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8 }}>
+    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
       {categories.map(cat => {
-        const col = CAT_COLORS[cat.key] || accent
-        const sel = value === cat.key
+        const style = CAT_STYLE[cat.key] || { bg:'#F0EEE3', iconBg:'#D5D2C5', color:'#444' }
+        const sel   = value === cat.key
         return (
           <button key={cat.key} type="button" onClick={() => onChange(cat.key)}
-            style={{ padding:'14px 8px', borderRadius:16, border:`2px solid ${sel?col:col+'30'}`,
-              background: sel ? col : `${col}08`, cursor:'pointer',
-              display:'flex', flexDirection:'column', alignItems:'center', gap:6,
-              boxShadow: sel ? `0 4px 16px ${col}40` : 'none',
-              transition:'all .15s' }}>
-            <span style={{ fontSize:24 }}>{cat.icon}</span>
-            <span style={{ fontSize:10, fontWeight:700, color: sel?'#fff':col, textAlign:'center', lineHeight:1.3 }}>
-              {cat.label}
-            </span>
+            style={{
+              padding:'14px 12px', borderRadius:16, cursor:'pointer',
+              border: sel ? `2.5px solid ${MP.yellow}` : '2px solid transparent',
+              background: sel ? style.bg : style.bg + 'BB',
+              display:'flex', flexDirection:'row', alignItems:'center', gap:12,
+              transition:'all .15s', fontFamily:MP.font,
+              boxShadow: sel ? `0 0 0 3px ${MP.yellow}55` : 'none',
+              outline: 'none',
+            }}>
+            <div style={{
+              width:40, height:40, borderRadius:12, flexShrink:0,
+              background: style.iconBg,
+              display:'flex', alignItems:'center', justifyContent:'center',
+              fontSize:20,
+            }}>
+              {cat.icon}
+            </div>
+            <div style={{ textAlign:'left', flex:1, minWidth:0 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:style.color, lineHeight:1.3, fontFamily:MP.font }}>
+                {cat.label}
+              </div>
+              {sel && (
+                <div style={{ fontSize:10, color:MP.yellow, fontWeight:600, marginTop:2, fontFamily:MP.font }}>✓ Selected</div>
+              )}
+            </div>
           </button>
         )
       })}
@@ -719,39 +773,49 @@ function CategoryPicker({ categories, value, onChange, accent }) {
 }
 
 // ─── Summary row ───────────────────────────────────────────────────────────────
-function SRow({ label, value, mono, color }) {
+function SRow({ label, value, mono, color, dark=false }) {
+  const border  = dark ? '#3A3D35'     : '#EDE9DE'
+  const lblClr  = dark ? MP.textMutedDark : MP.textMutedLight
+  const valClr  = color || (dark ? MP.textOnDark : MP.textDark)
+  const nullClr = dark ? '#5A5D55' : '#C8C5BC'
   return (
     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start',
-      padding:'9px 0', borderBottom:'1px solid #f1f5f9' }}>
-      <span style={{ fontSize:12, color:'#94a3b8', fontWeight:600, minWidth:110 }}>{label}</span>
-      <span style={{ fontSize:13, color:color||'#1e293b', fontWeight:700, textAlign:'right', flex:1,
-        fontFamily:mono?'monospace':'inherit' }}>
-        {value || <span style={{ color:'#cbd5e1', fontWeight:400 }}>—</span>}
+      padding:'9px 0', borderBottom:`1px solid ${border}`, fontFamily:MP.font }}>
+      <span style={{ fontSize:12, color:lblClr, fontWeight:600, minWidth:110 }}>{label}</span>
+      <span style={{ fontSize:13, color:valClr, fontWeight:700, textAlign:'right', flex:1,
+        fontFamily:mono?'monospace':MP.font }}>
+        {value || <span style={{ color:nullClr, fontWeight:400 }}>—</span>}
       </span>
     </div>
   )
 }
 
 // ─── Nav buttons ───────────────────────────────────────────────────────────────
-function NavBar({ onBack, onNext, nextLabel='Next →', nextColor, disabled, loading }) {
+function NavBar({ onBack, onNext, nextLabel='Next →', nextColor, disabled, loading, dark=false }) {
+  const navBg     = dark ? MP.darkCard  : MP.lightCard
+  const navBorder = dark ? '#3A3D35'   : '#E4E0D3'
+  const backBg    = dark ? '#2D302A'   : MP.lightCard
+  const backBdr   = dark ? '#4A4D45'   : '#D5D2C5'
+  const backClr   = dark ? MP.textMutedDark : MP.textMutedLight
+  const disabledBg  = dark ? '#3A3D35' : '#E4E0D3'
+  const disabledClr = dark ? '#5A5D55' : '#A7AAA0'
   return (
-    <div style={{ position:'fixed', bottom:0, left:0, right:0, background:'rgba(245,246,250,0.95)',
-      backdropFilter:'blur(10px)', padding:'12px 14px', boxSizing:'border-box',
-      borderTop:'1px solid #e2e8f0', display:'flex', gap:10, maxWidth:480, margin:'0 auto',
-      zIndex:100 }}>
+    <div style={{ position:'fixed', bottom:0, left:0, right:0, background:navBg,
+      borderTop:`1px solid ${navBorder}`, padding:'12px 14px', boxSizing:'border-box',
+      display:'flex', gap:10, maxWidth:480, margin:'0 auto', zIndex:100 }}>
       {onBack && (
         <button onClick={onBack}
-          style={{ padding:'14px 18px', borderRadius:14, border:'1.5px solid #e2e8f0',
-            background:'#fff', color:'#64748b', fontSize:14, fontWeight:700, cursor:'pointer', flexShrink:0 }}>
+          style={{ padding:'14px 18px', borderRadius:14, border:`1.5px solid ${backBdr}`,
+            background:backBg, color:backClr, fontSize:14, fontWeight:700, cursor:'pointer',
+            flexShrink:0, fontFamily:MP.font }}>
           ←
         </button>
       )}
       <button onClick={onNext} disabled={disabled || loading}
-        style={{ flex:1, padding:'15px', borderRadius:14, border:'none',
-          background: disabled ? '#e2e8f0' : (nextColor || T.summary.grad),
-          color: disabled ? '#94a3b8' : '#fff', fontSize:15, fontWeight:800,
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          boxShadow: disabled ? 'none' : '0 4px 16px rgba(0,0,0,0.2)' }}>
+        style={{ flex:1, padding:'15px', borderRadius:14, border:'none', fontFamily:MP.font,
+          background: disabled ? disabledBg : (nextColor || MP.yellow),
+          color: disabled ? disabledClr : MP.textDark, fontSize:15, fontWeight:700,
+          cursor: disabled ? 'not-allowed' : 'pointer' }}>
         {loading ? '⏳ Please wait…' : nextLabel}
       </button>
     </div>
@@ -1220,16 +1284,15 @@ export default function FormDailyExpense() {
   if (step === 'success') {
     const ts = T.success
     return (
-      <div style={PAGE}>
-        <div style={{ background:ts.grad, padding:'52px 22px 34px', borderRadius:'0 0 30px 30px',
-          textAlign:'center', boxShadow:'0 8px 40px rgba(0,0,0,0.3)', marginBottom:20 }}>
-          <div style={{ width:80, height:80, background:'rgba(255,255,255,.18)', borderRadius:24,
-            display:'flex', alignItems:'center', justifyContent:'center', fontSize:42, margin:'0 auto 16px' }}>✅</div>
-          <div style={{ fontSize:24, fontWeight:900, color:'#fff', letterSpacing:-.3 }}>Expense Recorded</div>
-          <div style={{ fontSize:28, fontWeight:900, color:'rgba(255,255,255,.9)', marginTop:8 }}>
+      <div style={getPage(ts)}>
+        <div style={{ background:MP.lightCard, padding:'52px 22px 34px', borderRadius:'0 0 28px 28px', textAlign:'center', borderBottom:`1px solid #E4E0D3`, marginBottom:20 }}>
+          <div style={{ width:72, height:72, background:`${ts.color}18`, borderRadius:20,
+            display:'flex', alignItems:'center', justifyContent:'center', fontSize:36, margin:'0 auto 14px' }}>✅</div>
+          <div style={{ fontSize:22, fontWeight:800, color:MP.textDark, letterSpacing:-.3, fontFamily:MP.font }}>Expense Recorded</div>
+          <div style={{ fontSize:26, fontWeight:800, color:ts.color, marginTop:8, fontFamily:MP.font }}>
             SAR {rawAmount.toLocaleString('en-US',{minimumFractionDigits:2})}
           </div>
-          <div style={{ fontSize:13, color:'rgba(255,255,255,.6)', marginTop:4 }}>
+          <div style={{ fontSize:13, color:MP.textMutedLight, marginTop:4, fontFamily:MP.font }}>
             {selCat?.icon} {selCat?.label}
           </div>
         </div>
@@ -1249,14 +1312,13 @@ export default function FormDailyExpense() {
             </Banner>
           )}
           <button onClick={reset}
-            style={{ background:ts.grad, color:'#fff', border:'none', borderRadius:16,
-              padding:'17px', fontSize:15, fontWeight:800, cursor:'pointer', width:'100%',
-              boxShadow:`0 4px 16px ${ts.color}40`, marginBottom:10 }}>
+            style={{ background:MP.yellow, color:MP.textDark, border:'none', borderRadius:16, fontFamily:MP.font,
+              padding:'17px', fontSize:15, fontWeight:700, cursor:'pointer', width:'100%', marginBottom:10 }}>
             + Add Another Expense
           </button>
           <button onClick={() => window.location.href='/forms'}
-            style={{ background:'#fff', color:'#64748b', border:'1.5px solid #e2e8f0', borderRadius:16,
-              padding:'14px', fontSize:14, fontWeight:700, cursor:'pointer', width:'100%' }}>
+            style={{ background:MP.lightCard, color:MP.textMutedLight, border:`1.5px solid #D5D2C5`, borderRadius:16,
+              padding:'14px', fontSize:14, fontWeight:600, fontFamily:MP.font, cursor:'pointer', width:'100%' }}>
             ← Back to Forms
           </button>
         </div>
@@ -1292,7 +1354,7 @@ export default function FormDailyExpense() {
   if (step === 'scan') {
     const ts = T.scan
     return (
-      <div style={PAGE}>
+      <div style={getPage(ts)}>
         <StepHeader stepId="scan" t={ts} emp={emp} devMode={devMode}
           onBack={null}>
           <div style={{ fontSize:12, color:'rgba(255,255,255,.55)', marginTop:4 }}>
@@ -1482,7 +1544,7 @@ export default function FormDailyExpense() {
           onBack={null}
           onNext={goNext}
           nextLabel="Next — Invoice Details →"
-          nextColor={ts.grad}
+          nextColor={ts.color}
           disabled={!canProceed('scan') || (devMode && !devEmployee)}
         />
       </div>
@@ -1493,7 +1555,7 @@ export default function FormDailyExpense() {
   if (step === 'invoice') {
     const ts = T.invoice
     return (
-      <div style={PAGE}>
+      <div style={getPage(ts)}>
         <StepHeader stepId="invoice" t={ts} emp={emp} devMode={devMode} onBack={goBack} />
         <div style={{ padding:'0 14px' }}>
 
@@ -1720,7 +1782,7 @@ export default function FormDailyExpense() {
           onBack={goBack}
           onNext={goNext}
           nextLabel="Next — Category →"
-          nextColor={ts.grad}
+          nextColor={ts.color}
           disabled={!canProceed('invoice')}
         />
       </div>
@@ -1731,7 +1793,7 @@ export default function FormDailyExpense() {
   if (step === 'classify') {
     const ts = T.classify
     return (
-      <div style={PAGE}>
+      <div style={getPage(ts)}>
         <StepHeader stepId="classify" t={ts} emp={emp} devMode={devMode} onBack={goBack} />
         <div style={{ padding:'0 14px' }}>
 
@@ -1794,7 +1856,7 @@ export default function FormDailyExpense() {
           onBack={goBack}
           onNext={goNext}
           nextLabel="Next — Notes →"
-          nextColor={ts.grad}
+          nextColor={ts.color}
           disabled={!canProceed('classify')}
         />
       </div>
@@ -1805,7 +1867,7 @@ export default function FormDailyExpense() {
   if (step === 'notes') {
     const ts = T.notes
     return (
-      <div style={PAGE}>
+      <div style={getPage(ts)}>
         <StepHeader stepId="notes" t={ts} emp={emp} devMode={devMode} onBack={goBack} />
         <div style={{ padding:'0 14px' }}>
 
@@ -1854,7 +1916,7 @@ export default function FormDailyExpense() {
           onBack={goBack}
           onNext={goNext}
           nextLabel="Review & Submit →"
-          nextColor={ts.grad}
+          nextColor={ts.color}
           disabled={!canProceed('notes')}
         />
       </div>
@@ -1870,16 +1932,15 @@ export default function FormDailyExpense() {
       && !(dupWarning && !dupAcked)
 
     return (
-      <div style={PAGE}>
-        <div style={{ background:ts.grad, padding:'50px 22px 28px', borderRadius:'0 0 30px 30px',
-          boxShadow:'0 8px 40px rgba(0,0,0,0.3)', marginBottom:20 }}>
-          <div style={{ fontSize:11, color:'rgba(255,255,255,.5)', textTransform:'uppercase', letterSpacing:1, marginBottom:8 }}>
+      <div style={getPage(ts)}>
+        <div style={{ background:MP.darkCard, padding:'50px 22px 28px', borderRadius:'0 0 28px 28px', marginBottom:20, borderBottom:`1px solid #3A3D35` }}>
+          <div style={{ fontSize:10, color:MP.textMutedDark, textTransform:'uppercase', letterSpacing:1.5, marginBottom:10, fontFamily:MP.font, fontWeight:600 }}>
             Expense Review
           </div>
-          <div style={{ fontSize:26, fontWeight:900, color:'#fff', letterSpacing:-.3 }}>
+          <div style={{ fontSize:30, fontWeight:800, color:MP.yellow, letterSpacing:-.5, fontFamily:MP.font }}>
             {selCat?.icon} SAR {rawAmount.toLocaleString('en-US',{minimumFractionDigits:2})}
           </div>
-          <div style={{ fontSize:14, color:'rgba(255,255,255,.65)', marginTop:6 }}>
+          <div style={{ fontSize:14, color:MP.textMutedDark, marginTop:8, fontFamily:MP.font }}>
             {selCat?.label} · {emp?.full_name_en}
           </div>
         </div>
@@ -1902,51 +1963,51 @@ export default function FormDailyExpense() {
           )}
 
           {/* Invoice details */}
-          <SCard>
-            <SSection title="Invoice" accent={ts.color}>
-              <SRow label="Vendor"         value={vendorName} />
-              <SRow label="Invoice Date"   value={invoiceDate} />
-              <SRow label="Invoice No."    value={invoiceNumber} mono />
-              <SRow label="Invoice Type"   value={invoiceType==='QR'?'📱 ZATCA QR':invoiceType==='PRINTED'?'🖨️ Printed':'✍️ Handwritten'} />
+          <SCard dark>
+            <SSection title="Invoice" accent={ts.color} dark>
+              <SRow label="Vendor"         value={vendorName} dark />
+              <SRow label="Invoice Date"   value={invoiceDate} dark />
+              <SRow label="Invoice No."    value={invoiceNumber} mono dark />
+              <SRow label="Invoice Type"   value={invoiceType==='QR'?'📱 ZATCA QR':invoiceType==='PRINTED'?'🖨️ Printed':'✍️ Handwritten'} dark />
             </SSection>
           </SCard>
 
           {/* Financial */}
-          <SCard>
-            <SSection title="Financial" accent={ts.color}>
-              <SRow label="Total Amount"  value={`SAR ${rawAmount.toLocaleString('en-US',{minimumFractionDigits:2})}`} color={ts.color} />
+          <SCard dark>
+            <SSection title="Financial" accent={ts.color} dark>
+              <SRow label="Total Amount"  value={`SAR ${rawAmount.toLocaleString('en-US',{minimumFractionDigits:2})}`} color={MP.yellow} dark />
               {vatPaid && <>
-                <SRow label="Net (ex-VAT)" value={`SAR ${netAmount.toFixed(2)}`} />
-                <SRow label="VAT (15%)"    value={`SAR ${vatAmount.toFixed(2)}`} />
+                <SRow label="Net (ex-VAT)" value={`SAR ${netAmount.toFixed(2)}`} dark />
+                <SRow label="VAT (15%)"    value={`SAR ${vatAmount.toFixed(2)}`} dark />
               </>}
-              <SRow label="VAT Registered" value={vatPaid && vatNumber ? (isValidVATNum(vatNumber) ? `✓ ${vatNumber}` : `⚠️ ${vatNumber}`) : vatPaid ? 'Yes (no VAT#)' : 'No'} mono />
+              <SRow label="VAT Registered" value={vatPaid && vatNumber ? (isValidVATNum(vatNumber) ? `✓ ${vatNumber}` : `⚠️ ${vatNumber}`) : vatPaid ? 'Yes (no VAT#)' : 'No'} mono dark />
             </SSection>
           </SCard>
 
           {/* Classification */}
-          <SCard>
-            <SSection title="Classification" accent={ts.color}>
-              <SRow label="Category" value={selCat ? `${selCat.icon} ${selCat.label}` : '—'} />
-              <SRow label="Site"     value={selAssign?`${selAssign.site_number}${selAssign.site_name?' — '+selAssign.site_name:''}`:'None / General'} />
-              <SRow label="Project"  value={selAssign?.project?.project_name || '—'} />
+          <SCard dark>
+            <SSection title="Classification" accent={ts.color} dark>
+              <SRow label="Category" value={selCat ? `${selCat.icon} ${selCat.label}` : '—'} dark />
+              <SRow label="Site"     value={selAssign?`${selAssign.site_number}${selAssign.site_name?' — '+selAssign.site_name:''}`:'None / General'} dark />
+              <SRow label="Project"  value={selAssign?.project?.project_name || '—'} dark />
             </SSection>
           </SCard>
 
           {/* Late / notes */}
           {(remarks || lateReason || late.level !== 'ok') && (
-            <SCard>
-              <SSection title="Notes" accent={ts.color}>
-                {late.level !== 'ok' && <SRow label="Submission" value={`${late.days} days late`} color={late.level==='warn'?'#f59e0b':'#dc2626'} />}
-                {lateReason && <SRow label="Late reason" value={lateReason} />}
-                {remarks    && <SRow label="Remarks"     value={remarks} />}
+            <SCard dark>
+              <SSection title="Notes" accent={ts.color} dark>
+                {late.level !== 'ok' && <SRow label="Submission" value={`${late.days} days late`} color={late.level==='warn'?'#F7D263':'#FF7B6B'} dark />}
+                {lateReason && <SRow label="Late reason" value={lateReason} dark />}
+                {remarks    && <SRow label="Remarks"     value={remarks} dark />}
               </SSection>
             </SCard>
           )}
 
           {/* Photo thumbnail */}
           {photo && (
-            <SCard>
-              <SSection title="Receipt Photo" accent={ts.color}>
+            <SCard dark>
+              <SSection title="Receipt Photo" accent={ts.color} dark>
                 <div style={{ borderRadius:12, overflow:'hidden' }}>
                   <img src={photo} alt="receipt" style={{ width:'100%', maxHeight:160, objectFit:'cover', display:'block' }} />
                 </div>
@@ -1962,17 +2023,15 @@ export default function FormDailyExpense() {
 
           {/* Submit */}
           <button onClick={handleSubmit} disabled={!submitReady || submitting}
-            style={{ background: (!submitReady||submitting) ? '#e2e8f0' : ts.grad,
-              color: (!submitReady||submitting) ? '#94a3b8' : '#fff', border:'none',
-              borderRadius:16, padding:'18px', fontSize:16, fontWeight:900,
-              cursor:(!submitReady||submitting)?'not-allowed':'pointer', width:'100%',
-              boxShadow:(!submitReady||submitting)?'none':'0 4px 20px rgba(0,0,0,0.25)',
-              marginBottom:8 }}>
+            style={{ background: (!submitReady||submitting) ? '#3A3D35' : MP.green,
+              color: (!submitReady||submitting) ? '#5A5D55' : MP.textDark, border:'none',
+              borderRadius:16, padding:'18px', fontSize:16, fontWeight:700, fontFamily:MP.font,
+              cursor:(!submitReady||submitting)?'not-allowed':'pointer', width:'100%', marginBottom:8 }}>
             {submitting ? '⏳ Saving…' : isHardBlock ? '🚫 Blocked — Invoice too old' : `✅ Submit SAR ${rawAmount.toLocaleString('en-US',{minimumFractionDigits:2})} ${selCat?.icon||''}`}
           </button>
           <button onClick={goBack}
-            style={{ background:'#fff', color:'#64748b', border:'1.5px solid #e2e8f0', borderRadius:16,
-              padding:'14px', fontSize:14, fontWeight:700, cursor:'pointer', width:'100%', marginBottom:16 }}>
+            style={{ background:'transparent', color:MP.textMutedDark, border:`1.5px solid #3A3D35`, borderRadius:16,
+              padding:'14px', fontSize:14, fontWeight:600, fontFamily:MP.font, cursor:'pointer', width:'100%', marginBottom:16 }}>
             ← Edit Details
           </button>
 

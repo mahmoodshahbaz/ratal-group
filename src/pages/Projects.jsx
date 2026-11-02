@@ -1,5 +1,6 @@
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
+import FormShell from '../components/FormShell'
 import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
 const MC = GROUP_COLORS.Masters       // Masters chapter (Ch02)
 import { useState, useEffect } from 'react'
@@ -162,7 +163,7 @@ export default function Projects({ entityId, role }) {
         parent:parent_project_id(project_number),
         child:next_project_id(project_number)
       `).eq('entity_id', entityId).order('created_at', { ascending:false }),
-      supabase.from('employees').select('id,full_name_en,designation,job_title,phone,email').eq('entity_id', entityId).eq('is_active', true).order('full_name_en'),
+      supabase.from('employees').select('id,full_name_en,designation,job_title,phone,email,department_id').eq('entity_id', entityId).eq('is_active', true).order('full_name_en'),
       supabase.from('departments').select('id,dept_name,dept_code,dept_head_id').eq('entity_id', entityId).eq('is_active', true).order('dept_name'),
       supabase.from('contractors').select('id,contractor_name,contractor_code').eq('entity_id', entityId).eq('vendor_type','CONTRACTOR').eq('status','ACTIVE').order('contractor_name'),
     ])
@@ -583,14 +584,14 @@ export default function Projects({ entityId, role }) {
         isOpen={showBanner}
         onClose={() => setShowBanner(false)}
         onStart={() => { setShowBanner(false); setStep(1); setOpen(true) }}
-        chapterL1="#C8B48F"
-        chapterL2="#FAF5E9"
-        moduleColor="#8C601B"
-        chapterLabel="Masters"
+        chapterName="Masters"
         formTitle={['New', 'Project', 'Creation']}
-        steps={['Project Info', 'Contractor', 'Our Team']}
+        heading="Create and manage project records"
+        description="Tracks contract value, timeline and assigned team members."
         icon="📁"
-        description="Create and manage project records. Tracks contract value, timeline and assigned team members."
+        iconLabel={'Project\nManagement'}
+        workflowSteps={['Project Info', 'Contractor', 'Our Team']}
+        steps={['Project Info', 'Contractor', 'Our Team']}
       />
 
       {/* ── New / Edit Modal — 3-box wizard layout ── */}
@@ -607,59 +608,21 @@ export default function Projects({ entityId, role }) {
         const row  = { display:'flex', gap:12, marginBottom:12, flexWrap:'wrap' }
         const col  = { flex:1, minWidth:120 }
         return (
-          <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&(setOpen(false),resetForm())}>
-            <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap');`}</style>
-            <div style={{ width:860, maxWidth:'calc(100vw - 24px)', borderRadius:18, overflow:'hidden', boxShadow:'0 28px 64px rgba(0,0,0,0.32)', fontFamily:POPPINS, background:L1, padding:8 }}>
-
-              {/* ── STEPS 1–3 — 6-layer layout ── */}
-              {step>=1 && (
-                <div style={{ background:L2, borderRadius:12, display:'flex', minHeight:560, position:'relative', overflow:'hidden' }}>
-                  <div style={{ position:'absolute', top:0, right:0, width:'55%', height:'36%', background:PRI, borderRadius:'0 12px 0 90px', zIndex:1 }} />
-
-                    {/* Sidebar */}
-                    <div style={{ width:210, flexShrink:0, padding:'20px 16px 16px', display:'flex', flexDirection:'column', fontFamily:POPPINS, position:'relative', zIndex:2 }}>
-                      <div style={{ fontSize:9, fontWeight:800, color:'#53666F', letterSpacing:1.8, textTransform:'uppercase', marginBottom:3 }}>Ratal Advanced Technologies</div>
-                      <div style={{ fontSize:9, fontWeight:800, color:PRI, letterSpacing:1.8, textTransform:'uppercase', marginBottom:16 }}><strong>Masters</strong></div>
-                      <div style={{ fontSize:24, fontWeight:900, color:'#172D37', lineHeight:1.1, marginBottom:6 }}>{STEP_NAMES[step]}</div>
-                      <div style={{ fontSize:11, color:'#53666F', lineHeight:1.5, marginBottom:8 }}>{STEP_DESC[step]}</div>
-                      <div style={{ fontSize:9, fontWeight:800, color:PRI, letterSpacing:1, marginBottom:14 }}>STEP {step} OF 3</div>
-                      <div style={{ flex:1, display:'flex', flexDirection:'column', gap:1 }}>
-                        {['Project Info','Contractor','Our Team'].map((name,idx)=>{
-                          const sn=idx+1, isAct=step===sn, isDone=step>sn
-                          return (
-                            <div key={sn} onClick={()=>isDone&&setStep(sn)} style={{ display:'flex', alignItems:'center', padding:'8px 0 8px 12px', cursor:isDone?'pointer':'default', borderLeft: isAct ? `3px solid ${PRI}` : isDone ? `3px solid ${PRI}55` : '3px solid rgba(0,0,0,0.08)' }}>
-                              <span style={{ fontSize:12, fontWeight:isAct?700:500, color:isAct?'#172D37':isDone?PRI:'#b09070' }}>{name}</span>
-                              {isDone && <span style={{ marginLeft:6, fontSize:10, color:PRI }}>✓</span>}
-                            </div>
-                          )
-                        })}
-                      </div>
-                      {editing?.is_carry_forward && (
-                        <div style={{ background:'#fff3e0', borderRadius:8, padding:'8px 10px', marginTop:10, fontSize:10, color:'#e65100', fontWeight:600 }}>
-                          🔄 CF#{editing.carry_forward_count} from {editing.original_project_number}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* White card */}
-                    <div style={{ position:'absolute', top:22, right:22, bottom:22, left:248, background:'#fff', borderRadius:16, display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:`0 6px 24px ${PRI}22`, zIndex:3 }}>
-
-                      {/* Card header */}
-                      <div style={{ padding:'18px 22px 0', flexShrink:0 }}>
-                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-                          <div>
-                            <div style={{ fontSize:17, fontWeight:700, color:'#2d1a2a' }}>
-                              {['','Project Info details','Contractor details','Our Team details'][step]}
-                            </div>
-                            {projNum && <div style={{ fontSize:11, color:PRI, fontWeight:700, marginTop:2 }}>{projNum}{editing?.is_carry_forward ? ' 🔄 Carry-forward' : ''}</div>}
-                          </div>
-                          <button onClick={()=>{setOpen(false);resetForm()}} style={{ background:`${PRI}18`, border:'none', color:PRI, borderRadius:8, width:28, height:28, cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>✕</button>
-                        </div>
-                        <div style={{ height:1, background:`${PRI}22` }} />
-                      </div>
-
-                      {/* Scrollable form */}
-                      <div style={{ flex:1, overflowY:'auto', padding:'14px 22px 10px', fontFamily:POPPINS }}>
+          <FormShell
+            isOpen={open}
+            onClose={() => { setOpen(false); resetForm() }}
+            chapterName="Masters"
+            title={['New', 'Project', 'Creation']}
+            description="Create and manage project records. Tracks contract value, timeline and assigned team members."
+            steps={['Project Info', 'Contractor', 'Our Team']}
+            currentStep={step}
+            onBack={step===1 ? () => { setOpen(false); resetForm() } : () => setStep(s=>s-1)}
+            backLabel={step===1 ? 'Cancel' : 'Back'}
+            onNext={step<3 ? () => setStep(s=>s+1) : save}
+            nextLabel={step<3 ? 'Save & Next' : (saving ? 'Saving…' : editing ? '✓ Update Project' : '✓ Create Project')}
+            nextDisabled={saving && step===3}
+          >
+          <div style={{ fontFamily:"'Poppins','Inter',sans-serif" }}>
 
                         {/* Step 1 — Project Info */}
                         {step===1 && <>
@@ -742,22 +705,37 @@ export default function Projects({ entityId, role }) {
                         {/* Step 3 — Our Team */}
                         {step===3 && <>
                           <div style={sec}>Our Project Team</div>
-                          <div style={row}>
-                            <div style={col}>
-                              <label style={lbl}>Project Manager</label>
-                              <select style={inp()} value={pmId} onChange={e=>onPmChange(e.target.value)}>
-                                <option value="">— Select PM —</option>
-                                {employees.map(e=><option key={e.id} value={e.id}>{e.full_name_en}{e.designation?' – '+e.designation:e.job_title?' – '+e.job_title:''}</option>)}
-                              </select>
-                            </div>
-                            <div style={col}>
-                              <label style={lbl}>Supervisor</label>
-                              <select style={inp()} value={supId} onChange={e=>onSupChange(e.target.value)}>
-                                <option value="">— Select Supervisor —</option>
-                                {employees.map(e=><option key={e.id} value={e.id}>{e.full_name_en}{e.designation?' – '+e.designation:e.job_title?' – '+e.job_title:''}</option>)}
-                              </select>
-                            </div>
-                          </div>
+                          {(() => {
+                            const teamEmps = deptId
+                              ? employees.filter(e => e.department_id === deptId)
+                              : employees
+                            const hint = deptId
+                              ? `Showing ${teamEmps.length} employee${teamEmps.length!==1?'s':''} from selected department`
+                              : 'All employees shown — select a Department in Project Info to filter'
+                            return (
+                              <>
+                                <div style={{ fontSize:10, color: deptId?'#2e7d32':'#e65100', fontWeight:600, marginBottom:10, fontFamily:"'Poppins',sans-serif" }}>
+                                  {deptId ? '✓' : '⚠'} {hint}
+                                </div>
+                                <div style={row}>
+                                  <div style={col}>
+                                    <label style={lbl}>Project Manager</label>
+                                    <select style={inp()} value={pmId} onChange={e=>onPmChange(e.target.value)}>
+                                      <option value="">— Select PM —</option>
+                                      {teamEmps.map(e=><option key={e.id} value={e.id}>{e.full_name_en}{e.designation?' – '+e.designation:e.job_title?' – '+e.job_title:''}</option>)}
+                                    </select>
+                                  </div>
+                                  <div style={col}>
+                                    <label style={lbl}>Supervisor</label>
+                                    <select style={inp()} value={supId} onChange={e=>onSupChange(e.target.value)}>
+                                      <option value="">— Select Supervisor —</option>
+                                      {teamEmps.map(e=><option key={e.id} value={e.id}>{e.full_name_en}{e.designation?' – '+e.designation:e.job_title?' – '+e.job_title:''}</option>)}
+                                    </select>
+                                  </div>
+                                </div>
+                              </>
+                            )
+                          })()}
                           {pmId && (
                             <div style={row}>
                               <div style={col}><label style={lbl}>PM Email</label><input type="email" style={inp()} value={pmEmail} onChange={e=>setPmEmail(e.target.value)} /></div>
@@ -770,23 +748,8 @@ export default function Projects({ entityId, role }) {
                           </div>
                         </>}
 
-                      </div>
-
-                      {/* Footer inside white card */}
-                      <div style={{ flexShrink:0, padding:'11px 22px 14px', borderTop:`1px solid ${PRI}22`, display:'flex', justifyContent:'space-between', alignItems:'center', fontFamily:POPPINS }}>
-                        <button onClick={step===1?()=>{setOpen(false);resetForm()}:()=>setStep(s=>s-1)} style={{ background:'#747474', color:'#fff', border:'none', borderRadius:24, padding:'9px 24px', cursor:'pointer', fontSize:13, fontWeight:600 }}>{step===1?'Cancel':'Back'}</button>
-                        <span style={{ fontSize:10, color:'#53666F' }}>Complete all three steps to create your project</span>
-                        {step<3
-                          ? <button onClick={()=>setStep(s=>s+1)} style={{ background:PRI, color:'#fff', border:'none', borderRadius:24, padding:'9px 28px', cursor:'pointer', fontSize:13, fontWeight:700, boxShadow:`0 4px 14px ${PRI}44` }}>Save &amp; Next</button>
-                          : <button onClick={save} disabled={saving} style={{ background:saving?'#c7c7c7':PRI, color:'#fff', border:'none', borderRadius:24, padding:'9px 28px', cursor:saving?'not-allowed':'pointer', fontSize:13, fontWeight:700, boxShadow:saving?'none':`0 4px 14px ${PRI}44` }}>{saving?'Saving…':editing?'✓ Update Project':'✓ Create Project'}</button>
-                        }
-                      </div>
-                    </div>
-                </div>
-              )}
-
-            </div>
           </div>
+          </FormShell>
         )
       })()}
     </div>

@@ -499,10 +499,12 @@ function driveToolbarScript(cfg) {
     'payroll-summary':       '1ZoRvqctWxDgJ-tTpblZFqEak3K7D8UXf',   // Overall_Summary
     'payroll-wps':           '1QU1KvkWcxW0SjdHp7nk0ccT6Y176wHLJ',   // WPS
     'payroll-mudad':         '13i5e3sB8HAiMmu15H6i2r-STV1ahgtMu',   // Mudad
-    // ── Claim folders — IDs to be provided by user ──────────────────────────
+    // ── Claim folders ────────────────────────────────────────────────────────
     'expense-claims':        '1vgO3xYfCxdLs5cvMQnyW2OV7PnZDbZuh',  // Expense Claims
     'food-allowance-claims': '17WsXDTzOrKAWQyTUbxkSfPswTP8_ZocJ',  // Food Allowance Claims
     'overtime-reports':      '1yNvqRJLv2145zcdDfPCX30OtjYCD9Cpd',  // Overtime Reports
+    // ── HR ──────────────────────────────────────────────────────────────────
+    'hr':                    '1p2spR9eWrmgM71y9MA1IayDIQdtp3aG1',  // HR → Vacation Application Forms
   };
   var year           = REQ_DATE.slice(0, 4) || String(new Date().getFullYear());
   var parentFolderId = FORM_FOLDER_MAP[FOLDER] || null;
@@ -583,13 +585,20 @@ function driveToolbarScript(cfg) {
       var imgData = canvas.toDataURL('image/jpeg', 0.95);
       var pageW = pdf.internal.pageSize.getWidth();
       var pageH = pdf.internal.pageSize.getHeight();
+      // 10 mm margin on all sides
+      var margin = 10;
+      var usableW = pageW - margin * 2;
+      var usableH = pageH - margin * 2;
       // Fit image maintaining aspect ratio (no stretch)
       var canvasAR = canvas.width / canvas.height;
-      var pageAR   = pageW / pageH;
+      var usableAR = usableW / usableH;
       var drawW, drawH;
-      if (canvasAR > pageAR) { drawW = pageW; drawH = pageW / canvasAR; }
-      else                   { drawH = pageH; drawW = pageH * canvasAR; }
-      pdf.addImage(imgData, 'JPEG', 0, 0, drawW, drawH);
+      if (canvasAR > usableAR) { drawW = usableW; drawH = usableW / canvasAR; }
+      else                     { drawH = usableH; drawW = usableH * canvasAR; }
+      // Centre the image within the usable area
+      var offX = margin + (usableW - drawW) / 2;
+      var offY = margin + (usableH - drawH) / 2;
+      pdf.addImage(imgData, 'JPEG', offX, offY, drawW, drawH);
       var pdfBase64 = pdf.output('datauristring').split(',')[1];
 
       if (statusEl) statusEl.textContent = '⏳ Saving to Drive…';
@@ -629,17 +638,16 @@ function driveToolbarScript(cfg) {
           }, 600);
         }
       } else {
-        if (statusEl) statusEl.textContent = '❌ Drive error: ' + (result.error || 'Unknown');
-        if (autoPrint && !IS_IFRAME) {
-          setTimeout(function() { window.print(); setTimeout(function(){ window.close(); }, 800); }, 1000);
-        }
+        // Drive failed — show error and keep window open so user can read it
+        var errMsg = result.error || result.message || JSON.stringify(result);
+        if (statusEl) statusEl.innerHTML = '❌ <strong>Drive error:</strong> ' + errMsg + '<br><small style="color:#888">Window kept open — read error above, then close manually.</small>';
+        if (tb) tb.style.display = 'flex';
+        // Do NOT auto-close on error — user needs to see the message
       }
     } catch(err) {
       if (tb) tb.style.display = 'flex';
-      if (statusEl) statusEl.textContent = '❌ ' + err.message;
-      if (autoPrint && !IS_IFRAME) {
-        setTimeout(function() { window.print(); setTimeout(function(){ window.close(); }, 800); }, 1000);
-      }
+      if (statusEl) statusEl.innerHTML = '❌ <strong>' + err.message + '</strong><br><small style="color:#888">Window kept open — read error above, then close manually.</small>';
+      // Do NOT auto-close on error
     }
     if (btn) btn.disabled = false;
   }
@@ -3733,6 +3741,300 @@ function buildEmployeeProfileLetter(d) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// VACATION APPLICATION FORM
+// Data fields: employee_name, date_issued, home_address, telephone,
+//   leave_type (ANNUAL|EMERGENCY|UNPAID), start_date, end_date,
+//   last_work_day, rejoin_day, join_date_accsys,
+//   prev1_from, prev1_to, prev1_days,
+//   prev2_from, prev2_to, prev2_days,
+//   prev3_from, prev3_to, prev3_days,
+//   prev_rejoin_date, entitlement_cycle (1_YEAR|2_YEAR),
+//   entitled_days, replacement_name, leave_id (for QR URL), qr_base_url
+// ─────────────────────────────────────────────────────────────────────────────
+function buildVacationApplication(data = {}) {
+  const d = data
+  const isAnnual    = (d.leave_type || 'ANNUAL') === 'ANNUAL'
+  const isEmergency = d.leave_type === 'EMERGENCY'
+  const isUnpaid    = d.leave_type === 'UNPAID'
+  const chk = (active) => active
+    ? '<span style="font-size:12pt;line-height:1;">&#9745;</span>'
+    : '<span style="font-size:12pt;line-height:1;">&#9744;</span>'
+
+  // QR — use api.qrserver.com (reliable in popup windows, no CDN scripts needed)
+  const qrUrl = d.qr_base_url
+    ? `${d.qr_base_url}/hr/vacations?id=${d.leave_id || ''}`
+    : `https://accsys.app/hr/vacations?id=${d.leave_id || ''}`
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=90x90&ecc=M&color=1a237e&data=${encodeURIComponent(qrUrl)}`
+
+  const printedDate = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })
+  const leaveIdDisplay = d.leave_id ? String(d.leave_id).slice(-10).toUpperCase() : 'N/A'
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Vacation Application — ${d.employee_name || ''}</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4 portrait; margin: 12mm 15mm 14mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Poppins', Arial, sans-serif;
+    font-size: 9pt; color: #111; margin: 0; padding: 0;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  table { border-collapse: collapse; width: 100%; }
+  td, th { padding: 0; font-family: 'Poppins', Arial, sans-serif; }
+  .page { max-width: 182mm; margin: 0 auto; }
+
+  /* ── HEADER ── */
+  .hdr-company  { font-size: 14pt; font-weight: 800; color: #1a237e; letter-spacing: 0.5px; line-height: 1.2; }
+  .hdr-address  { font-size: 7.5pt; color: #555; margin-top: 2px; line-height: 1.5; }
+  .hdr-divider  { border: none; border-top: 2px solid #1a237e; margin: 6px 0 4px; }
+  .doc-title    {
+    font-size: 11pt; font-weight: 700; text-align: center;
+    letter-spacing: 1px; text-transform: uppercase;
+    color: #1a237e; margin: 4px 0 8px;
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+
+  /* QR */
+  .qr-wrap  { text-align: center; }
+  .qr-label { font-size: 6.5pt; color: #777; margin-top: 2px; text-align: center; line-height: 1.3; }
+
+  /* ── BODY ── */
+  .section-title {
+    font-size: 8.5pt; font-weight: 700; text-decoration: underline;
+    text-underline-offset: 2px; margin: 8px 0 4px; color: #1a237e;
+  }
+  .field-row   { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 6px; }
+  .field-label { font-size: 8pt; font-weight: 500; white-space: nowrap; color: #333; }
+  .field-line  { flex: 1; border-bottom: 1px solid #333; min-width: 30px; padding-bottom: 1px; }
+  .field-val   { font-size: 8.5pt; font-weight: 600; }
+
+  /* Checkboxes */
+  .cb-box  {
+    border: 1px solid #bbb; border-radius: 4px;
+    padding: 5px 10px; margin-bottom: 6px;
+    display: flex; gap: 30px; align-items: center;
+    background: #f9f9fc;
+  }
+  .cb-item { display: flex; align-items: center; gap: 6px; font-size: 8.5pt; font-weight: 500; }
+
+  /* Previous vacations table */
+  .prev-table { width: 100%; border: 1px solid #999; margin-bottom: 6px; border-radius: 3px; overflow: hidden; }
+  .prev-table th {
+    background: #1a237e; color: #fff; border: 1px solid #1a237e;
+    padding: 4px 6px; font-size: 7.5pt; font-weight: 600; text-align: center;
+    font-family: 'Poppins', Arial, sans-serif;
+  }
+  .prev-table td {
+    border: 1px solid #ccc; padding: 4px 6px;
+    font-size: 8pt; text-align: center; height: 20px; color: #222;
+  }
+  .prev-table tr:nth-child(even) td { background: #f4f6fb; }
+
+  /* Signature area */
+  .sig-table     { width: 100%; margin-top: 6px; }
+  .sig-table td  { width: 50%; vertical-align: bottom; padding: 0 6px 0 0; }
+  .sig-table td:last-child { padding: 0 0 0 6px; }
+  .sig-line      { border-bottom: 1px solid #333; height: 22px; margin-bottom: 3px; }
+  .sig-label     { font-size: 7.5pt; color: #444; font-weight: 500; }
+
+  /* Personnel box */
+  .personnel-box {
+    border: 1px solid #bbb; border-radius: 4px;
+    padding: 7px 10px; margin: 8px 0; font-size: 8.5pt;
+    background: #f9f9fc;
+  }
+
+  /* Footer */
+  .footer {
+    border-top: 1.5px solid #1a237e; margin-top: 10px; padding-top: 5px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 7pt; color: #555;
+  }
+  .footer-left  { font-weight: 600; color: #1a237e; }
+  .footer-right { text-align: right; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ══ HEADER ══ -->
+  <table style="width:100%;margin-bottom:2px;">
+    <tr>
+      <td style="vertical-align:top;width:75%;">
+        <div class="hdr-company">Ratal Advanced Technologies</div>
+        <div class="hdr-address">
+          PO Box 59215, Building #4182 Al Gahdreer Street, Malaz<br>
+          Riyadh, Kingdom of Saudi Arabia
+        </div>
+      </td>
+      <td style="vertical-align:top;width:25%;">
+        <div class="qr-wrap">
+          <img
+            src="${qrSrc}"
+            width="90" height="90" alt="QR Code"
+            style="display:block;margin:0 auto;"
+            crossorigin="anonymous"
+          />
+          <div class="qr-label">Scan to verify<br>leave record</div>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <hr class="hdr-divider" />
+  <div class="doc-title">Vacation Application Form</div>
+
+  <!-- ══ EMPLOYEE INFO ══ -->
+  <div class="field-row">
+    <span class="field-label">Employee Name:</span>
+    <span class="field-line field-val">&nbsp;${d.employee_name || ''}</span>
+    <span class="field-label" style="margin-left:14px;">Date:</span>
+    <span class="field-line field-val" style="max-width:95px;">&nbsp;${d.date_issued || ''}</span>
+  </div>
+  <div class="field-row">
+    <span class="field-label">Home Address:</span>
+    <span class="field-line field-val">&nbsp;${d.home_address || ''}</span>
+  </div>
+  <div class="field-row">
+    <span class="field-label">Telephone:</span>
+    <span class="field-line field-val" style="max-width:170px;">&nbsp;${d.telephone || ''}</span>
+  </div>
+
+  <!-- ══ LEAVE TYPE ══ -->
+  <div class="field-label" style="margin-bottom:3px;">Tick ONE of the following:</div>
+  <div class="cb-box">
+    <div class="cb-item">${chk(isAnnual)}&nbsp;Annual Vacation</div>
+    <div class="cb-item">${chk(isEmergency)}&nbsp;Emergency Leave</div>
+    <div class="cb-item">${chk(isUnpaid)}&nbsp;Unpaid Leave</div>
+  </div>
+
+  <!-- ══ DATES ══ -->
+  <div class="field-row">
+    <span class="field-label">Leave Commencing:</span>
+    <span class="field-line field-val" style="max-width:135px;">&nbsp;${d.start_date || ''}</span>
+    <span class="field-label" style="margin-left:14px;">Ending:</span>
+    <span class="field-line field-val" style="max-width:135px;">&nbsp;${d.end_date || ''}</span>
+  </div>
+  <div class="field-row">
+    <span class="field-label">Last Day and Date of Work:</span>
+    <span class="field-line field-val">&nbsp;${d.last_work_day || ''}</span>
+  </div>
+  <div class="field-row">
+    <span class="field-label">Day and Date of Rejoining:</span>
+    <span class="field-line field-val">&nbsp;${d.rejoin_day || ''}</span>
+  </div>
+
+  <!-- ══ BALANCE OF VACATION ══ -->
+  <div class="section-title">Balance of Vacation</div>
+  <div class="field-row">
+    <span class="field-label">Starting Date With Ratal Advanced Technologies:</span>
+    <span class="field-line field-val">&nbsp;${d.join_date_accsys || ''}</span>
+  </div>
+
+  <!-- ══ PREVIOUS VACATIONS ══ -->
+  <div class="section-title">Past Availed Vacation History</div>
+  <table class="prev-table">
+    <thead>
+      <tr>
+        <th>From Date</th>
+        <th>To Date</th>
+        <th>No. of Days</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>${d.prev1_from || ''}</td>
+        <td>${d.prev1_to   || ''}</td>
+        <td>${d.prev1_days || ''}</td>
+      </tr>
+      <tr>
+        <td>${d.prev2_from || ''}</td>
+        <td>${d.prev2_to   || ''}</td>
+        <td>${d.prev2_days || ''}</td>
+      </tr>
+      <tr>
+        <td>${d.prev3_from || ''}</td>
+        <td>${d.prev3_to   || ''}</td>
+        <td>${d.prev3_days || ''}</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="field-row">
+    <span class="field-label">Day and Date of Rejoining after Vacation:</span>
+    <span class="field-line field-val">&nbsp;${d.prev_rejoin_date || ''}</span>
+  </div>
+
+  <!-- ══ VACATION ENTITLEMENT ══ -->
+  <div class="section-title">Vacation Entitlement</div>
+  <div class="cb-box">
+    <div class="cb-item">${chk(d.entitlement_cycle !== '2_YEAR')}&nbsp;Every One Year</div>
+    <div class="cb-item">${chk(d.entitlement_cycle === '2_YEAR')}&nbsp;Every Two Years</div>
+  </div>
+
+  <!-- ══ APPLICANT / SUPERVISOR ══ -->
+  <table class="sig-table" style="margin-top:10px;">
+    <tr>
+      <td><div class="sig-line"></div><div class="sig-label">Signature of Applicant</div></td>
+      <td><div class="sig-line"></div><div class="sig-label">Signature of Supervisor</div></td>
+    </tr>
+  </table>
+
+  <!-- ══ PERSONNEL DEPT BOX ══ -->
+  <div class="personnel-box" style="margin-top:10px;">
+    <span style="font-weight:600;">To be filled by Personnel Dept.</span><br>
+    This Applicant is entitled for &nbsp;
+    <span style="display:inline-block;border-bottom:1.5px solid #333;min-width:60px;text-align:center;font-weight:700;">&nbsp;${d.entitled_days || ''}&nbsp;</span>
+    &nbsp;Days.
+  </div>
+  <table class="sig-table">
+    <tr>
+      <td colspan="2">
+        <div class="sig-line" style="margin-top:4px;"></div>
+        <div class="sig-label">Signature of Personnel Manager</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- ══ REPLACEMENT ══ -->
+  <div style="margin-top:10px;font-size:8.5pt;font-weight:500;">
+    Arrangement is made to replace the applicant during his absence with:
+  </div>
+  <div class="field-row" style="margin-top:4px;">
+    <span class="field-label">Mr. / Ms.:</span>
+    <span class="field-line field-val">&nbsp;${d.replacement_name || ''}</span>
+  </div>
+  <hr style="border:none;border-top:1px solid #ccc;margin:8px 0;" />
+
+  <!-- ══ DEPT / GM SIGNATURES ══ -->
+  <table class="sig-table" style="margin-top:4px;">
+    <tr>
+      <td><div class="sig-line"></div><div class="sig-label">Signature of Department Manager</div></td>
+      <td><div class="sig-line"></div><div class="sig-label">Signature of General Manager</div></td>
+    </tr>
+  </table>
+
+  <!-- ══ FOOTER ══ -->
+  <div class="footer">
+    <div class="footer-left">Ratal Advanced Technologies</div>
+    <div style="color:#444;font-size:7pt;">
+      Leave ID: <strong>${leaveIdDisplay}</strong>
+      &nbsp;·&nbsp;
+      ${d.employee_name || ''}
+      &nbsp;·&nbsp;
+      Printed: ${printedDate}
+    </div>
+  </div>
+
+</div>
+</body>
+</html>`
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 const BUILTIN_BUILDERS = {
   money_request:          buildMoneyRequest,
   project_initiation:     buildProjectInitiation,
@@ -3766,4 +4068,6 @@ const BUILTIN_BUILDERS = {
   project_statement:        buildProjectStatement,
   // HR letter
   employee_profile_letter:  buildEmployeeProfileLetter,
+  // HR — Vacation Application Form
+  vacation_application:     buildVacationApplication,
 }

@@ -35,6 +35,8 @@ import SiteAssignment from './pages/SiteAssignment'
 import Vacations      from './pages/Vacations'
 import Loans          from './pages/Loans'
 import Compliance     from './pages/Compliance'
+import IqamaRenewals     from './pages/IqamaRenewals'
+import InsuranceManager  from './pages/InsuranceManager'
 import Engagement     from './pages/Engagement'
 import LOI           from './pages/LOI'
 import Vehicles      from './pages/Vehicles'
@@ -89,6 +91,7 @@ import TemplateLibrary       from './pages/TemplateLibrary'
 import BulkUpload            from './pages/BulkUpload'
 import SiteCompletion        from './pages/SiteCompletion'
 import SubConClaims          from './pages/SubConClaims'
+import DocumentValet         from './pages/DocumentValet'
 
 // Standalone mobile forms (shareable via Telegram / QR)
 import FormLanding       from './forms/FormLanding'
@@ -174,7 +177,7 @@ const NAV = [
   { key:'departments',     label:'Departments',       labelAr:'الأقسام',         icon:'🏛️', group:'Masters', entities:['RAT','GWT','ACCSYS'], roles:['SUPERADMIN','ADMIN','DEPT_HEAD'] },
   { key:'employees',         label:'Employees',         labelAr:'الموظفون',        icon:'👤', group:'Masters', entities:['RAT','GWT','ACCSYS'], roles:['SUPERADMIN','ADMIN','DEPT_HEAD'] },
   { key:'staff_actions',       label:'Staff Actions',       labelAr:'إجراءات الموظفين',      icon:'📋', group:'Human Resources', entities:['RAT','GWT','ACCSYS'], roles:['SUPERADMIN','ADMIN','DEPT_HEAD'] },
-  { key:'outsource_employees', label:'Outsource Employees', labelAr:'الموظفون الخارجيون',    icon:'🧑‍🔧', group:'Human Resources', entities:['ACCSYS'],             roles:['SUPERADMIN','ADMIN','DEPT_HEAD'] },
+  { key:'outsource_employees', label:'Contract Employees', labelAr:'الموظفون التعاقديون',    icon:'🧑‍🔧', group:'Human Resources', entities:['ACCSYS'],             roles:['SUPERADMIN','ADMIN','DEPT_HEAD'] },
   { key:'payroll',         label:'Payroll',           labelAr:'الرواتب',         icon:'💵', group:'Human Resources',        entities:['RAT','GWT','ACCSYS'], roles:['SUPERADMIN','ADMIN'] },
   { key:'payslip',         label:'Payslip',           labelAr:'قسيمة الراتب',    icon:'🧾', group:'Human Resources',        entities:['RAT','GWT','ACCSYS'], roles:['SUPERADMIN','ADMIN'] },
   { key:'overtime',        label:'Overtime',          labelAr:'العمل الإضافي',   icon:'⏱️', group:'Human Resources',        entities:['RAT','GWT','ACCSYS'], roles:['SUPERADMIN','ADMIN','DEPT_HEAD','PROJECT_MANAGER'] },
@@ -200,6 +203,8 @@ const NAV = [
   { key:'leave_balance',   label:'Leave Balance',     labelAr:'رصيد الإجازات',   icon:'🏝', group:'Human Resources',        entities:['RAT','GWT','ACCSYS'], roles:['SUPERADMIN','ADMIN','DEPT_HEAD'] },
   { key:'loans',           label:'Loans, EOS & Penalties', labelAr:'القروض ومكافآت والغرامات', icon:'💳', group:'Human Resources', entities:['RAT','GWT','ACCSYS'], roles:['SUPERADMIN','ADMIN'] },
   { key:'compliance',      label:'Compliance Alerts', labelAr:'تنبيهات الامتثال', icon:'⚠️', group:'Human Resources',        entities:['RAT','GWT','ACCSYS'], roles:['SUPERADMIN','ADMIN'] },
+  { key:'iqama_renewals',    label:'Iqama Renewals',     labelAr:'تجديد الإقامة',      icon:'🪪', group:'Human Resources', entities:['RAT','GWT','ACCSYS'], roles:['SUPERADMIN','ADMIN'] },
+  { key:'insurance_manager', label:'Insurance Manager',  labelAr:'إدارة التأمين',      icon:'🏥', group:'Human Resources', entities:['RAT','GWT','ACCSYS'], roles:['SUPERADMIN','ADMIN'] },
   { key:'engagement',      label:'Notice Board',      labelAr:'لوحة الإعلانات',  icon:'🎯', group:'Human Resources',        entities:['RAT','GWT','ACCSYS'], roles:'ALL' },
   // ── ADMIN
   { key:'qr_manager',      label:'QR Code Manager',   labelAr:'إدارة رموز QR',    icon:'📲', group:'Administration',    entities:['RAT','GWT','ACCSYS'], roles:['SUPERADMIN','ADMIN','DEPT_HEAD'] },
@@ -647,6 +652,7 @@ function AppShell() {
             {page==='cost_allocation'   && <CostAllocation    entityId={activeEntityId} />}
             {page==='management_report' && <ManagementReport  entityId={activeEntityId} />}
             {page==='document_vault'    && <DocumentVault     entityId={activeEntityId} />}
+            {page==='document_valet'    && <DocumentValet     entityId={activeEntityId} />}
             {page==='customer_crm'      && <CustomerCRM       entityId={activeEntityId} />}
             {page==='bank_recon'      && <BankRecon      entityId={activeEntityId} isAr={isAr} />}
             {page==='departments'     && <Departments    entityId={activeEntityId} isAr={isAr} />}
@@ -671,7 +677,9 @@ function AppShell() {
             {page==='vacations'       && <Vacations       entityId={activeEntityId} role={role} isAr={isAr} />}
             {page==='leave_balance'   && <LeaveBalance    entityId={activeEntityId} />}
             {page==='loans'           && <Loans           entityId={activeEntityId} isAr={isAr} />}
-            {page==='compliance'      && <Compliance      entityId={activeEntityId} isAr={isAr} />}
+            {page==='compliance'      && <Compliance      entityId={activeEntityId} isAr={isAr} onNavigate={setPage} />}
+            {page==='iqama_renewals'    && <IqamaRenewals    entityId={activeEntityId} />}
+            {page==='insurance_manager' && <InsuranceManager entityId={activeEntityId} />}
             {page==='vat_return'      && <VATReturn        entityId={activeEntityId} />}
             {page==='vat_report'      && <VATReport        entityId={activeEntityId} />}
             {page==='users'           && <UserManagement  entityId={activeEntityId} />}

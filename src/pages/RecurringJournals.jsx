@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import FormShell from '../components/FormShell'
+import PageBanner from '../components/PageBanner'
+
+const L3 = '#606D2C'
 
 // ═══════════════════════════════════════════════════════════════════
 // Recurring Journal Entries — Phase 15
@@ -24,11 +28,11 @@ const VOUCHER_TYPES = ['JV','ACR','RCL','ADJ']
 const FREQ_COLOR = { WEEKLY:'#1565C0', MONTHLY:'#2e7d32', QUARTERLY:'#5A32D4', ANNUAL:'#e65100', CUSTOM:'#546e7a' }
 
 const S = {
-  card: { background:'#fff', borderRadius:14, padding:'16px 20px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)', marginBottom:10 },
-  btn:  (c='#1a2e3d') => ({ background:c, color:'#fff', border:'none', borderRadius:8, padding:'8px 16px', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }),
-  btnO: (c='#1a2e3d') => ({ background:'transparent', color:c, border:`1.5px solid ${c}`, borderRadius:8, padding:'7px 15px', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }),
-  inp:  { padding:'7px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:12, outline:'none', width:'100%', boxSizing:'border-box', background:'#fff' },
-  lbl:  { display:'block', fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4 },
+  card: { background:'#fff', borderRadius:4, padding:'16px 20px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)', marginBottom:10 },
+  btn:  (c=L3) => ({ background:c, color:'#fff', border:'none', borderRadius:4, padding:'8px 16px', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap', fontFamily:"'Poppins',sans-serif" }),
+  btnO: (c=L3) => ({ background:'transparent', color:c, border:`1.5px solid ${c}`, borderRadius:4, padding:'7px 15px', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap', fontFamily:"'Poppins',sans-serif" }),
+  inp:  { padding:'7px 10px', borderRadius:4, border:'1px solid #dde3ec', fontSize:12, outline:'none', width:'100%', boxSizing:'border-box', background:'#fff', fontFamily:"'Poppins',sans-serif" },
+  lbl:  { display:'block', fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4, fontFamily:"'Poppins',sans-serif" },
 }
 
 const fmt  = n => (+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
@@ -179,136 +183,147 @@ function TemplateModal({ entityId, existing, coa, onClose, onSaved }) {
     onSaved()
   }
 
+  const [wizardStep, setWizardStep] = useState(1)
+
+  function goNext() {
+    setErr('')
+    if (!hdr.name.trim()) { setErr('Template name is required.'); return }
+    setWizardStep(2)
+  }
+
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000,
-      display:'flex', alignItems:'center', justifyContent:'center' }}
-      onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{ background:'#fff', borderRadius:16, padding:28, width:640,
-        maxHeight:'92vh', overflowY:'auto', boxShadow:'0 20px 60px rgba(0,0,0,0.25)' }}>
-        <div style={{ fontWeight:800, fontSize:16, color:'#1a2e3d', marginBottom:20 }}>
-          {isEdit?'Edit':'New'} Recurring Template
-        </div>
-        {err && <div style={{ background:'#ffebee',color:'#c62828',borderRadius:8,padding:'8px 12px',fontSize:12,marginBottom:12 }}>{err}</div>}
+    <FormShell
+      isOpen={true}
+      onClose={onClose}
+      chapterName="Accounting"
+      title={isEdit ? ['Edit', 'Recurring', 'Template'] : ['New', 'Recurring', 'Template']}
+      steps={['Template Details', 'Journal Lines']}
+      currentStep={wizardStep}
+      onBack={wizardStep === 1 ? onClose : () => setWizardStep(1)}
+      backLabel={wizardStep === 1 ? 'Cancel' : 'Back'}
+      onNext={wizardStep < 2 ? goNext : save}
+      nextLabel={wizardStep < 2 ? 'Next →' : (saving ? 'Saving…' : isEdit ? '✓ Save Changes' : '✓ Create Template')}
+      nextDisabled={saving || (wizardStep === 2 && !balanced)}
+    >
+      <div style={{ flex:1, overflowY:'auto', padding:'14px 18px', fontFamily:"'Poppins',sans-serif" }}>
+        {err && <div style={{ background:'#ffebee', color:'#c62828', borderRadius:4, padding:'8px 12px', fontSize:12, marginBottom:12 }}>{err}</div>}
 
-        {/* Header */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
-          <div style={{ gridColumn:'1/-1' }}>
-            <label style={S.lbl}>Template Name *</label>
-            <input style={S.inp} value={hdr.name} onChange={e=>set('name',e.target.value)} placeholder="e.g. Monthly Office Rent" />
-          </div>
-          <div style={{ gridColumn:'1/-1' }}>
-            <label style={S.lbl}>Narration (used in posted JV description)</label>
-            <input style={S.inp} value={hdr.description} onChange={e=>set('description',e.target.value)} placeholder="e.g. Monthly rent — Al Nakheel Tower" />
-          </div>
-          <div>
-            <label style={S.lbl}>Voucher Type</label>
-            <select style={S.inp} value={hdr.voucher_type} onChange={e=>set('voucher_type',e.target.value)}>
-              {VOUCHER_TYPES.map(t=><option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={S.lbl}>Frequency</label>
-            <select style={S.inp} value={hdr.frequency} onChange={e=>set('frequency',e.target.value)}>
-              {FREQUENCIES.map(f=><option key={f.code} value={f.code}>{f.label}</option>)}
-            </select>
-          </div>
-          {hdr.frequency==='CUSTOM' && (
-            <div>
-              <label style={S.lbl}>Repeat every N days</label>
-              <input type="number" style={S.inp} value={hdr.interval_days} onChange={e=>set('interval_days',e.target.value)} placeholder="e.g. 14" />
+        {/* Step 1 — Template Details */}
+        {wizardStep === 1 && (
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <div style={{ gridColumn:'1/-1' }}>
+              <label style={S.lbl}>Template Name *</label>
+              <input style={S.inp} value={hdr.name} onChange={e=>set('name',e.target.value)} placeholder="e.g. Monthly Office Rent" />
             </div>
-          )}
-          <div>
-            <label style={S.lbl}>Start Date</label>
-            <input type="date" style={S.inp} value={hdr.start_date} onChange={e=>{ set('start_date',e.target.value); set('next_run_date',e.target.value) }} />
+            <div style={{ gridColumn:'1/-1' }}>
+              <label style={S.lbl}>Narration (used in posted JV description)</label>
+              <input style={S.inp} value={hdr.description} onChange={e=>set('description',e.target.value)} placeholder="e.g. Monthly rent — Al Nakheel Tower" />
+            </div>
+            <div>
+              <label style={S.lbl}>Voucher Type</label>
+              <select style={S.inp} value={hdr.voucher_type} onChange={e=>set('voucher_type',e.target.value)}>
+                {VOUCHER_TYPES.map(t=><option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={S.lbl}>Frequency</label>
+              <select style={S.inp} value={hdr.frequency} onChange={e=>set('frequency',e.target.value)}>
+                {FREQUENCIES.map(f=><option key={f.code} value={f.code}>{f.label}</option>)}
+              </select>
+            </div>
+            {hdr.frequency === 'CUSTOM' && (
+              <div style={{ gridColumn:'1/-1' }}>
+                <label style={S.lbl}>Repeat every N days</label>
+                <input type="number" style={S.inp} value={hdr.interval_days} onChange={e=>set('interval_days',e.target.value)} placeholder="e.g. 14" />
+              </div>
+            )}
+            <div>
+              <label style={S.lbl}>Start Date</label>
+              <input type="date" style={S.inp} value={hdr.start_date} onChange={e=>{ set('start_date',e.target.value); set('next_run_date',e.target.value) }} />
+            </div>
+            <div>
+              <label style={S.lbl}>Next Run Date</label>
+              <input type="date" style={S.inp} value={hdr.next_run_date} onChange={e=>set('next_run_date',e.target.value)} />
+            </div>
+            <div>
+              <label style={S.lbl}>End Date (optional)</label>
+              <input type="date" style={S.inp} value={hdr.end_date} onChange={e=>set('end_date',e.target.value)} />
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:8 }}>
+              <input type="checkbox" checked={hdr.is_active} onChange={e=>set('is_active',e.target.checked)} id="is_active_rj" />
+              <label htmlFor="is_active_rj" style={{ fontSize:12, cursor:'pointer', fontFamily:"'Poppins',sans-serif" }}>Active (will appear in Post Now)</label>
+            </div>
           </div>
-          <div>
-            <label style={S.lbl}>Next Run Date</label>
-            <input type="date" style={S.inp} value={hdr.next_run_date} onChange={e=>set('next_run_date',e.target.value)} />
-          </div>
-          <div>
-            <label style={S.lbl}>End Date (optional)</label>
-            <input type="date" style={S.inp} value={hdr.end_date} onChange={e=>set('end_date',e.target.value)} />
-          </div>
-          <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:20 }}>
-            <input type="checkbox" checked={hdr.is_active} onChange={e=>set('is_active',e.target.checked)} id="is_active" />
-            <label htmlFor="is_active" style={{ fontSize:12, cursor:'pointer' }}>Active (will appear in Post Now)</label>
-          </div>
-        </div>
+        )}
 
-        {/* Lines */}
-        <div style={{ fontWeight:700, fontSize:12, color:'#1a2e3d', marginBottom:8 }}>Journal Lines</div>
-        <div style={{ border:'1px solid #e0e0e0', borderRadius:8, overflow:'hidden', marginBottom:12 }}>
-          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:11 }}>
-            <thead>
-              <tr style={{ background:'#1a2e3d', color:'#fff' }}>
-                <th style={{ padding:'7px 10px', textAlign:'left' }}>Account</th>
-                <th style={{ padding:'7px 10px', textAlign:'left' }}>Description</th>
-                <th style={{ padding:'7px 10px', textAlign:'right', width:110 }}>Debit</th>
-                <th style={{ padding:'7px 10px', textAlign:'right', width:110 }}>Credit</th>
-                <th style={{ width:28 }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {lines.map((l,i)=>(
-                <tr key={l._id} style={{ borderBottom:'1px solid #f0f0f0', background:i%2?'#fafafa':'#fff' }}>
-                  <td style={{ padding:'4px 6px' }}>
-                    <select style={{ ...S.inp, fontSize:11 }} value={l.account_code}
-                      onChange={e=>updateLine(l._id,'account_code',e.target.value)}>
-                      <option value="">— account —</option>
-                      {coa.map(a=><option key={a.account_code} value={a.account_code}>{a.account_code} {a.account_name}</option>)}
-                    </select>
-                  </td>
-                  <td style={{ padding:'4px 6px' }}>
-                    <input style={{ ...S.inp, fontSize:11 }} value={l.description}
-                      onChange={e=>updateLine(l._id,'description',e.target.value)} placeholder="Narration" />
-                  </td>
-                  <td style={{ padding:'4px 6px' }}>
-                    <input type="number" min="0" step="0.01"
-                      style={{ ...S.inp, textAlign:'right', fontFamily:'monospace', fontSize:11, background:l.debit?'#e8f5e9':'#fff' }}
-                      value={l.debit} onChange={e=>updateLine(l._id,'debit',e.target.value)} placeholder="0.00" />
-                  </td>
-                  <td style={{ padding:'4px 6px' }}>
-                    <input type="number" min="0" step="0.01"
-                      style={{ ...S.inp, textAlign:'right', fontFamily:'monospace', fontSize:11, background:l.credit?'#fff8e1':'#fff' }}
-                      value={l.credit} onChange={e=>updateLine(l._id,'credit',e.target.value)} placeholder="0.00" />
-                  </td>
-                  <td style={{ padding:'4px 4px', textAlign:'center' }}>
-                    {lines.length>2 && (
-                      <button onClick={()=>removeLine(l._id)}
-                        style={{ background:'none',border:'none',color:'#ef9a9a',fontSize:15,cursor:'pointer' }}>×</button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colSpan={5} style={{ padding:'6px 10px', borderTop:'1px dashed #e0e0e0' }}>
-                  <button onClick={addLine} style={{ ...S.btnO('#546e7a'), fontSize:10, padding:'4px 10px' }}>+ Add Line</button>
-                </td>
-              </tr>
-              <tr style={{ background: balanced?'#e8f5e9':totalDr===0?'#f5f7fa':'#ffebee' }}>
-                <td colSpan={2} style={{ padding:'7px 10px', fontWeight:700, fontSize:12 }}>
-                  {totalDr===0?'Enter amounts':balanced?'✅ Balanced':'⚠️ Out of balance'}
-                </td>
-                <td style={{ padding:'7px 10px', textAlign:'right', fontFamily:'monospace', fontWeight:700, color:'#1565C0' }}>{fmt(totalDr)}</td>
-                <td style={{ padding:'7px 10px', textAlign:'right', fontFamily:'monospace', fontWeight:700, color:'#c62828' }}>{fmt(totalCr)}</td>
-                <td />
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
-          <button onClick={onClose} style={S.btnO()}>Cancel</button>
-          <button onClick={save} disabled={saving||!balanced}
-            style={{ ...S.btn('#2e7d32'), opacity:(!balanced)?0.5:1, cursor:(!balanced)?'not-allowed':'pointer' }}>
-            {saving?'Saving…':isEdit?'Save Changes':'Create Template'}
-          </button>
-        </div>
+        {/* Step 2 — Journal Lines */}
+        {wizardStep === 2 && (
+          <div>
+            <div style={{ border:'1px solid #e0e0e0', borderRadius:4, overflow:'hidden', marginBottom:12 }}>
+              <table style={{ width:'100%', borderCollapse:'collapse', fontSize:11 }}>
+                <thead>
+                  <tr style={{ background:L3, color:'#fff' }}>
+                    <th style={{ padding:'7px 10px', textAlign:'left' }}>Account</th>
+                    <th style={{ padding:'7px 10px', textAlign:'left' }}>Description</th>
+                    <th style={{ padding:'7px 10px', textAlign:'right', width:110 }}>Debit</th>
+                    <th style={{ padding:'7px 10px', textAlign:'right', width:110 }}>Credit</th>
+                    <th style={{ width:28 }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lines.map((l,i)=>(
+                    <tr key={l._id} style={{ borderBottom:'1px solid #f0f0f0', background:i%2?'#fafafa':'#fff' }}>
+                      <td style={{ padding:'4px 6px' }}>
+                        <select style={{ ...S.inp, fontSize:11 }} value={l.account_code}
+                          onChange={e=>updateLine(l._id,'account_code',e.target.value)}>
+                          <option value="">— account —</option>
+                          {coa.map(a=><option key={a.account_code} value={a.account_code}>{a.account_code} {a.account_name}</option>)}
+                        </select>
+                      </td>
+                      <td style={{ padding:'4px 6px' }}>
+                        <input style={{ ...S.inp, fontSize:11 }} value={l.description}
+                          onChange={e=>updateLine(l._id,'description',e.target.value)} placeholder="Narration" />
+                      </td>
+                      <td style={{ padding:'4px 6px' }}>
+                        <input type="number" min="0" step="0.01"
+                          style={{ ...S.inp, textAlign:'right', fontFamily:'monospace', fontSize:11, background:l.debit?'#e8f5e9':'#fff' }}
+                          value={l.debit} onChange={e=>updateLine(l._id,'debit',e.target.value)} placeholder="0.00" />
+                      </td>
+                      <td style={{ padding:'4px 6px' }}>
+                        <input type="number" min="0" step="0.01"
+                          style={{ ...S.inp, textAlign:'right', fontFamily:'monospace', fontSize:11, background:l.credit?'#fff8e1':'#fff' }}
+                          value={l.credit} onChange={e=>updateLine(l._id,'credit',e.target.value)} placeholder="0.00" />
+                      </td>
+                      <td style={{ padding:'4px 4px', textAlign:'center' }}>
+                        {lines.length > 2 && (
+                          <button onClick={()=>removeLine(l._id)}
+                            style={{ background:'none', border:'none', color:'#ef9a9a', fontSize:15, cursor:'pointer' }}>×</button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colSpan={5} style={{ padding:'6px 10px', borderTop:'1px dashed #e0e0e0' }}>
+                      <button onClick={addLine} style={{ ...S.btnO('#546e7a'), fontSize:10, padding:'4px 10px' }}>+ Add Line</button>
+                    </td>
+                  </tr>
+                  <tr style={{ background: balanced?'#e8f5e9':totalDr===0?'#f5f7fa':'#ffebee' }}>
+                    <td colSpan={2} style={{ padding:'7px 10px', fontWeight:700, fontSize:12, fontFamily:"'Poppins',sans-serif" }}>
+                      {totalDr===0?'Enter amounts':balanced?'✅ Balanced':'⚠️ Out of balance'}
+                    </td>
+                    <td style={{ padding:'7px 10px', textAlign:'right', fontFamily:'monospace', fontWeight:700, color:'#1565C0' }}>{fmt(totalDr)}</td>
+                    <td style={{ padding:'7px 10px', textAlign:'right', fontFamily:'monospace', fontWeight:700, color:'#c62828' }}>{fmt(totalCr)}</td>
+                    <td />
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
+    </FormShell>
   )
 }
 
@@ -316,12 +331,13 @@ function TemplateModal({ entityId, existing, coa, onClose, onSaved }) {
 // Tab 1 — Templates List
 // ═══════════════════════════════════════════════════════════════════
 function TemplatesTab({ entityId, coa, onRefresh }) {
-  const [templates, setTemplates] = useState([])
-  const [loading,   setLoading]   = useState(true)
-  const [showModal, setShowModal] = useState(false)
-  const [editing,   setEditing]   = useState(null)
-  const [expanded,  setExpanded]  = useState({})
-  const [linesMap,  setLinesMap]  = useState({})
+  const [templates,   setTemplates]   = useState([])
+  const [loading,     setLoading]     = useState(true)
+  const [showBanner,  setShowBanner]  = useState(false)
+  const [showModal,   setShowModal]   = useState(false)
+  const [editing,     setEditing]     = useState(null)
+  const [expanded,    setExpanded]    = useState({})
+  const [linesMap,    setLinesMap]    = useState({})
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -458,13 +474,13 @@ function TemplatesTab({ entityId, coa, onRefresh }) {
 
   const TableHeader = () => (
     <thead>
-      <tr style={{ background:'#1a2e3d', color:'#fff' }}>
-        <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11 }}>Template Name</th>
-        <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11, width:100 }}>Frequency</th>
-        <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11, width:130 }}>Next Run</th>
-        <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11, width:130 }}>Last Run</th>
-        <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11, width:70 }}>Type</th>
-        <th style={{ padding:'9px 14px', textAlign:'right', fontSize:11, width:120 }}>Amount</th>
+      <tr style={{ background:L3, color:'#fff' }}>
+        <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11, fontFamily:"'Poppins',sans-serif" }}>Template Name</th>
+        <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11, fontFamily:"'Poppins',sans-serif", width:100 }}>Frequency</th>
+        <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11, fontFamily:"'Poppins',sans-serif", width:130 }}>Next Run</th>
+        <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11, fontFamily:"'Poppins',sans-serif", width:130 }}>Last Run</th>
+        <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11, fontFamily:"'Poppins',sans-serif", width:70 }}>Type</th>
+        <th style={{ padding:'9px 14px', textAlign:'right', fontSize:11, fontFamily:"'Poppins',sans-serif", width:120 }}>Amount</th>
         <th style={{ padding:'9px 14px', width:240 }}></th>
       </tr>
     </thead>
@@ -472,11 +488,23 @@ function TemplatesTab({ entityId, coa, onRefresh }) {
 
   return (
     <>
+      <PageBanner
+        isOpen={showBanner}
+        onClose={() => setShowBanner(false)}
+        onStart={() => { setShowBanner(false); setEditing(null); setShowModal(true) }}
+        chapterName="Accounting"
+        formTitle={['New', 'Recurring', 'Template']}
+        heading="Create a recurring journal entry template"
+        iconLabel="Recurring Journals"
+        workflowSteps={['Template Details', 'Journal Lines']}
+        description="Define monthly, quarterly, or custom-interval journal entries for rent, insurance, depreciation, and accruals. Post them all in one click."
+      />
+
       <div style={{ ...S.card, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-        <div style={{ fontSize:12, color:'#6b7c93' }}>
+        <div style={{ fontSize:12, color:'#6b7c93', fontFamily:"'Poppins',sans-serif" }}>
           {active.length} active · {inactive.length} paused
         </div>
-        <button onClick={()=>{ setEditing(null); setShowModal(true) }} style={S.btn('#2e7d32')}>
+        <button onClick={() => setShowBanner(true)} style={S.btn()}>
           + New Template
         </button>
       </div>
@@ -665,17 +693,17 @@ function PostNowTab({ entityId, onPosted }) {
         <div style={{ ...S.card, padding:0, overflow:'hidden' }}>
           <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
             <thead>
-              <tr style={{ background:'#1a2e3d', color:'#fff' }}>
+              <tr style={{ background:L3, color:'#fff' }}>
                 <th style={{ padding:'9px 14px', width:40 }}>
                   <input type="checkbox"
                     checked={selectedCount===due.length && due.length>0}
                     onChange={e=>setSelected(e.target.checked?Object.fromEntries(due.map(t=>[t.id,true])):{})} />
                 </th>
-                <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11 }}>Template</th>
-                <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11, width:100 }}>Type</th>
-                <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11, width:120 }}>Due Date</th>
-                <th style={{ padding:'9px 14px', textAlign:'right', fontSize:11, width:130 }}>Amount (SAR)</th>
-                <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11 }}>Lines</th>
+                <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11, fontFamily:"'Poppins',sans-serif" }}>Template</th>
+                <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11, fontFamily:"'Poppins',sans-serif", width:100 }}>Type</th>
+                <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11, fontFamily:"'Poppins',sans-serif", width:120 }}>Due Date</th>
+                <th style={{ padding:'9px 14px', textAlign:'right', fontSize:11, fontFamily:"'Poppins',sans-serif", width:130 }}>Amount (SAR)</th>
+                <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11, fontFamily:"'Poppins',sans-serif" }}>Lines</th>
               </tr>
             </thead>
             <tbody>
@@ -840,12 +868,12 @@ export default function RecurringJournals({ entityId }) {
         Define monthly templates — rent, insurance, accruals — and post them all in one click
       </div>
 
-      <div style={{ display:'flex', gap:4, marginBottom:14, borderBottom:'2px solid #f0f4f8' }}>
+      <div style={{ display:'flex', gap:4, marginBottom:14, borderBottom:`2px solid #f0f4f8` }}>
         {TABS.map(t=>(
           <button key={t.key} onClick={()=>setTab(t.key)}
             style={{ padding:'8px 18px', fontSize:12, fontWeight:700, cursor:'pointer', border:'none',
-              background:'transparent', borderBottom:tab===t.key?'3px solid #1a2e3d':'3px solid transparent',
-              color:tab===t.key?'#1a2e3d':'#6b7c93', marginBottom:-2 }}>
+              background:'transparent', borderBottom:tab===t.key?`3px solid ${L3}`:'3px solid transparent',
+              color:tab===t.key?L3:'#6b7c93', marginBottom:-2, fontFamily:"'Poppins',sans-serif" }}>
             {t.label}
           </button>
         ))}

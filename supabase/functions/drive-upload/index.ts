@@ -27,7 +27,7 @@
 //    convertToPdf : boolean — when true, activate PDF conversion mode
 // ================================================================
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { importPKCS8, SignJWT } from 'npm:jose@5'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,7 +36,7 @@ const corsHeaders = {
 }
 
 // ── Main handler ─────────────────────────────────────────────
-serve(async (req) => {
+Deno.serve(async (req) => {
 
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -55,6 +55,26 @@ serve(async (req) => {
       return errorResponse('Server configuration error: Drive secrets not set')
     }
     const serviceAccount = JSON.parse(serviceAccountJson)
+
+    // ── DEBUG MODE — returns key info without making Google API call ──
+    if (action === 'debug') {
+      const rawPem = serviceAccount.private_key || ''
+      const hasRealNewlines = rawPem.includes('\n')
+      const hasEscapedNewlines = rawPem.includes('\\n')
+      const normalizedPem = hasRealNewlines ? rawPem : rawPem.replace(/\\n/g, '\n')
+      return new Response(JSON.stringify({
+        success: true,
+        client_email: serviceAccount.client_email,
+        private_key_id: serviceAccount.private_key_id,
+        key_length: rawPem.length,
+        key_start: rawPem.slice(0, 40),
+        has_real_newlines: hasRealNewlines,
+        has_escaped_newlines: hasEscapedNewlines,
+        normalized_key_length: normalizedPem.length,
+        begins_with_header: normalizedPem.startsWith('-----BEGIN PRIVATE KEY-----'),
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
     const accessToken    = await getAccessToken(serviceAccount)
 
     // ── OCR MODE — extract text from receipt image ─────────────────
@@ -226,103 +246,52 @@ serve(async (req) => {
   }
 })
 
-// ── Google OAuth2 — Service Account JWT ──────────────────────
+// ── Google OAuth2 — Service Account JWT (via jose) ───────────
 
-async function getAccessToken(sa: Record<string, string>): Promise<string> {
+async function getGoogleToken(sa: Record<string, string>, scope: string): Promise<string> {
+  // Normalize private key — env vars sometimes double-escape \n as literal backslash+n
+  let pem = sa.private_key || ''
+  if (!pem.includes('\n')) pem = pem.replace(/\\n/g, '\n')
+
+  if (!pem.includes('BEGIN PRIVATE KEY')) {
+    throw new Error(`Bad private key format. Starts with: ${JSON.stringify(pem.slice(0, 60))}`)
+  }
+
+  const privateKey = await importPKCS8(pem, 'RS256')
   const now = Math.floor(Date.now() / 1000)
 
-  const header  = { alg: 'RS256', typ: 'JWT' }
-  const payload = {
+  const jwt = await new SignJWT({
     iss:   sa.client_email,
-    sub:   'info@ratal.net',          // impersonate ratal.net user → uploads use 2TB quota
-    scope: 'https://www.googleapis.com/auth/drive',
+    sub:   'info@ratal.net',  // DWD: impersonate Drive owner so uploads use their quota
+    scope,
     aud:   'https://oauth2.googleapis.com/token',
     iat:   now,
     exp:   now + 3600,
-  }
+  })
+    .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
+    .sign(privateKey)
 
-  const encode = (obj: unknown) =>
-    btoa(JSON.stringify(obj))
-      .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
-
-  const sigInput = `${encode(header)}.${encode(payload)}`
-
-  // Import RSA private key
-  const cryptoKey = await crypto.subtle.importKey(
-    'pkcs8',
-    pemToDer(sa.private_key),
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-    false,
-    ['sign']
-  )
-
-  const sigBytes = await crypto.subtle.sign(
-    'RSASSA-PKCS1-v1_5',
-    cryptoKey,
-    new TextEncoder().encode(sigInput)
-  )
-
-  const sig = btoa(String.fromCharCode(...new Uint8Array(sigBytes)))
-    .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
-
-  const jwt = `${sigInput}.${sig}`
-
-  // Exchange JWT for access token
-  const res  = await fetch('https://oauth2.googleapis.com/token', {
+  const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
   })
-
   const data = await res.json()
   if (!data.access_token) {
-    throw new Error(`OAuth failed: ${JSON.stringify(data)}`)
+    // Include diagnostics to identify the issue
+    const diag = `iss=${sa.client_email}|keyLen=${pem.length}|keyStart=${pem.slice(0,27)}`
+    throw new Error(`OAuth failed: ${JSON.stringify(data)} | diag: ${diag}`)
   }
-
   return data.access_token
 }
 
-// PEM private key → DER ArrayBuffer
-function pemToDer(pem: string): ArrayBuffer {
-  const b64 = pem
-    .replace('-----BEGIN PRIVATE KEY-----', '')
-    .replace('-----END PRIVATE KEY-----', '')
-    .replace(/\s/g, '')
-
-  const bin = atob(b64)
-  const buf = new Uint8Array(bin.length)
-  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i)
-  return buf.buffer
+async function getAccessToken(sa: Record<string, string>): Promise<string> {
+  return getGoogleToken(sa, 'https://www.googleapis.com/auth/drive')
 }
 
-// ── OCR: Vision API token (cloud-platform scope, no user impersonation) ──────
+// ── OCR: Vision API token ─────────────────────────────────────
 async function getAccessTokenOcr(sa: Record<string, string>): Promise<string> {
-  const now     = Math.floor(Date.now() / 1000)
-  const header  = { alg: 'RS256', typ: 'JWT' }
-  const payload = {
-    iss:   sa.client_email,
-    scope: 'https://www.googleapis.com/auth/cloud-platform',
-    aud:   'https://oauth2.googleapis.com/token',
-    iat:   now,
-    exp:   now + 3600,
-  }
-  const encode = (obj: unknown) =>
-    btoa(JSON.stringify(obj)).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_')
-  const sigInput  = `${encode(header)}.${encode(payload)}`
-  const cryptoKey = await crypto.subtle.importKey(
-    'pkcs8', pemToDer(sa.private_key),
-    { name:'RSASSA-PKCS1-v1_5', hash:'SHA-256' }, false, ['sign']
-  )
-  const sigBytes = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', cryptoKey, new TextEncoder().encode(sigInput))
-  const sig = btoa(String.fromCharCode(...new Uint8Array(sigBytes))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_')
-  const jwt = `${sigInput}.${sig}`
-  const res  = await fetch('https://oauth2.googleapis.com/token', {
-    method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
-    body:`grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
-  })
-  const data = await res.json()
-  if (!data.access_token) throw new Error(`OCR OAuth failed: ${JSON.stringify(data)}`)
-  return data.access_token
+  return getGoogleToken(sa, 'https://www.googleapis.com/auth/cloud-platform')
 }
 
 // ── OCR: Parse receipt text into structured fields ────────────────────────────

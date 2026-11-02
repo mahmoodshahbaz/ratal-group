@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth'
 import PageBanner from '../components/PageBanner'
+import FormShell from '../components/FormShell'
 
 // ─── User Management ─────────────────────────────────────────────
 // SUPERADMIN: all users, all entities, all roles, can delete
@@ -552,62 +553,32 @@ export default function UserManagement({ entityId: propEntityId }) {
         isOpen={showBanner}
         onClose={()=>setShowBanner(false)}
         onStart={()=>{ setShowBanner(false); openInvite() }}
-        chapterL1="#AAAED0"
-        chapterL2="#F0F1FA"
-        moduleColor="#454D9B"
-        chapterLabel="Administration"
+        chapterName="Administration"
         formTitle={['Invite', 'New', 'User']}
-        steps={['Select Employee', 'Send Invite']}
-        icon="👤"
+        heading="Manage system users and access roles"
         description="Invite an employee to the platform. Supabase sends a secure email — the user sets their own password and is linked to their employee record."
+        icon="👤"
+        iconLabel={'User\nManagement'}
+        workflowSteps={['Select Employee', 'Send Invite']}
+        steps={['Select Employee', 'Send Invite']}
       />
 
-      {/* ── INVITE MODAL — 6-layer Admin style ─────────────────────── */}
-      {showInvite && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:16, fontFamily:"'Poppins','Segoe UI',sans-serif" }}>
-          {/* L1 frame */}
-          <div style={{ background:'#AAAED0', borderRadius:20, padding:20, width:'100%', maxWidth:860, boxShadow:'0 24px 70px rgba(0,0,0,0.40)', position:'relative', border:'4px solid #AAAED0' }}>
-            {/* L3 accent */}
-            <div style={{ position:'absolute', top:0, right:0, width:220, height:110, background:'#454D9B', borderRadius:'0 20px 0 60px', zIndex:1 }} />
-            {/* L2 root */}
-            <div style={{ background:'#F0F1FA', borderRadius:14, display:'flex', overflow:'hidden', position:'relative', zIndex:2, minHeight:500 }}>
-              {/* Sidebar */}
-              <div style={{ width:200, flexShrink:0, padding:'24px 18px 18px', display:'flex', flexDirection:'column', background:'#F0F1FA' }}>
-                <div style={{ fontSize:9, fontWeight:800, color:'#53666F', letterSpacing:1.8, textTransform:'uppercase', marginBottom:3 }}>Ratal Advanced Technologies</div>
-                <div style={{ fontSize:11, fontWeight:900, color:'#454D9B', letterSpacing:1, textTransform:'uppercase', marginBottom:16 }}><strong>Administration</strong></div>
-                <div style={{ fontSize:18, fontWeight:900, color:'#172D37', lineHeight:1.1, marginBottom:6 }}>Invite New User</div>
-                <div style={{ fontSize:11, color:'#53666F', lineHeight:1.5, marginBottom:20 }}>Select an employee, assign their system role, and send the invite.</div>
-                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                  {[
-                    { label:'Select Employee', done: !!selectedEmp,                        active: inviteStep===1 && !selectedEmp },
-                    { label:'Assign Role',      done: inviteStep===2,                       active: inviteStep===1 && !!selectedEmp },
-                    { label:'Send Invite',      done: false,                                active: inviteStep===2 },
-                  ].map((s,i)=>(
-                    <div key={i} style={{ display:'flex', alignItems:'center', gap:8 }}>
-                      <div style={{ width:22, height:22, borderRadius:'50%', background:s.done?'#2e7d32':s.active?'#454D9B':'#C8C8D8', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:800, color:'#fff', flexShrink:0 }}>{s.done?'✓':i+1}</div>
-                      <div style={{ fontSize:11, fontWeight:s.active||s.done?700:400, color:s.active?'#454D9B':s.done?'#2e7d32':'#6b7c93' }}>{s.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {/* White card */}
-              <div style={{ flex:1, background:'#fff', borderRadius:'0 14px 14px 0', display:'flex', flexDirection:'column', overflow:'hidden' }}>
-                {/* Gradient banner */}
-                <div style={{ background:'linear-gradient(120deg,#2d3580 0%,#454D9B 55%,#6b74c8 100%)', padding:'18px 22px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', position:'relative', overflow:'hidden' }}>
-                  <div style={{ position:'absolute', right:-30, top:-30, width:110, height:110, borderRadius:'50%', background:'rgba(255,255,255,0.07)' }} />
-                  <div style={{ display:'flex', alignItems:'center', gap:12, position:'relative', zIndex:1 }}>
-                    <div style={{ width:42, height:42, borderRadius:10, background:'rgba(255,255,255,0.18)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22 }}>👤</div>
-                    <div>
-                      <div style={{ fontSize:10, color:'rgba(255,255,255,0.70)', letterSpacing:1.3, textTransform:'uppercase', marginBottom:2 }}>Step {inviteStep} of 2 · Administration</div>
-                      <div style={{ fontSize:15, fontWeight:900, color:'#fff' }}>{inviteStep===1?'Assign Role Details':'Confirm & Send Invite'}</div>
-                    </div>
-                  </div>
-                  <div style={{ display:'flex', gap:7, position:'relative', zIndex:1 }}>
-                    {[1,2].map(i=><div key={i} style={{ width:28, height:8, borderRadius:4, background:inviteStep===i?'#fff':'rgba(255,255,255,0.3)' }} />)}
-                  </div>
-                </div>
-                {/* Form body */}
-                <div style={{ flex:1, overflowY:'auto', padding:'18px 22px' }}>
+      {/* ── INVITE MODAL — FormShell ────────────────────────────────── */}
+      <FormShell
+        isOpen={showInvite}
+        onClose={() => setShowInvite(false)}
+        chapterName="Administration"
+        title={['Invite', 'New', 'User']}
+        description="Invite an employee to the platform. Supabase sends a secure email."
+        steps={['Select Employee', 'Send Invite']}
+        currentStep={inviteStep}
+        onBack={inviteStep===1 ? () => setShowInvite(false) : () => setInviteStep(1)}
+        backLabel={inviteStep===1 ? 'Cancel' : 'Back'}
+        onNext={inviteStep===1 ? () => { if(selectedEmp&&form.role&&(form.email||selectedEmp?.email)) setInviteStep(2) } : invite}
+        nextLabel={inviteStep===1 ? 'Save & Next' : (saving ? 'Sending…' : 'Send Invite')}
+        nextDisabled={inviteStep===1 ? !selectedEmp||!form.role||(!form.email&&!selectedEmp?.email) : saving}
+      >
+        <div>
 
                   {/* ── STEP 1: Compact dropdown form ── */}
                   {inviteStep===1 && (<>
@@ -700,15 +671,6 @@ export default function UserManagement({ entityId: propEntityId }) {
                         This employee already has system access. Saving will update their role and details.
                       </div>
                     )}
-
-                    <div style={{display:'flex',gap:10,justifyContent:'flex-end',paddingTop:10,borderTop:'1px solid #eaecf5'}}>
-                      <button style={{background:'#9e9e9e',color:'#fff',border:'none',borderRadius:22,padding:'9px 22px',cursor:'pointer',fontSize:13,fontWeight:700}} onClick={()=>setShowInvite(false)}>Cancel</button>
-                      <button
-                        style={{background:'#454D9B',color:'#fff',border:'none',borderRadius:22,padding:'9px 28px',cursor:'pointer',fontSize:13,fontWeight:700,opacity:(!selectedEmp||!form.role||(!form.email&&!selectedEmp?.email))?0.4:1}}
-                        onClick={()=>{ if(selectedEmp&&form.role&&(form.email||selectedEmp?.email)) setInviteStep(2) }}
-                        disabled={!selectedEmp||!form.role||(!form.email&&!selectedEmp?.email)}
-                      >Save &amp; Next</button>
-                    </div>
                   </>)}
 
                   {/* ── STEP 2: Confirm & Send Invite ── */}
@@ -736,20 +698,10 @@ export default function UserManagement({ entityId: propEntityId }) {
                     <div style={{background:'#e8f5e9',border:'1px solid #a5d6a7',borderRadius:8,padding:'10px 14px',fontSize:12,color:'#2e7d32',marginBottom:18}}>
                       Supabase will send a secure invite email. The employee sets their own password on first login and will be linked to their employee record.
                     </div>
-                    <div style={{display:'flex',gap:10,justifyContent:'flex-end',paddingTop:8,borderTop:'1px solid #eaecf5'}}>
-                      <button style={{background:'#9e9e9e',color:'#fff',border:'none',borderRadius:22,padding:'9px 22px',cursor:'pointer',fontSize:13,fontWeight:700}} onClick={()=>setInviteStep(1)}>Back</button>
-                      <button style={{background:'#454D9B',color:'#fff',border:'none',borderRadius:22,padding:'9px 28px',cursor:'pointer',fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:8}} onClick={invite} disabled={saving}>
-                        {saving?'Sending…':'Send Invite'}
-                      </button>
-                    </div>
                   </>)}
 
-                </div>{/* end form body */}
-              </div>{/* end white card */}
-            </div>{/* end L2 root */}
-          </div>{/* end L1 frame */}
         </div>
-      )}
+      </FormShell>
 
       {/* ── EDIT MODAL ─────────────────────────────────────────────── */}
       {editUser && (

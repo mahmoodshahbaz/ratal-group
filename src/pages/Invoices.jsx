@@ -5,6 +5,7 @@ import InvoiceTemplatePicker from './InvoiceTemplatePicker'
 import { postInvoiceJE, postCreditNoteJE, postRetentionReleaseJE, voidInvoiceJE } from '../lib/autoPost'
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
+import FormShell from '../components/FormShell'
 import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
 
 const MC = GROUP_COLORS.Finance
@@ -44,7 +45,7 @@ const statusText  = { DRAFT:'#f57f17', ISSUED:'#1565c0', PAID:'#2e7d32', CANCELL
 // ─── Styles ──────────────────────────────────────────────────────────────────
 const S = {
   overlay: { position:'fixed', inset:0, background:'rgba(0,0,0,0.52)', zIndex:1000, display:'flex', alignItems:'flex-start', justifyContent:'center', padding:'16px 10px', overflowY:'auto' },
-  modal:   { background:'#fff', borderRadius:16, padding:0, width:820, maxWidth:'98vw', boxShadow:'0 8px 40px rgba(0,0,0,0.2)', marginTop:'auto', marginBottom:'auto', overflow:'hidden' },
+  modal:   { background:'#fff', borderRadius:4, padding:0, width:820, maxWidth:'98vw', boxShadow:'0 8px 40px rgba(0,0,0,0.2)', marginTop:'auto', marginBottom:'auto', overflow:'hidden' },
   inp:     { width:'100%', padding:'8px 11px', borderRadius:7, border:'1px solid #dde3ec', fontSize:13, outline:'none', fontFamily:'inherit', boxSizing:'border-box' },
   label:   { display:'block', fontSize:11, color:'#6b7c93', fontWeight:700, marginBottom:4, textTransform:'uppercase', letterSpacing:0.4 },
   row:     { display:'flex', gap:12, marginBottom:14 },
@@ -1067,13 +1068,10 @@ setInvoices(inv||[])
       isOpen={showBanner}
       onClose={() => setShowBanner(false)}
       onStart={() => { setShowBanner(false); resetForm(); setOpen(true) }}
-      chapterL1="#C1A1A9"
-      chapterL2="#FAF0F2"
-      moduleColor={MC}
-      chapterLabel="Chapter 04 · Finance"
+      chapterName="Finance"
       formTitle={['New', 'Invoice', 'to Client']}
-      steps={['Header', 'Line Items', 'Tax & Totals', 'Attachments']}
-      icon="🧾"
+      workflowSteps={['Entity & Client', 'Dept & Projects', 'Line Items', 'Invoice Summary']}
+      iconLabel={'Invoices'}
       description="Create an official VAT invoice linked to a project and PO. PDF is generated automatically and saved to Google Drive."
     />
 
@@ -1208,77 +1206,20 @@ setInvoices(inv||[])
       {/* ══════════════════════════════════════════════════════════════
           CREATE INVOICE WIZARD — 4 Steps
       ══════════════════════════════════════════════════════════════ */}
-      {open && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}
-             onClick={e=>e.target===e.currentTarget&&(setOpen(false),setWizardStep(1))}>
-
-          {/* ── LAYER 1: Border frame — mauve padding ── */}
-          <div style={{ background:'#C1A1A9', borderRadius:16, width:700, maxWidth:'96vw', height:'86vh', padding:10, display:'flex', boxShadow:'0 24px 64px rgba(0,0,0,0.35)', fontFamily:"'Poppins', sans-serif" }}>
-
-            {/* ── LAYER 2: Light pink inner container ── */}
-            <div style={{ flex:1, background:'#FAF0F2', borderRadius:8, display:'flex', overflow:'visible', position:'relative' }}>
-
-              {/* ── SIDEBAR ── */}
-              <div style={{ width:152, flexShrink:0, padding:'16px 14px 16px', display:'flex', flexDirection:'column', alignItems:'flex-start' }}>
-
-                {/* Company name — top, overflows into right area */}
-                <div style={{ fontSize:13, fontWeight:900, color:'#3e1020', lineHeight:1.2, marginBottom:0, whiteSpace:'nowrap', position:'relative', zIndex:10 }}>{entityName||entityNameEn||'Ratal Group'}</div>
-
-                {/* Finance + Invoices — pushed down, center aligned */}
-                <div style={{ marginTop:80, width:'100%', textAlign:'center' }}>
-                  <div style={{ fontSize:12, fontWeight:800, color:'#8C354B', marginBottom:2 }}>Finance</div>
-                  <div style={{ fontSize:24, fontWeight:900, color:'#3e1020', letterSpacing:0.2 }}>Invoices</div>
-                </div>
-
-                {/* Spacer — pushes step nav to vertical middle */}
-                <div style={{ flex:1 }} />
-
-                {/* Step nav — vertically centred, left aligned */}
-                <div style={{ alignSelf:'flex-start', width:'100%' }}>
-                  {[
-                    { num:1, label:'Entity & Client' },
-                    { num:2, label:'Dept & Projects' },
-                    { num:3, label:'Line Items' },
-                    { num:4, label:'Invoice Summary' },
-                  ].map(s=>(
-                    <div key={s.num}
-                      onClick={()=>s.num<wizardStep&&setWizardStep(s.num)}
-                      style={{
-                        fontSize:11, marginBottom:12, paddingLeft:8,
-                        textAlign:'left', width:'100%', boxSizing:'border-box',
-                        borderLeft: wizardStep===s.num ? '3px solid #8C354B' : '3px solid transparent',
-                        color: wizardStep===s.num ? '#8C354B' : s.num<wizardStep ? '#5a2030' : '#b08090',
-                        fontWeight: wizardStep===s.num ? 700 : 400,
-                        cursor: s.num<wizardStep ? 'pointer' : 'default',
-                        opacity: s.num>wizardStep ? 0.5 : 1,
-                        transition:'all 0.15s',
-                      }}>
-                      {s.label}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Spacer — VAT# anchored at bottom */}
-                <div style={{ flex:1 }} />
-
-                {/* VAT# at bottom */}
-                <div style={{ paddingTop:8 }}>
-                  <div style={{ fontSize:8, fontWeight:800, color:'#9b6070', textTransform:'uppercase', letterSpacing:0.8, marginBottom:4 }}>VAT#</div>
-                  <div style={{ background:'#fff', borderRadius:6, padding:'5px 8px', fontSize:10, color:'#3e1020', fontWeight:600, border:'1px solid #e0ced2', wordBreak:'break-all' }}>{entityVatNumber||'—'}</div>
-                </div>
-              </div>
-
-              {/* ── RIGHT COLUMN — layers 3 & 4 ── */}
-              <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
-
-                {/* ── LAYER 3: Maroon top-right corner — no text, tall ── */}
-                <div style={{ position:'absolute', top:0, right:0, width:'55%', height:200, background:'#8C354B', borderRadius:'0 8px 0 0', zIndex:1 }} />
-
-                {/* ── LAYER 4: White card — overlaps Layer 3 ── */}
-                <div style={{ position:'absolute', top:52, left:12, right:12, bottom:12, background:'#fff', borderRadius:12, boxShadow:'0 4px 24px rgba(0,0,0,0.15)', display:'flex', flexDirection:'column', overflow:'hidden', zIndex:2 }}>
-
-                  {/* Scrollable form content */}
-                  <div style={{ flex:1, overflowY:'auto', overflowX:'hidden', padding:'12px 14px 8px' }}>
+      <FormShell
+        isOpen={open}
+        onClose={() => { setOpen(false); setWizardStep(1) }}
+        chapterName="Finance"
+        title={['New', 'Invoice', 'to Client']}
+        description="Create an official VAT invoice linked to a project and PO."
+        steps={['Entity & Client', 'Dept & Projects', 'Line Items', 'Invoice Summary']}
+        currentStep={wizardStep}
+        onBack={wizardStep===1 ? () => { setOpen(false); setWizardStep(1) } : () => setWizardStep(s=>s-1)}
+        backLabel={wizardStep===1 ? 'Cancel' : 'Back'}
+        onNext={wizardStep<4 ? () => setWizardStep(s=>s+1) : () => save(false)}
+        nextLabel={wizardStep<4 ? 'Save & Next' : (saving ? 'Submitting…' : '✓ Save Invoice')}
+        nextDisabled={saving && wizardStep===4}
+      >
 
                     {/* ── STEP 1: Entity & Client ── */}
                     {wizardStep===1 && (<>
@@ -1654,37 +1595,7 @@ setInvoices(inv||[])
                       </div>
                     </>)}
 
-                  </div>{/* end scrollable */}
-
-                  {/* ── FOOTER ── */}
-                  <div style={{ padding:'8px 14px', borderTop:'1px solid #f0e6e9', background:'#fff', flexShrink:0, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                    <button
-                      onClick={wizardStep===1?()=>{setOpen(false);setWizardStep(1)}:()=>setWizardStep(s=>s-1)}
-                      style={{ background:'#888', color:'#fff', border:'none', borderRadius:8, padding:'8px 20px', fontWeight:700, fontSize:12, cursor:'pointer' }}>
-                      {wizardStep===1 ? 'Cancel' : '← Back'}
-                    </button>
-                    <div style={{ display:'flex', gap:8 }}>
-                      {wizardStep===4&&(
-                        <button onClick={()=>save(true)} disabled={saving}
-                          style={{ background:'#C1A1A9', color:'#fff', border:'none', borderRadius:8, padding:'8px 16px', fontWeight:700, fontSize:12, cursor:'pointer' }}>
-                          {saving?'Saving…':'💾 Save as Draft'}
-                        </button>
-                      )}
-                      <button
-                        onClick={wizardStep===4?()=>save(false):()=>setWizardStep(s=>s+1)}
-                        disabled={saving}
-                        style={{ background:'#8C354B', color:'#fff', border:'none', borderRadius:8, padding:'8px 22px', fontWeight:800, fontSize:12, cursor:'pointer', boxShadow:'0 3px 10px rgba(140,53,75,0.3)' }}>
-                        {saving?'Submitting…':wizardStep===4?'Save & Submit':'Save & Next →'}
-                      </button>
-                    </div>
-                  </div>
-
-                </div>{/* end Layer 4 white card */}
-              </div>{/* end right column */}
-            </div>{/* end Layer 2 light pink */}
-          </div>{/* end Layer 1 frame */}
-        </div>
-      )}
+      </FormShell>
 
     </ChapterPage>
     </>

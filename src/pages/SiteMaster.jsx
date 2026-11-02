@@ -1,5 +1,6 @@
 import { GROUP_COLORS } from '../styles/appStyles'
 import PageBanner from '../components/PageBanner'
+import FormShell from '../components/FormShell'
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -895,22 +896,20 @@ export default function SiteMaster({ entityId }) {
       <PageBanner
         isOpen={showBanner} onClose={()=>setShowBanner(false)}
         onStart={()=>{ setShowBanner(false); setSmStep(1); setShowForm(true) }}
-        chapterL1="#C8B48F" chapterL2="#FAF5E9" moduleColor="#8C601B"
-        chapterLabel="Masters"
+        chapterName="Masters"
         formTitle={['New','Site','Creation']}
-        steps={['Project & Work Type','Site Identity','Team & Commercial','Budget & Margin']}
-        icon="🏗"
+        heading="Create site records with WF codes and budget tracking"
         description="Create site records with WF code, activity template, and percentage-based budget. Tracks real margin per job."
+        icon="🏗"
+        iconLabel={'Site\nManagement'}
+        workflowSteps={['Project & Work Type','Site Identity','Team & Commercial','Budget & Margin']}
+        steps={['Project & Work Type','Site Identity','Team & Commercial','Budget & Margin']}
       />
 
       {/* ══ CREATE / EDIT MODAL ══ */}
       {showForm && (() => {
         const PP  = "'Poppins','Inter',sans-serif"
         const PRI = '#8C601B'
-        const L1  = '#C8B48F'
-        const L2  = '#FAF5E9'
-        const STEP_NAMES = ['','Project & Work Type','Site Identity','Team & Commercial','Budget & Margin']
-        const STEP_DESC  = ['','Department, project & workflow code','Site#, Job#, name, location & dates','Contractor, PM, PO reference & contract value','Percentage-based cost budget with live margin']
         const inp3 = (ex={}) => ({ width:'100%', padding:'8px 12px', borderRadius:20, border:`1px solid ${PRI}44`, fontSize:12, color:'#172D37', background:'#fdfaf6', outline:'none', fontFamily:PP, boxSizing:'border-box', ...ex })
         const sec3 = { fontSize:9, fontWeight:800, color:PRI, letterSpacing:1.5, textTransform:'uppercase', marginBottom:8, marginTop:12, paddingBottom:4, borderBottom:`1.5px solid ${PRI}33` }
         const lbl3 = { display:'block', fontSize:11, fontWeight:600, color:'#53666F', marginBottom:4 }
@@ -920,56 +919,21 @@ export default function SiteMaster({ entityId }) {
         const showQty = form.uom==='Per Node' || form.uom==='Per KM'
 
         return (
-          <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&closeForm()}>
-            <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap');`}</style>
-            <div style={{ width:880, maxWidth:'calc(100vw - 24px)', borderRadius:18, overflow:'hidden', boxShadow:'0 28px 64px rgba(0,0,0,0.32)', fontFamily:PP, background:L1, padding:8 }}>
-              <div style={{ background:L2, borderRadius:12, display:'flex', minHeight:580, position:'relative', overflow:'hidden' }}>
-                <div style={{ position:'absolute', top:0, right:0, width:'55%', height:'36%', background:PRI, borderRadius:'0 12px 0 90px', zIndex:1 }} />
-
-                {/* Sidebar */}
-                <div style={{ width:210, flexShrink:0, padding:'20px 16px 16px', display:'flex', flexDirection:'column', fontFamily:PP, position:'relative', zIndex:2 }}>
-                  <div style={{ fontSize:9, fontWeight:800, color:'#53666F', letterSpacing:1.8, textTransform:'uppercase', marginBottom:3 }}>Ratal Advanced Technologies</div>
-                  <div style={{ fontSize:9, fontWeight:800, color:PRI, letterSpacing:1.8, textTransform:'uppercase', marginBottom:16 }}><strong>Masters</strong></div>
-                  <div style={{ fontSize:24, fontWeight:900, color:'#172D37', lineHeight:1.1, marginBottom:6 }}>{STEP_NAMES[smStep]}</div>
-                  <div style={{ fontSize:11, color:'#53666F', lineHeight:1.5, marginBottom:8 }}>{STEP_DESC[smStep]}</div>
-                  <div style={{ fontSize:9, fontWeight:800, color:PRI, letterSpacing:1, marginBottom:14 }}>STEP {smStep} OF 4</div>
-                  <div style={{ flex:1, display:'flex', flexDirection:'column', gap:1 }}>
-                    {['Project & Work Type','Site Identity','Team & Commercial','Budget & Margin'].map((name,idx)=>{
-                      const sn=idx+1, isAct=smStep===sn, isDone=smStep>sn
-                      return (
-                        <div key={sn} onClick={()=>isDone&&setSmStep(sn)} style={{ display:'flex', alignItems:'center', padding:'7px 0 7px 12px', cursor:isDone?'pointer':'default', borderLeft:isAct?`3px solid ${PRI}`:isDone?`3px solid ${PRI}55`:'3px solid rgba(0,0,0,0.08)' }}>
-                          <span style={{ fontSize:11, fontWeight:isAct?700:500, color:isAct?'#172D37':isDone?PRI:'#b09070' }}>{name}</span>
-                          {isDone && <span style={{ marginLeft:6, fontSize:10, color:PRI }}>✓</span>}
-                        </div>
-                      )
-                    })}
-                  </div>
-                  {editing && <div style={{ background:`${PRI}18`, borderRadius:8, padding:'8px 10px', marginTop:10, fontSize:10, color:PRI, fontWeight:700 }}>✏️ Editing: {editing.sm_id}</div>}
-                  {/* Live margin preview in sidebar */}
-                  {smStep===4 && cv > 0 && (
-                    <div style={{ background:mh.bg, borderRadius:8, padding:'8px 10px', marginTop:8, fontSize:11, color:mh.color, fontWeight:700, textAlign:'center' }}>
-                      {mh.label}<br/>
-                      <span style={{ fontSize:10, fontWeight:500 }}>{SAR(cv*(100-totalCostPct)/100)}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* White card */}
-                <div style={{ position:'absolute', top:22, right:22, bottom:22, left:248, background:'#fff', borderRadius:16, display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:`0 6px 24px ${PRI}22`, zIndex:3 }}>
-                  {/* Card header */}
-                  <div style={{ padding:'18px 22px 0', flexShrink:0 }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-                      <div>
-                        <div style={{ fontSize:17, fontWeight:700, color:'#172D37' }}>{STEP_NAMES[smStep]}</div>
-                        {editing && <div style={{ fontSize:11, color:PRI, fontWeight:700, marginTop:2 }}>{editing.sm_id}</div>}
-                      </div>
-                      <button onClick={closeForm} style={{ background:`${PRI}18`, border:'none', color:PRI, borderRadius:8, width:28, height:28, cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
-                    </div>
-                    <div style={{ height:1, background:`${PRI}22` }} />
-                  </div>
-
-                  {/* Scrollable form body */}
-                  <div style={{ flex:1, overflowY:'auto', padding:'14px 22px 10px', fontFamily:PP }}>
+          <FormShell
+            isOpen={showForm}
+            onClose={closeForm}
+            chapterName="Masters"
+            title={['New','Site','Creation']}
+            description="Create site records with WF code, activity template, and percentage-based budget."
+            steps={['Project & Work Type','Site Identity','Team & Commercial','Budget & Margin']}
+            currentStep={smStep}
+            onBack={smStep===1 ? closeForm : () => setSmStep(s=>s-1)}
+            backLabel={smStep===1 ? 'Cancel' : 'Back'}
+            onNext={smStep<4 ? () => setSmStep(s=>s+1) : save}
+            nextLabel={smStep<4 ? 'Save & Next' : (saving ? 'Saving…' : editing ? '✓ Update Site' : '✓ Create Site')}
+            nextDisabled={saving && smStep===4}
+          >
+          <div style={{ fontFamily:PP }}>
 
                     {/* ── STEP 1: Project & Work Type ── */}
                     {smStep===1 && <>
@@ -1194,25 +1158,8 @@ export default function SiteMaster({ entityId }) {
                       {saveError && <div style={{ background:'#ffebee', border:'1px solid #ef9a9a', borderRadius:8, padding:'8px 12px', marginTop:8, color:'#c62828', fontSize:12 }}>⚠ {saveError}</div>}
                     </>}
 
-                  </div>
-
-                  {/* Footer */}
-                  <div style={{ flexShrink:0, padding:'11px 22px 14px', borderTop:`1px solid ${PRI}22`, display:'flex', justifyContent:'space-between', alignItems:'center', fontFamily:PP }}>
-                    <button onClick={smStep===1?closeForm:()=>setSmStep(s=>s-1)} style={{ background:'#747474', color:'#fff', border:'none', borderRadius:24, padding:'9px 24px', cursor:'pointer', fontSize:13, fontWeight:600 }}>
-                      {smStep===1?'Cancel':'Back'}
-                    </button>
-                    <span style={{ fontSize:10, color:'#53666F' }}>Step {smStep} of 4</span>
-                    {smStep<4
-                      ? <button onClick={()=>setSmStep(s=>s+1)} style={{ background:PRI, color:'#fff', border:'none', borderRadius:24, padding:'9px 28px', cursor:'pointer', fontSize:13, fontWeight:700, boxShadow:`0 4px 14px ${PRI}44` }}>Save &amp; Next</button>
-                      : <button onClick={save} disabled={saving} style={{ background:saving?'#c7c7c7':PRI, color:'#fff', border:'none', borderRadius:24, padding:'9px 28px', cursor:saving?'not-allowed':'pointer', fontSize:13, fontWeight:700, boxShadow:saving?'none':`0 4px 14px ${PRI}44` }}>
-                          {saving?'Saving…':editing?'✓ Update Site':'✓ Create Site'}
-                        </button>
-                    }
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
+          </FormShell>
         )
       })()}
 

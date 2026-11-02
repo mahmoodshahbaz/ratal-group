@@ -1,4 +1,6 @@
 import { GROUP_COLORS } from '../styles/appStyles'
+import FormShell from '../components/FormShell'
+import PageBanner from '../components/PageBanner'
 /**
  * ChartOfAccounts.jsx
  * View, search, and manage the Chart of Accounts.
@@ -35,13 +37,14 @@ const BLANK = {
 
 // ── Styles ──────────────────────────────────────────────────────────────────
 const MC = GROUP_COLORS.Accounting
+const L3 = '#606D2C'
 
 const S = {
-  page:     { padding:'24px', fontFamily:'inherit' },
+  page:     { padding:'24px', fontFamily:"'Poppins',sans-serif" },
   topBar:   { display:'flex', alignItems:'center', gap:12, marginBottom:20, flexWrap:'wrap' },
   title:    { fontSize:22, fontWeight:800, color:'#1a2540', flex:1 },
-  searchBox:{ padding:'10px 14px', borderRadius:10, border:'1.5px solid #dde3ec', fontSize:14, outline:'none', width:240 },
-  addBtn:   { background:'linear-gradient(135deg,#1565c0,#1976d2)', color:'#fff', border:'none', borderRadius:10, padding:'10px 20px', fontSize:14, fontWeight:700, cursor:'pointer' },
+  searchBox:{ padding:'10px 14px', borderRadius:4, border:'1.5px solid #dde3ec', fontSize:14, outline:'none', width:240, fontFamily:"'Poppins',sans-serif" },
+  addBtn:   { background:L3, color:'#fff', border:'none', borderRadius:4, padding:'10px 20px', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:"'Poppins',sans-serif" },
   section:  { marginBottom:20 },
   sHead:    (color, bg) => ({ display:'flex', alignItems:'center', gap:10, padding:'12px 16px', background:bg, borderRadius:'12px 12px 0 0', cursor:'pointer', userSelect:'none' }),
   sTitle:   (color) => ({ fontSize:15, fontWeight:800, color, flex:1 }),
@@ -53,19 +56,16 @@ const S = {
   codeTd:   { padding:'7px 12px', fontSize:12, fontWeight:700, color:'#1565c0', borderBottom:'1px solid #f5f6f8', fontFamily:'monospace', whiteSpace:'nowrap' },
   amtTd:    (pos) => ({ padding:'7px 12px', fontSize:13, fontWeight:700, textAlign:'right', borderBottom:'1px solid #f5f6f8', color: pos>=0?'#2e7d32':'#c62828', whiteSpace:'nowrap' }),
   chip:     (c,bg) => ({ display:'inline-block', padding:'2px 8px', borderRadius:12, fontSize:11, fontWeight:700, color:c, background:bg }),
-  editBtn:  { background:'none', border:'none', cursor:'pointer', color:'#1565c0', fontSize:13, fontWeight:600, padding:'4px 8px', borderRadius:6 },
-  modal:    { position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999, padding:16 },
-  modalBox: { background:'#fff', borderRadius:20, padding:28, width:'100%', maxWidth:560, maxHeight:'90vh', overflowY:'auto' },
-  mTitle:   { fontSize:18, fontWeight:800, color:'#1a2540', marginBottom:20 },
-  label:    { display:'block', fontSize:12, fontWeight:700, color:'#6b7c93', marginBottom:5, textTransform:'uppercase' },
-  input:    { width:'100%', padding:'11px 13px', borderRadius:10, border:'1.5px solid #dde3ec', fontSize:14, outline:'none', boxSizing:'border-box', fontFamily:'inherit', marginBottom:14 },
-  select:   { width:'100%', padding:'11px 13px', borderRadius:10, border:'1.5px solid #dde3ec', fontSize:14, outline:'none', boxSizing:'border-box', fontFamily:'inherit', marginBottom:14, background:'#fff' },
+  editBtn:  { background:'none', border:'none', cursor:'pointer', color:'#1565c0', fontSize:13, fontWeight:600, padding:'4px 8px', borderRadius:4 },
+  label:    { display:'block', fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:5, textTransform:'uppercase', letterSpacing:'0.4px' },
+  input:    { width:'100%', padding:'11px 13px', borderRadius:4, border:'1.5px solid #dde3ec', fontSize:14, outline:'none', boxSizing:'border-box', fontFamily:"'Poppins',sans-serif", marginBottom:14 },
+  select:   { width:'100%', padding:'11px 13px', borderRadius:4, border:'1.5px solid #dde3ec', fontSize:14, outline:'none', boxSizing:'border-box', fontFamily:"'Poppins',sans-serif", marginBottom:14, background:'#fff' },
   row2:     { display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 },
-  saveBtn:  { background:'linear-gradient(135deg,#1565c0,#1976d2)', color:'#fff', border:'none', borderRadius:10, padding:'13px', fontSize:15, fontWeight:800, cursor:'pointer', width:'100%', marginTop:6 },
-  cancelBtn:{ background:'#f0f2f5', color:'#1a2540', border:'none', borderRadius:10, padding:'13px', fontSize:15, fontWeight:700, cursor:'pointer', width:'100%', marginTop:8 },
-  err:      { background:'#ffebee', color:'#c62828', borderRadius:8, padding:'10px 13px', fontSize:13, marginBottom:12 },
+  err:      { background:'#ffebee', color:'#c62828', borderRadius:4, padding:'10px 13px', fontSize:13, marginBottom:12 },
   emptyRow: { textAlign:'center', padding:'24px', color:'#aab2bd', fontSize:13 },
-  toggle:   (on) => ({ display:'inline-flex', alignItems:'center', gap:6, cursor:'pointer', fontSize:13, fontWeight:600, color: on?'#1565c0':'#aab2bd' }),
+  toggle:   (on) => ({ display:'inline-flex', alignItems:'center', gap:6, cursor:'pointer', fontSize:13, fontWeight:600, color: on?L3:'#aab2bd' }),
+  saveBtn:  { background:L3, color:'#fff', border:'none', borderRadius:4, padding:'13px', fontSize:15, fontWeight:800, cursor:'pointer', width:'100%', marginTop:6, fontFamily:"'Poppins',sans-serif" },
+  cancelBtn:{ background:'#f0f2f5', color:'#1a2540', border:'none', borderRadius:4, padding:'13px', fontSize:15, fontWeight:700, cursor:'pointer', width:'100%', marginTop:8, fontFamily:"'Poppins',sans-serif" },
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -82,6 +82,8 @@ export default function ChartOfAccounts({ entityId }) {
   const [saving,     setSaving]     = useState(false)
   const [error,      setError]      = useState(null)
   const [showInactive, setShowInactive] = useState(false)
+  const [showBanner, setShowBanner] = useState(false)
+  const [wizardStep, setWizardStep] = useState(1)
 
   useEffect(() => { if (entityId) load() }, [entityId])
 
@@ -116,7 +118,7 @@ export default function ChartOfAccounts({ entityId }) {
   function openAdd() {
     setForm({ ...BLANK })
     setError(null)
-    setModal('add')
+    setShowBanner(true)
   }
   function openEdit(acct) {
     setForm({
@@ -124,9 +126,10 @@ export default function ChartOfAccounts({ entityId }) {
       opening_balance: acct.opening_balance ?? '0',
     })
     setError(null)
+    setWizardStep(1)
     setModal(acct)
   }
-  function closeModal() { setModal(false); setError(null) }
+  function closeModal() { setModal(false); setError(null); setWizardStep(1) }
 
   async function save() {
     if (!form.account_code.trim()) return setError('Account code is required')
@@ -178,6 +181,8 @@ export default function ChartOfAccounts({ entityId }) {
     acc[t] = accounts.filter(a => a.account_type === t && a.is_active).length
     return acc
   }, {})
+
+  const STEPS = ['Account Identity', 'Balance & Settings']
 
   // ── Render ─────────────────────────────────────────────────
   return (
@@ -295,14 +300,45 @@ export default function ChartOfAccounts({ entityId }) {
         )
       })}
 
-      {/* ── Modal — Add / Edit ── */}
-      {modal && (
-        <div style={S.modal} onClick={e => { if (e.target===e.currentTarget) closeModal() }}>
-          <div style={S.modalBox}>
-            <div style={S.mTitle}>{modal === 'add' ? '➕ Add Account' : `✏️ Edit — ${form.account_code}`}</div>
+      {/* ── Page Banner — Add Account ── */}
+      <PageBanner
+        isOpen={showBanner}
+        onClose={() => setShowBanner(false)}
+        onStart={() => { setShowBanner(false); setWizardStep(1); setModal('add') }}
+        chapterName="Accounting"
+        formTitle={['Add', 'Account', 'to COA']}
+        workflowSteps={STEPS}
+        iconLabel="Chart of Accounts"
+        description="Register a new account in the Chart of Accounts. Assign its type, sub-type, and opening balance for financial reporting."
+      />
 
-            {error && <div style={S.err}>{error}</div>}
+      {/* ── FormShell — Add / Edit ── */}
+      <FormShell
+        isOpen={!!modal}
+        onClose={closeModal}
+        chapterName="Accounting"
+        title={modal === 'add' ? ['Add', 'Account', 'to COA'] : ['Edit', 'Account', form.account_code || '']}
+        steps={STEPS}
+        currentStep={wizardStep}
+        onBack={() => setWizardStep(s => s - 1)}
+        backLabel="Back"
+        onNext={() => {
+          if (wizardStep < STEPS.length) {
+            if (!form.account_code.trim()) { setError('Account code is required'); return }
+            if (!form.account_name.trim()) { setError('Account name is required'); return }
+            setError(null)
+            setWizardStep(s => s + 1)
+          } else {
+            save()
+          }
+        }}
+        nextLabel={wizardStep < STEPS.length ? 'Next →' : (saving ? 'Saving…' : modal === 'add' ? 'Add Account' : 'Save Changes')}
+        nextDisabled={saving}
+      >
+        {error && <div style={S.err}>{error}</div>}
 
+        {wizardStep === 1 && (
+          <div>
             <div style={S.row2}>
               <div>
                 <label style={S.label}>Account Code *</label>
@@ -347,7 +383,11 @@ export default function ChartOfAccounts({ entityId }) {
                 </select>
               </div>
             </div>
+          </div>
+        )}
 
+        {wizardStep === 2 && (
+          <div>
             <label style={S.label}>Opening Balance (SAR)</label>
             <input style={S.input} type="number" value={form.opening_balance}
               onChange={e => setForm(f => ({ ...f, opening_balance: e.target.value }))}
@@ -363,14 +403,9 @@ export default function ChartOfAccounts({ entityId }) {
               <span style={{ fontSize:18 }}>{form.is_active ? '✅' : '⬜'}</span>
               Active account
             </label>
-
-            <button onClick={save} disabled={saving} style={S.saveBtn}>
-              {saving ? 'Saving…' : modal === 'add' ? 'Add Account' : 'Save Changes'}
-            </button>
-            <button onClick={closeModal} style={S.cancelBtn}>Cancel</button>
           </div>
-        </div>
-      )}
+        )}
+      </FormShell>
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
+import FormShell from '../components/FormShell'
 import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
 const MC = GROUP_COLORS.Operations
 import { useState, useEffect, useRef } from 'react'
@@ -54,13 +55,16 @@ const EMPTY_VEH = {
   ownership_type:'OWN',
   plate_number:'', vehicle_type:'SUV', make:'', model:'', year:new Date().getFullYear(),
   color:'', chassis_no:'', engine_no:'', fuel_type:'PETROL',
+  fleet_value:0,
   odometer_reading:0, status:'ACTIVE', notes:'',
   ins_expiry:'', mvpi_expiry:'', reg_expiry:'', saher_expiry:'',
   // Rental fields
+  rental_contractor_id:'',
   rental_company:'', rental_vat_no:'',
   rent_start:'', rent_end:'',
   rate_daily:0, rate_monthly:0,
-  km_per_day:0, km_per_month:0,
+  km_per_day:200, km_per_month:6000,
+  km_extra_rate:0,
 }
 
 const EMPTY_MAINT = {
@@ -102,10 +106,11 @@ function SectionLabel({ icon, label, color='#1a2e3d' }) {
 }
 
 export default function Vehicles({ entityId }) {
-  const [vehicles,  setVehicles]  = useState([])
-  const [employees, setEmployees] = useState([])
-  const [depts,     setDepts]     = useState([])
-  const [maints,    setMaints]    = useState([])   // maintenance records for selected vehicle
+  const [vehicles,     setVehicles]  = useState([])
+  const [employees,    setEmployees] = useState([])
+  const [depts,        setDepts]     = useState([])
+  const [contractors,  setCons]      = useState([])  // Party List — for rental company lookup
+  const [maints,       setMaints]    = useState([])   // maintenance records for selected vehicle
   const [loading,   setLoading]   = useState(true)
   const [tab,       setTab]       = useState('register') // register | maintenance
   const [filter,    setFilter]    = useState({ status:'', type:'', search:'' })
@@ -135,10 +140,14 @@ export default function Vehicles({ entityId }) {
   const [assignForm,       setAssignForm]       = useState({
     assignment_date: TODAY, return_date:'', department_id:'',
     employee_id:'', iqama_dl:'', vehicle_id:'', vehicle_type:'', plate_number:'', make:'', color:'',
+    ownership_type:'OWN',
+    rental_company:'', rate_daily:0, rate_monthly:0,
+    km_per_day:0, km_per_month:0, km_extra_rate:0,
   })
   const [savingAssign,     setSavingAssign]     = useState(false)
   const [deptEmployees,    setDeptEmployees]    = useState([])
   const [activeAssignments,setActiveAssignments]= useState(new Map()) // plate_number → assignment record
+  const [activeEmpAssignments,setActiveEmpAssignments]= useState(new Map()) // employee_id → assignment record
   const [assignments,      setAssignments]      = useState([])        // all assignment records
   const [assignFilter,     setAssignFilter]     = useState('active')  // active | all | returned
 
@@ -147,12 +156,13 @@ export default function Vehicles({ entityId }) {
   async function load() {
     setLoading(true)
     // Core tables — must succeed
-    const [{ data:v },{ data:e },{ data:d }] = await Promise.all([
+    const [{ data:v },{ data:e },{ data:d },{ data:con }] = await Promise.all([
       supabase.from('vehicles').select('*').eq('entity_id',entityId).eq('status','ACTIVE').order('plate_number'),
       supabase.from('employees').select('id,full_name_en,department_id,phone').eq('entity_id',entityId).order('full_name_en'),
       supabase.from('departments').select('id,dept_name,dept_code').eq('entity_id',entityId).eq('is_active',true).order('dept_name'),
+      supabase.from('contractors').select('id,contractor_name,vat_number,vendor_type').eq('entity_id',entityId).order('contractor_name'),
     ])
-    setVehicles(v||[]); setEmployees(e||[]); setDepts(d||[])
+    setVehicles(v||[]); setEmployees(e||[]); setDepts(d||[]); setCons(con||[])
     // vehicle_assignments — optional (table may not exist if SQL patch not yet run)
     try {
       const { data:a } = await supabase.from('vehicle_assignments')
@@ -163,6 +173,10 @@ export default function Vehicles({ entityId }) {
       const activeMap = new Map()
       all.filter(r=>!r.return_date).forEach(r=>{ if(!activeMap.has(r.plate_number)) activeMap.set(r.plate_number,r) })
       setActiveAssignments(activeMap)
+      // Build Map: employee_id → active assignment (one car per employee rule)
+      const empMap = new Map()
+      all.filter(r=>!r.return_date && r.employee_id).forEach(r=>{ if(!empMap.has(r.employee_id)) empMap.set(r.employee_id,r) })
+      setActiveEmpAssignments(empMap)
     } catch(_) {
       setActiveAssignments(new Map()); setAssignments([])
     }
@@ -187,14 +201,17 @@ export default function Vehicles({ entityId }) {
       plate_number:v.plate_number||'', vehicle_type:v.vehicle_type||'SUV',
       make:v.make||'', model:v.model||'', year:v.year||new Date().getFullYear(),
       color:v.color||'', chassis_no:v.chassis_no||'', engine_no:v.engine_no||'',
+      fleet_value:v.fleet_value||0,
       fuel_type:v.fuel_type||'PETROL',
       odometer_reading:v.odometer_reading||0, status:v.status||'ACTIVE', notes:v.notes||'',
       ins_expiry:v.ins_expiry||'', mvpi_expiry:v.mvpi_expiry||'',
       reg_expiry:v.reg_expiry||'', saher_expiry:v.saher_expiry||'',
+      rental_contractor_id:v.rental_contractor_id||'',
       rental_company:v.rental_company||'', rental_vat_no:v.rental_vat_no||'',
       rent_start:v.rent_start||'', rent_end:v.rent_end||'',
       rate_daily:v.rate_daily||0, rate_monthly:v.rate_monthly||0,
-      km_per_day:v.km_per_day||0, km_per_month:v.km_per_month||0,
+      km_per_day:v.km_per_day||200, km_per_month:v.km_per_month||6000,
+      km_extra_rate:v.km_extra_rate||0,
     })
     setShowVehForm(true)
   }
@@ -221,13 +238,15 @@ export default function Vehicles({ entityId }) {
       saher_expiry:     vehForm.saher_expiry|| null,
       entity_id:        entityId,
     }
-    // chassis/engine only meaningful for OWN
+    // chassis/engine/fleet_value only meaningful for OWN
     if (!isRent) {
-      base.chassis_no = vehForm.chassis_no || null
-      base.engine_no  = vehForm.engine_no  || null
+      base.chassis_no  = vehForm.chassis_no  || null
+      base.engine_no   = vehForm.engine_no   || null
+      base.fleet_value = +vehForm.fleet_value || 0
     }
     // rental fields only when RENT — avoids schema-cache errors if patch not yet run
     if (isRent) {
+      base.rental_contractor_id = vehForm.rental_contractor_id || null
       base.rental_company = vehForm.rental_company || null
       base.rental_vat_no  = vehForm.rental_vat_no  || null
       base.rent_start     = vehForm.rent_start      || null
@@ -236,6 +255,7 @@ export default function Vehicles({ entityId }) {
       base.rate_monthly   = +vehForm.rate_monthly   || 0
       base.km_per_day     = +vehForm.km_per_day     || 0
       base.km_per_month   = +vehForm.km_per_month   || 0
+      base.km_extra_rate  = +vehForm.km_extra_rate  || 0
     }
     const payload = base
 
@@ -332,6 +352,12 @@ export default function Vehicles({ entityId }) {
       make:           veh.make            || '',
       color:          veh.color           || '',
       ownership_type: veh.ownership_type  || 'OWN',
+      rental_company: veh.rental_company  || '',
+      rate_daily:     veh.rate_daily      || 0,
+      rate_monthly:   veh.rate_monthly    || 0,
+      km_per_day:     veh.km_per_day      || 0,
+      km_per_month:   veh.km_per_month    || 0,
+      km_extra_rate:  veh.km_extra_rate   || 0,
     }))
   }
 
@@ -346,19 +372,24 @@ export default function Vehicles({ entityId }) {
   async function saveAssignment() {
     if (!assignForm.employee_id) { alert('Please select an employee'); return }
     if (!assignForm.vehicle_id)  { alert('Please select a vehicle');  return }
-    // Double-check availability (race condition guard)
+    // Double-check vehicle availability (race condition guard)
     if (activeAssignments.has(assignForm.plate_number)) {
       alert(`${assignForm.plate_number} is still assigned to another employee.\nRecord the return date for that assignment first.`); return
+    }
+    // Double-check employee — one car per employee rule
+    const existingEmpAssign = activeEmpAssignments.get(assignForm.employee_id)
+    if (existingEmpAssign) {
+      alert(`This employee already holds ${existingEmpAssign.plate_number}.\nRecord the return date for that vehicle first before assigning a new one.`); return
     }
 
     // Open print window synchronously (before any await, to bypass popup blocker)
     const preWin = openPrintWindow()
 
     setSavingAssign(true)
-    const { error } = await supabase.from('vehicle_assignments').insert({
+    const payload = {
       entity_id:       entityId,
       assignment_date: assignForm.assignment_date,
-      return_date:     assignForm.return_date || null,
+      return_date:     null,   // always null on new assignment; use Mark Returned to close
       department_id:   assignForm.department_id || null,
       employee_id:     assignForm.employee_id,
       iqama_dl:        assignForm.iqama_dl,
@@ -366,9 +397,20 @@ export default function Vehicles({ entityId }) {
       plate_number:    assignForm.plate_number,
       make:            assignForm.make,
       color:           assignForm.color,
-    })
+    }
+    console.log('[VA] Insert payload:', JSON.stringify(payload))
+    const { data: savedRow, error } = await supabase
+      .from('vehicle_assignments').insert(payload).select().single()
     setSavingAssign(false)
-    if (error) { if (preWin) preWin.close(); alert(error.message); return }
+    console.log('[VA] Insert result — data:', savedRow, '| error:', error)
+    if (error || !savedRow) {
+      if (preWin) preWin.close()
+      const msg = error
+        ? `DB Error (${error.code}): ${error.message}\n\nHint: ${error.hint||'none'}\nDetails: ${error.details||'none'}`
+        : `Record not returned after insert.\nentityId used: ${entityId}\nemployee_id: ${assignForm.employee_id}`
+      alert(msg)
+      return
+    }
 
     // Gather data for the handover document
     const selVeh  = vehicles.find(v => v.id === assignForm.vehicle_id) || {}
@@ -376,7 +418,8 @@ export default function Vehicles({ entityId }) {
     const selDept = depts.find(d => d.id === assignForm.department_id) || {}
     const [aYr, aMo, aDy] = (assignForm.assignment_date || TODAY).split('-')
     const dateStr = `${aDy || '00'}${aMo || '00'}${(aYr || '0000').slice(2)}`
-    const refNum  = `VH-${(assignForm.plate_number || 'VEH').replace(/\s+/g, '')}-${dateStr}`
+    const empName = (selEmp.full_name_en || '').trim().replace(/\s+/g, '-') || 'Unknown'
+    const refNum  = `VH-${(assignForm.plate_number || 'VEH').replace(/\s+/g, '')}-${empName}-${dateStr}`
 
     printDocument('vehicle_handover', {
       vehicle_plate:            assignForm.plate_number || '',
@@ -396,15 +439,15 @@ export default function Vehicles({ entityId }) {
     }, {
       orientation:   'portrait',
       driveFolder:   'vehicle-handovers',
-      driveFileName: `VH-${(assignForm.plate_number || 'VEH').replace(/\s+/g, '')}-${dateStr}.pdf`,
+      driveFileName: `VH-${(assignForm.plate_number || 'VEH').replace(/\s+/g, '')}-${empName}-${dateStr}.pdf`,
       requestDate:   assignForm.assignment_date || TODAY,
       autoRun:       true,
       _preWin:       preWin,
     })
 
     setShowAssignForm(false)
-    setTab('register')
-    setAssignForm({ assignment_date:TODAY, return_date:'', department_id:'', employee_id:'', iqama_dl:'', vehicle_id:'', vehicle_type:'', plate_number:'', make:'', color:'' })
+    setTab('assign')   // stay on Assignments tab so the new record is visible
+    setAssignForm({ assignment_date:TODAY, return_date:'', department_id:'', employee_id:'', iqama_dl:'', vehicle_id:'', vehicle_type:'', plate_number:'', make:'', color:'', ownership_type:'OWN', rental_company:'', rate_daily:0, rate_monthly:0, km_per_day:0, km_per_month:0, km_extra_rate:0 })
     load() // refresh active assignments
   }
 
@@ -434,28 +477,28 @@ export default function Vehicles({ entityId }) {
         isOpen={showVehBanner}
         onClose={() => setShowVehBanner(false)}
         onStart={() => { setShowVehBanner(false); setShowVehForm(true) }}
-        chapterL1="#70A5A6"
-        chapterL2="#EAF3F2"
-        moduleColor={MC}
-        chapterLabel="Operations"
+        chapterName="Operations"
         formTitle={['New', 'Fleet', 'Vehicle']}
-        steps={['Vehicle Details', 'Documents', 'Attachments', 'Notes & Review']}
+        heading="Register a vehicle to the fleet"
+        description="Own or Rental. Supports compliance document tracking, maintenance log and site assignment."
         icon="🚗"
-        description="Register a vehicle to the fleet — Own or Rental. Supports maintenance tracking and site assignment."
+        iconLabel={'Fleet\nManagement'}
+        workflowSteps={['Vehicle Details', 'Documents & Expiry', 'Filed & Saved']}
+        steps={['Vehicle Details', 'Documents', 'Attachments', 'Notes & Review']}
       />
 
       <PageBanner
         isOpen={showAssignBanner}
         onClose={() => { setShowAssignBanner(false); setTab('assignments') }}
         onStart={() => { setShowAssignBanner(false); setAssignStep(1); setShowAssignForm(true) }}
-        chapterL1="#70A5A6"
-        chapterL2="#EAF3F2"
-        moduleColor="#5C5C72"
-        chapterLabel="Operations"
+        chapterName="Operations"
         formTitle={['Vehicle', 'Assignment', 'Form']}
-        steps={['Vehicle Information', 'Employee Information']}
+        heading="Assign a fleet vehicle to an employee"
+        description="Sets the assignment period and records Iqama / DL details. A handover document is auto-generated on save."
         icon="🔑"
-        description="Assign a fleet vehicle to an employee or department. Sets the assignment period and records Iqama / DL details."
+        iconLabel={'Vehicle\nHandover'}
+        workflowSteps={['Select Vehicle', 'Employee Info', 'Filed & Saved']}
+        steps={['Vehicle Information', 'Employee Information']}
       />
 
       {/* Header — chapter H1 provided by AppShell; only action button here */}
@@ -596,12 +639,15 @@ export default function Vehicles({ entityId }) {
                             {v.ownership_type==='RENT' && (
                               <DetailSection label="Rental Info" borderColor="#b2ebf2">
                                 <DetailRow>
-                                  <DetailField label="Company"    value={v.rental_company} />
+                                  <DetailField label="Party"      value={contractors.find(c=>c.id===v.rental_contractor_id)?.contractor_name || v.rental_company} />
                                   <DetailField label="VAT No."    value={v.rental_vat_no} mono />
                                   <DetailField label="From"       value={v.rent_start} />
                                   <DetailField label="Until"      value={v.rent_end} />
-                                  <DetailField label="Daily Rate" value={v.rate_daily ? `SAR ${v.rate_daily}` : null} />
-                                  <DetailField label="Monthly"    value={v.rate_monthly ? `SAR ${v.rate_monthly}` : null} />
+                                  <DetailField label="Daily Rate"    value={v.rate_daily    ? `SAR ${(+v.rate_daily).toLocaleString()}`    : null} />
+                                  <DetailField label="Monthly Rate"  value={v.rate_monthly  ? `SAR ${(+v.rate_monthly).toLocaleString()}`  : null} />
+                                  <DetailField label="KM / Day"      value={v.km_per_day    ? `${(+v.km_per_day).toLocaleString()} km`     : null} />
+                                  <DetailField label="KM / Month"    value={v.km_per_month  ? `${(+v.km_per_month).toLocaleString()} km`   : null} />
+                                  <DetailField label="Extra KM Rate" value={v.km_extra_rate ? `SAR ${v.km_extra_rate}/km`                  : null} />
                                 </DetailRow>
                               </DetailSection>
                             )}
@@ -724,78 +770,28 @@ export default function Vehicles({ entityId }) {
       )}
 
       {/* ── REGISTER VEHICLE (ASSIGNMENT) MODAL ─────────────────────── */}
-      {showAssignForm && (() => {
-        const PP = "'Poppins','Inter',sans-serif"
-        const PRI = '#70A5A6'
+      {(() => {
         const closeAssign = () => { setShowAssignForm(false); setAssignStep(1); setTab('assignments') }
-        const inpA = (ex={}) => ({ width:'100%', padding:'9px 14px', borderRadius:8, border:'1px solid #b0cfe8', fontSize:13, color:'#172D37', background:'#f8f8fc', outline:'none', fontFamily:PP, boxSizing:'border-box', ...ex })
+        const PP  = "'Poppins','Inter',sans-serif"
+        const PRI = '#70A5A6'
+        const inpA = (ex={}) => ({ width:'100%', padding:'9px 14px', borderRadius:6, border:'1px solid #b0cfe8', fontSize:13, color:'#172D37', background:'#f8f8fc', outline:'none', fontFamily:PP, boxSizing:'border-box', ...ex })
         const lblA = { display:'block', fontSize:11, fontWeight:600, color:'#53666F', marginBottom:4 }
-        const secA = { fontSize:9, fontWeight:800, color:'#0079BC', letterSpacing:1.5, textTransform:'uppercase', marginBottom:8, marginTop:12, paddingBottom:4, borderBottom:'1.5px solid #b0cfe8' }
         return (
-        <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&closeAssign()}>
-          <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap');`}</style>
-          <div style={{ width:860, maxWidth:'calc(100vw - 24px)', height:'min(92vh,660px)', borderRadius:0, overflow:'hidden', boxShadow:'0 28px 64px rgba(0,0,0,0.35)', fontFamily:PP, display:'flex', flexDirection:'column' }}>
-
-            {/* ── STEPS 1–2 — 3-box wizard ── */}
-            {assignStep>=1 && (
-              <div style={{ flex:1, background:'#5C5C72', display:'flex', padding:20, boxSizing:'border-box' }}>
-                <div style={{ flex:1, background:'#F2F2F6', position:'relative', display:'flex', overflow:'hidden' }}>
-                  <div style={{ position:'absolute', top:0, right:0, width:'55%', height:'36%', background:'#0079BC', zIndex:1 }} />
-
-                  {/* Sidebar */}
-                  <div style={{ width:260, flexShrink:0, padding:'20px 20px 16px', display:'flex', flexDirection:'column', fontFamily:PP, position:'relative', zIndex:2 }}>
-                    <div style={{ fontSize:12, fontWeight:800, color:'#1a1a2a', marginBottom:18, lineHeight:1.3 }}>Ratal Advanced Technologies</div>
-                    <div style={{ fontSize:9, fontWeight:800, color:'#0079BC', letterSpacing:1.5, textTransform:'uppercase', marginBottom:4 }}>Fleet Management</div>
-                    <div style={{ fontSize:18, fontWeight:900, color:'#172D37', lineHeight:1.2, marginBottom:4 }}>{assignStep===1?'Vehicle Info':'Employee Info'}</div>
-                    <div style={{ fontSize:11, color:'#53666F', lineHeight:1.5, marginBottom:6 }}>{assignStep===1?'Select vehicle & period':'Assign to employee & confirm'}</div>
-                    <div style={{ fontSize:9, fontWeight:800, color:'#0079BC', letterSpacing:1, marginBottom:14 }}>STEP {assignStep} OF 2</div>
-                    <div style={{ flex:1, display:'flex', flexDirection:'column', gap:2 }}>
-                      {[['Vehicle Information','Fleet & dates'],['Employee Information','Assign & confirm']].map(([name,desc],idx)=>{
-                        const sn=idx+1, isAct=assignStep===sn, isDone=assignStep>sn;
-                        return (
-                          <div key={sn} onClick={()=>isDone&&setAssignStep(sn)} style={{ display:'flex', flexDirection:'column', padding:'8px 0 8px 12px', cursor:isDone?'pointer':'default', borderLeft:isAct?`3px solid ${PRI}`:isDone?'3px solid rgba(26,26,42,0.35)':'3px solid rgba(0,0,0,0.08)', marginBottom:2 }}>
-                            <div style={{ display:'flex', alignItems:'center' }}>
-                              <span style={{ fontSize:12, fontWeight:isAct?700:500, color:isAct?'#1a1a2a':isDone?'#1a1a2a':'#8888a0' }}>{name}</span>
-                              {isDone && <span style={{ marginLeft:6, fontSize:10, color:'#1a1a2a' }}>✓</span>}
-                            </div>
-                            <span style={{ fontSize:10, color:'#9090a0', marginTop:1 }}>{desc}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {assignStep===2 && assignForm.vehicle_id && (
-                      <div style={{ padding:'9px 12px', background:'#0079BC', borderRadius:10, marginTop:8 }}>
-                        <div style={{ fontSize:9, color:'silver', fontWeight:800, textTransform:'uppercase', letterSpacing:1, marginBottom:3 }}>Selected Vehicle</div>
-                        <div style={{ fontSize:14, fontWeight:900, color:'#fff', fontFamily:'monospace', letterSpacing:1 }}>{assignForm.plate_number||'—'}</div>
-                        <div style={{ fontSize:10, color:'#a0a0b8', marginTop:2 }}>{assignForm.make} {assignForm.model||''}</div>
-                        <div style={{ fontSize:10, color:'#a0a0b8' }}>{assignForm.ownership_type==='RENT'?'🔑 Rental':'🏢 Own'} · {assignForm.color||''}</div>
-                      </div>
-                    )}
-                    {assignStep===2 && (
-                      <div style={{ padding:'8px 10px', background:'#e8e8f0', borderRadius:8, marginTop:8 }}>
-                        <div style={{ fontSize:9, fontWeight:800, color:PRI, marginBottom:3 }}>🚦 Penalty Rule</div>
-                        <div style={{ fontSize:9, color:'#4a4a5a', lineHeight:1.5 }}>Traffic fines charged to assigned employee during this period.</div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* White card */}
-                  <div style={{ position:'absolute', top:22, right:22, bottom:22, left:248, background:'#fff', borderRadius:16, display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:'0 6px 24px rgba(26,26,42,0.14)', zIndex:3 }}>
-
-                    {/* Card header */}
-                    <div style={{ padding:'18px 22px 0', flexShrink:0 }}>
-                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-                        <div>
-                          <div style={{ fontSize:17, fontWeight:700, color:'#172D37' }}>{assignStep===1?'Vehicle Information':'Employee Information'}</div>
-                          <div style={{ fontSize:11, color:'#53666F', marginTop:2 }}>{assignStep===1?'Select period & vehicle from fleet':'Select department, employee & confirm'}</div>
-                        </div>
-                        <button onClick={closeAssign} style={{ background:'#f2f2f6', border:'none', color:'#6a6a80', borderRadius:8, width:28, height:28, cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>✕</button>
-                      </div>
-                      <div style={{ height:1, background:'#e0e0ea' }} />
-                    </div>
-
-                    {/* Form body */}
-                    <div style={{ flex:1, overflowY:'auto', padding:'16px 22px 10px', fontFamily:PP, display:'flex', flexDirection:'column' }}>
+        <FormShell
+          isOpen={showAssignForm}
+          onClose={closeAssign}
+          chapterName="Operations"
+          title={['Vehicle', 'Assignment', 'Form']}
+          description="Assign a fleet vehicle to an employee."
+          steps={['Vehicle Information', 'Employee Information']}
+          currentStep={assignStep}
+          onBack={assignStep === 1 ? closeAssign : () => setAssignStep(1)}
+          backLabel={assignStep === 1 ? 'Cancel' : 'Back'}
+          onNext={assignStep === 1 ? () => setAssignStep(2) : saveAssignment}
+          nextLabel={assignStep === 1 ? 'Next → Employee' : '🔑 Register Assignment'}
+          nextDisabled={assignStep === 1 ? !assignForm.vehicle_id : (savingAssign || availableVehicles.length === 0 || activeEmpAssignments.has(assignForm.employee_id))}
+        >
+        <div style={{ fontFamily: PP }}>
 
                       {/* PAGE 1 — Vehicle Information */}
                       {assignStep===1 && <>
@@ -810,10 +806,6 @@ export default function Vehicles({ entityId }) {
                           <div>
                             <label style={lblA}>Assignment Date</label>
                             <input type="date" style={inpA()} value={assignForm.assignment_date} onChange={e=>fa('assignment_date',e.target.value)} />
-                          </div>
-                          <div>
-                            <label style={lblA}>Expected Return Date</label>
-                            <input type="date" style={inpA()} value={assignForm.return_date} onChange={e=>fa('return_date',e.target.value)} />
                           </div>
                         </div>
                         <div style={{ fontSize:9, fontWeight:800, color:PRI, letterSpacing:1.5, textTransform:'uppercase', marginBottom:8, paddingBottom:4, borderBottom:'1.5px solid #e0e0ea' }}>Select Vehicle from Fleet</div>
@@ -839,18 +831,40 @@ export default function Vehicles({ entityId }) {
                           )}
                         </div>
                         {assignForm.vehicle_id ? (
-                          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:8, marginTop:4 }}>
-                            {[
-                              ['Type', assignForm.vehicle_type],
-                              ['Make', assignForm.make],
-                              ['Color', assignForm.color],
-                              ['Fleet', assignForm.ownership_type==='RENT'?'🔑 Rental':'🏢 Own'],
-                            ].map(([k,v])=>(
-                              <div key={k} style={{ background:'#f8f8fc', borderRadius:10, padding:'10px 12px', border:'1px solid #e0e0ea' }}>
-                                <div style={{ fontSize:9, color:'#8888a0', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:3 }}>{k}</div>
-                                <div style={{ fontSize:12, fontWeight:700, color:PRI }}>{v||'—'}</div>
+                          <div>
+                            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:8, marginTop:4 }}>
+                              {[
+                                ['Type',  assignForm.vehicle_type],
+                                ['Make',  assignForm.make],
+                                ['Color', assignForm.color],
+                                ['Fleet', assignForm.ownership_type==='RENT'?'🔑 Rental':'🏢 Own'],
+                              ].map(([k,v])=>(
+                                <div key={k} style={{ background: assignForm.ownership_type==='RENT'?'#EAF3F2':'#f8f8fc', borderRadius:10, padding:'10px 12px', border:`1px solid ${assignForm.ownership_type==='RENT'?'#b0cfe8':'#e0e0ea'}` }}>
+                                  <div style={{ fontSize:9, color:'#8888a0', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:3 }}>{k}</div>
+                                  <div style={{ fontSize:12, fontWeight:700, color:PRI }}>{v||'—'}</div>
+                                </div>
+                              ))}
+                            </div>
+                            {assignForm.ownership_type==='RENT' && (
+                              <div style={{ background:'#EAF3F2', border:'1.5px solid #b0cfe8', borderRadius:10, padding:'12px 14px', marginTop:10 }}>
+                                <div style={{ fontSize:9, fontWeight:800, color:PRI, letterSpacing:1.2, textTransform:'uppercase', marginBottom:10 }}>🔑 Rental Details</div>
+                                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+                                  {[
+                                    ['Party / Company',  assignForm.rental_company || '—'],
+                                    ['Rate / Day',       assignForm.rate_daily    ? `SAR ${(+assignForm.rate_daily).toLocaleString()}`   : '—'],
+                                    ['Rate / Month',     assignForm.rate_monthly  ? `SAR ${(+assignForm.rate_monthly).toLocaleString()}` : '—'],
+                                    ['KM / Day',         assignForm.km_per_day    ? `${(+assignForm.km_per_day).toLocaleString()} km`    : '—'],
+                                    ['KM / Month',       assignForm.km_per_month  ? `${(+assignForm.km_per_month).toLocaleString()} km`  : '—'],
+                                    ['Extra KM Rate',    assignForm.km_extra_rate ? `SAR ${assignForm.km_extra_rate}/km`                 : '—'],
+                                  ].map(([k,v])=>(
+                                    <div key={k} style={{ background:'#fff', borderRadius:8, padding:'8px 10px', border:'1px solid #d0e8f2' }}>
+                                      <div style={{ fontSize:9, color:'#8888a0', fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, marginBottom:2 }}>{k}</div>
+                                      <div style={{ fontSize:12, fontWeight:700, color:PRI }}>{v}</div>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
-                            ))}
+                            )}
                           </div>
                         ) : (
                           <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:6, opacity:0.35 }}>
@@ -876,8 +890,23 @@ export default function Vehicles({ entityId }) {
                             <label style={lblA}>Employee Name *</label>
                             <select style={inpA()} value={assignForm.employee_id} onChange={e=>onAssignEmployeeChange(e.target.value)} disabled={!assignForm.department_id}>
                               <option value="">{assignForm.department_id?'— Select Employee —':'Select dept first'}</option>
-                              {deptEmployees.map(e=><option key={e.id} value={e.id}>{e.full_name_en}</option>)}
+                              {deptEmployees.map(e=>{
+                                const held = activeEmpAssignments.get(e.id)
+                                return <option key={e.id} value={e.id} disabled={!!held}>
+                                  {e.full_name_en}{held ? ` — has ${held.plate_number} (must return first)` : ''}
+                                </option>
+                              })}
                             </select>
+                            {/* Warning if selected employee already holds a car */}
+                            {assignForm.employee_id && activeEmpAssignments.has(assignForm.employee_id) && (() => {
+                              const held = activeEmpAssignments.get(assignForm.employee_id)
+                              return (
+                                <div style={{ marginTop:6, background:'#ffebee', border:'1.5px solid #ef9a9a', borderRadius:8, padding:'8px 12px', fontSize:11, color:'#c62828', fontWeight:600 }}>
+                                  🚫 This employee is already holding <strong>{held.plate_number}</strong> (assigned {held.assignment_date}).
+                                  Record the return date for that vehicle before assigning a new one.
+                                </div>
+                              )
+                            })()}
                           </div>
                           <div>
                             <label style={lblA}>Iqama # / License # {assignForm.iqama_dl && <span style={{ fontSize:9, background:PRI, color:'#fff', borderRadius:4, padding:'1px 6px', marginLeft:4 }}>AUTO</span>}</label>
@@ -892,33 +921,15 @@ export default function Vehicles({ entityId }) {
                             <div>
                               <div style={{ fontSize:12, fontWeight:800, color:PRI, marginBottom:4 }}>Liability assigned to employee</div>
                               <div style={{ fontSize:11, color:'#6a6a80', lineHeight:1.6 }}>
-                                Any traffic fine for plate <strong style={{ color:PRI, fontFamily:'monospace' }}>{assignForm.plate_number||'—'}</strong> during <strong>{assignForm.assignment_date||'—'}</strong> → <strong>{assignForm.return_date||'open-ended'}</strong> is charged to the assigned employee, whether company-owned or rented.
+                                Any traffic fine for plate <strong style={{ color:PRI, fontFamily:'monospace' }}>{assignForm.plate_number||'—'}</strong> from <strong>{assignForm.assignment_date||'—'}</strong> onward is charged to the assigned employee until the vehicle is returned. Return date is recorded when the vehicle is handed back.
                               </div>
                             </div>
                           </div>
                         </div>
                       </>}
 
-                    </div>
-
-                    {/* Footer */}
-                    <div style={{ flexShrink:0, padding:'11px 22px 14px', borderTop:'1px solid #e0e0ea', display:'flex', justifyContent:'space-between', alignItems:'center', fontFamily:PP }}>
-                      <button onClick={assignStep===1?closeAssign:()=>setAssignStep(1)} style={{ background:'#747474', color:'#fff', border:'none', borderRadius:24, padding:'9px 24px', cursor:'pointer', fontSize:13, fontWeight:600 }}>{assignStep===1?'Cancel':'Back'}</button>
-                      <span style={{ fontSize:10, color:'#9090a0' }}>{assignStep===1?'Select vehicle to proceed':'Complete all fields to register'}</span>
-                      {assignStep===1
-                        ? <button onClick={()=>setAssignStep(2)} disabled={!assignForm.vehicle_id} style={{ background:assignForm.vehicle_id?PRI:'#c8c8d8', color:'#fff', border:'none', borderRadius:24, padding:'9px 28px', cursor:assignForm.vehicle_id?'pointer':'not-allowed', fontSize:13, fontWeight:700, boxShadow:assignForm.vehicle_id?'0 4px 14px rgba(26,26,42,0.28)':'none' }}>Next → Employee</button>
-                        : <button onClick={saveAssignment} disabled={savingAssign||availableVehicles.length===0}
-                            style={{ background:availableVehicles.length===0?'#ccc':PRI, color:'#fff', border:'none', borderRadius:24, padding:'9px 28px', cursor:availableVehicles.length===0?'not-allowed':'pointer', fontSize:13, fontWeight:700, boxShadow:availableVehicles.length===0?'none':'0 4px 14px rgba(26,26,42,0.30)' }}>
-                            {savingAssign?'Saving…':'🔑 Register Assignment'}
-                          </button>
-                      }
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
+        </FormShell>
         )
       })()}
 
@@ -1037,64 +1048,47 @@ export default function Vehicles({ entityId }) {
       )}
 
       {/* ── VEHICLE FORM MODAL ───────────────────────────────────────── */}
-      {showVehForm && (() => {
+      <FormShell
+        isOpen={showVehForm}
+        onClose={() => setShowVehForm(false)}
+        chapterName="Operations"
+        title={['New', 'Fleet', 'Vehicle']}
+        description="Register Own or Rental vehicle to the fleet."
+        steps={['Vehicle Details', 'Documents', 'Attachments', 'Notes & Review']}
+        currentStep={vehStep}
+        onBack={vehStep === 1 ? () => setShowVehForm(false) : () => setVehStep(s => s - 1)}
+        backLabel={vehStep === 1 ? 'Cancel' : 'Back'}
+        onNext={vehStep < 4 ? () => setVehStep(s => s + 1) : saveVehicle}
+        nextLabel={vehStep < 4 ? 'Save & Next' : (editVeh ? '✓ Update Vehicle' : '✓ Save Vehicle')}
+        nextDisabled={savingVeh && vehStep === 4}
+      >
+        {(() => {
         const PP = "'Poppins','Inter',sans-serif"
         const PRI = '#70A5A6'
-        const STEP_NAMES = ['','Vehicle Details','Documents','Attachments','Notes & Review']
-        const STEP_DESC  = ['','Type, plate, make, model & specs','Insurance / MVPI / Estemara expiry','Supporting files (optional)','Final notes & summary']
-        const inp2 = (ex={}) => ({ width:'100%', padding:'9px 14px', borderRadius:20, border:'1px solid #b0cfe8', fontSize:13, color:'#172D37', background:'#f8f8fc', outline:'none', fontFamily:PP, boxSizing:'border-box', ...ex })
         const sec2 = { fontSize:9, fontWeight:800, color:'#0079BC', letterSpacing:1.5, textTransform:'uppercase', marginBottom:8, marginTop:12, paddingBottom:4, borderBottom:'1.5px solid #b0cfe8' }
         const lbl2 = { display:'block', fontSize:11, fontWeight:600, color:'#53666F', marginBottom:4 }
+        const inp2 = (ex={}) => ({ width:'100%', padding:'9px 14px', borderRadius:6, border:'1px solid #b0cfe8', fontSize:13, color:'#172D37', background:'#f8f8fc', outline:'none', fontFamily:PP, boxSizing:'border-box', ...ex })
         return (
-        <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&setShowVehForm(false)}>
-          <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap');`}</style>
-          <div style={{ background:'#70A5A6', borderRadius:18, padding:8, width:960, maxWidth:'calc(100vw - 24px)', boxShadow:'0 28px 64px rgba(0,0,0,0.32)', fontFamily:PP }}>
-
-
-            <div style={{ background:'#EAF3F2', borderRadius:12, display:'flex', position:'relative', overflow:'hidden', minHeight:520 }}>
-                  <div style={{ position:'absolute', top:0, right:0, width:220, height:185, background:'#0079BC', borderRadius:'0 12px 0 90px', zIndex:1 }} />
-
-                  {/* Sidebar */}
-                  <div style={{ width:260, flexShrink:0, padding:'20px 20px 16px', display:'flex', flexDirection:'column', fontFamily:PP, position:'relative', zIndex:2 }}>
-                    <div style={{ fontSize:9, fontWeight:800, color:'#53666F', letterSpacing:1.5, textTransform:'uppercase', marginBottom:4 }}>Ratal Advanced Technologies</div>
-                    <div style={{ fontSize:9, fontWeight:800, color:'#0079BC', letterSpacing:1.5, textTransform:'uppercase', marginBottom:4 }}>Operations</div>
-                    <div style={{ fontSize:20, fontWeight:900, color:'#172D37', lineHeight:1.2, marginBottom:6 }}>{STEP_NAMES[vehStep]}</div>
-                    <div style={{ fontSize:11, color:'#53666F', lineHeight:1.5, marginBottom:8 }}>{STEP_DESC[vehStep]}</div>
-                    <div style={{ fontSize:9, fontWeight:800, color:'#0079BC', letterSpacing:1, marginBottom:14 }}>STEP {vehStep} OF 4</div>
-                    <div style={{ flex:1, display:'flex', flexDirection:'column', gap:1 }}>
-                      {['Vehicle Details','Documents','Attachments','Notes & Review'].map((name,idx)=>{
-                        const sn=idx+1, isAct=vehStep===sn, isDone=vehStep>sn
-                        return (
-                          <div key={sn} onClick={()=>isDone&&setVehStep(sn)} style={{ display:'flex', alignItems:'center', padding:'8px 0 8px 12px', cursor:isDone?'pointer':'default', borderLeft:isAct?'3px solid #0079BC':isDone?'rgba(0,121,188,0.35)':undefined }}>
-                            <span style={{ fontSize:12, fontWeight:isAct?700:500, color:isAct?'#172D37':isDone?'#0079BC':'#53666F' }}>{name}</span>
-                            {isDone && <span style={{ marginLeft:6, fontSize:10, color:'#0079BC' }}>✓</span>}
-                          </div>
-                        )
-                      })}
-                    </div>
-                    {editVeh && <div style={{ background:'#EAF3F2', borderRadius:8, padding:'8px 10px', marginTop:10, fontSize:10, color:'#0079BC', fontWeight:700 }}>✏️ Editing: {editVeh.plate_number}</div>}
-                  </div>
-
-                  {/* White card (L4) */}
-                  <div style={{ flex:1, background:'#fff', borderRadius:10, margin:'56px 10px 10px 0', display:'flex', flexDirection:'column', overflow:'hidden', zIndex:3 }}>
-
-                    {/* Card header */}
-                    <div style={{ padding:'18px 22px 0', flexShrink:0 }}>
-                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-                        <div>
-                          <div style={{ fontSize:17, fontWeight:700, color:'#172D37' }}>{['','Vehicle Details','Document Expiry','Attachments','Notes & Review'][vehStep]}</div>
-                          {vehForm.plate_number && <div style={{ fontSize:11, color:'#0079BC', fontWeight:700, marginTop:2 }}>{vehForm.plate_number} · {vehForm.ownership_type==='RENT'?'Rental':'Own Fleet'}</div>}
-                        </div>
-                        <button onClick={()=>setShowVehForm(false)} style={{ background:'#f0f4f8', border:'none', color:'#53666F', borderRadius:8, width:28, height:28, cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>✕</button>
-                      </div>
-                      <div style={{ height:1, background:'#b0cfe8' }} />
-                    </div>
-
-                    {/* Scrollable form */}
-                    <div style={{ flex:1, overflowY:'auto', padding:'14px 22px 10px', fontFamily:PP }}>
+        <div style={{ fontFamily: PP }}>
 
                       {/* Step 1: Vehicle Details */}
                       {vehStep===1 && <>
+                {/* Fleet Type Toggle */}
+                <div style={{ marginBottom:16 }}>
+                  <div style={{ fontSize:9, fontWeight:800, color:PRI, letterSpacing:1.5, textTransform:'uppercase', marginBottom:8, paddingBottom:4, borderBottom:'1.5px solid #e0e0ea' }}>Fleet Category *</div>
+                  <div style={{ display:'flex', gap:12 }}>
+                    {[['OWN','🏢 Own Fleet','Company-owned vehicle'],['RENT','🔑 Rental Fleet','Third-party rental vehicle']].map(([v,lbl,desc])=>(
+                      <button key={v} type="button" onClick={()=>fv('ownership_type',v)}
+                        style={{ flex:1, padding:'13px 16px', borderRadius:10,
+                          border:`2px solid ${vehForm.ownership_type===v ? PRI : '#d0d8e8'}`,
+                          background: vehForm.ownership_type===v ? '#EAF3F2' : '#f8f8fc',
+                          cursor:'pointer', textAlign:'left', fontFamily:PP, outline:'none' }}>
+                        <div style={{ fontWeight:800, fontSize:13, color: vehForm.ownership_type===v ? PRI : '#53666F' }}>{lbl}</div>
+                        <div style={{ fontSize:10, color:'#8888a0', marginTop:2 }}>{desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 {vehForm.ownership_type==='RENT' && (
                   <div style={{ background:'#EAF3F2', border:'1.5px solid #0079BC', borderRadius:12, padding:'16px 18px', marginBottom:18 }}>
                     <div style={{ fontWeight:800, fontSize:12, color:PRI, textTransform:'uppercase', letterSpacing:0.8, marginBottom:12, display:'flex', alignItems:'center', gap:6 }}>
@@ -1102,12 +1096,35 @@ export default function Vehicles({ entityId }) {
                     </div>
                     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
                       <div>
-                        <label style={{ ...S.label, color:'#0079BC' }}>Rental Company Name *</label>
-                        <input style={{ ...S.inp, background:'#fff' }} value={vehForm.rental_company} onChange={e=>fv('rental_company',e.target.value)} placeholder="Company name from Party List" />
+                        <label style={{ ...S.label, color:'#0079BC' }}>Rental Company * <span style={{ fontWeight:400 }}>(from Party List)</span></label>
+                        <select
+                          style={{ ...S.inp, background:'#fff', fontWeight:600 }}
+                          value={vehForm.rental_contractor_id}
+                          onChange={e => {
+                            const con = contractors.find(c => c.id === e.target.value)
+                            fv('rental_contractor_id', e.target.value)
+                            fv('rental_company',       con?.contractor_name || '')
+                            fv('rental_vat_no',        con?.vat_number      || '')
+                          }}>
+                          <option value="">— Select from Party List —</option>
+                          {contractors.map(c => (
+                            <option key={c.id} value={c.id}>
+                              {c.contractor_name}{c.vendor_type ? ` · ${c.vendor_type}` : ''}
+                            </option>
+                          ))}
+                        </select>
+                        {contractors.length === 0 && (
+                          <div style={{ fontSize:10, color:'#c62828', marginTop:3 }}>⚠ No parties found — add them in Party List first</div>
+                        )}
                       </div>
                       <div>
-                        <label style={{ ...S.label, color:'#0079BC' }}>Rental Company VAT No.</label>
-                        <input style={{ ...S.inp, background:'#fff' }} value={vehForm.rental_vat_no} onChange={e=>fv('rental_vat_no',e.target.value)} placeholder="300XXXXXXXXXX" />
+                        <label style={{ ...S.label, color:'#0079BC' }}>VAT No. <span style={{ fontWeight:400 }}>(auto-filled)</span></label>
+                        <input
+                          style={{ ...S.inp, background:'#f0f4f8', color: vehForm.rental_vat_no ? PRI : '#8888a0', fontFamily:'monospace', fontWeight:700 }}
+                          value={vehForm.rental_vat_no || ''}
+                          readOnly
+                          placeholder="Auto-filled from Party List"
+                        />
                       </div>
                     </div>
                     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
@@ -1120,16 +1137,27 @@ export default function Vehicles({ entityId }) {
                         <input type="date" style={{ ...S.inp, background:'#fff' }} value={vehForm.rent_end} onChange={e=>fv('rent_end',e.target.value)} />
                       </div>
                     </div>
-                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:12 }}>
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, marginBottom:12 }}>
                       {[
                         ['rate_daily',   'Rate / Day (SAR)',   '0.00'],
                         ['rate_monthly', 'Rate / Month (SAR)', '0.00'],
-                        ['km_per_day',   'Allowed KM / Day',   '0'],
-                        ['km_per_month', 'Allowed KM / Month', '0'],
+                        ['km_extra_rate','Extra KM Rate (SAR/km)', '0.00'],
                       ].map(([k,l,ph])=>(
                         <div key={k}>
                           <label style={{ ...S.label, color:'#0079BC' }}>{l}</label>
                           <input type="number" min="0" step="0.01" style={{ ...S.inp, background:'#fff', fontWeight:700, color:PRI }}
+                            value={vehForm[k]} onChange={e=>fv(k,e.target.value)} placeholder={ph} />
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                      {[
+                        ['km_per_day',   'Allowed KM / Day',   '200'],
+                        ['km_per_month', 'Allowed KM / Month', '6000'],
+                      ].map(([k,l,ph])=>(
+                        <div key={k}>
+                          <label style={{ ...S.label, color:'#0079BC' }}>{l}</label>
+                          <input type="number" min="0" step="1" style={{ ...S.inp, background:'#fff', fontWeight:700, color:PRI }}
                             value={vehForm[k]} onChange={e=>fv(k,e.target.value)} placeholder={ph} />
                         </div>
                       ))}
@@ -1153,10 +1181,21 @@ export default function Vehicles({ entityId }) {
                   <div><label style={lbl2}>Odometer (km)</label><input type="number" style={inp2()} value={vehForm.odometer_reading} onChange={e=>fv('odometer_reading',e.target.value)} /></div>
                 </div>
                 {vehForm.ownership_type==='OWN' && (
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
-                    <div><label style={lbl2}>Chassis No.</label><input style={inp2({ fontFamily:'monospace' })} value={vehForm.chassis_no} onChange={e=>fv('chassis_no',e.target.value)} /></div>
-                    <div><label style={lbl2}>Engine No.</label><input style={inp2({ fontFamily:'monospace' })} value={vehForm.engine_no} onChange={e=>fv('engine_no',e.target.value)} /></div>
-                  </div>
+                  <>
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
+                      <div><label style={lbl2}>Chassis No.</label><input style={inp2({ fontFamily:'monospace' })} value={vehForm.chassis_no} onChange={e=>fv('chassis_no',e.target.value)} /></div>
+                      <div><label style={lbl2}>Engine No.</label><input style={inp2({ fontFamily:'monospace' })} value={vehForm.engine_no} onChange={e=>fv('engine_no',e.target.value)} /></div>
+                    </div>
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 2fr', gap:12, marginBottom:12 }}>
+                      <div>
+                        <label style={lbl2}>Fleet Value (SAR)</label>
+                        <input type="number" style={inp2()} value={vehForm.fleet_value}
+                          onChange={e=>fv('fleet_value',e.target.value)}
+                          placeholder="Declared market value" />
+                        <div style={{ fontSize:10, color:'#6b7c93', marginTop:3 }}>Used for insurance — comprehensive coverage calculation</div>
+                      </div>
+                    </div>
+                  </>
                 )}
                       </>}
 
@@ -1247,22 +1286,10 @@ export default function Vehicles({ entityId }) {
                         </div>
                       </>}
 
-                    </div>
-
-                  </div>
-                </div>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 16px 4px', fontFamily:PP }}>
-            <button onClick={vehStep===1?()=>setShowVehForm(false):()=>setVehStep(s=>s-1)} style={{ background:'#747474', color:'#fff', border:'none', borderRadius:24, padding:'9px 24px', cursor:'pointer', fontSize:13, fontWeight:600 }}>{vehStep===1?'Cancel':'Back'}</button>
-            <span style={{ fontSize:10, color:'#53666F' }}>Step {vehStep} of 4 — {STEP_DESC[vehStep]}</span>
-            {vehStep<4
-              ? <button onClick={()=>setVehStep(s=>s+1)} style={{ background:PRI, color:'#fff', border:'none', borderRadius:24, padding:'9px 28px', cursor:'pointer', fontSize:13, fontWeight:700, boxShadow:'0 4px 14px rgba(0,121,188,0.28)' }}>Save &amp; Next</button>
-              : <button onClick={saveVehicle} disabled={savingVeh} style={{ background:savingVeh?'#ccc':PRI, color:'#fff', border:'none', borderRadius:24, padding:'9px 28px', cursor:savingVeh?'not-allowed':'pointer', fontSize:13, fontWeight:700 }}>{savingVeh?'Saving…':editVeh?'✓ Update Vehicle':'✓ Save Vehicle'}</button>
-            }
-          </div>
-          </div>
         </div>
         )
-      })()}
+        })()}
+      </FormShell>
 
       {/* ── MAINTENANCE FORM MODAL ───────────────────────────────────── */}
       {showMaintForm && (

@@ -1,157 +1,206 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth'
-import PageBanner from '../components/PageBanner'
+import FormShell from '../components/FormShell'
 
 // ═══════════════════════════════════════════════════════════════════
-// Document Vault — Phase 20
+// Document Vault — v2
 //
-// Store, search, and track documents: contracts, licenses, MOUs,
-// insurance policies, visas, certificates.
-// File upload via Supabase Storage bucket 'documents'.
-// Expiry alerts at configurable threshold.
+// Redesigned with:
+//  - Left sidebar: entity type sections → doc type list (click to filter)
+//  - Modal: Link To first → entity → doc type (no manual title needed)
+//  - Title auto-generated from doc type
 // ═══════════════════════════════════════════════════════════════════
 
-// ── Context-aware document categories by linked_type ─────────────
-// Category = WHAT the document IS (not a filing bucket)
+// ── Palette (Administration = indigo) ────────────────────────────────
+const PRI = '#454D9B'
+const L1  = '#AAAED0'
+const L2  = '#F0F1FA'
+const PP  = "'Poppins','Segoe UI',sans-serif"
+
+// ── Sidebar category config ───────────────────────────────────────────
+const SIDEBAR_CATS = [
+  { key:'EMPLOYEE',       label:'Employee',        icon:'👤', color:'#6a1b9a', light:'#f3e5f5' },
+  { key:'VEHICLE',        label:'Fleet',           icon:'🚗', color:'#e65100', light:'#fff3e0' },
+  { key:'CONTRACTOR',     label:'Contractor',      icon:'🏗️', color:'#2e7d32', light:'#e8f5e9' },
+  { key:'SUBCONTRACTOR',  label:'Sub-contractor',  icon:'🔧', color:'#6d4c41', light:'#efebe9' },
+  { key:'SUPPLIER',       label:'Supplier',        icon:'📦', color:'#1565c0', light:'#e3f2fd' },
+  { key:'LOCAL_SUPPLIER', label:'Local Supplier',  icon:'🛒', color:'#00695c', light:'#e0f2f1' },
+  { key:'VENDOR',         label:'Vendor',          icon:'🤝', color:'#5d4037', light:'#efebe9' },
+  { key:'PROJECT',        label:'Project',         icon:'📁', color:'#37474f', light:'#eceff1' },
+  { key:'COMPANY',        label:'Company',         icon:'🏢', color:'#1565c0', light:'#e3f2fd' },
+]
+
+// ── Doc type taxonomy ─────────────────────────────────────────────────
 const DOC_CATEGORIES = {
   EMPLOYEE: [
-    'IQAMA',          // Residency Permit (Expats)
-    'DRIVING_LICENSE',// DL
-    'PASSPORT',       // Passport
-    'NATIONAL_ID',    // Saudi ID
-    'QIWA',           // QIWA Labour platform certificate
-    'SCE',            // Saudi Council of Engineers
-    'MEDICAL_INSURANCE',
-    'WORK_PERMIT',
-    'EMPLOYMENT_CONTRACT',
-    'SALARY_CERTIFICATE',
-    'TRAINING_CERTIFICATE',
-    'GOSI_CERTIFICATE',
-    'OTHER',
-  ],
-  CONTRACTOR: [
-    'CR',             // Commercial Registration
-    'VAT_CERTIFICATE',
-    'CHAMBER_OF_COMMERCE',
-    'GOSI_CERTIFICATE',
-    'SAUDIZATION',    // Nitaqat certificate
-    'ISO_CERTIFICATE',
-    'VENDOR_APPROVAL',// Client/Aramco/SABIC approval
-    'MOI_LICENSE',
-    'CONTRACT',
-    'MOU',
-    'BANK_GUARANTEE',
-    'INSURANCE',
-    'OTHER',
-  ],
-  SUBCONTRACTOR: [
-    // Individual / person-based sub-contractors (no formal company registration)
-    'IQAMA',          // Most common for individual SubCons
-    'DRIVING_LICENSE',
-    'PASSPORT',
-    'NATIONAL_ID',    // Saudi nationals
-    'QIWA',           // QIWA individual labour card
-    'SCE',            // Engineering certification (individual)
-    'MEDICAL_INSURANCE',
-    // Company-based sub-contractors
-    'CR',
-    'VAT_CERTIFICATE',
-    'CHAMBER_OF_COMMERCE',
-    'GOSI_CERTIFICATE',
-    'SAUDIZATION',
-    'VENDOR_APPROVAL',
-    'MOI_LICENSE',
-    // Common to both
-    'CONTRACT',
-    'PERFORMANCE_BOND',
-    'INSURANCE',
+    'IQAMA','DRIVING_LICENSE','PASSPORT','NATIONAL_ID','QIWA','SCE',
+    'MEDICAL_INSURANCE','WORK_PERMIT','EMPLOYMENT_CONTRACT',
+    'SALARY_CERTIFICATE','TRAINING_CERTIFICATE','GOSI_CERTIFICATE',
+    'DEPENDENT_IQAMA','DEPENDENT_PASSPORT','DEPENDENT_INSURANCE',
     'OTHER',
   ],
   VEHICLE: [
-    'ISTIMARA',       // Vehicle registration (Mulkia)
-    'INSURANCE',
-    'INSPECTION',     // Periodic inspection / Fahas
-    'DRIVING_LICENSE',// Driver license copy
-    'LEASING_CONTRACT',
-    'OTHER',
+    'ISTIMARA','INSURANCE','INSPECTION','DRIVING_LICENSE','LEASING_CONTRACT','OTHER',
+  ],
+  CONTRACTOR: [
+    'CR','VAT_CERTIFICATE','CHAMBER_OF_COMMERCE','GOSI_CERTIFICATE',
+    'SAUDIZATION','ISO_CERTIFICATE','VENDOR_APPROVAL','MOI_LICENSE',
+    'CONTRACT','MOU','BANK_GUARANTEE','INSURANCE','OTHER',
+  ],
+  SUBCONTRACTOR: [
+    'IQAMA','DRIVING_LICENSE','PASSPORT','NATIONAL_ID','QIWA','SCE','MEDICAL_INSURANCE',
+    'CR','VAT_CERTIFICATE','CHAMBER_OF_COMMERCE','GOSI_CERTIFICATE','SAUDIZATION',
+    'VENDOR_APPROVAL','MOI_LICENSE','CONTRACT','PERFORMANCE_BOND','INSURANCE','OTHER',
+  ],
+  SUPPLIER: [
+    'CR','VAT_CERTIFICATE','CHAMBER_OF_COMMERCE','GOSI_CERTIFICATE',
+    'SAUDIZATION','ISO_CERTIFICATE','VENDOR_APPROVAL','MOI_LICENSE',
+    'CONTRACT','MOU','BANK_GUARANTEE','INSURANCE','INVOICE','OTHER',
+  ],
+  LOCAL_SUPPLIER: [
+    'CR','VAT_CERTIFICATE','CHAMBER_OF_COMMERCE','MOI_LICENSE',
+    'CONTRACT','INVOICE','INSURANCE','OTHER',
+  ],
+  VENDOR: [
+    'CR','VAT_CERTIFICATE','CHAMBER_OF_COMMERCE','GOSI_CERTIFICATE',
+    'SAUDIZATION','ISO_CERTIFICATE','VENDOR_APPROVAL','MOI_LICENSE',
+    'CONTRACT','MOU','BANK_GUARANTEE','INSURANCE','OTHER',
   ],
   PROJECT: [
-    'CONTRACT',
-    'MOU',
-    'PURCHASE_ORDER',
-    'BANK_GUARANTEE',
-    'INSURANCE',
-    'COMPLETION_CERTIFICATE',
-    'HANDOVER_CERTIFICATE',
-    'VARIATION_ORDER',
-    'OTHER',
+    'CONTRACT','MOU','PURCHASE_ORDER','BANK_GUARANTEE','INSURANCE',
+    'COMPLETION_CERTIFICATE','HANDOVER_CERTIFICATE','VARIATION_ORDER','OTHER',
   ],
   COMPANY: [
-    'CR',
-    'VAT_CERTIFICATE',
-    'CHAMBER_OF_COMMERCE',
-    'GOSI_CERTIFICATE',
-    'SAUDIZATION',
-    'MOI_LICENSE',
-    'ARAMCO_APPROVAL',
-    'SABIC_APPROVAL',
-    'ISO_CERTIFICATE',
-    'OTHER',
-  ],
-  OTHER: [
-    'CONTRACT','CERTIFICATE','LICENSE','INVOICE','LEGAL','OTHER',
+    'CR','VAT_CERTIFICATE','CHAMBER_OF_COMMERCE','GOSI_CERTIFICATE',
+    'SAUDIZATION','MOI_LICENSE','ARAMCO_APPROVAL','SABIC_APPROVAL','ISO_CERTIFICATE','OTHER',
   ],
 }
 
-// All unique categories (for filter dropdown across all types)
-const ALL_CATEGORIES = [...new Set(Object.values(DOC_CATEGORIES).flat())]
+const ALL_CAT_KEYS = [...new Set(Object.values(DOC_CATEGORIES).flat())]
 
-// Helper — get category list for a given linked_type (fallback to generic)
-function getCats(linkedType) {
-  return DOC_CATEGORIES[linkedType] || DOC_CATEGORIES.OTHER
+const CAT_LABELS = {
+  IQAMA:'Iqama (Residency Permit)',
+  DRIVING_LICENSE:'Driving Licence',
+  PASSPORT:'Passport',
+  NATIONAL_ID:'National ID (Saudi)',
+  QIWA:'QIWA Certificate',
+  SCE:'SCE Certificate',
+  MEDICAL_INSURANCE:'Medical Insurance',
+  WORK_PERMIT:'Work Permit',
+  EMPLOYMENT_CONTRACT:'Employment Contract',
+  SALARY_CERTIFICATE:'Salary Certificate',
+  TRAINING_CERTIFICATE:'Training Certificate',
+  GOSI_CERTIFICATE:'GOSI Certificate',
+  CR:'CR (Commercial Registration)',
+  VAT_CERTIFICATE:'VAT Registration Certificate',
+  CHAMBER_OF_COMMERCE:'Chamber of Commerce',
+  SAUDIZATION:'Saudization / Nitaqat',
+  ISO_CERTIFICATE:'ISO Certificate',
+  VENDOR_APPROVAL:'Vendor / Client Approval',
+  MOI_LICENSE:'MOI License',
+  BANK_GUARANTEE:'Bank Guarantee',
+  ARAMCO_APPROVAL:'Aramco Approval',
+  SABIC_APPROVAL:'SABIC Approval',
+  PERFORMANCE_BOND:'Performance Bond',
+  ISTIMARA:'Istimara (Vehicle Registration)',
+  INSPECTION:'Inspection / Fahas Certificate',
+  LEASING_CONTRACT:'Leasing / Rental Contract',
+  PURCHASE_ORDER:'Purchase Order',
+  COMPLETION_CERTIFICATE:'Completion Certificate',
+  HANDOVER_CERTIFICATE:'Handover Certificate',
+  VARIATION_ORDER:'Variation Order',
+  MOU:'MOU',
+  CONTRACT:'Contract',
+  CERTIFICATE:'Certificate',
+  LICENSE:'License',
+  INVOICE:'Invoice',
+  LEGAL:'Legal Document',
+  INSURANCE:'Insurance',
+  DEPENDENT_IQAMA:'Dependent Iqama',
+  DEPENDENT_PASSPORT:'Dependent Passport',
+  DEPENDENT_INSURANCE:'Dependent Medical Insurance',
+  OTHER:'Other',
 }
 
-const STATUSES   = ['ACTIVE','EXPIRING_SOON','EXPIRED','RENEWED','CANCELLED']
-const LINK_TYPES = ['EMPLOYEE','PROJECT','CONTRACTOR','SUBCONTRACTOR','VEHICLE','COMPANY','OTHER']
-
-// Map linked_type → { table, labelCol, numberCol }
-const LINK_TABLE = {
-  EMPLOYEE:      { table:'employees',  labelCol:'full_name_en', numberCol:'employee_number' },
-  PROJECT:       { table:'projects',   labelCol:'project_name', numberCol:'project_code' },
-  CONTRACTOR:    { table:'contractors',labelCol:'company_name', numberCol:'cr_number' },
-  SUBCONTRACTOR: { table:'contractors',labelCol:'company_name', numberCol:'cr_number' },
-  VEHICLE:       { table:'vehicles',   labelCol:'plate_number', numberCol:'vehicle_model' },
+const CAT_ICONS = {
+  IQAMA:'🪪', DRIVING_LICENSE:'🚗', PASSPORT:'✈️', NATIONAL_ID:'🪪',
+  QIWA:'💼', SCE:'🏗️', MEDICAL_INSURANCE:'🏥', WORK_PERMIT:'📋',
+  EMPLOYMENT_CONTRACT:'📄', SALARY_CERTIFICATE:'💰', TRAINING_CERTIFICATE:'🏅',
+  CR:'🏢', VAT_CERTIFICATE:'💹', CHAMBER_OF_COMMERCE:'🏛️',
+  GOSI_CERTIFICATE:'🛡️', SAUDIZATION:'🇸🇦', ISO_CERTIFICATE:'✅',
+  VENDOR_APPROVAL:'👍', MOI_LICENSE:'⚖️', BANK_GUARANTEE:'🏦',
+  ARAMCO_APPROVAL:'⛽', SABIC_APPROVAL:'🧪', PERFORMANCE_BOND:'📑',
+  ISTIMARA:'🚘', INSPECTION:'🔍', LEASING_CONTRACT:'🔑',
+  PURCHASE_ORDER:'📦', COMPLETION_CERTIFICATE:'✔️', HANDOVER_CERTIFICATE:'🤝',
+  VARIATION_ORDER:'🔄', MOU:'🤝', CONTRACT:'📄', CERTIFICATE:'🏅',
+  LICENSE:'🪪', INVOICE:'🧾', LEGAL:'⚖️', INSURANCE:'🛡️',
+  DEPENDENT_IQAMA:'👨‍👩‍👧', DEPENDENT_PASSPORT:'🛂', DEPENDENT_INSURANCE:'👪',
+  OTHER:'📁',
 }
 
-// Auto-fill: which authority issues each document type
+// Auto-fill issuing authority
 const ISSUING_AUTHORITY = {
-  IQAMA:               'Ministry of Interior (MOI)',
-  DRIVING_LICENSE:     'General Directorate of Traffic (MOI)',
-  PASSPORT:            'General Directorate of Passports (MOI)',
-  NATIONAL_ID:         'National Information Center (NIC)',
-  QIWA:                'Ministry of Human Resources (MHRSD) — QIWA',
-  SCE:                 'Saudi Council of Engineers (SCE)',
-  WORK_PERMIT:         'Ministry of Human Resources (MHRSD)',
-  GOSI_CERTIFICATE:    'General Organization for Social Insurance (GOSI)',
-  CR:                  'Ministry of Commerce (MOC)',
-  VAT_CERTIFICATE:     'Zakat, Tax and Customs Authority (ZATCA)',
-  CHAMBER_OF_COMMERCE: 'Chamber of Commerce',
-  SAUDIZATION:         'Ministry of Human Resources (MHRSD)',
-  MOI_LICENSE:         'Ministry of Interior (MOI)',
-  ARAMCO_APPROVAL:     'Saudi Aramco',
-  SABIC_APPROVAL:      'SABIC',
-  ISTIMARA:            'General Directorate of Traffic (MOI)',
-  INSPECTION:          'General Directorate of Traffic (MOI)',
-  ISO_CERTIFICATE:     'ISO Certification Body',
+  IQAMA:'Ministry of Interior (MOI)',
+  DRIVING_LICENSE:'General Directorate of Traffic (MOI)',
+  PASSPORT:'General Directorate of Passports (MOI)',
+  NATIONAL_ID:'National Information Center (NIC)',
+  QIWA:'Ministry of Human Resources (MHRSD) — QIWA',
+  SCE:'Saudi Council of Engineers (SCE)',
+  WORK_PERMIT:'Ministry of Human Resources (MHRSD)',
+  GOSI_CERTIFICATE:'General Organization for Social Insurance (GOSI)',
+  CR:'Ministry of Commerce (MOC)',
+  VAT_CERTIFICATE:'Zakat, Tax and Customs Authority (ZATCA)',
+  CHAMBER_OF_COMMERCE:'Chamber of Commerce',
+  SAUDIZATION:'Ministry of Human Resources (MHRSD)',
+  MOI_LICENSE:'Ministry of Interior (MOI)',
+  ARAMCO_APPROVAL:'Saudi Aramco',
+  SABIC_APPROVAL:'SABIC',
+  ISTIMARA:'General Directorate of Traffic (MOI)',
+  INSPECTION:'General Directorate of Traffic (MOI)',
+  ISO_CERTIFICATE:'ISO Certification Body',
+  DEPENDENT_IQAMA:'General Directorate of Passports (JAWAZAT)',
+  DEPENDENT_PASSPORT:'Home Country Embassy / Consulate',
+  DEPENDENT_INSURANCE:'Insurance Provider',
 }
 
-// Entity code → company name (for Owner auto-fill)
-const ENTITY_COMPANY = {
-  ACCSYS: 'Ratal Advanced Technologies',
-  RAT:    'Ratal Group',
-  GWT:    'GWT',
+// Who bears responsibility — 'COMPANY' = on us, 'EMPLOYEE' = employee's own obligation
+const DOC_RESPONSIBLE = {
+  DEPENDENT_IQAMA:      'COMPANY',   // sponsored + paid by employer
+  DEPENDENT_INSURANCE:  'COMPANY',   // covered by employer
+  DEPENDENT_PASSPORT:   'EMPLOYEE',  // employee's personal responsibility
 }
+
+// Static company list (entities in this ACCSYS installation)
+const COMPANY_LIST = [
+  { id:'ACCSYS', name:'Ratal Advanced Technologies' },
+  { id:'RAT',    name:'Ratal Tours & Travels' },
+  { id:'GWT',    name:'Green Wings Travel' },
+]
+
+// Entity tables for lookup
+// filter: optional { col, val } applied as .eq(col, val)
+// selectCols: override the auto-built select string
+// displayFn: custom option label builder fn(row) → string
+const LINK_TABLE = {
+  EMPLOYEE:       { table:'employees',   labelCol:'full_name_en',  numberCol:'employee_number' },
+  PROJECT:        { table:'projects',    labelCol:'project_name',  numberCol:'project_number' },
+  VEHICLE:        {
+    table:'vehicles',
+    labelCol:'plate_number',
+    numberCol:'make',
+    selectCols:'id,plate_number,vehicle_type,make,model',
+    displayFn: r => [r.plate_number, [r.vehicle_type,r.make,r.model].filter(Boolean).join(' ')].filter(Boolean).join(' · ')
+  },
+  CONTRACTOR:     { table:'contractors', labelCol:'company_name',  numberCol:'cr_number', filter:{ col:'vendor_type', val:'CONTRACTOR' } },
+  SUBCONTRACTOR:  { table:'contractors', labelCol:'company_name',  numberCol:'cr_number', filter:{ col:'vendor_type', val:'SUB_CONTRACTOR' } },
+  SUPPLIER:       { table:'contractors', labelCol:'company_name',  numberCol:'cr_number', filter:{ col:'vendor_type', val:'SUPPLIER' } },
+  LOCAL_SUPPLIER: { table:'contractors', labelCol:'company_name',  numberCol:'cr_number', filter:{ col:'vendor_type', val:'LOCAL_SUPPLIER' } },
+  VENDOR:         { table:'contractors', labelCol:'company_name',  numberCol:'cr_number', filter:{ col:'vendor_type', val:'VENDOR' } },
+}
+
+const STATUSES    = ['ACTIVE','EXPIRING_SOON','EXPIRED','RENEWED','CANCELLED']
+const LINK_TYPES  = ['EMPLOYEE','PROJECT','CONTRACTOR','SUBCONTRACTOR','VEHICLE','COMPANY','OTHER']
 
 const STATUS_COLORS = {
   ACTIVE:        { bg:'#e8f5e9', color:'#2e7d32', border:'#a5d6a7' },
@@ -161,180 +210,136 @@ const STATUS_COLORS = {
   CANCELLED:     { bg:'#f5f5f5', color:'#757575', border:'#e0e0e0' },
 }
 
-const CAT_ICONS = {
-  // Employee docs
-  IQAMA:'🪪', DRIVING_LICENSE:'🚗', PASSPORT:'✈️', NATIONAL_ID:'🪪',
-  QIWA:'💼', SCE:'🏗️', MEDICAL_INSURANCE:'🏥', WORK_PERMIT:'📋',
-  EMPLOYMENT_CONTRACT:'📄', SALARY_CERTIFICATE:'💰', TRAINING_CERTIFICATE:'🏅',
-  // Contractor/Company docs
-  CR:'🏢', VAT_CERTIFICATE:'💹', CHAMBER_OF_COMMERCE:'🏛️',
-  GOSI_CERTIFICATE:'🛡️', SAUDIZATION:'🇸🇦', ISO_CERTIFICATE:'✅',
-  VENDOR_APPROVAL:'👍', MOI_LICENSE:'⚖️', BANK_GUARANTEE:'🏦',
-  ARAMCO_APPROVAL:'⛽', SABIC_APPROVAL:'🧪', PERFORMANCE_BOND:'📑',
-  // Vehicle docs
-  ISTIMARA:'🚘', INSPECTION:'🔍', LEASING_CONTRACT:'🔑',
-  // Project docs
-  PURCHASE_ORDER:'📦', COMPLETION_CERTIFICATE:'✔️', HANDOVER_CERTIFICATE:'🤝',
-  VARIATION_ORDER:'🔄',
-  // Generic
-  MOU:'🤝', CONTRACT:'📄', CERTIFICATE:'🏅', LICENSE:'🪪',
-  INVOICE:'🧾', LEGAL:'⚖️', INSURANCE:'🛡️', OTHER:'📁',
-}
+const fmtD = d => d ? new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—'
 
-// Human-readable labels for category codes
-const CAT_LABELS = {
-  IQAMA:'🪪 Iqama (Residency Permit)',
-  DRIVING_LICENSE:'🚗 Driving Licence',
-  PASSPORT:'✈️ Passport',
-  NATIONAL_ID:'🪪 National ID (Saudi)',
-  QIWA:'💼 QIWA Certificate',
-  SCE:'🏗️ SCE Certificate',
-  MEDICAL_INSURANCE:'🏥 Medical Insurance',
-  WORK_PERMIT:'📋 Work Permit',
-  EMPLOYMENT_CONTRACT:'📄 Employment Contract',
-  SALARY_CERTIFICATE:'💰 Salary Certificate',
-  TRAINING_CERTIFICATE:'🏅 Training Certificate',
-  GOSI_CERTIFICATE:'🛡️ GOSI Certificate',
-  CR:'🏢 CR (Commercial Registration)',
-  VAT_CERTIFICATE:'💹 VAT Registration Certificate',
-  CHAMBER_OF_COMMERCE:'🏛️ Chamber of Commerce',
-  SAUDIZATION:'🇸🇦 Saudization / Nitaqat',
-  ISO_CERTIFICATE:'✅ ISO Certificate',
-  VENDOR_APPROVAL:'👍 Vendor / Client Approval',
-  MOI_LICENSE:'⚖️ MOI License',
-  BANK_GUARANTEE:'🏦 Bank Guarantee',
-  ARAMCO_APPROVAL:'⛽ Aramco Approval',
-  SABIC_APPROVAL:'🧪 SABIC Approval',
-  PERFORMANCE_BOND:'📑 Performance Bond',
-  ISTIMARA:'🚘 Istimara (Vehicle Registration)',
-  INSPECTION:'🔍 Inspection / Fahas Certificate',
-  LEASING_CONTRACT:'🔑 Leasing / Rental Contract',
-  PURCHASE_ORDER:'📦 Purchase Order',
-  COMPLETION_CERTIFICATE:'✔️ Completion Certificate',
-  HANDOVER_CERTIFICATE:'🤝 Handover Certificate',
-  VARIATION_ORDER:'🔄 Variation Order',
-  MOU:'🤝 MOU',
-  CONTRACT:'📄 Contract',
-  CERTIFICATE:'🏅 Certificate',
-  LICENSE:'🪪 License',
-  INVOICE:'🧾 Invoice',
-  LEGAL:'⚖️ Legal Document',
-  INSURANCE:'🛡️ Insurance',
-  OTHER:'📁 Other',
-}
-
-const today = () => new Date().toISOString().slice(0,10)
-const fmtD  = d => d ? new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—'
-
-function daysUntilExpiry(expiry_date) {
+function daysUntil(expiry_date) {
   if (!expiry_date) return null
   return Math.ceil((new Date(expiry_date) - new Date()) / 86400000)
 }
 
 function computeStatus(doc) {
-  if (!doc.expiry_date) return doc.status
-  const days = daysUntilExpiry(doc.expiry_date)
-  if (days < 0) return 'EXPIRED'
-  if (days <= (doc.alert_days||30)) return 'EXPIRING_SOON'
-  return doc.status==='EXPIRED'||doc.status==='RENEWED'||doc.status==='CANCELLED' ? doc.status : 'ACTIVE'
+  if (!doc.expiry_date) return doc.status||'ACTIVE'
+  const d = daysUntil(doc.expiry_date)
+  if (d < 0) return 'EXPIRED'
+  if (d <= (doc.alert_days||30)) return 'EXPIRING_SOON'
+  return (doc.status==='EXPIRED'||doc.status==='RENEWED'||doc.status==='CANCELLED') ? doc.status : 'ACTIVE'
 }
 
-const S = {
-  card:  { background:'#fff', borderRadius:14, padding:'16px 20px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)', marginBottom:12 },
-  input: { padding:'8px 10px', borderRadius:8, border:'1px solid #dde3ec', fontSize:12, outline:'none', background:'#fff', width:'100%', boxSizing:'border-box' },
-  label: { display:'block', fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4 },
-  btn:   (c='#454D9B') => ({ background:c, color:'#fff', border:'none', borderRadius:8, padding:'8px 14px', fontSize:12, fontWeight:700, cursor:'pointer' }),
-}
+// ── Add / Edit modal ─────────────────────────────────────────────────
+// Redesigned flow: Link To → Entity → Doc Type → number/notes → dates + file
 
-// ── Document modal — 6-layer Administration theme ─────────────────
-const PP = "'Poppins','Segoe UI',sans-serif"
-const PRI = '#454D9B'
-const L1  = '#AAAED0'
-const L2  = '#F0F1FA'
+const STEP_NAMES = ['Who & What', 'Dates & Attachments']
 
-const STEP_NAMES = ['Document Details', 'Dates & Attachments']
-const STEP_DESC  = [
-  'Title, category, parties and document reference',
-  'Dates, expiry alerts, file upload and ownership',
-]
-
-function DocModal({ entityId, item, onClose, onSaved }) {
+function DocModal({ entityId, item, preLinkedType, preCategory, onClose, onSaved }) {
   const { user } = useAuth()
+  const isEdit = !!(item?.id)
+
   const [step, setStep] = useState(1)
-  const [form, setForm] = useState({
-    title:'', doc_number:'', category:'OTHER', description:'',
-    counterparty:'', issued_by:'', issue_date:'', effective_date:'',
-    expiry_date:'', alert_days:30, is_renewable:false,
-    status:'ACTIVE', linked_type:'', linked_id:'', linked_name:'',
-    department:'', owner_name:'', notes:'',
-    file_url:'', file_name:'', file_type:'',
-    ...item,
-  })
-  const [file,        setFile]        = useState(null)
-  const [saving,      setSaving]      = useState(false)
-  const [err,         setErr]         = useState('')
-  const [uploading,   setUploading]   = useState(false)
-  const [lookupList,  setLookupList]  = useState([])
+  const [linkedType, setLinkedType] = useState(item?.linked_type || preLinkedType || '')
+  const [linkedId,   setLinkedId]   = useState(item?.linked_id   || '')
+  const [linkedName, setLinkedName] = useState(item?.linked_name  || '')
+  const [category,   setCategory]   = useState(item?.category     || preCategory || '')
+  const [docNumber,  setDocNumber]  = useState(item?.doc_number   || '')
+  const [issuedBy,   setIssuedBy]   = useState(item?.issued_by    || '')
+  const [counterparty, setCounterparty] = useState(item?.counterparty || '')
+  const [notes,      setNotes]      = useState(item?.description  || item?.notes || '')
+  const [issueDate,  setIssueDate]  = useState(item?.issue_date   || '')
+  const [effectiveDate, setEffDate] = useState(item?.effective_date || '')
+  const [expiryDate, setExpiryDate] = useState(item?.expiry_date  || '')
+  const [alertDays,  setAlertDays]  = useState(item?.alert_days   || 30)
+  const [renewable,  setRenewable]  = useState(item?.is_renewable || false)
+  const [status,     setStatusV]    = useState(item?.status       || 'ACTIVE')
+  const [department, setDepartment] = useState(item?.department   || '')
+  const [ownerName,  setOwnerName]  = useState(item?.owner_name   || '')
+  const [file,       setFile]       = useState(null)
+  const [fileUrl,    setFileUrl]    = useState(item?.file_url     || '')
+  const [fileName,   setFileName]   = useState(item?.file_name    || '')
+
+  const [lookupList,    setLookupList]    = useState([])
   const [lookupLoading, setLookupLoading] = useState(false)
-  const [deptMap,     setDeptMap]     = useState({}) // dept_id → { code, name }
+  const [deptMap,       setDeptMap]       = useState({})
+  const [saving,        setSaving]        = useState(false)
+  const [uploading,     setUploading]     = useState(false)
+  const [err,           setErr]           = useState('')
 
-  const setF = (k,v) => setForm(f=>({...f,[k]:v}))
-  const setFM = (patch) => setForm(f=>({...f,...patch}))
-  const isMount = useRef(true) // skip resets on initial mount (edit mode)
+  // Dependent selector (for DEPENDENT_* doc types under EMPLOYEE)
+  const [depList,    setDepList]    = useState([])
+  const [depLoading, setDepLoading] = useState(false)
+  const [depId,      setDepId]      = useState(item?.dependent_id || '')
+  const [depName,    setDepName]    = useState(item?.dependent_name || '')
 
-  // When linked_type changes: fetch lookup list, load depts if EMPLOYEE, auto-set category
+  const DEPENDENT_DOC_TYPES = ['DEPENDENT_IQAMA','DEPENDENT_PASSPORT','DEPENDENT_INSURANCE']
+  const isDepType = DEPENDENT_DOC_TYPES.includes(category ?? '')
+
+  // Available doc types for this linked type
+  const docTypes = DOC_CATEGORIES[linkedType] || []
+
+  // Load entity lookup when linked type changes
   useEffect(() => {
-    const cfg = LINK_TABLE[form.linked_type]
-    const cats = getCats(form.linked_type)
-    if (!isMount.current) {
-      // Only reset when user actually changes the type (not on initial open)
-      setF('category', cats[0])
-      setF('linked_id', '')
-      setF('linked_name', '')
-    }
-    isMount.current = false
+    const cfg = LINK_TABLE[linkedType]
     if (!cfg || !entityId) { setLookupList([]); return }
     setLookupLoading(true)
-    const cols = `id,${cfg.labelCol},${cfg.numberCol}`
-    supabase.from(cfg.table)
-      .select(cols)
+    const selectStr = cfg.selectCols || `id,${cfg.labelCol}${cfg.numberCol ? ','+cfg.numberCol : ''}`
+    let q = supabase.from(cfg.table)
+      .select(selectStr)
       .eq('entity_id', entityId)
-      .order(cfg.labelCol)
+    if (cfg.filter) q = q.eq(cfg.filter.col, cfg.filter.val)
+    q.order(cfg.labelCol)
       .then(({ data }) => { setLookupList(data||[]); setLookupLoading(false) })
-    // Load departments for auto-fill
-    if (form.linked_type === 'EMPLOYEE') {
+    if (linkedType === 'EMPLOYEE') {
       supabase.from('departments').select('id,dept_code,dept_name').eq('entity_id', entityId)
         .then(({ data }) => {
-          const map = {}
-          ;(data||[]).forEach(d => { map[d.id] = d })
-          setDeptMap(map)
+          const m = {}; (data||[]).forEach(d=>{m[d.id]=d}); setDeptMap(m)
         })
     }
-  }, [form.linked_type, entityId])
+  }, [linkedType, entityId])
 
-  // Auto-fill Issued By / Counterparty when category changes
+  // Auto-set first doc type when linked type changes (only if category doesn't fit)
   useEffect(() => {
-    const auth = ISSUING_AUTHORITY[form.category]
-    if (auth) setFM({ issued_by: auth, counterparty: auth })
-  }, [form.category])
+    const types = DOC_CATEGORIES[linkedType] || []
+    if (types.length && !types.includes(category)) setCategory(types[0])
+  }, [linkedType])
 
-  // Auto-fill Department + Owner when employee selected — fetch full record separately
+  // Auto-fill issuing authority + responsibility when doc type changes
   useEffect(() => {
-    if (form.linked_type !== 'EMPLOYEE' || !form.linked_id) return
-    // Fetch the full employee record for dept/owner auto-fill
-    supabase.from('employees')
-      .select('id,department_id,employee_category,entity_code')
-      .eq('id', form.linked_id)
-      .maybeSingle()
+    const auth = ISSUING_AUTHORITY[category]
+    if (auth) { setIssuedBy(auth); setCounterparty(auth) }
+    // Override ownerName for dependent doc types
+    const resp = DOC_RESPONSIBLE[category]
+    if (resp === 'EMPLOYEE') setOwnerName('Employee (Personal Responsibility)')
+    else if (resp === 'COMPANY') setOwnerName('') // will be set by entity lookup below
+  }, [category])
+
+  // Load dependent list when employee is selected and doc type is a dependent type
+  useEffect(() => {
+    if (linkedType !== 'EMPLOYEE' || !linkedId || !isDepType) {
+      setDepList([]); return
+    }
+    setDepLoading(true)
+    supabase.from('employee_dependents')
+      .select('id,full_name,relationship,iqama_expiry,insurance_expiry')
+      .eq('employee_id', linkedId)
+      .eq('entity_id', entityId)
+      .eq('is_active', true)
+      .order('full_name')
+      .then(({ data }) => { setDepList(data||[]); setDepLoading(false) })
+  }, [linkedId, isDepType])
+
+  // Auto-fill dept/owner when employee selected
+  useEffect(() => {
+    if (linkedType !== 'EMPLOYEE' || !linkedId) return
+    supabase.from('employees').select('id,department_id,employee_category,entity_code').eq('id', linkedId).maybeSingle()
       .then(({ data: emp }) => {
         if (!emp) return
         const dept = deptMap[emp.department_id]
-        const deptCode = dept?.dept_code || dept?.dept_name || ''
+        if (dept) setDepartment(dept.dept_code || dept.dept_name)
+        const ENTITY_CO = { ACCSYS:'Ratal Advanced Technologies', RAT:'Ratal Group', GWT:'GWT' }
         const cat = emp.employee_category || ''
-        const owner = cat === '03' ? 'Self' : (ENTITY_COMPANY[emp.entity_code] || ENTITY_COMPANY.ACCSYS)
-        setFM({ department: deptCode, owner_name: owner })
+        setOwnerName(cat === '03' ? 'Self' : (ENTITY_CO[emp.entity_code] || ENTITY_CO.ACCSYS))
       })
-  }, [form.linked_id, form.linked_type, deptMap])
+  }, [linkedId, deptMap])
+
+  const autoTitle = CAT_LABELS[category] || category
 
   async function uploadFile(f) {
     if (!f) return null
@@ -342,292 +347,357 @@ function DocModal({ entityId, item, onClose, onSaved }) {
     const path = `${entityId}/${Date.now()}_${f.name}`
     const { error } = await supabase.storage.from('documents').upload(path, f, { upsert:true })
     setUploading(false)
-    if (error) { setErr('Upload failed: '+error.message); return null }
+    if (error) throw new Error('Upload failed: ' + error.message)
     const { data:{ publicUrl } } = supabase.storage.from('documents').getPublicUrl(path)
     return { url: publicUrl, name: f.name, type: f.name.split('.').pop().toUpperCase(), size: Math.round(f.size/1024) }
   }
 
   async function save() {
-    if (!form.title) { setErr('Title is required'); setStep(1); return }
+    if (!category)  { setErr('Select a document type'); return }
     setSaving(true); setErr('')
     let fileData = {}
     if (file) {
-      const up = await uploadFile(file)
-      if (!up) { setSaving(false); return }
-      fileData = { file_url:up.url, file_name:up.name, file_type:up.type, file_size_kb:up.size }
+      try { const up = await uploadFile(file); if (up) fileData = { file_url:up.url, file_name:up.name, file_type:up.type, file_size_kb:up.size } }
+      catch(e) { setErr(e.message); setSaving(false); return }
     }
     const row = {
-      entity_id:entityId, title:form.title, doc_number:form.doc_number||null,
-      category:form.category, description:form.description||null,
-      counterparty:form.counterparty||null, issued_by:form.issued_by||null,
-      issue_date:form.issue_date||null, effective_date:form.effective_date||null,
-      expiry_date:form.expiry_date||null, alert_days:+form.alert_days||30,
-      is_renewable:form.is_renewable, status:form.status,
-      linked_type:form.linked_type||null, linked_id:form.linked_id||null, linked_name:form.linked_name||null,
-      department:form.department||null, owner_name:form.owner_name||null,
-      owner_user_id:user?.id||null, notes:form.notes||null,
-      created_by:user?.id||null, ...fileData,
+      entity_id: entityId,
+      title: autoTitle,
+      doc_number: docNumber||null,
+      category,
+      description: notes||null,
+      counterparty: counterparty||null,
+      issued_by: issuedBy||null,
+      issue_date: issueDate||null,
+      effective_date: effectiveDate||null,
+      expiry_date: expiryDate||null,
+      alert_days: +alertDays||30,
+      is_renewable: renewable,
+      status,
+      linked_type: linkedType||null,
+      linked_id: linkedId||null,
+      linked_name: linkedName||null,
+      dependent_id: (isDepType && depId) ? depId : null,
+      dependent_name: (isDepType && depName) ? depName : null,
+      department: department||null,
+      owner_name: ownerName||null,
+      owner_user_id: user?.id||null,
+      notes: notes||null,
+      created_by: user?.id||null,
+      ...fileData,
     }
-    const { error } = item?.id
-      ? await supabase.from('documents').update(row).eq('id',item.id)
+    const { error } = isEdit
+      ? await supabase.from('documents').update(row).eq('id', item.id)
       : await supabase.from('documents').insert(row)
     setSaving(false)
     if (error) { setErr(error.message); return }
     onSaved()
   }
 
-  const inp  = (extra={}) => ({ padding:'9px 11px', borderRadius:8, border:'1.5px solid #dde3ec', fontSize:12, outline:'none', background:'#fff', width:'100%', boxSizing:'border-box', fontFamily:PP, ...extra })
-  const lbl  = { display:'block', fontSize:10, fontWeight:700, color:'#6b7c93', marginBottom:4, textTransform:'uppercase', letterSpacing:0.5 }
-  const row2 = { display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }
-  const mb12 = { marginBottom:12 }
+  const inp = (extra={}) => ({ padding:'9px 11px', borderRadius:8, border:`1.5px solid ${PRI}33`, fontSize:13, outline:'none', background:'#fff', width:'100%', boxSizing:'border-box', fontFamily:PP, ...extra })
+  const lbl = { display:'block', fontSize:10, fontWeight:700, color:'#6b7c93', marginBottom:5, textTransform:'uppercase', letterSpacing:0.5 }
+  const mb  = { marginBottom:14 }
+
+  // Linked type meta for step 1 header
+  const ltMeta = SIDEBAR_CATS.find(c=>c.key===linkedType)
 
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-      {/* L1 frame */}
-      <div style={{ background:L1, borderRadius:20, padding:20, width:'100%', maxWidth:860, boxShadow:'0 24px 70px rgba(0,0,0,0.40)', position:'relative', border:'4px solid '+L1 }}>
-        {/* L3 accent block */}
-        <div style={{ position:'absolute', top:0, right:0, width:220, height:110, background:PRI, borderRadius:'0 20px 0 60px', zIndex:1 }} />
-        {/* L2 root */}
-        <div style={{ background:L2, borderRadius:14, display:'flex', overflow:'hidden', position:'relative', zIndex:2, minHeight:520 }}>
-          {/* Sidebar */}
-          <div style={{ width:210, flexShrink:0, padding:'24px 18px 18px', display:'flex', flexDirection:'column', fontFamily:PP, background:L2, position:'relative', zIndex:2 }}>
-            <div style={{ fontSize:9, fontWeight:800, color:'#53666F', letterSpacing:1.8, textTransform:'uppercase', marginBottom:3 }}>Ratal Advanced Technologies</div>
-            <div style={{ fontSize:11, fontWeight:900, color:PRI, letterSpacing:1, textTransform:'uppercase', marginBottom:16 }}><strong>Administration</strong></div>
-            <div style={{ fontSize:20, fontWeight:900, color:'#172D37', lineHeight:1.1, marginBottom:6 }}>{STEP_NAMES[step-1]}</div>
-            <div style={{ fontSize:11, color:'#53666F', lineHeight:1.5, marginBottom:16 }}>{STEP_DESC[step-1]}</div>
-            {/* Step dots */}
-            <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:4 }}>
-              {STEP_NAMES.map((n,i)=>(
-                <div key={i} onClick={()=>setStep(i+1)} style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer' }}>
-                  <div style={{ width:22, height:22, borderRadius:'50%', background:step===i+1?PRI:'#C8C8D8', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:800, color:'#fff', flexShrink:0, transition:'background .2s' }}>{i+1}</div>
-                  <div style={{ fontSize:11, fontWeight:step===i+1?800:500, color:step===i+1?PRI:'#6b7c93' }}>{n}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{ flex:1 }} />
-            <div style={{ fontSize:9, color:'#aab2bd', marginTop:16 }}>{item?.id ? 'Editing document' : 'New document'}</div>
-          </div>
-          {/* White card */}
-          <div style={{ flex:1, background:'#fff', borderRadius:'0 14px 14px 0', display:'flex', flexDirection:'column', overflow:'hidden' }}>
-            {/* Step banner — Projects style gradient */}
-            <div style={{ background:`linear-gradient(120deg, #2d3580 0%, ${PRI} 55%, #6b74c8 100%)`, padding:'20px 24px 18px', display:'flex', alignItems:'center', justifyContent:'space-between', position:'relative', overflow:'hidden' }}>
-              {/* Decorative circles */}
-              <div style={{ position:'absolute', right:-30, top:-30, width:120, height:120, borderRadius:'50%', background:'rgba(255,255,255,0.08)' }} />
-              <div style={{ position:'absolute', right:50, bottom:-30, width:80, height:80, borderRadius:'50%', background:'rgba(255,255,255,0.05)' }} />
-              <div style={{ display:'flex', alignItems:'center', gap:14, position:'relative', zIndex:1 }}>
-                <div style={{ width:44, height:44, borderRadius:12, background:'rgba(255,255,255,0.18)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0 }}>{CAT_ICONS[form.category]||'📁'}</div>
-                <div>
-                  <div style={{ fontSize:10, color:'rgba(255,255,255,0.70)', fontFamily:PP, letterSpacing:1.4, textTransform:'uppercase', marginBottom:3 }}>Step {step} of {STEP_NAMES.length} · Administration</div>
-                  <div style={{ fontSize:17, fontWeight:900, color:'#fff', fontFamily:PP, letterSpacing:0.2 }}>{STEP_NAMES[step-1]}</div>
-                </div>
-              </div>
-              {/* Step pills */}
-              <div style={{ display:'flex', gap:7, position:'relative', zIndex:1 }}>
-                {STEP_NAMES.map((_,i)=>(
-                  <div key={i} style={{ width:32, height:8, borderRadius:4, background: step===i+1 ? '#fff' : 'rgba(255,255,255,0.30)', transition:'background .2s' }} />
+    <FormShell
+      isOpen={true}
+      onClose={onClose}
+      chapterName="Administration"
+      title={isEdit ? ['Edit', 'Document', 'Record'] : ['New', 'Document', 'Record']}
+      description={isEdit ? 'Update document details and attachment.' : 'Select who this document belongs to, then the document type.'}
+      steps={STEP_NAMES}
+      currentStep={step}
+      onBack={step===1 ? onClose : () => setStep(1)}
+      backLabel={step===1 ? 'Cancel' : 'Back'}
+      onNext={step < 2
+        ? () => { if (!linkedType) { setErr('Select entity type'); return }; if (!category) { setErr('Select document type'); return }; setErr(''); setStep(2) }
+        : save
+      }
+      nextLabel={step < 2 ? 'Next →' : (saving ? 'Saving…' : (isEdit ? 'Update' : 'Save Document'))}
+      nextDisabled={saving || uploading}
+    >
+      <div style={{ fontFamily:PP }}>
+
+        {/* ── STEP 1: Who & What ── */}
+        {step === 1 && (
+          <>
+            {/* Entity type strip */}
+            <div style={mb}>
+              <label style={lbl}>This document belongs to *</label>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:7 }}>
+                {SIDEBAR_CATS.map(cat => (
+                  <button key={cat.key}
+                    onClick={() => { setLinkedType(cat.key); setLinkedId(''); setLinkedName('') }}
+                    style={{ display:'flex', alignItems:'center', gap:5, padding:'7px 13px', borderRadius:20,
+                      border:`2px solid ${linkedType===cat.key ? cat.color : cat.color+'44'}`,
+                      background: linkedType===cat.key ? cat.color : cat.light,
+                      color: linkedType===cat.key ? '#fff' : cat.color,
+                      fontFamily:PP, fontSize:12, fontWeight:700, cursor:'pointer', transition:'all .12s' }}>
+                    <span>{cat.icon}</span> {cat.label}
+                  </button>
                 ))}
               </div>
             </div>
-            {/* Form body */}
-            <div style={{ flex:1, overflowY:'auto', padding:'20px 22px' }}>
-              {step===1 && (
-                <>
-                  <div style={mb12}>
-                    <label style={lbl}>Document Title *</label>
-                    <input style={inp({ fontSize:14 })} value={form.title} onChange={e=>setF('title',e.target.value)} placeholder="Enter document title" />
-                  </div>
-                  <div style={row2}>
-                    <div>
-                      <label style={lbl}>Document Type {form.linked_type && <span style={{ color:'#9e9e9e', fontWeight:400 }}>({form.linked_type})</span>}</label>
-                      <select value={form.category} onChange={e=>setF('category',e.target.value)} style={inp()}>
-                        {getCats(form.linked_type).map(c=><option key={c} value={c}>{CAT_LABELS[c]||c.replace(/_/g,' ')}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label style={lbl}>Status</label>
-                      <select value={form.status} onChange={e=>setF('status',e.target.value)} style={inp()}>
-                        {STATUSES.map(s=><option key={s}>{s}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                  <div style={row2}>
-                    <div>
-                      <label style={lbl}>Document Number / Ref</label>
-                      <input style={inp()} value={form.doc_number} onChange={e=>setF('doc_number',e.target.value)} placeholder="License no., contract no." />
-                    </div>
-                    <div>
-                      <label style={lbl}>Link To</label>
-                      <select value={form.linked_type} onChange={e=>setF('linked_type',e.target.value)} style={inp()}>
-                        <option value="">— None —</option>
-                        {LINK_TYPES.map(t=><option key={t}>{t}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                  <div style={row2}>
-                    <div>
-                      <label style={lbl}>Counterparty / Issuing Authority {ISSUING_AUTHORITY[form.category]&&<span style={{ color:'#2e7d32', fontWeight:400 }}>✓ auto</span>}</label>
-                      <input style={inp()} value={form.counterparty} onChange={e=>setF('counterparty',e.target.value)} placeholder="e.g. Ministry of Interior (MOI)" />
-                    </div>
-                    <div>
-                      <label style={lbl}>Issued By {ISSUING_AUTHORITY[form.category]&&<span style={{ color:'#2e7d32', fontWeight:400 }}>✓ auto</span>}</label>
-                      <input style={inp()} value={form.issued_by} onChange={e=>setF('issued_by',e.target.value)} placeholder="Issuing authority" />
-                    </div>
-                  </div>
-                  {form.linked_type && form.linked_type !== 'COMPANY' && form.linked_type !== 'OTHER' && (
-                    <div style={mb12}>
-                      <label style={lbl}>
-                        {form.linked_type === 'EMPLOYEE' ? 'Employee' :
-                         form.linked_type === 'PROJECT'  ? 'Project'  :
-                         form.linked_type === 'CONTRACTOR' || form.linked_type === 'SUBCONTRACTOR' ? 'Party (Contractor / Vendor)' :
-                         form.linked_type === 'VEHICLE' ? 'Vehicle' : form.linked_type}
-                      </label>
-                      {lookupLoading
-                        ? <div style={{ fontSize:11, color:'#6b7c93', padding:'8px 0' }}>Loading…</div>
-                        : lookupList.length > 0
-                          ? (
-                            <select style={inp()} value={form.linked_id||''} onChange={e => {
-                              const rec = lookupList.find(r=>r.id===e.target.value)
-                              const cfg = LINK_TABLE[form.linked_type]
-                              setF('linked_id', e.target.value)
-                              setF('linked_name', rec ? rec[cfg.labelCol] : '')
-                            }}>
-                              <option value="">— Select {form.linked_type.toLowerCase()} —</option>
-                              {lookupList.map(r => {
-                                const cfg = LINK_TABLE[form.linked_type]
-                                const label = r[cfg.labelCol] || '—'
-                                const num   = r[cfg.numberCol] ? ` (${r[cfg.numberCol]})` : ''
-                                return <option key={r.id} value={r.id}>{label}{num}</option>
-                              })}
-                            </select>
-                          )
-                          : <input style={inp()} value={form.linked_name} onChange={e=>setF('linked_name',e.target.value)} placeholder={`Name of linked ${form.linked_type.toLowerCase()}`} />
+
+            {/* ── Entity + Doc Type  — single row, two dropdowns ── */}
+            {linkedType && (
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:14 }}>
+
+                {/* LEFT — entity selector */}
+                <div>
+                  <label style={lbl}>
+                    {linkedType==='EMPLOYEE'       ? 'Employee *'
+                    : linkedType==='PROJECT'       ? 'Project *'
+                    : linkedType==='VEHICLE'       ? 'Vehicle (Fleet) *'
+                    : linkedType==='CONTRACTOR'    ? 'Contractor *'
+                    : linkedType==='SUBCONTRACTOR' ? 'Sub-contractor *'
+                    : linkedType==='SUPPLIER'      ? 'Supplier *'
+                    : linkedType==='LOCAL_SUPPLIER'? 'Local Supplier *'
+                    : linkedType==='VENDOR'        ? 'Vendor *'
+                    : linkedType==='COMPANY'       ? 'Company / Entity Name'
+                    : 'Linked To (optional)'}
+                  </label>
+
+                  {linkedType === 'COMPANY' ? (
+                    <select style={inp()} value={linkedId}
+                      onChange={e => {
+                        const co = COMPANY_LIST.find(c => c.id === e.target.value)
+                        setLinkedId(e.target.value)
+                        setLinkedName(co ? co.name : '')
+                      }}>
+                      <option value="">— Select company —</option>
+                      {COMPANY_LIST.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+
+                  ) : lookupLoading ? (
+                    <div style={{ ...inp(), color:'#6b7c93', display:'flex', alignItems:'center' }}>Loading…</div>
+
+                  ) : lookupList.length > 0 ? (
+                    <select style={inp()} value={linkedId}
+                      onChange={e => {
+                        const rec = lookupList.find(r => String(r.id)===e.target.value)
+                        const cfg = LINK_TABLE[linkedType]
+                        setLinkedId(e.target.value)
+                        setLinkedName(rec ? rec[cfg.labelCol] : '')
+                      }}>
+                      <option value="">— Select —</option>
+                      {lookupList.map(r => {
+                        const cfg = LINK_TABLE[linkedType]
+                        const label = cfg.displayFn
+                          ? cfg.displayFn(r)
+                          : `${r[cfg.labelCol]||'—'}${r[cfg.numberCol] ? ` · ${r[cfg.numberCol]}` : ''}`
+                        return <option key={r.id} value={r.id}>{label}</option>
+                      })}
+                    </select>
+
+                  ) : (
+                    <input style={inp()} value={linkedName}
+                      onChange={e=>setLinkedName(e.target.value)}
+                      placeholder="Type name manually" />
+                  )}
+                </div>
+
+                {/* RIGHT — document type dropdown */}
+                <div>
+                  <label style={lbl}>Document Type *</label>
+                  <select style={inp()} value={category} onChange={e=>setCategory(e.target.value)}>
+                    <option value="">— Select type —</option>
+                    {docTypes.map(t => (
+                      <option key={t} value={t}>{CAT_ICONS[t]||'📄'} {CAT_LABELS[t]||t.replace(/_/g,' ')}</option>
+                    ))}
+                  </select>
+                  {DOC_RESPONSIBLE[category] && (
+                    <div style={{ marginTop:5, display:'flex', alignItems:'center', gap:5, fontSize:11 }}>
+                      {DOC_RESPONSIBLE[category]==='COMPANY'
+                        ? <span style={{ background:'#e3f2fd', color:'#1565c0', border:'1px solid #90caf9', borderRadius:10, padding:'2px 8px', fontWeight:700 }}>🏢 Company Responsibility</span>
+                        : <span style={{ background:'#fff8e1', color:'#f57f17', border:'1px solid #ffe082', borderRadius:10, padding:'2px 8px', fontWeight:700 }}>👤 Employee Responsibility</span>
                       }
                     </div>
                   )}
-                  {(form.linked_type === 'COMPANY' || form.linked_type === 'OTHER') && (
-                    <div style={mb12}>
-                      <label style={lbl}>{form.linked_type === 'COMPANY' ? 'Company / Entity Name' : 'Reference Name'}</label>
-                      <input style={inp()} value={form.linked_name} onChange={e=>setF('linked_name',e.target.value)} placeholder={form.linked_type==='COMPANY'?'e.g. Ratal Advanced Technologies':'Reference name'} />
-                    </div>
-                  )}
-                  <div style={mb12}>
-                    <label style={lbl}>Description / Notes</label>
-                    <textarea style={{ ...inp(), minHeight:70, resize:'vertical' }} value={form.description} onChange={e=>setF('description',e.target.value)} />
+                </div>
+
+              </div>
+            )}
+
+            {/* ── Dependent selector (shows when a DEPENDENT_* doc type is chosen) ── */}
+            {linkedType === 'EMPLOYEE' && linkedId && isDepType && (
+              <div style={{ marginBottom:14, background:'#fce4ec', border:'1.5px solid #f48fb1', borderRadius:10, padding:'10px 14px' }}>
+                <label style={{ ...lbl, color:'#c62828' }}>
+                  👨‍👩‍👧 Select Dependent *
+                  <span style={{ fontSize:10, fontWeight:400, marginLeft:6, color:'#e57373' }}>
+                    — this document belongs to which family member?
+                  </span>
+                </label>
+                {depLoading ? (
+                  <div style={{ ...inp(), color:'#9e9e9e' }}>Loading dependents…</div>
+                ) : depList.length === 0 ? (
+                  <div style={{ fontSize:12, color:'#e57373', padding:'8px 0' }}>
+                    ⚠️ No dependents registered for this employee. Add them in the Employees → Dependents tab first.
                   </div>
-                </>
-              )}
-              {step===2 && (
-                <>
-                  <div style={row2}>
-                    <div>
-                      <label style={lbl}>Issue Date</label>
-                      <input type="date" style={inp()} value={form.issue_date} onChange={e=>setF('issue_date',e.target.value)} />
-                    </div>
-                    <div>
-                      <label style={lbl}>Effective Date</label>
-                      <input type="date" style={inp()} value={form.effective_date} onChange={e=>setF('effective_date',e.target.value)} />
-                    </div>
+                ) : (
+                  <select style={{ ...inp(), borderColor:'#f48fb1' }} value={depId}
+                    onChange={e => {
+                      const dep = depList.find(d => d.id === e.target.value)
+                      setDepId(e.target.value)
+                      setDepName(dep ? dep.full_name : '')
+                    }}>
+                    <option value="">— Select dependent —</option>
+                    {depList.map(dep => (
+                      <option key={dep.id} value={dep.id}>
+                        {dep.full_name} ({dep.relationship})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
+
+            {/* Auto-generated title preview */}
+            {category && (
+              <div style={{ ...mb, background:L2, border:`1px solid ${L1}`, borderRadius:9, padding:'9px 13px', display:'flex', alignItems:'center', gap:8 }}>
+                <span style={{ fontSize:18 }}>{CAT_ICONS[category]||'📄'}</span>
+                <div>
+                  <div style={{ fontSize:10, color:'#6b7c93', fontWeight:700, letterSpacing:.5, textTransform:'uppercase' }}>Document title (auto)</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:'#1a2332' }}>{autoTitle}</div>
+                </div>
+              </div>
+            )}
+
+            {/* Doc number + issuing authority */}
+            {category && (
+              <>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:14 }}>
+                  <div>
+                    <label style={lbl}>Document Number / Ref</label>
+                    <input style={inp()} value={docNumber} onChange={e=>setDocNumber(e.target.value)} placeholder="Iqama#, policy#, CR#…" />
                   </div>
-                  <div style={row2}>
-                    <div>
-                      <label style={lbl}>Expiry Date</label>
-                      <input type="date" style={inp()} value={form.expiry_date} onChange={e=>setF('expiry_date',e.target.value)} />
-                    </div>
-                    <div>
-                      <label style={lbl}>Alert (days before expiry)</label>
-                      <input type="number" style={inp()} value={form.alert_days} min={1} onChange={e=>setF('alert_days',e.target.value)} />
-                    </div>
+                  <div>
+                    <label style={lbl}>Issued By {ISSUING_AUTHORITY[category]&&<span style={{ color:'#2e7d32', fontWeight:500, textTransform:'none' }}> ✓ auto</span>}</label>
+                    <input style={inp()} value={issuedBy} onChange={e=>setIssuedBy(e.target.value)} placeholder="Issuing authority" />
                   </div>
-                  <div style={row2}>
-                    <div>
-                      <label style={lbl}>Department {form.linked_type==='EMPLOYEE'&&form.department&&<span style={{ color:'#2e7d32', fontWeight:400 }}>✓ auto</span>}</label>
-                      {Object.keys(deptMap).length > 0 ? (
-                        <select style={inp()} value={form.department} onChange={e=>setF('department',e.target.value)}>
-                          <option value="">— Select department —</option>
-                          {Object.values(deptMap).sort((a,b)=>(a.dept_code||'').localeCompare(b.dept_code||'')).map(d=>(
-                            <option key={d.id} value={d.dept_code||d.dept_name}>{d.dept_code} — {d.dept_name}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input style={inp()} value={form.department} onChange={e=>setF('department',e.target.value)} placeholder="e.g. TISU, NIS, CISU" />
-                      )}
-                    </div>
-                    <div>
-                      <label style={lbl}>Owner / Responsible {form.linked_type==='EMPLOYEE'&&form.owner_name&&<span style={{ color:'#2e7d32', fontWeight:400 }}>✓ auto</span>}</label>
-                      <div style={{ position:'relative' }}>
-                        <input style={inp({ paddingRight: form.owner_name ? 32 : 11 })} value={form.owner_name} onChange={e=>setF('owner_name',e.target.value)} placeholder="Responsible for renewal" />
-                        {form.owner_name && <span style={{ position:'absolute', right:9, top:'50%', transform:'translateY(-50%)', fontSize:14 }}>👤</span>}
-                      </div>
-                    </div>
-                  </div>
-                  <div style={mb12}>
-                    <label style={lbl}>File Attachment</label>
-                    {form.file_url && !file && (
-                      <div style={{ fontSize:12, color:'#2e7d32', marginBottom:6 }}>
-                        📎 Current: <a href={form.file_url} target="_blank" rel="noreferrer" style={{ color:PRI }}>{form.file_name||'View file'}</a>
-                      </div>
-                    )}
-                    <input type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls" onChange={e=>setFile(e.target.files[0])} style={{ ...inp(), padding:'6px' }} />
-                    {file && <div style={{ fontSize:11, color:'#546e7a', marginTop:4 }}>📎 {file.name} ({Math.round(file.size/1024)} KB)</div>}
-                    {uploading && <div style={{ fontSize:11, color:PRI, marginTop:4 }}>Uploading…</div>}
-                  </div>
-                  <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, cursor:'pointer', fontFamily:PP }}>
-                    <input type="checkbox" checked={form.is_renewable} onChange={e=>setF('is_renewable',e.target.checked)} />
-                    Document is renewable
-                  </label>
-                </>
-              )}
-              {err && <div style={{ color:'#c62828', fontSize:12, marginTop:8 }}>{err}</div>}
+                </div>
+                <div style={mb}>
+                  <label style={lbl}>Notes</label>
+                  <textarea style={{ ...inp(), minHeight:56, resize:'vertical' }} value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Renewal notes, contact…" />
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {/* ── STEP 2: Dates & Attachments ── */}
+        {step === 2 && (
+          <>
+            {/* Summary chip */}
+            <div style={{ ...mb, background:L2, border:`1px solid ${L1}`, borderRadius:9, padding:'9px 13px', display:'flex', gap:10, alignItems:'center' }}>
+              <span style={{ fontSize:20 }}>{CAT_ICONS[category]||'📄'}</span>
+              <div>
+                <div style={{ fontWeight:700, fontSize:13, color:'#1a2332' }}>{autoTitle}</div>
+                <div style={{ fontSize:11, color:'#6b7c93' }}>{ltMeta?.icon} {linkedName||ltMeta?.label}</div>
+              </div>
             </div>
-            {/* Footer */}
-            <div style={{ padding:'12px 22px', borderTop:'1px solid #f0f4f8', display:'flex', justifyContent:'space-between', alignItems:'center', background:'#fff' }}>
-              <button onClick={step===1?onClose:()=>setStep(s=>s-1)} style={{ background:'#747474', color:'#fff', border:'none', borderRadius:22, padding:'9px 22px', cursor:'pointer', fontSize:13, fontWeight:700, fontFamily:PP }}>
-                {step===1?'Cancel':'Back'}
-              </button>
-              {step<STEP_NAMES.length
-                ? <button onClick={()=>{ if(!form.title){setErr('Title is required');return}; setErr(''); setStep(s=>s+1) }} style={{ background:PRI, color:'#fff', border:'none', borderRadius:22, padding:'9px 28px', cursor:'pointer', fontSize:13, fontWeight:700, fontFamily:PP }}>Next →</button>
-                : <button onClick={save} disabled={saving||uploading} style={{ background:PRI, color:'#fff', border:'none', borderRadius:22, padding:'9px 28px', cursor:'pointer', fontSize:13, fontWeight:700, fontFamily:PP }}>{saving?'Saving…':'Save Document'}</button>
-              }
+
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:14 }}>
+              <div>
+                <label style={lbl}>Issue Date</label>
+                <input type="date" style={inp()} value={issueDate} onChange={e=>setIssueDate(e.target.value)} />
+              </div>
+              <div>
+                <label style={lbl}>Effective Date</label>
+                <input type="date" style={inp()} value={effectiveDate} onChange={e=>setEffDate(e.target.value)} />
+              </div>
             </div>
-          </div>
-        </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:14 }}>
+              <div>
+                <label style={lbl}>Expiry Date</label>
+                <input type="date" style={inp()} value={expiryDate} onChange={e=>setExpiryDate(e.target.value)} />
+              </div>
+              <div>
+                <label style={lbl}>Alert before expiry (days)</label>
+                <input type="number" style={inp()} value={alertDays} min={1} onChange={e=>setAlertDays(e.target.value)} />
+              </div>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:14 }}>
+              <div>
+                <label style={lbl}>Department {linkedType==='EMPLOYEE'&&department&&<span style={{ color:'#2e7d32', fontWeight:500, textTransform:'none' }}> ✓ auto</span>}</label>
+                {Object.keys(deptMap).length > 0
+                  ? <select style={inp()} value={department} onChange={e=>setDepartment(e.target.value)}>
+                      <option value="">— Select —</option>
+                      {Object.values(deptMap).sort((a,b)=>(a.dept_code||'').localeCompare(b.dept_code||'')).map(d=>(
+                        <option key={d.id} value={d.dept_code||d.dept_name}>{d.dept_code} — {d.dept_name}</option>
+                      ))}
+                    </select>
+                  : <input style={inp()} value={department} onChange={e=>setDepartment(e.target.value)} placeholder="e.g. TISU, NIS…" />
+                }
+              </div>
+              <div>
+                <label style={lbl}>Owner / Responsible</label>
+                <input style={inp()} value={ownerName} onChange={e=>setOwnerName(e.target.value)} placeholder="Responsible for renewal" />
+              </div>
+            </div>
+            <div style={mb}>
+              <label style={lbl}>File Attachment</label>
+              {fileUrl && !file && (
+                <div style={{ fontSize:12, color:'#2e7d32', marginBottom:6 }}>
+                  📎 Current: <a href={fileUrl} target="_blank" rel="noreferrer" style={{ color:PRI }}>{fileName||'View file'}</a>
+                </div>
+              )}
+              <input type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls"
+                onChange={e=>setFile(e.target.files[0])} style={{ ...inp(), padding:'7px' }} />
+              {file && <div style={{ fontSize:11, color:'#546e7a', marginTop:4 }}>📎 {file.name} ({Math.round(file.size/1024)} KB)</div>}
+              {uploading && <div style={{ fontSize:11, color:PRI, marginTop:4 }}>Uploading…</div>}
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:14 }}>
+              <div>
+                <label style={lbl}>Status</label>
+                <select style={inp()} value={status} onChange={e=>setStatusV(e.target.value)}>
+                  {STATUSES.map(s=><option key={s}>{s}</option>)}
+                </select>
+              </div>
+              <div style={{ display:'flex', alignItems:'center', paddingTop:22 }}>
+                <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, cursor:'pointer' }}>
+                  <input type="checkbox" checked={renewable} onChange={e=>setRenewable(e.target.checked)} />
+                  Document is renewable
+                </label>
+              </div>
+            </div>
+          </>
+        )}
+
+        {err && <div style={{ color:'#c62828', fontSize:12, marginTop:6, padding:'6px 10px', background:'#ffebee', borderRadius:7 }}>{err}</div>}
       </div>
-    </div>
+    </FormShell>
   )
 }
 
-// ── Document card ─────────────────────────────────────────────────
+// ── Document card ─────────────────────────────────────────────────────
 function DocCard({ doc, onEdit, onDelete }) {
-  const status = computeStatus(doc)
-  const sc     = STATUS_COLORS[status]||STATUS_COLORS.ACTIVE
-  const days   = daysUntilExpiry(doc.expiry_date)
+  const st  = computeStatus(doc)
+  const sc  = STATUS_COLORS[st] || STATUS_COLORS.ACTIVE
+  const days = daysUntil(doc.expiry_date)
 
   return (
-    <div style={{ background:'#fff', borderRadius:14, padding:'14px 16px',
-      boxShadow:'0 2px 10px rgba(0,0,0,0.07)',
-      borderLeft:`4px solid ${sc.border}` }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
-        <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap' }}>
-          <span style={{ fontSize:18 }}>{CAT_ICONS[doc.category]||'📁'}</span>
-          <span style={{ background:sc.bg, color:sc.color, border:`1px solid ${sc.border}`, borderRadius:20, padding:'2px 10px', fontSize:10, fontWeight:700 }}>
-            {status}
-          </span>
-          <span style={{ background:'#f0f4f8', color:'#546e7a', borderRadius:6, padding:'2px 8px', fontSize:10, fontWeight:600 }}>
-            {doc.category}
-          </span>
+    <div style={{ background:'#fff', borderRadius:12, padding:'13px 15px',
+      boxShadow:'0 2px 8px rgba(0,0,0,0.07)', borderLeft:`4px solid ${sc.border}` }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:7 }}>
+        <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignItems:'center' }}>
+          <span style={{ fontSize:16 }}>{CAT_ICONS[doc.category]||'📁'}</span>
+          <span style={{ background:sc.bg, color:sc.color, border:`1px solid ${sc.border}`, borderRadius:20, padding:'2px 9px', fontSize:10, fontWeight:700 }}>{st}</span>
         </div>
         <div style={{ display:'flex', gap:4 }}>
-          <button onClick={()=>onEdit(doc)} style={{ background:'transparent', color:'#1565C0', border:'1px solid #1565C0', borderRadius:6, padding:'3px 8px', fontSize:10, cursor:'pointer' }}>Edit</button>
+          <button onClick={()=>onEdit(doc)} style={{ background:'transparent', color:PRI, border:`1px solid ${PRI}`, borderRadius:6, padding:'3px 8px', fontSize:10, cursor:'pointer' }}>Edit</button>
           <button onClick={()=>onDelete(doc)} style={{ background:'transparent', color:'#c62828', border:'1px solid #ef9a9a', borderRadius:6, padding:'3px 8px', fontSize:10, cursor:'pointer' }}>Del</button>
         </div>
       </div>
-
-      <div style={{ fontWeight:800, fontSize:14, color:'#1a2e3d', marginBottom:4 }}>{doc.title}</div>
-      {doc.doc_number && <div style={{ fontSize:11, color:'#6b7c93', marginBottom:4 }}>📌 {doc.doc_number}</div>}
-      {doc.counterparty && <div style={{ fontSize:12, color:'#546e7a', marginBottom:4 }}>{doc.counterparty}</div>}
-
-      <div style={{ display:'flex', gap:12, flexWrap:'wrap', fontSize:11, color:'#6b7c93', marginTop:8 }}>
-        {doc.effective_date && <span>From: {fmtD(doc.effective_date)}</span>}
+      <div style={{ fontWeight:700, fontSize:13, color:'#1a2e3d', marginBottom:3 }}>{doc.title}</div>
+      {doc.linked_name && <div style={{ fontSize:11, color:'#546e7a', marginBottom:3 }}>🔗 {doc.linked_name}</div>}
+      {doc.doc_number   && <div style={{ fontSize:11, color:'#6b7c93', fontFamily:'monospace' }}>#{doc.doc_number}</div>}
+      <div style={{ display:'flex', gap:10, flexWrap:'wrap', fontSize:11, color:'#6b7c93', marginTop:7 }}>
         {doc.expiry_date && (
           <span style={{ color:sc.color, fontWeight:700 }}>
             {days !== null && days < 0 ? `Expired ${Math.abs(days)}d ago` :
@@ -635,15 +705,13 @@ function DocCard({ doc, onEdit, onDelete }) {
              `Exp: ${fmtD(doc.expiry_date)}`}
           </span>
         )}
-        {doc.linked_type && doc.linked_name && <span>🔗 {doc.linked_type}: {doc.linked_name}</span>}
         {doc.owner_name && <span>👤 {doc.owner_name}</span>}
       </div>
-
       {doc.file_url && (
-        <div style={{ marginTop:8 }}>
+        <div style={{ marginTop:7 }}>
           <a href={doc.file_url} target="_blank" rel="noreferrer"
-            style={{ fontSize:11, color:'#1565C0', textDecoration:'none', display:'inline-flex', alignItems:'center', gap:4 }}>
-            📎 {doc.file_name||'View attachment'} {doc.file_type && `(${doc.file_type})`}
+            style={{ fontSize:11, color:PRI, textDecoration:'none', display:'inline-flex', alignItems:'center', gap:4 }}>
+            📎 {doc.file_name||'View attachment'}
           </a>
         </div>
       )}
@@ -652,224 +720,463 @@ function DocCard({ doc, onEdit, onDelete }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Main export
+// Main page
 // ═══════════════════════════════════════════════════════════════════
+// Layout model:
+//  Outer  = flex row, fixed height (100vh - chrome), overflow:hidden
+//  Sidebar = 240px, own overflowY:auto
+//  Main    = flex:1, own overflowY:auto  ← THE SCROLL OWNER
+//    Sticky strip (position:sticky top:0) = KPI cards + filter bar
+//    Table with <thead position:sticky top:STRIP_HEIGHT>
+//
+// STRIP_HEIGHT ≈ 114px  (KPI row 62px + filter row 52px)
+// ═══════════════════════════════════════════════════════════════════
+
+const STRIP_H = 114  // px — must match sticky strip rendered height
+
 export default function DocumentVault({ entityId }) {
-  const [docs,     setDocs]    = useState([])
-  const [loading,  setLoading] = useState(true)
-  const [modal,    setModal]   = useState(null)
-  const [showBanner, setShowBanner] = useState(false)
-  const [filterCat,    setFilterCat]    = useState('')
-  const [filterSt,     setFilterSt]     = useState('')
-  const [filterLinked, setFilterLinked] = useState('')
-  const [search,       setSearch]       = useState('')
-  const [view,         setView]         = useState('grid')  // grid | list
+  const [docs,          setDocs]          = useState([])
+  const [loading,       setLoading]       = useState(true)
+  const [modal,         setModal]         = useState(null)
+  const [preLinked,     setPreLinked]     = useState('')
+  const [preCat,        setPreCat]        = useState('')
+  const [search,        setSearch]        = useState('')
+  const [filterLinked,  setFilterLinked]  = useState('')
+  const [filterCat,     setFilterCat]     = useState('')
+  const [tableOpen,       setTableOpen]       = useState(true)
+  const [groupByEntity,   setGroupByEntity]   = useState(false)
+  const [collapsedGroups, setCollapsedGroups] = useState({})
+  const [expandedRows,    setExpandedRows]    = useState({})
+  const [filterSt,      setFilterSt]      = useState('')
 
   const load = useCallback(async () => {
     if (!entityId) return
     setLoading(true)
-    let q = supabase.from('documents').select('*').eq('entity_id', entityId).order('expiry_date', { ascending:true, nullsFirst:false })
-    if (filterCat) q = q.eq('category', filterCat)
-    const { data } = await q
+    const { data } = await supabase.from('documents').select('*')
+      .eq('entity_id', entityId)
+      .order('expiry_date', { ascending:true, nullsFirst:false })
     setDocs(data||[])
     setLoading(false)
-  }, [entityId, filterCat])
+  }, [entityId])
 
   useEffect(() => { load() }, [load])
 
+  // doc types available for the selected linked type (or all)
+  const availableCatKeys = filterLinked ? (DOC_CATEGORIES[filterLinked] || ALL_CAT_KEYS) : ALL_CAT_KEYS
+
   async function handleDelete(doc) {
     if (!window.confirm(`Delete "${doc.title}"?`)) return
-    await supabase.from('documents').delete().eq('id',doc.id)
+    await supabase.from('documents').delete().eq('id', doc.id)
     load()
   }
 
-  // Compute statuses client-side for filtering
-  const allDocs = docs.map(d=>({ ...d, _status: computeStatus(d) }))
-  const visible = allDocs
-    .filter(d => !filterSt     || d._status===filterSt)
-    .filter(d => !filterLinked || d.linked_type===filterLinked)
-    .filter(d => !search ||
-      d.title.toLowerCase().includes(search.toLowerCase()) ||
-      (d.doc_number||'').toLowerCase().includes(search.toLowerCase()) ||
-      (d.counterparty||'').toLowerCase().includes(search.toLowerCase()) ||
-      (d.linked_name||'').toLowerCase().includes(search.toLowerCase()))
-
-  // KPIs
-  const expiring  = allDocs.filter(d=>d._status==='EXPIRING_SOON').length
-  const expired   = allDocs.filter(d=>d._status==='EXPIRED').length
-  const active    = allDocs.filter(d=>d._status==='ACTIVE').length
-
-  // Group by category for summary
-  const byCat = {}
-  for (const d of allDocs) {
-    if (!byCat[d.category]) byCat[d.category] = 0
-    byCat[d.category]++
+  function openNewModal(lt='', cat='') {
+    setPreLinked(lt); setPreCat(cat); setModal('new')
   }
 
+  const enriched = docs.map(d=>({ ...d, _st: computeStatus(d) }))
+  const expired  = enriched.filter(d=>d._st==='EXPIRED').length
+  const expiring = enriched.filter(d=>d._st==='EXPIRING_SOON').length
+  const active   = enriched.filter(d=>d._st==='ACTIVE').length
+
+  const visible = enriched
+    .filter(d => !filterLinked || d.linked_type === filterLinked)
+    .filter(d => !filterCat    || d.category    === filterCat)
+    .filter(d => !filterSt     || d._st          === filterSt)
+    .filter(d => !search ||
+      (d.title||'').toLowerCase().includes(search.toLowerCase()) ||
+      (d.doc_number||'').toLowerCase().includes(search.toLowerCase()) ||
+      (d.linked_name||'').toLowerCase().includes(search.toLowerCase()) ||
+      (d.counterparty||'').toLowerCase().includes(search.toLowerCase()))
+
+  const TH = { padding:'10px 12px', textAlign:'left', fontSize:10, fontWeight:700, color:'#fff',
+               textTransform:'uppercase', letterSpacing:.8, whiteSpace:'nowrap', fontFamily:PP,
+               background:'#454D9B', borderBottom:'2px solid #353d82' }
+
   return (
-    <div>
-      <div style={{ fontSize:12, color:'#6b7c93', marginBottom:16 }}>
-        Contracts, licenses, MOUs, insurance policies, visas — with expiry tracking
-      </div>
+    // ── Outer shell ─ fixed height, clips overflow so main can scroll ──
+    // chrome = 52px topbar + 1 border + 58px chapter header + 1 border = 112px
+    // App.jsx content wrapper bottom padding = 22px  →  total offset = 134px
+    <div style={{ fontFamily:PP, height:'calc(100vh - 134px)', overflow:'hidden' }}>
 
-      {/* KPI strip */}
-      <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginBottom:14, alignItems:'stretch' }}>
-        {[
-          { label:'Total Docs',    val:allDocs.length, color:'#1565c0', icon:'📁', onClick:()=>setFilterSt('') },
-          { label:'Active',        val:active,          color:'#2e7d32', icon:'✅', onClick:()=>setFilterSt('ACTIVE') },
-          { label:'Expiring Soon', val:expiring,        color:'#e65100', icon:'⏳', onClick:()=>setFilterSt('EXPIRING_SOON') },
-          { label:'Expired',       val:expired,         color:'#c62828', icon:'❌', onClick:()=>setFilterSt('EXPIRED') },
-        ].map(k=>(
-          <div key={k.label} onClick={k.onClick} style={{ background:`linear-gradient(135deg,${k.color}cc 0%,${k.color} 100%)`, borderRadius:10, padding:'10px 16px', flexShrink:0, minWidth:110, boxShadow:`0 3px 10px ${k.color}44`, cursor:'pointer', position:'relative', overflow:'hidden' }}>
-            <div style={{ position:'absolute', right:8, top:6, fontSize:18, opacity:0.25 }}>{k.icon}</div>
-            <div style={{ fontSize:9, color:'rgba(255,255,255,0.85)', fontWeight:700, textTransform:'uppercase', letterSpacing:0.8 }}>{k.label}</div>
-            <div style={{ fontSize:22, fontWeight:900, color:'#fff', lineHeight:1.2, marginTop:2 }}>{k.val}</div>
-          </div>
-        ))}
-        {Object.entries(byCat).slice(0,4).map(([cat,cnt])=>(
-          <div key={cat} onClick={()=>setFilterCat(filterCat===cat?'':cat)} style={{ background:`linear-gradient(135deg,#546e7acc 0%,#37474f 100%)`, borderRadius:10, padding:'10px 14px', flexShrink:0, minWidth:90, boxShadow:'0 3px 10px #546e7a44', cursor:'pointer', position:'relative', overflow:'hidden' }}>
-            <div style={{ position:'absolute', right:8, top:6, fontSize:16, opacity:0.25 }}>{CAT_ICONS[cat]||'📁'}</div>
-            <div style={{ fontSize:9, color:'rgba(255,255,255,0.85)', fontWeight:700, textTransform:'uppercase', letterSpacing:0.8 }}>{cat}</div>
-            <div style={{ fontSize:20, fontWeight:900, color:'#fff', lineHeight:1.2, marginTop:2 }}>{cnt}</div>
-          </div>
-        ))}
-      </div>
+      {/* ── MAIN (full-width, scroll owner) ── */}
+      <div style={{ height:'100%', overflowY:'auto', overflowX:'hidden', display:'flex', flexDirection:'column', background:'#f8f9fb' }}>
 
-      {/* Expiring soon alert */}
-      {expiring > 0 && (
-        <div style={{ ...S.card, background:'#fff8e1', border:'1.5px solid #ffe082' }}>
-          <div style={{ fontWeight:700, fontSize:13, color:'#f57f17', marginBottom:6 }}>⏳ Expiring Soon</div>
-          {allDocs.filter(d=>d._status==='EXPIRING_SOON').sort((a,b)=>new Date(a.expiry_date)-new Date(b.expiry_date)).map(d=>{
-            const days = daysUntilExpiry(d.expiry_date)
-            return (
-              <div key={d.id} style={{ fontSize:12, color:'#e65100', marginBottom:4, display:'flex', justifyContent:'space-between' }}>
-                <span>{CAT_ICONS[d.category]||'📁'} <strong>{d.title}</strong> — {d.counterparty||d.issued_by||''}</span>
-                <span style={{ fontWeight:700 }}>{days} days left ({fmtD(d.expiry_date)})</span>
+        {/* ── STICKY STRIP (KPI + filters) ── */}
+        <div style={{ position:'sticky', top:0, zIndex:30, background:'#f8f9fb',
+          borderBottom:`1px solid ${L1}88`, boxShadow:'0 2px 8px rgba(0,0,0,0.06)' }}>
+
+          {/* Row 1 — KPI cards + Add button */}
+          <div style={{ display:'flex', gap:8, alignItems:'center', padding:'10px 22px 8px' }}>
+            {[
+              { label:'Total',    val:docs.length, color:'#454D9B', st:'' },
+              { label:'Active',   val:active,      color:'#2e7d32', st:'ACTIVE' },
+              { label:'Expiring', val:expiring,    color:'#e65100', st:'EXPIRING_SOON' },
+              { label:'Expired',  val:expired,     color:'#c62828', st:'EXPIRED' },
+            ].map(k=>(
+              <div key={k.label} onClick={()=>setFilterSt(filterSt===k.st?'':k.st)}
+                style={{ background:`linear-gradient(135deg,${k.color}cc,${k.color})`,
+                  borderRadius:9, padding:'6px 16px', cursor:'pointer', minWidth:80,
+                  boxShadow:filterSt===k.st?`0 0 0 2px #fff,0 0 0 4px ${k.color}`:`0 2px 6px ${k.color}44` }}>
+                <div style={{ fontSize:9, color:'rgba(255,255,255,0.85)', fontWeight:700, textTransform:'uppercase', letterSpacing:.8 }}>{k.label}</div>
+                <div style={{ fontSize:22, fontWeight:900, color:'#fff', lineHeight:1.2 }}>{k.val}</div>
               </div>
+            ))}
+            {expiring > 0 && !filterSt && (
+              <div style={{ fontSize:11, color:'#f57f17', background:'#fff8e1', border:'1px solid #ffe082',
+                borderRadius:8, padding:'5px 10px', whiteSpace:'nowrap', fontWeight:700 }}>
+                ⏳ {expiring} expiring soon
+              </div>
+            )}
+            <div style={{ flex:1 }} />
+            <button onClick={()=>openNewModal(filterLinked||'', filterCat||'')}
+              style={{ padding:'8px 20px', borderRadius:9, border:'none',
+                background:`linear-gradient(135deg,${PRI},#6a72c1)`, color:'#fff',
+                fontFamily:PP, fontSize:13, fontWeight:700, cursor:'pointer',
+                boxShadow:`0 2px 6px ${PRI}55`, whiteSpace:'nowrap' }}>
+              + Add Document
+            </button>
+          </div>
+
+          {/* Row 2 — Entity type · Doc type · Status · Search */}
+          <div style={{ display:'flex', gap:8, alignItems:'center', padding:'0 22px 10px', flexWrap:'wrap' }}>
+
+            {/* Entity type filter */}
+            <select value={filterLinked}
+              onChange={e=>{ setFilterLinked(e.target.value); setFilterCat('') }}
+              style={{ padding:'7px 10px', borderRadius:8, border:`1.5px solid ${filterLinked?PRI:PRI+'33'}`,
+                fontSize:12, background: filterLinked?L2:'#fff', fontFamily:PP, cursor:'pointer', outline:'none',
+                color: filterLinked?PRI:'#546e7a', fontWeight: filterLinked?700:400 }}>
+              <option value=''>All entity types</option>
+              {SIDEBAR_CATS.map(c=><option key={c.key} value={c.key}>{c.icon} {c.label}</option>)}
+            </select>
+
+            {/* Doc type filter — scoped to selected entity type */}
+            <select value={filterCat} onChange={e=>setFilterCat(e.target.value)}
+              style={{ padding:'7px 10px', borderRadius:8, border:`1.5px solid ${filterCat?PRI:PRI+'33'}`,
+                fontSize:12, background: filterCat?L2:'#fff', fontFamily:PP, cursor:'pointer', outline:'none',
+                color: filterCat?PRI:'#546e7a', fontWeight: filterCat?700:400 }}>
+              <option value=''>All doc types</option>
+              {availableCatKeys.map(k=><option key={k} value={k}>{CAT_ICONS[k]} {CAT_LABELS[k]||k}</option>)}
+            </select>
+
+            {/* Status filter */}
+            <select value={filterSt} onChange={e=>setFilterSt(e.target.value)}
+              style={{ padding:'7px 10px', borderRadius:8, border:`1.5px solid ${filterSt?PRI:PRI+'33'}`,
+                fontSize:12, background: filterSt?L2:'#fff', fontFamily:PP, cursor:'pointer', outline:'none',
+                color: filterSt?PRI:'#546e7a', fontWeight: filterSt?700:400 }}>
+              <option value=''>All statuses</option>
+              {STATUSES.map(s=><option key={s} value={s}>{s}</option>)}
+            </select>
+
+            {/* Search */}
+            <input style={{ flex:'1 1 180px', minWidth:0, padding:'7px 12px', borderRadius:8,
+              border:`1.5px solid ${PRI}33`, fontSize:13, outline:'none', background:'#fff', fontFamily:PP }}
+              value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search title, number, entity…" />
+
+            {(filterLinked||filterCat||filterSt||search) && (
+              <button onClick={()=>{ setFilterLinked(''); setFilterCat(''); setFilterSt(''); setSearch('') }}
+                style={{ padding:'7px 12px', borderRadius:8, border:'1px solid #ddd', background:'#fff',
+                  fontSize:12, cursor:'pointer', fontFamily:PP, flexShrink:0 }}>✕ Clear</button>
+            )}
+            {/* Group by Entity toggle */}
+            <button onClick={()=>{ setGroupByEntity(g=>!g); setCollapsedGroups({}) }}
+              style={{ padding:'7px 13px', borderRadius:8, border:`1.5px solid ${groupByEntity ? '#454D9B' : '#c5cae9'}`,
+                background: groupByEntity ? '#454D9B' : '#fff', color: groupByEntity ? '#fff' : '#454D9B',
+                fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:PP, whiteSpace:'nowrap', flexShrink:0 }}>
+              {groupByEntity ? '⊞ Grouped' : '⊞ Group by Entity'}
+            </button>
+          </div>
+        </div>
+
+        {/* ── TABLE ── */}
+        <div style={{ flex:1, padding:'0 22px 24px' }}>
+          {loading ? (
+            <div style={{ textAlign:'center', padding:80, color:'#6b7c93' }}>
+              <div style={{ fontSize:32, marginBottom:10 }}>🗄️</div>Loading…
+            </div>
+          ) : visible.length === 0 ? (
+            <div style={{ textAlign:'center', padding:80, color:'#6b7c93', background:'#fff', borderRadius:12, marginTop:16 }}>
+              <div style={{ fontSize:40, marginBottom:10 }}>📂</div>
+              <div style={{ fontSize:14, fontWeight:600, color:'#37474f', marginBottom:6 }}>No documents found</div>
+              <div style={{ fontSize:12, marginBottom:14 }}>
+                {filterLinked
+                  ? `No ${filterCat ? (CAT_LABELS[filterCat]||filterCat) : filterLinked} documents yet.`
+                  : 'Click "+ Add Document" to attach the first document.'}
+              </div>
+              <button onClick={()=>openNewModal(filterLinked, filterCat)}
+                style={{ padding:'9px 22px', borderRadius:20, border:'none', background:PRI,
+                  color:'#fff', fontFamily:PP, fontSize:13, fontWeight:700, cursor:'pointer' }}>
+                + Add Document
+              </button>
+            </div>
+          ) : (() => {
+            // ── shared column widths & row renderer ──────────────────
+            const colgroup = (
+              <colgroup>
+                <col style={{ width:'36px'  }} />{/* chevron only */}
+                <col style={{ width:'32%'   }} />{/* icon + doc type + number */}
+                <col style={{ width:'20%'   }} />{/* entity */}
+                <col style={{ width:'16%'   }} />{/* expiry */}
+                <col style={{ width:'120px' }} />{/* status */}
+                <col style={{ width:'160px' }} />{/* actions */}
+              </colgroup>
             )
-          })}
-        </div>
-      )}
 
-      {/* Controls - sticky */}
-      <div style={{ position:'sticky', top:0, zIndex:20, background:'#f4f7fb', paddingBottom:8, marginBottom:4 }}><div style={{ ...S.card, display:'flex', gap:8, alignItems:'flex-end', flexWrap:'wrap', marginBottom:0 }}>
-        <div style={{ flex:1, minWidth:200 }}>
-          <label style={S.label}>Search</label>
-          <input style={S.input} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Title, number, counterparty…" />
-        </div>
-        <div>
-          <label style={S.label}>Linked To</label>
-          <select style={{ ...S.input, width:130 }} value={filterLinked} onChange={e=>setFilterLinked(e.target.value)}>
-            <option value="">All Types</option>
-            {LINK_TYPES.map(t=><option key={t}>{t}</option>)}
-          </select>
-        </div>
-        <div>
-          <label style={S.label}>Document Type</label>
-          <select style={{ ...S.input, width:190 }} value={filterCat} onChange={e=>setFilterCat(e.target.value)}>
-            <option value="">All Types</option>
-            {ALL_CATEGORIES.map(c=><option key={c} value={c}>{CAT_LABELS[c]||c.replace(/_/g,' ')}</option>)}
-          </select>
-        </div>
-        <div>
-          <label style={S.label}>Status</label>
-          <select style={{ ...S.input, width:140 }} value={filterSt} onChange={e=>setFilterSt(e.target.value)}>
-            <option value="">All Statuses</option>
-            {STATUSES.map(s=><option key={s}>{s}</option>)}
-          </select>
-        </div>
-        <div style={{ display:'flex', gap:4, alignSelf:'flex-end' }}>
-          <button onClick={()=>setView('grid')} style={{ ...S.btn(view==='grid'?'#1a2e3d':'#f0f4f8'), color:view==='grid'?'#fff':'#546e7a', padding:'8px 12px' }}>⊞</button>
-          <button onClick={()=>setView('list')} style={{ ...S.btn(view==='list'?'#1a2e3d':'#f0f4f8'), color:view==='list'?'#fff':'#546e7a', padding:'8px 12px' }}>☰</button>
-        </div>
-        <button onClick={()=>setShowBanner(true)} style={{ ...S.btn(), minWidth:160, padding:'10px 0', textAlign:'center', fontFamily:"'Poppins',sans-serif", boxShadow:'0 3px 8px rgba(69,77,155,0.35)' }}>Add New Document</button>
-      </div></div>
+            const renderRow = (doc, i) => {
+              const sc      = STATUS_COLORS[doc._st] || STATUS_COLORS.ACTIVE
+              const days    = daysUntil(doc.expiry_date)
+              const isOpen  = !!expandedRows[doc.id]
+              const rowBg   = doc._st==='EXPIRED' ? '#fff5f5' : doc._st==='EXPIRING_SOON' ? '#fffdf0' : i%2===0 ? '#fff' : '#fafbfc'
+              const detailBg = doc._st==='EXPIRED' ? '#fff0f0' : doc._st==='EXPIRING_SOON' ? '#fffae8' : '#f4f6ff'
 
-      {loading ? (
-        <div style={{ textAlign:'center', padding:80, color:'#6b7c93' }}>
-          <div style={{ fontSize:32, marginBottom:12 }}>🗄️</div>Loading…
-        </div>
-      ) : visible.length===0 ? (
-        <div style={{ ...S.card, textAlign:'center', padding:60, color:'#6b7c93' }}>
-          <div style={{ fontSize:40, marginBottom:12 }}>🗄️</div>
-          <div style={{ fontSize:14 }}>No documents found</div>
-          <div style={{ fontSize:12, marginTop:4 }}>Add your first document with the button above</div>
-        </div>
-      ) : view==='grid' ? (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))', gap:10 }}>
-          {visible.map(d=>(
-            <DocCard key={d.id} doc={d} onEdit={r=>setModal(r)} onDelete={handleDelete} />
-          ))}
-        </div>
-      ) : (
-        <div style={{ background:'#fff', borderRadius:14, overflow:'auto', boxShadow:'0 2px 10px rgba(0,0,0,0.07)' }}>
-          <table style={{ width:'100%', borderCollapse:'collapse' }}>
-            <thead>
-              <tr style={{ background:'#f0f4f8' }}>
-                {['Cat','Title','Number','Counterparty','Expiry','Status','Linked to',''].map(h=>(
-                  <th key={h} style={{ padding:'10px 10px', textAlign:'left', fontSize:11, fontWeight:700, color:'#6b7c93' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map(d=>{
-                const sc  = STATUS_COLORS[d._status]||STATUS_COLORS.ACTIVE
-                const days= daysUntilExpiry(d.expiry_date)
-                return (
-                  <tr key={d.id} style={{ borderBottom:'1px solid #f0f4f8' }}>
-                    <td style={{ padding:'9px 10px', fontSize:18 }}>{CAT_ICONS[d.category]||'📁'}</td>
-                    <td style={{ padding:'9px 10px' }}>
-                      <div style={{ fontWeight:700, fontSize:13 }}>{d.title}</div>
-                      {d.file_url && <a href={d.file_url} target="_blank" rel="noreferrer" style={{ fontSize:10, color:'#1565C0' }}>📎 {d.file_name||'View'}</a>}
+              const toggleRow = () => setExpandedRows(prev => ({ ...prev, [doc.id]: !prev[doc.id] }))
+
+              const expiryLabel = doc.expiry_date
+                ? days !== null && days < 0
+                  ? `${fmtD(doc.expiry_date)} · ${Math.abs(days)}d ago`
+                  : days !== null && days <= 30
+                    ? `${fmtD(doc.expiry_date)} · ${days}d left`
+                    : fmtD(doc.expiry_date)
+                : '—'
+
+              return (
+                <>
+                  {/* ── Summary row (always visible) ── */}
+                  <tr key={doc.id} onClick={toggleRow}
+                    style={{ cursor:'pointer', transition:'background .15s' }}
+                    onMouseEnter={e=>e.currentTarget.style.background='#eef0fb'}
+                    onMouseLeave={e=>e.currentTarget.style.background=''}>
+
+                    {/* Chevron only */}
+                    <td style={{ padding:'10px 6px', textAlign:'center', background:rowBg,
+                      borderBottom: isOpen ? 'none' : '1px solid #f0f4f8', verticalAlign:'middle' }}>
+                      <span style={{ fontSize:11, color:'#9e9e9e' }}>{isOpen ? '▾' : '▸'}</span>
                     </td>
-                    <td style={{ padding:'9px 10px', fontSize:11, color:'#6b7c93' }}>{d.doc_number||'—'}</td>
-                    <td style={{ padding:'9px 10px', fontSize:12 }}>{d.counterparty||'—'}</td>
-                    <td style={{ padding:'9px 10px', fontSize:12, color:sc.color, fontWeight:days!==null&&days<=30?700:400 }}>
-                      {d.expiry_date ? (
-                        <>{fmtD(d.expiry_date)}<br/><span style={{ fontSize:10 }}>{days<0?`${Math.abs(days)}d ago`:days<=30?`${days}d left`:''}</span></>
-                      ) : '—'}
+
+                    {/* Icon + doc type + number */}
+                    <td style={{ padding:'10px 12px 10px 4px', background:rowBg,
+                      borderBottom: isOpen ? 'none' : '1px solid #f0f4f8', verticalAlign:'middle' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                        <span style={{ fontSize:18, flexShrink:0, lineHeight:1 }}>{CAT_ICONS[doc.category]||'📄'}</span>
+                        <div style={{ minWidth:0, flex:1 }}>
+                          <div style={{ fontWeight:700, fontSize:12, color:'#1a2e3d',
+                            overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{doc.title}</div>
+                          {doc.doc_number && (
+                            <div style={{ fontSize:10, color:'#78909c', fontFamily:'monospace', marginTop:1 }}>{doc.doc_number}</div>
+                          )}
+                        </div>
+                      </div>
                     </td>
-                    <td style={{ padding:'9px 10px' }}>
-                      <span style={{ ...sc, border:`1.5px solid ${sc.border}`, borderRadius:20, padding:'2px 10px', fontSize:10, fontWeight:700 }}>
-                        {d._status}
+
+                    {/* Entity */}
+                    <td style={{ padding:'10px 12px', background:rowBg,
+                      borderBottom: isOpen ? 'none' : '1px solid #f0f4f8', verticalAlign:'middle' }}>
+                      <div style={{ fontSize:12, color:'#546e7a', whiteSpace:'nowrap' }}>{doc.linked_name||'—'}</div>
+                    </td>
+
+                    {/* Expiry */}
+                    <td style={{ padding:'10px 12px', background:rowBg,
+                      borderBottom: isOpen ? 'none' : '1px solid #f0f4f8', verticalAlign:'middle' }}>
+                      <div style={{ fontSize:12, fontWeight: days!==null && days<=30 ? 700 : 400,
+                        color: sc.color, whiteSpace:'nowrap' }}>{expiryLabel}</div>
+                    </td>
+
+                    {/* Status badge */}
+                    <td style={{ padding:'10px 12px', background:rowBg,
+                      borderBottom: isOpen ? 'none' : '1px solid #f0f4f8', verticalAlign:'middle' }}>
+                      <span style={{ background:sc.bg, color:sc.color, border:`1px solid ${sc.border}`,
+                        borderRadius:20, padding:'3px 10px', fontSize:10, fontWeight:700, whiteSpace:'nowrap' }}>
+                        {doc._st}
                       </span>
                     </td>
-                    <td style={{ padding:'9px 10px', fontSize:11, color:'#6b7c93' }}>
-                      {d.linked_type && d.linked_name ? `${d.linked_type}: ${d.linked_name}` : '—'}
-                    </td>
-                    <td style={{ padding:'9px 10px' }}>
-                      <div style={{ display:'flex', gap:4 }}>
-                        <button onClick={()=>setModal(d)} style={{ background:'transparent', color:'#1565C0', border:'1px solid #1565C0', borderRadius:6, padding:'3px 8px', fontSize:10, cursor:'pointer' }}>Edit</button>
-                        <button onClick={()=>handleDelete(d)} style={{ background:'transparent', color:'#c62828', border:'1px solid #ef9a9a', borderRadius:6, padding:'3px 8px', fontSize:10, cursor:'pointer' }}>Del</button>
+
+                    {/* Quick actions always visible */}
+                    <td style={{ padding:'10px 12px', background:rowBg,
+                      borderBottom: isOpen ? 'none' : '1px solid #f0f4f8', verticalAlign:'middle', textAlign:'right' }}>
+                      <div style={{ display:'flex', gap:6, justifyContent:'flex-end', flexWrap:'nowrap' }}>
+                        <button onClick={e=>{ e.stopPropagation(); setModal(doc) }}
+                          style={{ background:'#454D9B', color:'#fff', border:'none',
+                            borderRadius:6, padding:'5px 12px', fontSize:11, fontWeight:700,
+                            cursor:'pointer', fontFamily:PP, whiteSpace:'nowrap' }}>✏ Edit</button>
+                        <button onClick={e=>{ e.stopPropagation(); handleDelete(doc) }}
+                          style={{ background:'#fff0f0', color:'#c62828', border:'1px solid #ffcdd2',
+                            borderRadius:6, padding:'5px 12px', fontSize:11, fontWeight:700,
+                            cursor:'pointer', fontFamily:PP, whiteSpace:'nowrap' }}>🗑 Del</button>
                       </div>
                     </td>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
+
+                  {/* ── Expanded detail panel ── */}
+                  {isOpen && (
+                    <tr key={doc.id+'-detail'}>
+                      <td colSpan={6} style={{ padding:0, background:detailBg,
+                        borderBottom:'2px solid #c5cae9', borderTop:'1px solid #c5cae9' }}>
+                        <div style={{ padding:'14px 20px', display:'grid',
+                          gridTemplateColumns:'repeat(auto-fill, minmax(180px, 1fr))', gap:'10px 24px' }}>
+
+                          {/* Field helper */}
+                          {[
+                            { label:'Doc Type',    val: doc.title },
+                            { label:'Category',    val: `${CAT_ICONS[doc.category]||''} ${CAT_LABELS[doc.category]||doc.category||'—'}` },
+                            { label:'Number / Ref',val: doc.doc_number||'—' },
+                            { label:'Entity',      val: doc.linked_name||'—' },
+                            { label:'Entity Type', val: doc.linked_type||'—' },
+                            { label:'Issued By',   val: doc.counterparty||doc.issued_by||'—' },
+                            { label:'Issue Date',  val: fmtD(doc.issue_date)||'—' },
+                            { label:'Effective',   val: fmtD(doc.effective_date)||'—' },
+                            { label:'Expiry Date', val: fmtD(doc.expiry_date)||'—', highlight: days!==null && days<=30 },
+                            { label:'Alert (days)',val: doc.alert_before_expiry_days ?? '30' },
+                            { label:'Department',  val: doc.department||'—' },
+                            { label:'Owner',       val: doc.owner_responsible||'—' },
+                            { label:'Status',      val: doc._st },
+                            { label:'Renewable',   val: doc.is_renewable ? '✅ Yes' : 'No' },
+                            { label:'Notes',       val: doc.notes||'—' },
+                          ].map(f => (
+                            <div key={f.label}>
+                              <div style={{ fontSize:9, fontWeight:700, color:'#7986cb',
+                                textTransform:'uppercase', letterSpacing:.6, marginBottom:2 }}>{f.label}</div>
+                              <div style={{ fontSize:12, color: f.highlight ? sc.color : '#1a2e3d',
+                                fontWeight: f.highlight ? 700 : 400, wordBreak:'break-word' }}>{f.val}</div>
+                            </div>
+                          ))}
+
+                          {/* Attachment link */}
+                          {doc.file_url && (
+                            <div style={{ gridColumn:'1/-1', marginTop:4, display:'flex', gap:8, alignItems:'center' }}>
+                              <span style={{ fontSize:9, fontWeight:700, color:'#7986cb',
+                                textTransform:'uppercase', letterSpacing:.6 }}>Attachment</span>
+                              <a href={doc.file_url} target="_blank" rel="noreferrer"
+                                style={{ fontSize:12, color:'#454D9B', fontWeight:700,
+                                  textDecoration:'none', border:'1px solid #c5cae9',
+                                  borderRadius:6, padding:'4px 12px', background:'#fff',
+                                  display:'inline-flex', alignItems:'center', gap:5 }}>
+                                📎 View / Download
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
+              )
+            }
+
+            const thead = (
+              <thead>
+                <tr style={{ position:'sticky', top:STRIP_H, zIndex:20, cursor:'pointer' }}
+                    onClick={()=>setTableOpen(o=>!o)}>
+                  <th style={{ ...TH, textAlign:'center', fontSize:13, width:36 }}>{tableOpen ? '▾' : '▸'}</th>
+                  <th style={TH}>Document Type &amp; Reference</th>
+                  <th style={TH}>Entity</th>
+                  <th style={TH}>Expiry</th>
+                  <th style={TH}>Status</th>
+                  <th style={{ ...TH, textAlign:'right' }}>Actions</th>
+                </tr>
+              </thead>
+            )
+
+            // ── FLAT view ────────────────────────────────────────────
+            if (!groupByEntity) return (
+              <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'auto', marginTop:8 }}>
+                {colgroup}
+                {thead}
+                <tbody style={{ display: tableOpen ? 'table-row-group' : 'none' }}>
+                  {visible.map((doc, i) => renderRow(doc, i))}
+                </tbody>
+              </table>
+            )
+
+            // ── GROUPED view ─────────────────────────────────────────
+            // Build ordered map: entityKey → { label, type, docs[] }
+            const groups = {}
+            visible.forEach(doc => {
+              const key = doc.linked_id || doc.linked_name || 'unlinked'
+              if (!groups[key]) {
+                const typeInfo = SIDEBAR_CATS.find(c=>c.key===doc.linked_type) || {}
+                groups[key] = {
+                  key,
+                  label: doc.linked_name || 'Unlinked',
+                  icon:  typeInfo.icon || '📎',
+                  type:  doc.linked_type || '',
+                  linkedId: doc.linked_id,
+                  docs: []
+                }
+              }
+              groups[key].docs.push(doc)
+            })
+            const groupList = Object.values(groups)
+
+            return (
+              <div style={{ marginTop:8 }}>
+                {groupList.map(grp => {
+                  const isOpen = !collapsedGroups[grp.key]
+                  const expired  = grp.docs.filter(d=>d._st==='EXPIRED').length
+                  const expiring = grp.docs.filter(d=>d._st==='EXPIRING_SOON').length
+                  return (
+                    <div key={grp.key} style={{ marginBottom:12, borderRadius:10, overflow:'hidden',
+                      boxShadow:'0 1px 4px rgba(0,0,0,0.07)', border:'1px solid #e8eaf6' }}>
+                      {/* Group header row */}
+                      <div onClick={()=>setCollapsedGroups(prev=>({ ...prev, [grp.key]: !prev[grp.key] }))}
+                        style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 16px',
+                          background:'linear-gradient(90deg,#454D9B,#5c64b3)', cursor:'pointer',
+                          userSelect:'none' }}>
+                        <span style={{ fontSize:16 }}>{isOpen ? '▾' : '▸'}</span>
+                        <span style={{ fontSize:14 }}>{grp.icon}</span>
+                        <span style={{ fontFamily:PP, fontWeight:700, fontSize:13, color:'#fff', flex:1 }}>
+                          {grp.label}
+                        </span>
+                        {/* Doc count badge */}
+                        <span style={{ background:'rgba(255,255,255,0.2)', color:'#fff', borderRadius:20,
+                          padding:'2px 10px', fontSize:11, fontWeight:700 }}>
+                          {grp.docs.length} doc{grp.docs.length!==1?'s':''}
+                        </span>
+                        {expired > 0 && (
+                          <span style={{ background:'#c62828', color:'#fff', borderRadius:20,
+                            padding:'2px 9px', fontSize:10, fontWeight:700 }}>
+                            {expired} expired
+                          </span>
+                        )}
+                        {expiring > 0 && (
+                          <span style={{ background:'#e65100', color:'#fff', borderRadius:20,
+                            padding:'2px 9px', fontSize:10, fontWeight:700 }}>
+                            {expiring} expiring
+                          </span>
+                        )}
+                        {/* Quick Add for this entity */}
+                        <button onClick={e=>{ e.stopPropagation(); openNewModal(grp.type, '') }}
+                          style={{ background:'rgba(255,255,255,0.15)', color:'#fff', border:'1px solid rgba(255,255,255,0.4)',
+                            borderRadius:7, padding:'3px 10px', fontSize:11, fontWeight:700,
+                            cursor:'pointer', fontFamily:PP, flexShrink:0 }}>
+                          + Add
+                        </button>
+                      </div>
+                      {/* Group table */}
+                      {isOpen && (
+                        <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'auto' }}>
+                          {colgroup}
+                          <tbody>
+                            {grp.docs.map((doc, i) => renderRow(doc, i))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
         </div>
-      )}
+      </div>
 
-      {/* PageBanner — intro screen for new documents */}
-      <PageBanner
-        isOpen={showBanner}
-        onClose={()=>setShowBanner(false)}
-        onStart={()=>{ setShowBanner(false); setModal('new') }}
-        chapterL1="#AAAED0"
-        chapterL2="#F0F1FA"
-        moduleColor="#454D9B"
-        chapterLabel="Administration"
-        formTitle={['New', 'Document', 'Record']}
-        steps={['Document Details', 'Dates & Attachments']}
-        icon="📄"
-        description="Store contracts, licenses, MOUs, visas, certificates and any document that needs tracking, expiry alerts and easy retrieval."
-      />
-
+      {/* Modal */}
       {modal && (
         <DocModal
           entityId={entityId}
-          item={modal==='new'?null:modal}
+          item={modal === 'new' ? null : modal}
+          preLinkedType={modal === 'new' ? preLinked : undefined}
+          preCategory={modal === 'new' ? preCat : undefined}
           onClose={()=>setModal(null)}
           onSaved={()=>{ setModal(null); load() }}
         />

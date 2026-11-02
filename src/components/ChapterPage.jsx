@@ -75,6 +75,8 @@ export default function ChapterPage({
   emptyMessage    = 'No records found',
   // KPI bar (optional)
   kpis            = [],   // [{ label, value, sub }]
+  // Extra sticky content rendered below section header (e.g. custom filter bar)
+  filterBar,
   // Custom table / content override
   children,
 }) {
@@ -85,146 +87,138 @@ export default function ChapterPage({
 
   return (
     <div style={{
-      display: 'flex', flexDirection: 'column',
-      height: '100%', overflow: 'hidden',
       background: PAGE.BG,
       fontFamily: TYPE.FONT,
+      minHeight: 0,
     }}>
 
       {/* H1 is now provided globally by AppShell — ChapterPage starts at H2 */}
 
-      {/* ── KPI bar (optional) ── */}
-      {kpis.length > 0 && (
-        <div style={{
-          display: 'flex', gap: 14, padding: '14px 28px',
-          background: '#fff', borderBottom: '1px solid #e8ecf4',
-          flexShrink: 0, overflowX: 'auto',
-        }}>
-          {kpis.map((k, i) => {
-            // Vivid distinct colors per card — different from chapter header color
-            const VIVID = [
-              ['#1565c0','#1976d2'],  // blue
-              ['#2e7d32','#388e3c'],  // green
-              ['#b45309','#d97706'],  // amber
-              ['#7c3aed','#8b5cf6'],  // purple
-              ['#0369a1','#0284c7'],  // sky
-              ['#b91c1c','#dc2626'],  // red
-            ]
-            const [c1, c2] = VIVID[i % VIVID.length]
-            return (
-              <div key={i} style={{
-                background: `linear-gradient(135deg, ${c1} 0%, ${c2} 100%)`,
-                borderRadius: 10, padding: '11px 16px',
-                boxShadow: `0 3px 12px ${c1}55`,
-                minWidth: 120, flex: 1, position: 'relative', overflow: 'hidden',
-              }}>
-                <div style={{
-                  position: 'absolute', right: 8, top: 5,
-                  fontSize: 26, opacity: 0.12, color: '#fff',
-                  fontFamily: TYPE.FONT,
-                }}>{k.icon || '◈'}</div>
-                <div style={{
-                  fontSize: 9, fontWeight: 800, letterSpacing: 0.9,
-                  textTransform: 'uppercase', color: 'rgba(255,255,255,0.72)',
-                  marginBottom: 3, fontFamily: TYPE.FONT,
-                }}>{k.label}</div>
-                <div style={{
-                  fontSize: 19, fontWeight: 900, color: '#fff',
-                  lineHeight: 1.1, fontFamily: TYPE.FONT,
-                }}>{k.value}</div>
-                {k.sub && (
-                  <div style={{
-                    fontSize: 10, color: 'rgba(255,255,255,0.68)', marginTop: 3,
-                    fontFamily: TYPE.FONT,
-                  }}>{k.sub}</div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* ── Section H2 + L1 action + filters ── */}
+      {/* ══════════════════════════════════════════════════════════
+          STICKY HEADER ZONE — KPI cards + section heading + filterBar
+          position:sticky keeps this pinned while content below scrolls
+      ══════════════════════════════════════════════════════════ */}
       <div style={{
-        padding: '14px 28px 10px',
-        flexShrink: 0,
+        position: 'sticky', top: 0, zIndex: 30,
+        background: PAGE.BG,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
       }}>
-        {/* H2 section title row — title left, L1 button right */}
-        {(sectionTitle || onNew) && (
+
+        {/* ── KPI bar (optional) ── */}
+        {kpis.length > 0 && (
           <div style={{
-            display: 'flex', alignItems: 'center',
-            justifyContent: 'space-between', marginBottom: 10,
+            display: 'flex', gap: 14, padding: '14px 28px',
+            background: '#fff', borderBottom: '1px solid #e8ecf4',
+            overflowX: 'auto',
           }}>
-            {sectionTitle && (
-              <h2 style={{
-                fontSize: TYPE.H2_SIZE, fontWeight: TYPE.H2_WEIGHT,
-                color: TYPE.H2_COLOR, margin: 0,
-                fontFamily: TYPE.FONT,
-              }}>
-                {sectionTitle}
-              </h2>
-            )}
-            {/* Level 1 button — big, module color */}
-            {onNew && (
-              <button onClick={onNew} style={{ ...btn.L1(chapterColor), marginLeft:'auto' }}>
-                {newLabel}
-              </button>
-            )}
+            {kpis.map((k, i) => {
+              const VIVID = [
+                ['#1565c0','#1976d2'],
+                ['#2e7d32','#388e3c'],
+                ['#b45309','#d97706'],
+                ['#7c3aed','#8b5cf6'],
+                ['#0369a1','#0284c7'],
+                ['#b91c1c','#dc2626'],
+              ]
+              const [c1, c2] = VIVID[i % VIVID.length]
+              return (
+                <div key={i} style={{
+                  background: `linear-gradient(135deg, ${c1} 0%, ${c2} 100%)`,
+                  borderRadius: 10, padding: '11px 16px',
+                  boxShadow: `0 3px 12px ${c1}55`,
+                  minWidth: 120, flex: 1, position: 'relative', overflow: 'hidden',
+                }}>
+                  <div style={{
+                    position: 'absolute', right: 8, top: 5,
+                    fontSize: 26, opacity: 0.12, color: '#fff',
+                    fontFamily: TYPE.FONT,
+                  }}>{k.icon || '◈'}</div>
+                  <div style={{
+                    fontSize: 9, fontWeight: 800, letterSpacing: 0.9,
+                    textTransform: 'uppercase', color: 'rgba(255,255,255,0.72)',
+                    marginBottom: 3, fontFamily: TYPE.FONT,
+                  }}>{k.label}</div>
+                  <div style={{
+                    fontSize: 19, fontWeight: 900, color: '#fff',
+                    lineHeight: 1.1, fontFamily: TYPE.FONT,
+                  }}>{k.value}</div>
+                  {k.sub && (
+                    <div style={{
+                      fontSize: 10, color: 'rgba(255,255,255,0.68)', marginTop: 3,
+                      fontFamily: TYPE.FONT,
+                    }}>{k.sub}</div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
 
-        {/* Filter strip */}
-        <div style={{
-          display: 'flex', alignItems: 'center',
-          gap: 8, flexWrap: 'wrap',
-        }}>
-          {filters.map(f => (
-            <button
-              key={f}
-              onClick={() => onFilter?.(f)}
-              style={filterChip(f === activeFilter, chapterColor)}
-            >
-              {f}
-            </button>
-          ))}
-
-          {/* search */}
-          {onSearch !== undefined && (
-            <div style={{ position: 'relative', marginLeft: 'auto' }}>
-              <span style={{
-                position: 'absolute', left: 10, top: '50%',
-                transform: 'translateY(-50%)',
-                fontSize: 13, color: '#94a3b8', pointerEvents: 'none',
-              }}>🔍</span>
-              <input
-                value={searchValue}
-                onChange={e => onSearch(e.target.value)}
-                placeholder={searchPlaceholder}
-                style={searchInput}
-              />
+        {/* ── Section H2 + L1 action ── */}
+        {(sectionTitle || onNew) && (
+          <div style={{ padding: '12px 28px 8px', background: PAGE.BG }}>
+            <div style={{
+              display: 'flex', alignItems: 'center',
+              justifyContent: 'space-between',
+            }}>
+              {sectionTitle && (
+                <h2 style={{
+                  fontSize: TYPE.H2_SIZE, fontWeight: TYPE.H2_WEIGHT,
+                  color: TYPE.H2_COLOR, margin: 0,
+                  fontFamily: TYPE.FONT,
+                }}>
+                  {sectionTitle}
+                </h2>
+              )}
+              {onNew && (
+                <button onClick={onNew} style={{ ...btn.L1(chapterColor), marginLeft:'auto' }}>
+                  {newLabel}
+                </button>
+              )}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        )}
 
+        {/* ── Built-in filter strip (for pages using filters/onSearch props) ── */}
+        {(filters.length > 0 || onSearch !== undefined) && (
+          <div style={{ padding: '0 28px 10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {filters.map(f => (
+                <button key={f} onClick={() => onFilter?.(f)} style={filterChip(f === activeFilter, chapterColor)}>{f}</button>
+              ))}
+              {onSearch !== undefined && (
+                <div style={{ position: 'relative', marginLeft: 'auto' }}>
+                  <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: '#94a3b8', pointerEvents: 'none' }}>🔍</span>
+                  <input value={searchValue} onChange={e => onSearch(e.target.value)} placeholder={searchPlaceholder} style={searchInput} />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Custom filter bar (e.g. Vacations) ── */}
+        {filterBar && (
+          <div style={{ padding: '0 28px 10px' }}>
+            {filterBar}
+          </div>
+        )}
+
+      </div>{/* end sticky header zone */}
+
+      {/* ── Scrollable content area ── */}
       {/* ── Table OR custom children ── */}
       {children ? (
-        // Custom table content (used by pages with complex rendering)
-        <div style={{ flex: 1, overflow: 'hidden', padding: '0 28px 24px', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '0 28px 24px' }}>
           {children}
         </div>
       ) : null}
 
-      {!children && <div style={{
-        flex: 1, overflow: 'hidden',
-        padding: '0 28px 24px',
-        display: 'flex', flexDirection: 'column',
-      }}>
+      {!children && <div style={{ padding: '0 28px 24px' }}>
         <div style={{
-          flex: 1, overflow: 'auto',
           borderRadius: TABLE.RADIUS,
           boxShadow: PAGE.CARD_SHADOW,
           background: '#fff',
+          overflowX: 'auto',
         }}>
           <table style={{
             width: '100%', borderCollapse: 'collapse',

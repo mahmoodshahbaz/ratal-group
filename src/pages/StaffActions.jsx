@@ -2,6 +2,10 @@ import { GROUP_COLORS } from '../styles/appStyles'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth'
+import FormShell from '../components/FormShell'
+import PageBanner from '../components/PageBanner'
+
+const L3 = '#795338'
 
 // ─── Staff Action Request page — DEPT_HEAD portal ────────────────
 // Tabs: My Team | Submit Action | Budget View | My Submissions
@@ -92,27 +96,35 @@ const EMPTY_FORM = {
 const MC = GROUP_COLORS.HR
 
 const S = {
-  card:  { background: '#fff', borderRadius: 14, padding: '18px 22px', boxShadow: '0 2px 10px rgba(0,0,0,0.07)', marginBottom: 16 },
-  inp:   { width: '100%', padding: '8px 10px', borderRadius: 7, border: '1px solid #dde3ec', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' },
-  btn:   (c = '#1a2e3d') => ({ background: c, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }),
-  label: { display: 'block', fontSize: 11, color: '#6b7c93', fontWeight: 700, marginBottom: 4 },
-  tab:   a => ({ padding: '7px 18px', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700, marginRight: 6, background: a ? '#00897b' : '#f0f4f8', color: a ? '#fff' : '#6b7c93' }),
-  th:    { background: MC, color: '#fff', padding: '9px 14px', fontWeight: 700, textAlign: 'left', fontSize: 11 },
+  card:  { background: '#fff', borderRadius: 4, padding: '18px 22px', boxShadow: '0 2px 10px rgba(0,0,0,0.07)', marginBottom: 16 },
+  inp:   { width: '100%', padding: '8px 10px', borderRadius: 4, border: '1px solid #dde3ec', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: 'Poppins, sans-serif' },
+  btn:   (c = L3) => ({ background: c, color: '#fff', border: 'none', borderRadius: 4, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'Poppins, sans-serif' }),
+  label: { display: 'block', fontSize: 11, color: '#6b7c93', fontWeight: 700, marginBottom: 4, fontFamily: 'Poppins, sans-serif' },
+  tab:   a => ({ padding: '7px 18px', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12, fontWeight: 700, marginRight: 6, background: a ? L3 : '#f0f4f8', color: a ? '#fff' : '#6b7c93', fontFamily: 'Poppins, sans-serif' }),
+  th:    { background: L3, color: '#fff', padding: '9px 14px', fontWeight: 700, textAlign: 'left', fontSize: 11 },
   td:    { padding: '10px 14px', borderBottom: '1px solid #f0f4f8', verticalAlign: 'middle', fontSize: 12 },
 }
 
 export default function StaffActions({ entityId }) {
   const { profile } = useAuth()
-  const [tab,        setTab]      = useState('team')
-  const [employees,  setEmp]      = useState([])
-  const [depts,      setDepts]    = useState([])
-  const [myDept,     setMyDept]   = useState(null)
-  const [sars,       setSars]     = useState([])
-  const [loading,    setLoading]  = useState(true)
-  const [saving,     setSaving]   = useState(false)
-  const [form,       setForm]     = useState(EMPTY_FORM)
-  const [deptCost,   setDeptCost] = useState(0)
-  const [msg,        setMsg]      = useState(null)
+  const [tab,          setTab]        = useState('team')
+  const [employees,    setEmp]        = useState([])
+  const [depts,        setDepts]      = useState([])
+  const [myDept,       setMyDept]     = useState(null)
+  const [activeDeptId, setActiveDeptId] = useState('')  // Admin override: selected dept
+  const [sars,         setSars]       = useState([])
+  const [loading,      setLoading]    = useState(true)
+  const [empLoading,   setEmpLoading] = useState(false)
+  const [saving,       setSaving]     = useState(false)
+  const [form,         setForm]       = useState(EMPTY_FORM)
+  const [deptCost,     setDeptCost]   = useState(0)
+  const [msg,          setMsg]        = useState(null)
+  const [showBanner,   setShowBanner] = useState(false)
+  const [showModal,    setShowModal]  = useState(false)
+  const [wizardStep,   setWizardStep] = useState(1)
+
+  // isAdmin = no dept matched → show dept selector
+  const isAdmin = !myDept
 
   useEffect(() => { if (entityId) load() }, [entityId, profile?.email])
 
@@ -120,49 +132,33 @@ export default function StaffActions({ entityId }) {
     setLoading(true)
 
     // 1. Departments for this entity
-    const { data: deptData } = await supabase
+    const { data: deptData, error: deptErr } = await supabase
       .from('departments')
-      .select('id, name, short_code, head')
+      .select('id, dept_name, dept_code')
       .eq('entity_id', entityId)
-      .order('name')
+      .eq('is_active', true)
+      .order('dept_name')
+    if (deptErr) console.error('Departments load error:', deptErr.message)
     setDepts(deptData || [])
 
-    // 2. Find my department by matching profile.department (name or short_code)
-    const myDeptKey = (profile?.department || '').toLowerCase()
+    // 2. Find my department — try multiple matching strategies
+    const myDeptKey = (profile?.department || '').toLowerCase().trim()
     const found = myDeptKey
       ? (deptData || []).find(d =>
-          d.name?.toLowerCase() === myDeptKey ||
-          d.short_code?.toLowerCase() === myDeptKey
+          d.dept_name?.toLowerCase().trim()  === myDeptKey ||
+          d.dept_code?.toLowerCase().trim()  === myDeptKey ||
+          d.dept_name?.toLowerCase().trim().includes(myDeptKey) ||
+          myDeptKey.includes(d.dept_code?.toLowerCase().trim() || '__NO__')
         )
       : null
     setMyDept(found || null)
 
-    if (found) {
-      // 3. Employees in my dept — NO salary columns
-      const { data: empData } = await supabase
-        .from('employees')
-        .select('id, full_name, full_name_en, employee_no, employee_number, employee_type, contract_end_date, is_active')
-        .eq('entity_id', entityId)
-        .eq('department_id', found.id)
-        .eq('is_active', true)
-        .order('full_name')
-      setEmp(empData || [])
+    const deptToLoad = found?.id || null
 
-      // 4. Aggregate dept cost (sum only — no individual rows displayed)
-      const { data: costData } = await supabase
-        .from('employees')
-        .select('bank_portion, cash_portion, basic_salary, housing_allowance, transport_allowance')
-        .eq('entity_id', entityId)
-        .eq('department_id', found.id)
-        .eq('is_active', true)
-      const total = (costData || []).reduce((s, e) => {
-        const bp   = +(e.bank_portion || 0)
-        const cp   = +(e.cash_portion || 0)
-        const comp = +(e.basic_salary || 0) + +(e.housing_allowance || 0) + +(e.transport_allowance || 0)
-        return s + (bp > 0 ? bp + cp : comp)
-      }, 0)
-      setDeptCost(total)
+    if (deptToLoad) {
+      await loadEmployeesForDept(deptToLoad, entityId)
     } else {
+      // Admin / unmatched dept — clear employees; they'll pick a dept manually
       setEmp([]); setDeptCost(0)
     }
 
@@ -179,12 +175,49 @@ export default function StaffActions({ entityId }) {
     setLoading(false)
   }
 
+  // Load employees for a given dept ID (used by both DH auto-load and Admin dept picker)
+  async function loadEmployeesForDept(deptId, eid) {
+    setEmpLoading(true)
+    const [{ data: empData }, { data: costData }] = await Promise.all([
+      supabase.from('employees')
+        .select('id, full_name, full_name_en, employee_no, employee_number, employee_type, contract_end_date, is_active, department_id')
+        .eq('entity_id', eid || entityId)
+        .eq('department_id', deptId)
+        .eq('is_active', true)
+        .order('full_name'),
+      supabase.from('employees')
+        .select('bank_portion, cash_portion, basic_salary, housing_allowance, transport_allowance')
+        .eq('entity_id', eid || entityId)
+        .eq('department_id', deptId)
+        .eq('is_active', true),
+    ])
+    setEmp(empData || [])
+    const total = (costData || []).reduce((s, e) => {
+      const bp = +(e.bank_portion || 0), cp = +(e.cash_portion || 0)
+      const comp = +(e.basic_salary || 0) + +(e.housing_allowance || 0) + +(e.transport_allowance || 0)
+      return s + (bp > 0 ? bp + cp : comp)
+    }, 0)
+    setDeptCost(total)
+    setEmpLoading(false)
+  }
+
+  // Admin dept picker change
+  async function onAdminDeptChange(deptId) {
+    setActiveDeptId(deptId)
+    setF('employee_id', '')   // reset selected employee
+    if (deptId) await loadEmployeesForDept(deptId)
+    else { setEmp([]); setDeptCost(0) }
+  }
+
   function flash(type, text) {
     setMsg({ type, text })
     setTimeout(() => setMsg(null), 5000)
   }
 
   function setF(k, v) { setForm(f => ({ ...f, [k]: v })) }
+
+  // Active dept for display (DH's own dept, or admin-selected dept)
+  const activeDept = myDept || depts.find(d => d.id === activeDeptId) || null
 
   async function submitSar() {
     if (!form.employee_id) { alert('Please select an employee'); return }
@@ -198,14 +231,14 @@ export default function StaffActions({ entityId }) {
       employee_id:           form.employee_id,
       submitted_by_name:     profile?.full_name || profile?.email || '',
       submitted_by_email:    profile?.email || '',
-      department_name:       myDept?.name || profile?.department || '',
+      department_name:       activeDept?.dept_name || profile?.department || '',
       action_type:           form.action_type,
       notice_given_date:     form.notice_given_date || null,
       last_working_day:      form.action_type === 'RELEASE'            ? (form.last_working_day || null) : null,
       hold_month:            form.action_type === 'PAYROLL_HOLD'       ? form.hold_month : null,
       transfer_to_dept_id:   form.action_type === 'TRANSFER'           ? (form.transfer_to_dept_id || null) : null,
       transfer_to_dept_name: form.action_type === 'TRANSFER'
-        ? (depts.find(d => d.id === form.transfer_to_dept_id)?.name || '') : null,
+        ? (depts.find(d => d.id === form.transfer_to_dept_id)?.dept_name || '') : null,
       notice_period:         form.notice_period,
       reason:                form.reason,
       notes:                 form.notes || null,
@@ -218,6 +251,8 @@ export default function StaffActions({ entityId }) {
 
     flash('success', 'SAR submitted. Payroll has been notified.')
     setForm(EMPTY_FORM)
+    setShowModal(false)
+    setWizardStep(1)
     load()
     setTab('history')
   }
@@ -237,7 +272,7 @@ export default function StaffActions({ entityId }) {
           <div style={{ fontSize: 22, fontWeight: 800, color: '#1a2e3d' }}>📋 Staff Actions</div>
           <div style={{ fontSize: 12, color: '#6b7c93', marginTop: 2 }}>
             Dept Head Portal — Submit staff action requests and track their status
-            {myDept && <span style={{ marginLeft: 10, background: '#ede7f6', color: '#6a1b9a', borderRadius: 5, padding: '2px 9px', fontSize: 10, fontWeight: 800 }}>{myDept.short_code || myDept.name}</span>}
+            {myDept && <span style={{ marginLeft: 10, background: '#ede7f6', color: '#6a1b9a', borderRadius: 5, padding: '2px 9px', fontSize: 10, fontWeight: 800 }}>{myDept.dept_code || myDept.dept_name}</span>}
           </div>
         </div>
         <div style={{ fontSize: 12, color: '#6b7c93' }}>
@@ -298,7 +333,7 @@ export default function StaffActions({ entityId }) {
           <div style={{ ...S.card, padding: 0, overflow: 'hidden' }}>
             <div style={{ background: '#1a2e3d', padding: '10px 16px', display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>
-                {myDept ? `${myDept.name} — Active Employees` : 'My Department'}
+                {myDept ? `${myDept.dept_name} — Active Employees` : 'My Department'}
               </span>
               <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11 }}>{employees.length} employees · Names & contracts only</span>
             </div>
@@ -354,118 +389,200 @@ export default function StaffActions({ entityId }) {
         </>
       )}
 
+      {/* ── PAGE BANNER ── */}
+      <PageBanner
+        isOpen={showBanner}
+        onClose={() => setShowBanner(false)}
+        onStart={() => { setShowBanner(false); setForm(EMPTY_FORM); setWizardStep(1); setShowModal(true) }}
+        chapterName="HR"
+        formTitle={['New', 'Staff', 'Action']}
+        heading="Submit a staff action request to the Payroll team"
+        iconLabel="Staff Actions"
+        workflowSteps={['Action Details', 'Notes & Submit']}
+        description="Select an employee from your department, choose the action type (Release, Transfer, Hold, etc.), and provide the required details. Payroll will be notified automatically."
+      />
+
+      {/* ── FORMSHELL WIZARD ── */}
+      <FormShell
+        isOpen={showModal}
+        onClose={() => { setShowModal(false); setWizardStep(1) }}
+        chapterName="HR"
+        title={['New', 'Staff Action', 'Request']}
+        steps={['Action Details', 'Notes & Submit']}
+        currentStep={wizardStep}
+        onBack={() => setWizardStep(1)}
+        backLabel="Back"
+        onNext={wizardStep === 1 ? () => setWizardStep(2) : submitSar}
+        nextLabel={wizardStep === 1 ? 'Next: Notes & Submit' : (saving ? 'Submitting…' : 'Submit SAR')}
+        nextDisabled={saving || !form.employee_id || !form.reason || (isAdmin && !activeDeptId) || (form.action_type === 'RELEASE' && !form.last_working_day) || (form.action_type === 'TRANSFER' && !form.transfer_to_dept_id)}
+      >
+        {/* ── STEP 1: Action Details ── */}
+        {wizardStep === 1 && (
+          <div>
+            {/* Dept + Employee — same row */}
+            <div style={{ display: 'flex', gap: 12, marginBottom: 14, alignItems: 'flex-end' }}>
+              {/* Department — shown as abbreviation only */}
+              <div style={{ flex: '0 0 140px' }}>
+                <label style={{ ...S.label, color: isAdmin ? '#e65100' : undefined }}>
+                  {isAdmin ? '⚠️ ' : ''}Department *
+                </label>
+                {isAdmin ? (
+                  <select style={S.inp} value={activeDeptId} onChange={e => onAdminDeptChange(e.target.value)}>
+                    <option value="">— Dept —</option>
+                    {depts.map(d => <option key={d.id} value={d.id}>{d.dept_code || d.dept_name}</option>)}
+                  </select>
+                ) : (
+                  <input
+                    style={{ ...S.inp, background: '#f5f7fa', cursor: 'default' }}
+                    readOnly
+                    value={myDept ? (myDept.dept_code || myDept.dept_name) : '—'}
+                  />
+                )}
+              </div>
+
+              {/* Employee */}
+              <div style={{ flex: 1 }}>
+                <label style={S.label}>Employee *</label>
+              <select
+                style={{ ...S.inp, background: (isAdmin && !activeDeptId) ? '#f5f7fa' : '#fff' }}
+                value={form.employee_id}
+                onChange={e => setF('employee_id', e.target.value)}
+                disabled={isAdmin && !activeDeptId}
+              >
+                <option value="">{empLoading ? 'Loading employees…' : (employees.length === 0 ? '— No active employees in this department —' : '— Select employee —')}</option>
+                {employees.map(emp => (
+                  <option key={emp.id} value={emp.id}>
+                    {empName(emp)}{empId(emp) ? ` (${empId(emp)})` : ''} — {emp.employee_type || 'DIRECT'}
+                  </option>
+                ))}
+              </select>
+              </div>{/* flex:1 employee */}
+            </div>{/* flex row */}
+
+            {/* Action Type */}
+            <div style={{ marginBottom: 14 }}>
+              <label style={S.label}>Action Type *</label>
+              <select style={S.inp} value={form.action_type} onChange={e => setF('action_type', e.target.value)}>
+                {ACTION_TYPES.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
+              </select>
+            </div>
+
+            {/* RELEASE fields */}
+            {form.action_type === 'RELEASE' && (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+                  <div>
+                    <label style={S.label}>Notice Given Date *</label>
+                    <input type="date" style={S.inp} value={form.notice_given_date} onChange={e => setF('notice_given_date', e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={S.label}>Last Working Day *</label>
+                    <input type="date" style={S.inp} value={form.last_working_day} onChange={e => setF('last_working_day', e.target.value)} />
+                  </div>
+                </div>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={S.label}>Notice Period</label>
+                  <select style={S.inp} value={form.notice_period} onChange={e => setF('notice_period', e.target.value)}>
+                    {NOTICE_PERIODS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                  </select>
+                </div>
+              </>
+            )}
+
+            {/* PAYROLL HOLD fields */}
+            {form.action_type === 'PAYROLL_HOLD' && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={S.label}>Hold for Month *</label>
+                <input type="month" style={{ ...S.inp, width: 200 }} value={form.hold_month} onChange={e => setF('hold_month', e.target.value)} />
+              </div>
+            )}
+
+            {/* TRANSFER fields */}
+            {form.action_type === 'TRANSFER' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+                <div>
+                  <label style={S.label}>From Department</label>
+                  <input style={{ ...S.inp, background: '#f5f7fa' }} value={myDept?.dept_name || activeDept?.dept_name || profile?.department || '—'} readOnly />
+                </div>
+                <div>
+                  <label style={S.label}>To Department *</label>
+                  <select style={S.inp} value={form.transfer_to_dept_id} onChange={e => setF('transfer_to_dept_id', e.target.value)}>
+                    <option value="">— Select department —</option>
+                    {depts.filter(d => d.id !== myDept?.id).map(d => (
+                      <option key={d.id} value={d.id}>{d.dept_name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* CONTRACT EXTENSION fields */}
+            {form.action_type === 'CONTRACT_EXTENSION' && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={S.label}>New Contract End Date *</label>
+                <input type="date" style={{ ...S.inp, width: 220 }} value={form.new_contract_end} onChange={e => setF('new_contract_end', e.target.value)} />
+              </div>
+            )}
+
+            {/* Reason */}
+            <div style={{ marginBottom: 14 }}>
+              <label style={S.label}>Reason *</label>
+              <select style={S.inp} value={form.reason} onChange={e => setF('reason', e.target.value)}>
+                <option value="">— Select reason —</option>
+                {(REASONS[form.action_type] || []).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 2: Notes & Submit ── */}
+        {wizardStep === 2 && (
+          <div>
+            <div style={{ marginBottom: 16, padding: '12px 14px', background: '#F7F2ED', borderRadius: 4, fontSize: 13 }}>
+              <div style={{ fontWeight: 700, color: L3, marginBottom: 6 }}>Action Summary</div>
+              <div style={{ color: '#5a3f32', lineHeight: 1.7 }}>
+                <strong>Employee:</strong> {employees.find(e => e.id === form.employee_id) ? empName(employees.find(e => e.id === form.employee_id)) : '—'}<br />
+                <strong>Action:</strong> {ACTION_TYPES.find(a => a.value === form.action_type)?.label || form.action_type}<br />
+                {form.action_type === 'RELEASE' && <><strong>Last Working Day:</strong> {form.last_working_day}<br /></>}
+                {form.action_type === 'PAYROLL_HOLD' && <><strong>Hold Month:</strong> {form.hold_month}<br /></>}
+                {form.action_type === 'TRANSFER' && <><strong>To Dept:</strong> {depts.find(d => d.id === form.transfer_to_dept_id)?.dept_name || '—'}<br /></>}
+                {form.action_type === 'CONTRACT_EXTENSION' && <><strong>New End Date:</strong> {form.new_contract_end}<br /></>}
+                <strong>Reason:</strong> {(REASONS[form.action_type] || []).find(r => r.value === form.reason)?.label || form.reason}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 18 }}>
+              <label style={S.label}>Notes to Payroll</label>
+              <textarea
+                style={{ ...S.inp, height: 90, resize: 'vertical' }}
+                placeholder="Any special instructions, pro-rata notes, vendor details, final invoice info…"
+                value={form.notes}
+                onChange={e => setF('notes', e.target.value)}
+              />
+            </div>
+
+            <div style={{ fontSize: 11, color: '#aab2bd' }}>
+              📧 Payroll will receive an email notification with your name and these details. Track status under My Submissions.
+            </div>
+          </div>
+        )}
+      </FormShell>
+
       {/* ── SUBMIT ACTION (SAR) TAB ── */}
       {!loading && tab === 'sar' && (
         <div style={{ ...S.card, maxWidth: 640 }}>
-          <div style={{ fontWeight: 800, fontSize: 15, color: '#1a2e3d', marginBottom: 16 }}>New Staff Action Request</div>
-
-          {/* Employee */}
-          <div style={{ marginBottom: 14 }}>
-            <label style={S.label}>Employee *</label>
-            <select style={S.inp} value={form.employee_id} onChange={e => setF('employee_id', e.target.value)}>
-              <option value="">— Select employee —</option>
-              {employees.map(emp => (
-                <option key={emp.id} value={emp.id}>
-                  {empName(emp)}{empId(emp) ? ` (${empId(emp)})` : ''} — {emp.employee_type || 'DIRECT'}
-                </option>
-              ))}
-            </select>
+          <div style={{ fontWeight: 800, fontSize: 15, color: '#1a2e3d', marginBottom: 8 }}>New Staff Action Request</div>
+          <div style={{ fontSize: 13, color: '#6b7c93', marginBottom: 20 }}>
+            Submit release, transfer, hold, or contract actions for employees in your department. Payroll is notified automatically.
           </div>
-
-          {/* Action Type */}
-          <div style={{ marginBottom: 14 }}>
-            <label style={S.label}>Action Type *</label>
-            <select style={S.inp} value={form.action_type} onChange={e => setF('action_type', e.target.value)}>
-              {ACTION_TYPES.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
-            </select>
-          </div>
-
-          {/* ── RELEASE fields ── */}
-          {form.action_type === 'RELEASE' && (
-            <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-                <div>
-                  <label style={S.label}>Notice Given Date *</label>
-                  <input type="date" style={S.inp} value={form.notice_given_date} onChange={e => setF('notice_given_date', e.target.value)} />
-                </div>
-                <div>
-                  <label style={S.label}>Last Working Day *</label>
-                  <input type="date" style={S.inp} value={form.last_working_day} onChange={e => setF('last_working_day', e.target.value)} />
-                </div>
-              </div>
-              <div style={{ marginBottom: 14 }}>
-                <label style={S.label}>Notice Period</label>
-                <select style={S.inp} value={form.notice_period} onChange={e => setF('notice_period', e.target.value)}>
-                  {NOTICE_PERIODS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-                </select>
-              </div>
-            </>
-          )}
-
-          {/* ── PAYROLL HOLD fields ── */}
-          {form.action_type === 'PAYROLL_HOLD' && (
-            <div style={{ marginBottom: 14 }}>
-              <label style={S.label}>Hold for Month *</label>
-              <input type="month" style={{ ...S.inp, width: 200 }} value={form.hold_month} onChange={e => setF('hold_month', e.target.value)} />
-            </div>
-          )}
-
-          {/* ── TRANSFER fields ── */}
-          {form.action_type === 'TRANSFER' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-              <div>
-                <label style={S.label}>From Department</label>
-                <input style={{ ...S.inp, background: '#f5f7fa' }} value={myDept?.name || profile?.department || '—'} readOnly />
-              </div>
-              <div>
-                <label style={S.label}>To Department *</label>
-                <select style={S.inp} value={form.transfer_to_dept_id} onChange={e => setF('transfer_to_dept_id', e.target.value)}>
-                  <option value="">— Select department —</option>
-                  {depts.filter(d => d.id !== myDept?.id).map(d => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-
-          {/* ── CONTRACT EXTENSION fields ── */}
-          {form.action_type === 'CONTRACT_EXTENSION' && (
-            <div style={{ marginBottom: 14 }}>
-              <label style={S.label}>New Contract End Date *</label>
-              <input type="date" style={{ ...S.inp, width: 220 }} value={form.new_contract_end} onChange={e => setF('new_contract_end', e.target.value)} />
-            </div>
-          )}
-
-          {/* Reason */}
-          <div style={{ marginBottom: 14 }}>
-            <label style={S.label}>Reason *</label>
-            <select style={S.inp} value={form.reason} onChange={e => setF('reason', e.target.value)}>
-              <option value="">— Select reason —</option>
-              {(REASONS[form.action_type] || []).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-            </select>
-          </div>
-
-          {/* Notes */}
-          <div style={{ marginBottom: 18 }}>
-            <label style={S.label}>Notes to Payroll</label>
-            <textarea
-              style={{ ...S.inp, height: 80, resize: 'vertical' }}
-              placeholder="Any special instructions, pro-rata notes, vendor details, final invoice info…"
-              value={form.notes}
-              onChange={e => setF('notes', e.target.value)}
-            />
-          </div>
-
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={submitSar} disabled={saving} style={S.btn('#00897b')}>
-              {saving ? '⏳ Submitting…' : '📤 Submit SAR'}
-            </button>
-            <button onClick={() => setForm(EMPTY_FORM)} style={S.btn('#aab2bd')}>Clear</button>
-          </div>
-
+          <button
+            onClick={() => setShowBanner(true)}
+            style={{ ...S.btn(), padding: '11px 24px', fontSize: 14 }}
+          >
+            + Submit Staff Action Request
+          </button>
           <div style={{ marginTop: 12, fontSize: 11, color: '#aab2bd' }}>
-            📧 Payroll will receive an email notification with your name and these details. You can track the status under My Submissions.
+            📧 Your name and submission details are sent to Payroll. Track all past submissions under My Submissions.
           </div>
         </div>
       )}
@@ -492,7 +609,7 @@ export default function StaffActions({ entityId }) {
           <div style={{ ...S.card }}>
             <div style={{ fontWeight: 700, fontSize: 13, color: '#1a2e3d', marginBottom: 12 }}>📊 Department Cost (aggregate only — no individual salaries)</div>
             <div style={{ fontSize: 12, color: '#6b7c93', marginBottom: 8 }}>
-              Total monthly compensation for {employees.length} active employees in {myDept?.name || 'your department'}
+              Total monthly compensation for {employees.length} active employees in {myDept?.dept_name || activeDept?.dept_name || 'your department'}
             </div>
             <div style={{ background: '#f5f7fa', borderRadius: 8, padding: '12px 14px', fontSize: 13, color: '#1a2e3d', fontWeight: 600 }}>
               Estimated Monthly Cost: <span style={{ color: '#00897b', fontSize: 16, fontWeight: 800 }}>{SAR_FMT(deptCost)}</span>
@@ -527,7 +644,7 @@ export default function StaffActions({ entityId }) {
                           {days <= 0 ? 'EXPIRED' : `${days} days`}
                         </td>
                         <td style={S.td}>
-                          <button onClick={() => { setF('employee_id', emp.id); setTab('sar') }} style={{ ...S.btn('#e65100'), padding: '5px 12px', fontSize: 11 }}>
+                          <button onClick={() => { setForm(f => ({ ...f, employee_id: emp.id })); setWizardStep(1); setShowModal(true) }} style={{ ...S.btn('#e65100'), padding: '5px 12px', fontSize: 11 }}>
                             Submit SAR
                           </button>
                         </td>

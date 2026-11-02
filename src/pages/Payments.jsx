@@ -1,5 +1,6 @@
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
+import FormShell from '../components/FormShell'
 import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
 const MC = GROUP_COLORS.Finance
 import { useState, useEffect, useCallback } from 'react'
@@ -43,7 +44,7 @@ const S = {
   btn:    (bg, color='#fff') => ({ background:bg, color, border:'none', borderRadius:9, padding:'9px 20px', cursor:'pointer', fontSize:13, fontWeight:700 }),
   chip:   (bg, color) => ({ background:bg, color, borderRadius:6, padding:'3px 9px', fontSize:11, fontWeight:700, whiteSpace:'nowrap', display:'inline-block' }),
   overlay:{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 },
-  modal:  { background:'#fff', borderRadius:18, width:800, maxWidth:'100%', maxHeight:'92vh', overflowY:'auto', boxShadow:'0 20px 60px rgba(0,0,0,0.22)', display:'flex', flexDirection:'column' },
+  modal:  { background:'#fff', borderRadius:4, width:800, maxWidth:'100%', maxHeight:'92vh', overflowY:'auto', boxShadow:'0 20px 60px rgba(0,0,0,0.22)', display:'flex', flexDirection:'column' },
 }
 
 function fmt(n) { return (n||0).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 }) }
@@ -900,79 +901,47 @@ export default function Payments({ entityId, entityName, entityNameEn }) {
         isOpen={showBanner}
         onClose={() => setShowBanner(false)}
         onStart={() => { setShowBanner(false); setShowSheet(true) }}
-        chapterL1="#C1A1A9"
-        chapterL2="#FAF0F2"
-        moduleColor="#8C354B"
-        chapterLabel="Finance"
+        chapterName="Finance"
         formTitle={['Payment', 'Sheet']}
-        steps={['Request Details', 'Payment Lines', 'Summary']}
-        icon="💳"
+        heading="Process approved money requests"
         description="Process approved money requests and wire funds to beneficiaries."
+        icon="💳"
+        iconLabel={'Payments'}
+        workflowSteps={['Request Details', 'Payment Lines', 'Summary']}
+        steps={['Request Details', 'Payment Lines', 'Summary']}
       />
 
       {/* ══════════════════════════════════════════════════════════════════════
           PAYMENT INSTRUCTION SHEET — 4-LAYER FINANCE WIZARD
       ══════════════════════════════════════════════════════════════════════ */}
-      {showSheet && selMR && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(15,23,42,0.62)', backdropFilter:'blur(6px)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:16, fontFamily:"'Poppins',sans-serif" }}
-          onClick={e => { if(e.target===e.currentTarget){ setShowSheet(false); setShowSendBack(false); setSendBackReason('') }}}>
+      <FormShell
+        isOpen={!!(showSheet && selMR)}
+        onClose={() => { setShowSheet(false); setShowSendBack(false); setSendBackReason('') }}
+        chapterName="Finance"
+        title={['Payment', 'Instruction', 'Sheet']}
+        description="Process approved money requests and wire funds to beneficiaries."
+        steps={['Request Details', 'Payment Lines', 'Summary']}
+        currentStep={wizardStep}
+        onBack={wizardStep===1 ? () => { setShowSheet(false); setShowSendBack(false); setSendBackReason('') } : () => setWizardStep(s=>s-1)}
+        backLabel={wizardStep===1 ? 'Cancel' : '← Back'}
+        onNext={wizardStep<3 ? () => setWizardStep(s=>s+1) : markPaid}
+        nextLabel={wizardStep<3 ? 'Save & Next →' : (saving ? '⏳ Saving…' : `✅ Mark as Paid — SAR ${fmt(lineTotal)}`)}
+        nextDisabled={wizardStep===3 && (saving || mrLines.length===0 || !reference.trim())}
+      >
+        <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
 
-          {/* L1 — mauve border frame */}
-          <div style={{ background:'#C1A1A9', borderRadius:18, padding:8, width:940, maxWidth:'98vw', maxHeight:'94vh', display:'flex', flexDirection:'column', boxShadow:'0 28px 80px rgba(0,0,0,0.35)' }}
-            onClick={e => e.stopPropagation()}>
-
-            {/* L2 — light pink inner */}
-            <div style={{ background:'#FAF0F2', borderRadius:12, flex:1, display:'flex', flexDirection:'row', overflow:'hidden', minHeight:560 }}>
-
-              {/* ── LEFT SIDEBAR ── */}
-              <div style={{ width:152, flexShrink:0, padding:'16px 14px 16px', display:'flex', flexDirection:'column', alignItems:'flex-start' }}>
-                <div style={{ fontSize:13, fontWeight:900, color:'#3e1020', lineHeight:1.2, whiteSpace:'nowrap', position:'relative', zIndex:10 }}>
-                  {entityName || entityNameEn || 'Ratal Group'}
-                </div>
-                <div style={{ marginTop:80, width:'100%', textAlign:'center' }}>
-                  <div style={{ fontSize:12, fontWeight:800, color:'#8C354B', marginBottom:2 }}>Finance</div>
-                  <div style={{ fontSize:22, fontWeight:900, color:'#3e1020', letterSpacing:0.2, lineHeight:1.15 }}>Payment Sheet</div>
-                </div>
-                <div style={{ flex:1 }} />
-                {/* Step nav */}
-                <div style={{ alignSelf:'flex-start', width:'100%' }}>
-                  {[{num:1,label:'Request Details'},{num:2,label:'Payment Lines'},{num:3,label:'Summary'}].map(s => (
-                    <div key={s.num} style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 0',
-                      borderLeft: wizardStep===s.num ? '3px solid #8C354B' : '3px solid transparent',
-                      paddingLeft:8, marginLeft:-11 }}>
-                      <div style={{ width:20, height:20, borderRadius:'50%',
-                        background: wizardStep===s.num ? '#8C354B' : '#C1A1A9',
-                        color:'#fff', fontSize:10, fontWeight:800,
-                        display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{s.num}</div>
-                      <span style={{ fontSize:10, fontWeight: wizardStep===s.num ? 800 : 500,
-                        color: wizardStep===s.num ? '#8C354B' : '#94a3b8', lineHeight:1.2 }}>{s.label}</span>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ flex:1 }} />
-              </div>
-
-              {/* ── RIGHT COLUMN ── */}
-              <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
-
-                {/* L3 — maroon corner, decorative only */}
-                <div style={{ position:'absolute', top:0, right:0, width:'55%', height:200, background:'#8C354B', borderRadius:'0 8px 0 0', zIndex:1 }} />
-
-                {/* L4 — white card */}
-                <div style={{ position:'absolute', top:48, left:12, right:12, bottom:12, background:'#fff', borderRadius:12, boxShadow:'0 4px 24px rgba(0,0,0,0.15)', display:'flex', flexDirection:'column', overflow:'hidden', zIndex:2 }}>
-
-                  {/* MR Info Strip */}
-                  <div style={{ padding:'7px 16px', borderBottom:'1px solid #f1f5f9', background:'#fafafa', flexShrink:0, display:'flex', gap:12, alignItems:'center', flexWrap:'wrap' }}>
-                    <span style={{ fontSize:12, fontWeight:800, color:'#8C354B', fontFamily:'monospace' }}>{selMR.request_number}</span>
-                    <span style={{ fontSize:10, color:'#94a3b8' }}>{selMR.request_date}</span>
-                    <span style={{ fontSize:10, fontWeight:700, color:'#475569', background:'#f1f5f9', borderRadius:5, padding:'1px 7px' }}>{selMR.department_name||'—'}</span>
-                    <span style={{ fontSize:11, color:'#475569', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{selMR.purpose||'—'}</span>
+          {/* MR Info Strip */}
+          <div style={{ padding:'7px 16px', borderBottom:'1px solid #f1f5f9', background:'#fafafa', flexShrink:0, display:'flex', gap:12, alignItems:'center', flexWrap:'wrap' }}>
+                    <span style={{ fontSize:12, fontWeight:800, color:'#8C354B', fontFamily:'monospace' }}>{selMR?.request_number}</span>
+                    <span style={{ fontSize:10, color:'#94a3b8' }}>{selMR?.request_date}</span>
+                    <span style={{ fontSize:10, fontWeight:700, color:'#475569', background:'#f1f5f9', borderRadius:5, padding:'1px 7px' }}>{selMR?.department_name||'—'}</span>
+                    <span style={{ fontSize:11, color:'#475569', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{selMR?.purpose||'—'}</span>
                     <span style={{ fontSize:12, fontWeight:800, color:'#8C354B', whiteSpace:'nowrap' }}>SAR {fmt(lineTotal)}</span>
                     <span style={{ fontSize:10, color:'#64748b' }}>{mrLines.length} wire{mrLines.length!==1?'s':''}</span>
                   </div>
 
-                  {/* Scrollable step content */}
-                  <div style={{ flex:1, overflowY:'auto', padding:'12px 16px' }}>
+          {/* Scrollable step content */}
+          <div style={{ flex:1, overflowY:'auto', padding:'12px 16px' }}>
 
                     {/* ── STEP 1: Request Details ── */}
                     {wizardStep === 1 && (
@@ -1026,10 +995,10 @@ export default function Payments({ entityId, entityName, entityNameEn }) {
                           <div style={{ fontSize:8, fontWeight:800, color:'#8C354B', letterSpacing:0.8, textTransform:'uppercase', marginBottom:6 }}>Request Summary</div>
                           <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
                             {[
-                              { label:'Requested By', val: empMap[selMR.requested_by] || selMR.requested_by || '—' },
-                              { label:'Purpose',      val: selMR.purpose || '—' },
-                              { label:'Stage',        val: stageInfo(selMR.status).label },
-                              { label:'Total Amount', val: `SAR ${fmt(selMR.amount||0)}` },
+                              { label:'Requested By', val: empMap[selMR?.requested_by] || selMR?.requested_by || '—' },
+                              { label:'Purpose',      val: selMR?.purpose || '—' },
+                              { label:'Stage',        val: stageInfo(selMR?.status).label },
+                              { label:'Total Amount', val: `SAR ${fmt(selMR?.amount||0)}` },
                             ].map(({ label, val }) => (
                               <div key={label}>
                                 <div style={{ fontSize:8, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:0.5, marginBottom:1 }}>{label}</div>
@@ -1249,75 +1218,41 @@ export default function Payments({ entityId, entityName, entityNameEn }) {
                       </div>
                     )}
 
-                  </div>
-
-                  {/* ── Send Back Panel ── */}
-                  {showSendBack && (
-                    <div style={{ padding:'10px 16px', borderTop:'1px solid #fecaca', background:'#fff7f7', flexShrink:0 }}>
-                      <div style={{ fontSize:11, fontWeight:700, color:'#991b1b', marginBottom:5 }}>↩ Send Back to DH — Enter reason</div>
-                      <textarea value={sendBackReason} onChange={e => setSendBackReason(e.target.value)}
-                        placeholder="e.g. IBAN for Employee A is missing…"
-                        rows={2}
-                        style={{ width:'100%', padding:'6px 9px', borderRadius:7, border:'1px solid #fca5a5', fontSize:11, resize:'vertical', outline:'none', boxSizing:'border-box', fontFamily:'inherit', color:'#1e293b' }} />
-                      <div style={{ display:'flex', gap:8, marginTop:6, justifyContent:'flex-end' }}>
-                        <button onClick={() => { setShowSendBack(false); setSendBackReason('') }}
-                          style={{ ...S.btn('#f1f5f9','#475569'), padding:'5px 12px', fontSize:11 }}>Cancel</button>
-                        <button onClick={sendBackToDH} disabled={sendingBack || !sendBackReason.trim()}
-                          style={{ ...S.btn(sendingBack || !sendBackReason.trim() ? '#94a3b8' : 'linear-gradient(135deg,#b91c1c,#991b1b)'), opacity: sendingBack || !sendBackReason.trim() ? 0.7 : 1, padding:'5px 14px', fontSize:11 }}>
-                          {sendingBack ? '⏳ Sending…' : '↩ Confirm Send Back'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ── Footer ── */}
-                  <div style={{ padding:'10px 16px', borderTop:'1px solid #e2e8f0', background:'#f8fafc', display:'flex', gap:8, justifyContent:'space-between', alignItems:'center', flexShrink:0, flexWrap:'wrap' }}>
-                    {/* Left: utility actions */}
-                    <div style={{ display:'flex', gap:6 }}>
-                      <button onClick={() => printInstruction(selMR, mrLines, fromAccount, empMap)}
-                        style={{ ...S.btn('#fff','#1e293b'), border:'1px solid #e2e8f0', padding:'6px 12px', fontSize:11 }}>
-                        🖨️ Print
-                      </button>
-                      <button onClick={() => { setShowSendBack(s => !s); setSendBackReason('') }}
-                        style={{ ...S.btn(showSendBack ? '#fef2f2' : '#fff7f0', showSendBack ? '#991b1b' : '#c2410c'), border:'1px solid ' + (showSendBack ? '#fca5a5' : '#fed7aa'), padding:'6px 12px', fontSize:11 }}>
-                        ↩ Send Back
-                      </button>
-                    </div>
-                    {/* Right: navigation + save */}
-                    <div style={{ display:'flex', gap:6 }}>
-                      <button
-                        onClick={wizardStep===1 ? () => { setShowSheet(false); setShowSendBack(false); setSendBackReason('') } : () => setWizardStep(s => s-1)}
-                        style={{ ...S.btn('#e2e8f0','#475569'), padding:'6px 16px', fontSize:11, fontWeight:700 }}>
-                        {wizardStep===1 ? 'Cancel' : '← Back'}
-                      </button>
-                      {wizardStep < 3 && (
-                        <button onClick={() => setWizardStep(s => s+1)}
-                          style={{ ...S.btn('#8C354B'), padding:'6px 20px', fontSize:11, fontWeight:700 }}>
-                          Next →
-                        </button>
-                      )}
-                      {wizardStep === 3 && (() => {
-                        const ready = !saving && mrLines.length > 0 && reference.trim().length > 0
-                        return (
-                          <button onClick={markPaid} disabled={!ready}
-                            style={{ ...S.btn(ready ? 'linear-gradient(135deg,#15803d,#166534)' : '#94a3b8'), opacity: ready ? 1 : 0.7, padding:'6px 20px', fontSize:11, fontWeight:700 }}>
-                            {saving ? '⏳ Saving…' : `✅ Mark as Paid — SAR ${fmt(lineTotal)}`}
-                          </button>
-                        )
-                      })()}
-                    </div>
-                  </div>
-
-                </div>
-                {/* end L4 */}
-              </div>
-              {/* end right column */}
-            </div>
-            {/* end L2 */}
           </div>
-          {/* end L1 */}
+
+          {/* ── Send Back Panel ── */}
+          {showSendBack && (
+            <div style={{ padding:'10px 16px', borderTop:'1px solid #fecaca', background:'#fff7f7', flexShrink:0 }}>
+              <div style={{ fontSize:11, fontWeight:700, color:'#991b1b', marginBottom:5 }}>↩ Send Back to DH — Enter reason</div>
+              <textarea value={sendBackReason} onChange={e => setSendBackReason(e.target.value)}
+                placeholder="e.g. IBAN for Employee A is missing…"
+                rows={2}
+                style={{ width:'100%', padding:'6px 9px', borderRadius:4, border:'1px solid #fca5a5', fontSize:11, resize:'vertical', outline:'none', boxSizing:'border-box', fontFamily:'inherit', color:'#1e293b' }} />
+              <div style={{ display:'flex', gap:8, marginTop:6, justifyContent:'flex-end' }}>
+                <button onClick={() => { setShowSendBack(false); setSendBackReason('') }}
+                  style={{ ...S.btn('#f1f5f9','#475569'), padding:'5px 12px', fontSize:11 }}>Cancel</button>
+                <button onClick={sendBackToDH} disabled={sendingBack || !sendBackReason.trim()}
+                  style={{ ...S.btn(sendingBack || !sendBackReason.trim() ? '#94a3b8' : 'linear-gradient(135deg,#b91c1c,#991b1b)'), opacity: sendingBack || !sendBackReason.trim() ? 0.7 : 1, padding:'5px 14px', fontSize:11 }}>
+                  {sendingBack ? '⏳ Sending…' : '↩ Confirm Send Back'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Utility actions (Print + Send Back toggle) ── */}
+          <div style={{ padding:'8px 16px', borderTop:'1px solid #e2e8f0', background:'#f8fafc', display:'flex', gap:6, flexShrink:0 }}>
+            <button onClick={() => printInstruction(selMR, mrLines, fromAccount, empMap)}
+              style={{ ...S.btn('#fff','#1e293b'), border:'1px solid #e2e8f0', padding:'5px 12px', fontSize:11 }}>
+              🖨️ Print
+            </button>
+            <button onClick={() => { setShowSendBack(s => !s); setSendBackReason('') }}
+              style={{ ...S.btn(showSendBack ? '#fef2f2' : '#fff7f0', showSendBack ? '#991b1b' : '#c2410c'), border:'1px solid ' + (showSendBack ? '#fca5a5' : '#fed7aa'), padding:'5px 12px', fontSize:11 }}>
+              ↩ Send Back
+            </button>
+          </div>
+
         </div>
-      )}
+      </FormShell>
 
       {/* ══════════════════════════════════════════════════════════════════════
           BATCH ANB-39 PAY MODAL — one transfer, multiple MRs, shared TRN

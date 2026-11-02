@@ -1,5 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import FormShell from '../components/FormShell'
+import PageBanner from '../components/PageBanner'
+
+const ACCT_L3 = '#606D2C'
 
 // ═══════════════════════════════════════════════════════════════════
 // Petty Cash Module — Phase 9
@@ -39,7 +43,9 @@ function CashBook({ entityId, accounts, reloadAccounts }) {
   const [acctId,  setAcctId]  = useState(accounts[0]?.id || '')
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(false)
-  const [modal,   setModal]   = useState(false)
+  const [showBanner, setShowBanner] = useState(false)
+  const [showModal,  setShowModal]  = useState(false)
+  const [wizardStep, setWizardStep] = useState(1)
   const [form,    setForm]    = useState({
     transaction_date: new Date().toISOString().slice(0,10),
     entry_type:'OUT', amount:'', description:'', category:'Other',
@@ -99,7 +105,7 @@ function CashBook({ entityId, accounts, reloadAccounts }) {
       approved_by:      form.approved_by || null,
       voucher_number:   voucher || null,
     })
-    setSaving(false); setModal(false); load()
+    setSaving(false); setShowModal(false); setWizardStep(1); load()
     setForm(f=>({ ...f, amount:'', description:'', reference:'', approved_by:'' }))
   }
 
@@ -202,7 +208,7 @@ function CashBook({ entityId, accounts, reloadAccounts }) {
         </div>
         <div><label style={S.lbl}>From</label><input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={{ ...S.inp, width:140 }} /></div>
         <div><label style={S.lbl}>To</label><input type="date" value={to} onChange={e=>setTo(e.target.value)} style={{ ...S.inp, width:140 }} /></div>
-        <button onClick={()=>setModal(true)} style={{ ...S.btn('#2e7d32'), marginLeft:'auto' }}>+ Add Entry</button>
+        <button onClick={()=>setShowBanner(true)} style={{ ...S.btn(ACCT_L3), marginLeft:'auto' }}>+ Add Entry</button>
         <button onClick={exportCSV} style={S.btnO()}>⬇ CSV</button>
         <button onClick={printBook} style={S.btnO('#2e7d32')}>🖨 Print</button>
       </div>
@@ -308,66 +314,97 @@ function CashBook({ entityId, accounts, reloadAccounts }) {
         )}
       </div>
 
-      {/* Add Entry Modal */}
-      {modal && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-          <div style={{ background:'#fff', borderRadius:16, width:'100%', maxWidth:480, padding:24 }}>
-            <div style={{ fontSize:17, fontWeight:800, marginBottom:18 }}>📋 Add Cash Entry</div>
+      {/* Page Banner — Add Entry */}
+      <PageBanner
+        isOpen={showBanner}
+        onClose={() => setShowBanner(false)}
+        onStart={() => { setShowBanner(false); setWizardStep(1); setShowModal(true) }}
+        chapterName="Accounting"
+        formTitle={['New', 'Cash', 'Entry']}
+        workflowSteps={['Entry Details', 'Reference & Approval']}
+        iconLabel="Petty Cash"
+        description="Record a new petty cash transaction — payment, receipt, replenishment, or adjustment."
+      />
+
+      {/* FormShell — Add Entry */}
+      <FormShell
+        isOpen={showModal}
+        onClose={() => { setShowModal(false); setWizardStep(1) }}
+        chapterName="Accounting"
+        title={['New', 'Cash', 'Entry']}
+        steps={['Entry Details', 'Reference & Approval']}
+        currentStep={wizardStep}
+        onBack={() => setWizardStep(s => s - 1)}
+        backLabel="Back"
+        onNext={() => {
+          if (wizardStep < 2) {
+            if (!form.amount || !form.transaction_date) return
+            setWizardStep(2)
+          } else { addEntry() }
+        }}
+        nextLabel={wizardStep < 2 ? 'Next →' : (saving ? 'Saving…' : '✓ Add Entry')}
+        nextDisabled={saving}
+      >
+        {wizardStep === 1 && (
+          <div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
               <div>
                 <label style={S.lbl}>Date *</label>
                 <input type="date" value={form.transaction_date}
-                  onChange={e=>setForm(f=>({...f,transaction_date:e.target.value}))} style={S.inp} />
+                  onChange={e=>setForm(f=>({...f,transaction_date:e.target.value}))}
+                  style={{ ...S.inp, borderRadius:4, marginBottom:14 }} />
               </div>
               <div>
                 <label style={S.lbl}>Type *</label>
-                <select value={form.entry_type} onChange={e=>setForm(f=>({...f,entry_type:e.target.value}))} style={S.inp}>
+                <select value={form.entry_type} onChange={e=>setForm(f=>({...f,entry_type:e.target.value}))}
+                  style={{ ...S.inp, borderRadius:4, marginBottom:14 }}>
                   {ENTRY_TYPES.map(t=><option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div>
                 <label style={S.lbl}>Amount (SAR) *</label>
                 <input type="number" min="0" step="0.01" value={form.amount}
-                  onChange={e=>setForm(f=>({...f,amount:e.target.value}))} style={S.inp} placeholder="0.00" />
+                  onChange={e=>setForm(f=>({...f,amount:e.target.value}))}
+                  style={{ ...S.inp, borderRadius:4, marginBottom:14 }} placeholder="0.00" />
               </div>
               <div>
                 <label style={S.lbl}>Category</label>
-                <select value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))} style={S.inp}>
+                <select value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))}
+                  style={{ ...S.inp, borderRadius:4, marginBottom:14 }}>
                   {CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-              <div style={{ gridColumn:'1/-1' }}>
-                <label style={S.lbl}>Description</label>
-                <input value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))} style={S.inp} placeholder="What was purchased / received?" />
-              </div>
-              <div>
-                <label style={S.lbl}>Receipt / Reference #</label>
-                <input value={form.reference} onChange={e=>setForm(f=>({...f,reference:e.target.value}))} style={S.inp} />
-              </div>
-              <div>
-                <label style={S.lbl}>Approved By</label>
-                <input value={form.approved_by} onChange={e=>setForm(f=>({...f,approved_by:e.target.value}))} style={S.inp} />
-              </div>
             </div>
-
-            {/* Type explainer */}
-            <div style={{ marginTop:12, padding:'8px 12px', borderRadius:8, background:'#f5f7fa', fontSize:11, color:'#546e7a' }}>
+            <div style={{ padding:'8px 12px', borderRadius:4, background:'#f5f7fa', fontSize:11, color:'#546e7a', marginTop:4 }}>
               {form.entry_type === 'OUT'           && '💸 OUT — Cash paid for an expense (reduces balance)'}
               {form.entry_type === 'IN'            && '💰 IN — Cash returned or received (increases balance)'}
-              {form.entry_type === 'REPLENISHMENT' && '🔄 REPLENISHMENT — Top-up from bank account (increases balance, posts DR Petty Cash / CR Bank)'}
+              {form.entry_type === 'REPLENISHMENT' && '🔄 REPLENISHMENT — Top-up from bank account'}
               {form.entry_type === 'OPENING'       && '📌 OPENING — Set the initial cash balance for this box'}
               {form.entry_type === 'ADJUSTMENT'    && '⚙️ ADJUSTMENT — Correction entry (surplus +ve, shortage -ve)'}
             </div>
+          </div>
+        )}
 
-            <div style={{ display:'flex', gap:8, justifyContent:'flex-end', marginTop:18 }}>
-              <button onClick={()=>setModal(false)} style={S.btnO()}>Cancel</button>
-              <button onClick={addEntry} disabled={saving} style={S.btn('#2e7d32')}>
-                {saving ? 'Saving…' : '✓ Add Entry'}
-              </button>
+        {wizardStep === 2 && (
+          <div>
+            <label style={S.lbl}>Description</label>
+            <input value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))}
+              style={{ ...S.inp, borderRadius:4, marginBottom:14 }} placeholder="What was purchased / received?" />
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <div>
+                <label style={S.lbl}>Receipt / Reference #</label>
+                <input value={form.reference} onChange={e=>setForm(f=>({...f,reference:e.target.value}))}
+                  style={{ ...S.inp, borderRadius:4, marginBottom:0 }} />
+              </div>
+              <div>
+                <label style={S.lbl}>Approved By</label>
+                <input value={form.approved_by} onChange={e=>setForm(f=>({...f,approved_by:e.target.value}))}
+                  style={{ ...S.inp, borderRadius:4, marginBottom:0 }} />
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </FormShell>
     </>
   )
 }
@@ -407,7 +444,9 @@ function printVoucher(entry, acct) {
 // Tab 2 — Accounts (Cash Box Management)
 // ═══════════════════════════════════════════════════════════════════
 function AccountsTab({ entityId, accounts, reload }) {
-  const [modal, setModal] = useState(null)
+  const [showBanner2, setShowBanner2] = useState(false)
+  const [modal,       setModal]       = useState(null)
+  const [wizardStep2, setWizardStep2] = useState(1)
   const [form,  setForm]  = useState({ account_name:'', department:'', custodian_name:'', float_limit:'500', gl_account_code:'', notes:'' })
   const [saving,setSaving]= useState(false)
 
@@ -419,7 +458,7 @@ function AccountsTab({ entityId, accounts, reload }) {
       gl_account_code:form.gl_account_code||null, notes:form.notes||null, is_active:true }
     if (modal === 'add') await supabase.from('petty_cash_accounts').insert(payload)
     else await supabase.from('petty_cash_accounts').update(payload).eq('id', modal.id)
-    setSaving(false); setModal(null); reload()
+    setSaving(false); setModal(null); setWizardStep2(1); reload()
   }
 
   function openEdit(a) {
@@ -431,8 +470,8 @@ function AccountsTab({ entityId, accounts, reload }) {
   return (
     <>
       <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:10 }}>
-        <button onClick={()=>{ setForm({account_name:'',department:'',custodian_name:'',float_limit:'500',gl_account_code:'',notes:''}); setModal('add') }}
-          style={S.btn('#2e7d32')}>+ New Cash Box</button>
+        <button onClick={()=>{ setForm({account_name:'',department:'',custodian_name:'',float_limit:'500',gl_account_code:'',notes:''}); setShowBanner2(true) }}
+          style={S.btn(ACCT_L3)}>+ New Cash Box</button>
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:12 }}>
@@ -462,37 +501,65 @@ function AccountsTab({ entityId, accounts, reload }) {
         )}
       </div>
 
-      {modal && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-          <div style={{ background:'#fff', borderRadius:16, width:'100%', maxWidth:440, padding:24 }}>
-            <div style={{ fontSize:17, fontWeight:800, marginBottom:18 }}>
-              {modal==='add' ? '➕ New Cash Box' : `✏️ Edit: ${modal.account_name}`}
-            </div>
-            <div style={{ display:'grid', gap:10 }}>
-              {[
-                { l:'Box Name *',      k:'account_name',    ph:'e.g. Head Office Petty Cash' },
-                { l:'Department',      k:'department',      ph:'e.g. Finance' },
-                { l:'Custodian Name',  k:'custodian_name',  ph:'Responsible person' },
-                { l:'Float Limit (SAR)', k:'float_limit',   ph:'500', num:true },
-                { l:'GL Account Code', k:'gl_account_code', ph:'e.g. 1010' },
-              ].map(({l,k,ph,num})=>(
-                <div key={k}>
-                  <label style={S.lbl}>{l}</label>
-                  <input type={num?'number':'text'} value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} style={S.inp} placeholder={ph} />
-                </div>
-              ))}
-              <div>
-                <label style={S.lbl}>Notes</label>
-                <textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} style={{ ...S.inp, height:60, resize:'vertical' }} />
+      <PageBanner
+        isOpen={showBanner2}
+        onClose={() => setShowBanner2(false)}
+        onStart={() => { setShowBanner2(false); setWizardStep2(1); setModal('add') }}
+        chapterName="Accounting"
+        formTitle={['New', 'Cash', 'Box']}
+        workflowSteps={['Box Details', 'GL & Notes']}
+        iconLabel="Petty Cash"
+        description="Create a new petty cash box for a department or location, with a float limit and GL account."
+      />
+
+      <FormShell
+        isOpen={!!modal}
+        onClose={() => { setModal(null); setWizardStep2(1) }}
+        chapterName="Accounting"
+        title={modal==='add' ? ['New', 'Cash', 'Box'] : ['Edit', 'Cash', 'Box']}
+        steps={['Box Details', 'GL & Notes']}
+        currentStep={wizardStep2}
+        onBack={() => setWizardStep2(s => s - 1)}
+        backLabel="Back"
+        onNext={() => {
+          if (wizardStep2 < 2) {
+            if (!form.account_name) return
+            setWizardStep2(2)
+          } else { save() }
+        }}
+        nextLabel={wizardStep2 < 2 ? 'Next →' : (saving ? 'Saving…' : '✓ Save')}
+        nextDisabled={saving}
+      >
+        {wizardStep2 === 1 && (
+          <div>
+            {[
+              { l:'Box Name *',      k:'account_name',    ph:'e.g. Head Office Petty Cash' },
+              { l:'Department',      k:'department',      ph:'e.g. Finance' },
+              { l:'Custodian Name',  k:'custodian_name',  ph:'Responsible person' },
+            ].map(({l,k,ph})=>(
+              <div key={k}>
+                <label style={S.lbl}>{l}</label>
+                <input type="text" value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))}
+                  style={{ ...S.inp, borderRadius:4, marginBottom:14 }} placeholder={ph} />
               </div>
-            </div>
-            <div style={{ display:'flex', gap:8, justifyContent:'flex-end', marginTop:18 }}>
-              <button onClick={()=>setModal(null)} style={S.btnO()}>Cancel</button>
-              <button onClick={save} disabled={saving} style={S.btn('#2e7d32')}>{saving?'Saving…':'✓ Save'}</button>
-            </div>
+            ))}
           </div>
-        </div>
-      )}
+        )}
+
+        {wizardStep2 === 2 && (
+          <div>
+            <label style={S.lbl}>Float Limit (SAR)</label>
+            <input type="number" value={form.float_limit} onChange={e=>setForm(f=>({...f,float_limit:e.target.value}))}
+              style={{ ...S.inp, borderRadius:4, marginBottom:14 }} placeholder="500" />
+            <label style={S.lbl}>GL Account Code</label>
+            <input type="text" value={form.gl_account_code} onChange={e=>setForm(f=>({...f,gl_account_code:e.target.value}))}
+              style={{ ...S.inp, borderRadius:4, marginBottom:14 }} placeholder="e.g. 1010" />
+            <label style={S.lbl}>Notes</label>
+            <textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))}
+              style={{ ...S.inp, borderRadius:4, height:70, resize:'vertical', marginBottom:0 }} />
+          </div>
+        )}
+      </FormShell>
     </>
   )
 }
