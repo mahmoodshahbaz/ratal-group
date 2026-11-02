@@ -478,10 +478,20 @@ export default function FormLanding() {
   }, [auth.employee?.id])
 
   async function confirmGateItem(item) {
-    if (gateConfirming) return; setGateConfirming(item.id); const now = new Date().toISOString(); let error = null
-    if (item.gateType === 'FIELD_LINE') ;({ error } = await supabase.from('field_payment_lines').update({ ack_status:'CONFIRMED', ack_at:now }).eq('id', item.id).eq('ack_status', 'PENDING'))
-    else if (item.gateType === 'MONEY_REQUEST') ;({ error } = await supabase.from('money_requests').update({ dh_ack_status:'CONFIRMED', dh_ack_at:now, dh_ack_by:auth.employee.id }).eq('id', item.id).eq('dh_ack_status', 'PENDING'))
-    if (!error) setPendingGate(prev => prev.filter(g => g.id !== item.id)); else alert('Could not confirm. Please try again.'); setGateConfirming(null)
+    if (gateConfirming) return
+    setGateConfirming(item.id)
+    const now = new Date().toISOString()
+    let err = null
+    if (item.gateType === 'FIELD_LINE') {
+      const res = await supabase.from('field_payment_lines').update({ ack_status:'CONFIRMED', ack_at:now }).eq('id', item.id).eq('ack_status', 'PENDING')
+      err = res.error
+    } else if (item.gateType === 'MONEY_REQUEST') {
+      const res = await supabase.from('money_requests').update({ dh_ack_status:'CONFIRMED', dh_ack_at:now, dh_ack_by:auth.employee.id }).eq('id', item.id).eq('dh_ack_status', 'PENDING')
+      err = res.error
+    }
+    if (!err) setPendingGate(prev => prev.filter(g => g.id !== item.id))
+    else alert('Could not confirm. Please try again.')
+    setGateConfirming(null)
   }
 
   async function confirmAllGateItems() {
