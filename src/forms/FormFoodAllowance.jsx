@@ -14,6 +14,7 @@
  */
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { useFieldAuth } from '../lib/useFieldAuth'
 
 // ── Food Allowance Theme (scoped — do NOT export) ───────────────────────────
 const FT = {
@@ -46,9 +47,9 @@ const DEV_WORKERS = [
   { id:'dev-5', full_name_en:'Omar Al-Zahrani',    employee_number:'EXT-005' },
 ]
 
-const devMode     = new URLSearchParams(window.location.search).get('dev') === '1' ||
+const _params     = new URLSearchParams(window.location.search)
+const devMode     = _params.get('dev') === '1' || _params.get('preview') === '1' ||
                     localStorage.getItem('accsys_dev_mode') === '1'
-const previewMode = new URLSearchParams(window.location.search).get('preview') === '1'
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 const S = {
@@ -96,8 +97,9 @@ const S = {
 }
 
 export default function FormFoodAllowance() {
+  const auth = useFieldAuth()
+
   const [step,      setStep]      = useState(1)
-  const [session,   setSession]   = useState(null)
   const [employees, setEmployees] = useState([])
   const [projects,  setProjects]  = useState([])
   const [deptMap,   setDeptMap]   = useState({})
@@ -150,31 +152,17 @@ export default function FormFoodAllowance() {
       })
     : projects
 
-  // Load on mount
+  // Load data once auth resolves
   useEffect(() => {
-    if (previewMode) {
-      setSession({ user: { id: 'preview' } })
-      setEmployees([
-        { id:'prev-1', full_name_en:'Abdul Hakim Ibrahim',  employee_number:'RAT-001', department_id:'d1', phone:'+966501234567', entity_id:'e1', employment_type:'RATAL', is_active:true, fa_eligible:true, fa_amount:30 },
-        { id:'prev-2', full_name_en:'Mohammed Al-Zahrani',  employee_number:'RAT-002', department_id:'d1', phone:'+966502345678', entity_id:'e1', employment_type:'RATAL', is_active:true, fa_eligible:true, fa_amount:30 },
-        { id:'prev-3', full_name_en:'Khalid Al-Ghamdi',     employee_number:'RAT-003', department_id:'d1', phone:'+966503456789', entity_id:'e1', employment_type:'RATAL', is_active:true, fa_eligible:true, fa_amount:50 },
-      ])
-      setDeptMap({ d1: { dept_name:'Field Operations', dept_code:'FO' } })
-      return
-    }
-    if (devMode) { loadData(null); return }
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session); if (session) loadData(session)
-    })
-  }, [])
+    if (auth.loading) return
+    if (!auth.employee && !devMode) return
+    loadData()
+  }, [auth.loading])
 
-  async function loadData(session) {
-    let entityId = null
-    if (!devMode && session?.user?.id) {
-      const { data: prof } = await supabase
-        .from('user_profiles').select('entity_id').eq('id', session.user.id).single()
-      entityId = prof?.entity_id || null
-    }
+  async function loadData() {
+    // Entity comes from QR token auth (no user_profiles lookup needed)
+    const entityId = auth.entityId || null
+
     const empQ = devMode
       ? supabase.rpc('get_dev_employees')
       : supabase.from('employees')
@@ -266,7 +254,6 @@ export default function FormFoodAllowance() {
   function goBack() { setError(''); setStep(s => s - 1) }
 
   async function submit() {
-    if (previewMode) { setReqNumber('FA-2026-0055'); setStep(5); return }
     setLoading(true); setError('')
 
     const { data: existing } = await supabase
@@ -355,16 +342,26 @@ export default function FormFoodAllowance() {
     setAllowDate(new Date().toISOString().split('T')[0])
   }
 
-  // ─── Login gate ───────────────────────────────────────────────────────────────
-  if (!session && !devMode && !previewMode) return (
-    <div style={{ minHeight:'100vh', background:FT.cream, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:FONT }}>
-      <div style={{ textAlign:'center', padding:40 }}>
-        <div style={{ width:72, height:72, borderRadius:'50%', background:FT.forest, display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, margin:'0 auto 16px' }}>🔐</div>
-        <div style={{ fontSize:16, fontWeight:700, color:FT.text, marginBottom:8 }}>Sign in required</div>
-        <div style={{ fontSize:13, color:FT.mutedLight }}>Open the Ratal Group app, sign in, then return to this link.</div>
+  // ─── Auth guard (QR token) ────────────────────────────────────────────────────
+  if (!devMode) {
+    if (auth.loading) return (
+      <div style={{ minHeight:'100vh', background:FT.cream, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:FONT }}>
+        <div style={{ textAlign:'center' }}>
+          <div style={{ fontSize:36, marginBottom:12 }}>⏳</div>
+          <div style={{ fontSize:14, color:FT.mutedLight }}>Checking access…</div>
+        </div>
       </div>
-    </div>
-  )
+    )
+    if (auth.error || !auth.employee) return (
+      <div style={{ minHeight:'100vh', background:FT.cream, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:FONT }}>
+        <div style={{ background:FT.lightCard, borderRadius:20, padding:36, maxWidth:320, textAlign:'center', boxShadow:'0 4px 20px rgba(16,63,52,0.1)', margin:20, border:`1px solid ${FT.border}` }}>
+          <div style={{ width:72, height:72, borderRadius:'50%', background:FT.forest, display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, margin:'0 auto 16px' }}>🔒</div>
+          <div style={{ fontSize:16, fontWeight:700, color:FT.text, marginBottom:8 }}>Access Required</div>
+          <div style={{ fontSize:13, color:FT.mutedLight, lineHeight:1.6 }}>Scan your QR code to submit a food allowance request.</div>
+        </div>
+      </div>
+    )
+  }
 
   // ─── Step meta ────────────────────────────────────────────────────────────────
   const STEP_INFO = {
@@ -404,7 +401,7 @@ export default function FormFoodAllowance() {
           style={{ background:'rgba(255,255,255,0.12)', color:'rgba(255,255,255,0.9)', border:'1px solid rgba(255,255,255,0.25)', borderRadius:8, padding:'4px 10px', fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:FONT }}>
           {isAr ? 'English' : 'عربي'}
         </button>
-        <button onClick={async () => { await supabase.auth.signOut(); window.location.reload() }}
+        <button onClick={() => { auth.logout(); window.location.reload() }}
           title="Sign out"
           style={{ background:'rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.65)', border:'1px solid rgba(255,255,255,0.15)', borderRadius:8, padding:'4px 9px', fontSize:13, cursor:'pointer' }}>
           ⎋
