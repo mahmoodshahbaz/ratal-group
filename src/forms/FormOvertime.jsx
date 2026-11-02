@@ -358,12 +358,34 @@ export default function FormOvertime() {
   }
 
   function reset() {
-    setStep(1); setEmpId(''); setEmpName(''); setEmpNum(''); setEmpBasic(0)
-    setDept(''); setEmpDeptCode(''); setEmpDeptId(''); setContact('')
-    setEmpEntityId(''); setProjectId(''); setProjNum(''); setProjName('')
-    setJobNo(''); setOtType('NORMAL'); setFromTime(''); setToTime('')
-    setRemarks(''); setError(''); setAssignmentLoaded(false); setManualOverride(false)
+    setStep(1)
+    setOtType('NORMAL'); setFromTime(''); setToTime('')
+    setRemarks(''); setError(''); setManualOverride(false)
     setOtDate(new Date().toISOString().split('T')[0])
+
+    // Re-apply the QR-authenticated employee immediately (don't blank the form)
+    const authEmp = auth.employee
+    if (authEmp && !devMode && !previewMode) {
+      const d = deptMap[authEmp.department_id] || {}
+      setEmpId(authEmp.id)
+      setEmpName(authEmp.full_name_en || '')
+      setEmpNum(authEmp.employee_number || '')
+      setDept(d.dept_code || d.dept_name || authEmp.dept_code || '')
+      setEmpDeptCode(d.dept_code || d.dept_name || authEmp.dept_code || '')
+      setEmpDeptId(authEmp.department_id || '')
+      setContact(authEmp.phone || '')
+      setEmpEntityId(authEmp.entity_id || '')
+      setEmpBasic(authEmp.basic_salary || 0)
+      setAssignmentLoaded(false)
+      setProjectId(''); setProjNum(''); setProjName(''); setJobNo('')
+      loadEmployeeAssignment(authEmp.id)
+    } else {
+      // devMode or no auth — full clear
+      setEmpId(''); setEmpName(''); setEmpNum(''); setEmpBasic(0)
+      setDept(''); setEmpDeptCode(''); setEmpDeptId(''); setContact('')
+      setEmpEntityId(''); setProjectId(''); setProjNum(''); setProjName('')
+      setJobNo(''); setAssignmentLoaded(false)
+    }
   }
 
   // ─── Auth gate ──────────────────────────────────────────────────────────────

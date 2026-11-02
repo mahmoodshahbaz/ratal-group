@@ -401,14 +401,34 @@ export default function FormFoodAllowance() {
   }
 
   function reset() {
-    setStep(1); setEmpId(''); setEmpName(''); setEmpNum('')
-    setDept(''); setEmpDeptCode(''); setContact(''); setEmpEntityId('')
-    setProjectId(''); setProjNum(''); setProjName('')
-    setLocation(''); setJobNo(''); setHasTeam(false)
-    setEmpFoodRate(null); setSiteWorkers([]); setSelectedWorkers([])
-    setRemarks(''); setError('')
+    setStep(1)
+    setHasTeam(false); setSiteWorkers([]); setSelectedWorkers([])
+    setRemarks(''); setError(''); setManualOverride(false)
     setAllowDate(new Date().toISOString().split('T')[0])
-    setSiteMasterId(''); setAssignmentId(''); setManualOverride(false)
+
+    // Re-apply the QR-authenticated employee immediately
+    const authEmp = auth.employee
+    if (authEmp && !devMode) {
+      const d = deptMap[authEmp.department_id] || {}
+      setEmpId(authEmp.id)
+      setEmpName(authEmp.full_name_en || '')
+      setEmpNum(authEmp.employee_number || '')
+      setDept(d.dept_code || d.dept_name || '')
+      setEmpDeptCode(d.dept_code || d.dept_name || '')
+      setContact(authEmp.phone || '')
+      setEmpEntityId(authEmp.entity_id || '')
+      setEmpFoodRate(authEmp.fa_amount && authEmp.fa_amount > 0 ? Number(authEmp.fa_amount) : 30)
+      setProjectId(''); setProjNum(''); setProjName('')
+      setLocation(''); setJobNo(''); setSiteMasterId(''); setAssignmentId('')
+      loadEmployeeAssignment(authEmp.id)
+    } else {
+      // devMode — full clear
+      setEmpId(''); setEmpName(''); setEmpNum('')
+      setDept(''); setEmpDeptCode(''); setContact(''); setEmpEntityId('')
+      setProjectId(''); setProjNum(''); setProjName('')
+      setLocation(''); setJobNo(''); setSiteMasterId(''); setAssignmentId('')
+      setEmpFoodRate(null)
+    }
   }
 
   // ─── Auth guard (QR token) ────────────────────────────────────────────────────
