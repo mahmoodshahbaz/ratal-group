@@ -157,11 +157,13 @@ export default function FormOvertime() {
   const [empDeptId,   setEmpDeptId]   = useState('')
   const [contact,     setContact]     = useState('')
   // Screen 2
-  const [otDate,    setOtDate]    = useState(new Date().toISOString().split('T')[0])
-  const [projectId, setProjectId] = useState('')
-  const [projNum,   setProjNum]   = useState('')
-  const [projName,  setProjName]  = useState('')
-  const [jobNo,     setJobNo]     = useState('')
+  const [otDate,           setOtDate]           = useState(new Date().toISOString().split('T')[0])
+  const [projectId,        setProjectId]        = useState('')
+  const [projNum,          setProjNum]          = useState('')
+  const [projName,         setProjName]         = useState('')
+  const [jobNo,            setJobNo]            = useState('')
+  const [assignmentLoaded, setAssignmentLoaded] = useState(false)
+  const [manualOverride,   setManualOverride]   = useState(false)
   // Screen 3
   const [otType,   setOtType]   = useState('NORMAL')
   const [fromTime, setFromTime] = useState('')
@@ -253,6 +255,35 @@ export default function FormOvertime() {
       setContact(match.phone || '')
       setEmpEntityId(match.entity_id || '')
       setEmpBasic(match.basic_salary || 0)
+      loadEmployeeAssignment(match.id)
+    }
+  }
+
+  async function loadEmployeeAssignment(eid) {
+    setAssignmentLoaded(false)
+    setProjectId(''); setProjNum(''); setProjName(''); setJobNo('')
+    try {
+      const { data } = await supabase
+        .from('site_assignments')
+        .select(`
+          id, project_id, site_master_id,
+          project:project_id(id, project_number, project_name),
+          site:site_master_id(id, site_name, job_no, sm_id)
+        `)
+        .eq('employee_id', eid)
+        .eq('status', 'ACTIVE')
+        .order('assignment_date', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (data) {
+        setProjectId(data.project_id || '')
+        setProjNum(data.project?.project_number || '')
+        setProjName(data.project?.project_name || '')
+        setJobNo(data.site?.job_no || data.site?.sm_id || '')
+        setAssignmentLoaded(true)
+      }
+    } catch (err) {
+      console.error('[FormOvertime] loadEmployeeAssignment error:', err)
     }
   }
 
@@ -266,13 +297,14 @@ export default function FormOvertime() {
     setDept(d.dept_code || d.dept_name || '');  setEmpDeptCode(code)
     setEmpDeptId(e.department_id || ''); setContact(e.phone || '')
     setEmpEntityId(e.entity_id || '')
-    setProjectId(''); setProjNum(''); setProjName('')
+    setManualOverride(false)
     let basic = e.basic_salary || 0
     if (!basic) {
       const { data: emp } = await supabase.from('employees').select('basic_salary').eq('id', id).single()
       basic = emp?.basic_salary || 0
     }
     setEmpBasic(basic)
+    loadEmployeeAssignment(id)
   }
 
   function goNext() {
@@ -282,7 +314,7 @@ export default function FormOvertime() {
       if (!contact) { setError(isAr ? 'رقم الجوال غير موجود' : 'Mobile number missing — update employee profile first'); return }
       setStep(2)
     } else if (step === 2) {
-      if (!projectId) { setError(isAr ? 'يرجى اختيار المشروع' : 'Please select a project'); return }
+      if (!projectId && manualOverride) { setError(isAr ? 'يرجى اختيار المشروع' : 'Please select a project'); return }
       setStep(3)
     } else if (step === 3) {
       if (!fromTime || !toTime) { setError(isAr ? 'يرجى تحديد الأوقات' : 'Start and end time required'); return }
@@ -330,7 +362,7 @@ export default function FormOvertime() {
     setDept(''); setEmpDeptCode(''); setEmpDeptId(''); setContact('')
     setEmpEntityId(''); setProjectId(''); setProjNum(''); setProjName('')
     setJobNo(''); setOtType('NORMAL'); setFromTime(''); setToTime('')
-    setRemarks(''); setError('')
+    setRemarks(''); setError(''); setAssignmentLoaded(false); setManualOverride(false)
     setOtDate(new Date().toISOString().split('T')[0])
   }
 
@@ -512,33 +544,56 @@ export default function FormOvertime() {
   const screen2 = (
     <div style={{ paddingBottom:16 }}>
       {errBanner}
-      <div style={S.sectionTitle(false)}>{isAr?'اختر المشروع':'Select project site'}</div>
-
-      {deptProjects.length === 0 ? (
-        <div style={S.card}>
-          <div style={{ textAlign:'center', color: TH.muted, fontSize:13, padding:'8px 0' }}>
-            {isAr?'لا توجد مشاريع نشطة':'No active projects found for this department'}
+      {/* Auto-filled from site assignment */}
+      {assignmentLoaded && !manualOverride ? (
+        <div style={{ margin:'0 12px' }}>
+          <div style={{ background:'#e8f5e9', border:'1px solid #a5d6a7', borderRadius:14, padding:'12px 14px', marginBottom:8, display:'flex', alignItems:'center', gap:10 }}>
+            <span style={{ fontSize:18 }}>📍</span>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:11, fontWeight:700, color:'#2e7d32', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:2 }}>
+                AUTO — from site assignment
+              </div>
+              <div style={{ fontSize:13, fontWeight:700, color:'#1b5e20' }}>[{projNum}] {projName}</div>
+            </div>
+            <span style={{ color:'#388e3c', fontSize:18 }}>✓</span>
           </div>
+          {canSelectOther && (
+            <button onClick={() => setManualOverride(true)}
+              style={{ background:'none', border:'none', color: TH.sub, fontSize:11, textDecoration:'underline', cursor:'pointer', padding:'2px 0', marginBottom:8 }}>
+              {isAr ? 'تغيير يدوياً' : 'Change manually'}
+            </button>
+          )}
         </div>
       ) : (
-        <div style={{ margin:'0 12px' }}>
-          {deptProjects.map(p => {
-            const sel = projectId === p.id
-            const deptLabel = p.dept?.dept_name || deptMap[p.department_id]?.dept_name || empDeptCode
-            return (
-              <div key={p.id}
-                onClick={() => { setProjectId(p.id); setProjNum(p.project_number||''); setProjName(p.project_name||''); setError('') }}
-                style={{ background: sel ? TH.headerBg : TH.card, border:`1px solid ${sel ? TH.headerBg : TH.cardBorder}`, borderRadius:14, padding:'12px 14px', marginBottom:8, cursor:'pointer', display:'flex', alignItems:'center', gap:10, boxShadow: sel?'0 2px 8px rgba(0,0,0,0.15)':'0 1px 3px rgba(0,0,0,0.05)' }}>
-                <span style={{ fontSize:18 }}>📍</span>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color: sel?'#fff': TH.text }}>[{p.project_number}] {p.project_name}</div>
-                  <div style={{ fontSize:11, color: sel?'rgba(255,255,255,0.65)': TH.muted }}>{deptLabel}</div>
-                </div>
-                {sel && <span style={{ color:'#fff', fontWeight:700, fontSize:16 }}>✓</span>}
+        <>
+          <div style={S.sectionTitle(false)}>{isAr?'اختر المشروع':'Select project site'}</div>
+          {deptProjects.length === 0 ? (
+            <div style={S.card}>
+              <div style={{ textAlign:'center', color: TH.muted, fontSize:13, padding:'8px 0' }}>
+                {isAr?'لا توجد مشاريع نشطة':'No active projects found for this department'}
               </div>
-            )
-          })}
-        </div>
+            </div>
+          ) : (
+            <div style={{ margin:'0 12px' }}>
+              {deptProjects.map(p => {
+                const sel = projectId === p.id
+                const deptLabel = p.dept?.dept_name || deptMap[p.department_id]?.dept_name || empDeptCode
+                return (
+                  <div key={p.id}
+                    onClick={() => { setProjectId(p.id); setProjNum(p.project_number||''); setProjName(p.project_name||''); setError('') }}
+                    style={{ background: sel ? TH.headerBg : TH.card, border:`1px solid ${sel ? TH.headerBg : TH.cardBorder}`, borderRadius:14, padding:'12px 14px', marginBottom:8, cursor:'pointer', display:'flex', alignItems:'center', gap:10, boxShadow: sel?'0 2px 8px rgba(0,0,0,0.15)':'0 1px 3px rgba(0,0,0,0.05)' }}>
+                    <span style={{ fontSize:18 }}>📍</span>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:13, fontWeight:700, color: sel?'#fff': TH.text }}>[{p.project_number}] {p.project_name}</div>
+                      <div style={{ fontSize:11, color: sel?'rgba(255,255,255,0.65)': TH.muted }}>{deptLabel}</div>
+                    </div>
+                    {sel && <span style={{ color:'#fff', fontWeight:700, fontSize:16 }}>✓</span>}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </>
       )}
 
       <div style={S.card}>
