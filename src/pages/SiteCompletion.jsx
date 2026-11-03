@@ -199,7 +199,7 @@ export default function SiteCompletion({ entityId }) {
   // ── Helpers ────────────────────────────────────────────────────────────────
   const fmt = d => d ? new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—'
 
-  const toggle = key => setExpanded(p => ({ ...p, [key]: !p[key] }))
+  const toggle = key => setExpanded(p => ({ [key]: !p[key] }))
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
