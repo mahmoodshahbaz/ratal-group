@@ -325,7 +325,7 @@ export default function SiteAssignment({ entityId }) {
         name:      emp ? emp.full_name_en : (sc ? sc.contractor_name : '—'),
         type:      a.assignee_type,
         project:   proj?.project_number || '—',
-        siteNo:    site?.job_no || site?.sm_id || '—',
+        siteNo:    site?.sm_id || site?.job_no || '—',
         siteName:  site?.site_name || '—',
         remote:    a.is_remote ? 'Remote' : 'Local',
       }

@@ -108,12 +108,24 @@ export function useFieldAuth() {
         const emp = emps?.[0] || null
 
         if (emp) {
-          const { data: assignments } = await supabase
+          const todayDev = new Date().toISOString().split('T')[0]
+          const { data: devRaw } = await supabase
             .from('site_assignments')
-            .select('id, site_number, site_name, scope_type, role_on_site, assigned_from, assigned_to, project:project_id(id,project_number,project_name), contractor:contractor_id(id,contractor_name)')
+            .select('id, site_master_id, scope_type, role_on_site, assignment_date, allow_fa, allow_ot, allow_others, project:project_id(id,project_number,project_name)')
             .eq('employee_id', emp.id)
-            .eq('is_active', true)
-            .order('assigned_from', { ascending: false })
+            .eq('status', 'ACTIVE')
+            .eq('assignment_date', todayDev)
+            .order('id', { ascending: false })
+          const devMasterIds = [...new Set((devRaw || []).map(a => a.site_master_id).filter(Boolean))]
+          let devMasterMap = {}
+          if (devMasterIds.length) {
+            const { data: dm } = await supabase.from('site_masters').select('id,sm_id,site_name,job_no').in('id', devMasterIds)
+            ;(dm || []).forEach(m => { devMasterMap[m.id] = m })
+          }
+          const assignments = (devRaw || []).map(a => {
+            const m = devMasterMap[a.site_master_id] || {}
+            return { ...a, site_number: m.sm_id || m.job_no || '—', site_name: m.site_name || '' }
+          })
 
           const allForms = ROLE_FORM_ACCESS['STAFF_DH']
           setState({
@@ -211,26 +223,46 @@ export function useFieldAuth() {
         employee:       result.employee,
       }
 
-      // Load this employee's active site assignments
-      const { data: assignments } = await supabase
+      // Load this employee's assignments for TODAY only (prevents stale records showing up)
+      const today = new Date().toISOString().split('T')[0]
+      const { data: rawAssignments } = await supabase
         .from('site_assignments')
         .select(`
           id,
-          site_number,
-          site_name,
+          site_master_id,
           scope_type,
           role_on_site,
-          assigned_from,
-          assigned_to,
+          assignment_date,
           allow_fa,
           allow_ot,
           allow_others,
-          project:project_id ( id, project_number, project_name ),
-          contractor:contractor_id ( id, contractor_name )
+          project:project_id ( id, project_number, project_name )
         `)
         .eq('employee_id', qt.employee.id)
-        .eq('is_active', true)
-        .order('assigned_from', { ascending: false })
+        .eq('status', 'ACTIVE')
+        .eq('assignment_date', today)
+        .order('id', { ascending: false })
+
+      // Fetch site master details for these assignments (get sm_id / site_name)
+      const masterIds = [...new Set((rawAssignments || []).map(a => a.site_master_id).filter(Boolean))]
+      let masterMap = {}
+      if (masterIds.length) {
+        const { data: masters } = await supabase
+          .from('site_masters')
+          .select('id, sm_id, site_name, job_no')
+          .in('id', masterIds)
+        ;(masters || []).forEach(m => { masterMap[m.id] = m })
+      }
+
+      // Shape into the format FormSiteCompletion expects
+      const assignments = (rawAssignments || []).map(a => {
+        const m = masterMap[a.site_master_id] || {}
+        return {
+          ...a,
+          site_number: m.sm_id || m.job_no || '—',
+          site_name:   m.site_name || '',
+        }
+      })
 
       // Load unread notification count
       const { count: unreadCount } = await supabase
