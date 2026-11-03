@@ -177,6 +177,7 @@ export default function SiteAssignment({ entityId }) {
   const [subcons,   setSubcons]   = useState([])
   const [approvedPOs, setApprovedPOs] = useState([])
   const [existingAssignments, setExistingAssignments] = useState([])
+  const [activeJobs, setActiveJobs] = useState([])  // site_jobs not COMPLETE/CANCELLED
 
   const [masterLoading, setMasterLoading] = useState(true)
   const [saving,        setSaving]        = useState(false)
@@ -203,13 +204,15 @@ export default function SiteAssignment({ entityId }) {
     if (!entityId) return
     async function loadMasters() {
       setMasterLoading(true)
-      const [{ data: d }, { data: p }, { data: sm }, { data: e }, { data: s }] = await Promise.all([
+      const [{ data: d }, { data: p }, { data: sm }, { data: e }, { data: s }, { data: sj }] = await Promise.all([
         supabase.from('departments').select('id,dept_name,dept_code')
           .eq('entity_id', entityId).eq('is_active', true).order('dept_name'),
         supabase.from('projects').select('id,project_number,project_name,status,department_id')
           .eq('entity_id', entityId).order('project_number'),
         supabase.from('site_masters').select('id,sm_id,job_no,site_name,project_id,dept_id,status')
           .eq('entity_id', entityId).neq('status', 'CLOSED').neq('status', 'HANDED_OVER').order('sm_id'),
+        supabase.from('site_jobs').select('id,site_master_id,service_unit,job_type,job_ref,status')
+          .eq('entity_id', entityId).not('status', 'in', '("COMPLETE","CANCELLED")').order('created_at'),
         supabase.from('employees').select('id,full_name_en,employee_number,employee_code,department_id,employee_category,employee_type')
           .eq('entity_id', entityId).eq('is_active', true).order('full_name_en'),
         supabase.from('contractors').select('id,contractor_name,contractor_code,vendor_type')
@@ -221,6 +224,7 @@ export default function SiteAssignment({ entityId }) {
       setAllSites(sm || [])
       setEmployees(e || [])
       setSubcons(s || [])
+      setActiveJobs(sj || [])
       setMasterLoading(false)
     }
     loadMasters()
@@ -387,6 +391,7 @@ export default function SiteAssignment({ entityId }) {
         checked:    !!existing,
         projectId:  existing?.project_id || '',
         siteId:     existing?.site_master_id || '',
+        jobId:      existing?.job_id || '',
         isRemote:   existing ? existing.is_remote : true,
         notes:      existing?.notes || '',
         existingId: existing?.id || null,
@@ -459,6 +464,7 @@ export default function SiteAssignment({ entityId }) {
         allow_fa:        r.fa     ?? false,
         allow_ot:        r.ot     ?? false,
         allow_others:    r.others ?? false,
+        job_id:          r.jobId  || null,
       }))
 
       const { error } = await supabase.from('site_assignments').insert(records)
@@ -849,15 +855,30 @@ export default function SiteAssignment({ entityId }) {
                     ))}
                   </select>
 
-                  {/* Site */}
-                  <select value={row.siteId} disabled={!row.checked}
-                    onChange={e => updateEmpRow(row.id, { siteId: e.target.value })}
-                    style={{ ...S.inp, opacity: row.checked ? 1 : 0.35 }}>
-                    <option value="">— Site —</option>
-                    {sites.map(s => (
-                      <option key={s.id} value={s.id}>{s.job_no || s.sm_id}{s.site_name ? ` — ${s.site_name}` : ''}</option>
-                    ))}
-                  </select>
+                  {/* Site + Job# stacked */}
+                  <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                    <select value={row.siteId} disabled={!row.checked}
+                      onChange={e => updateEmpRow(row.id, { siteId: e.target.value, jobId: '' })}
+                      style={{ ...S.inp, opacity: row.checked ? 1 : 0.35 }}>
+                      <option value="">— Site —</option>
+                      {sites.map(s => (
+                        <option key={s.id} value={s.id}>{s.job_no || s.sm_id}{s.site_name ? ` — ${s.site_name}` : ''}</option>
+                      ))}
+                    </select>
+                    {/* Job# — only when site selected and jobs exist for that site */}
+                    {row.siteId && activeJobs.filter(j => j.site_master_id === row.siteId).length > 0 && (
+                      <select value={row.jobId || ''} disabled={!row.checked}
+                        onChange={e => updateEmpRow(row.id, { jobId: e.target.value })}
+                        style={{ ...S.inp, fontSize:11, opacity: row.checked ? 1 : 0.35, color:'#546e7a' }}>
+                        <option value="">— Job# (optional) —</option>
+                        {activeJobs.filter(j => j.site_master_id === row.siteId).map(j => (
+                          <option key={j.id} value={j.id}>
+                            {j.service_unit} · {j.job_type}{j.job_ref ? ` (${j.job_ref})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
 
                   {/* Remote / Local toggle */}
                   <button
