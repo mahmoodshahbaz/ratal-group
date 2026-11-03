@@ -781,7 +781,6 @@ export default function SiteMaster({ entityId }) {
                 <div style={{ position:'absolute', top:'110%', left:0, background:'#fff', border:'1px solid #e0e7ef', borderRadius:10, boxShadow:'0 6px 20px rgba(0,0,0,0.12)', zIndex:50, minWidth:160, padding:'8px 0' }}
                   onClick={e=>e.stopPropagation()}>
                   {[
-                    { key:'site_no',   label:'Site#'    },
                     { key:'wf_code',   label:'WF Code'  },
                     { key:'contract',  label:'Contract' },
                     { key:'actual',    label:'Actual'   },
@@ -826,10 +825,10 @@ export default function SiteMaster({ entityId }) {
                 style={{ cursor:'pointer', width:14, height:14, accentColor:'#fff' }} />
             </th>
             <th style={{ ...S.th, whiteSpace:'nowrap' }}>SM ID</th>
-            <th style={{ ...S.th, whiteSpace:'nowrap' }}>Unit</th>
-            {colVis.site_no   && <th style={{ ...S.th, whiteSpace:'nowrap' }}>Site#</th>}
-            <th style={{ ...S.th, whiteSpace:'nowrap' }}>Job#</th>
+            <th style={{ ...S.th, whiteSpace:'nowrap' }}>Department</th>
+            <th style={{ ...S.th, whiteSpace:'nowrap' }}>Site#</th>
             <th style={S.th}>Site Name</th>
+            <th style={{ ...S.th, whiteSpace:'nowrap' }}>Job#</th>
             {colVis.wf_code   && <th style={{ ...S.th, whiteSpace:'nowrap' }}>WF Code</th>}
             <th style={{ ...S.th, whiteSpace:'nowrap' }}>Status</th>
             {colVis.contract  && <th style={{ ...S.th, textAlign:'right', whiteSpace:'nowrap' }}>Contract</th>}
@@ -854,10 +853,13 @@ export default function SiteMaster({ entityId }) {
                       style={{ cursor:'pointer', width:14, height:14, accentColor:'#8C601B', pointerEvents:'none' }} />
                   </td>
                   <td style={{ ...S.td, ...nw, fontWeight:800, color:'#5A32D4', fontFamily:'monospace', fontSize:12 }}>{sm.sm_id}</td>
-                  <td style={{ ...S.td, ...nw }}><span style={S.badge()}>{sm.service_unit}</span></td>
-                  {colVis.site_no  && <td style={{ ...S.td, ...nw, fontFamily:'monospace', fontSize:11, color:'#1565c0' }}>{sm.site_no||'—'}</td>}
-                  <td style={{ ...S.td, ...nw, fontFamily:'monospace', fontSize:11 }}>{sm.job_no||'—'}</td>
+                  <td style={{ ...S.td, ...nw }}>
+                    <div style={{ fontSize:12, fontWeight:600, color:'#1a2e3d' }}>{depts.find(d=>d.id===sm.dept_id)?.dept_name||'—'}</div>
+                    <div style={{ fontSize:10, color:'#6b7c93', marginTop:1 }}><span style={S.badge()}>{sm.service_unit}</span></div>
+                  </td>
+                  <td style={{ ...S.td, ...nw, fontFamily:'monospace', fontSize:11, color:'#1565c0' }}>{sm.site_no||'—'}</td>
                   <td style={{ ...S.td, fontSize:12, maxWidth:200, ...nw }}>{sm.site_name||'—'}</td>
+                  <td style={{ ...S.td, ...nw, fontFamily:'monospace', fontSize:11 }}>{sm.job_no||'—'}</td>
                   {colVis.wf_code  && <td style={{ ...S.td, ...nw }}>{sm.wf_code?<span style={{ ...S.badge('#00695c'), fontSize:10 }}>{sm.wf_code}</span>:'—'}</td>}
                   <td style={{ ...S.td, ...nw }}>
                     <span style={{ background:(STATUS_COLORS[sm.status]||'#9e9e9e')+'18', color:STATUS_COLORS[sm.status]||'#9e9e9e', padding:'2px 9px', borderRadius:20, fontSize:10, fontWeight:700 }}>
