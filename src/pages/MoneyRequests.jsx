@@ -1037,6 +1037,10 @@ export default function MoneyRequests({ entityId, currentUser }) {
       onFilter={f => { setMainTab(f === 'Pending' ? 'pending' : 'history'); setExpandedId(null) }}
     >{/* Custom table content begins — all original logic preserved below */}
 
+      {/* ── STICKY HEADER BLOCK: tabs + KPI + filters + column headers ── */}
+      <div style={{ position:'sticky', top:0, zIndex:20, background:'#fff',
+        boxShadow:'0 2px 10px rgba(0,0,0,0.07)', marginLeft:-1, marginRight:-1 }}>
+
       {/* Main tabs */}
       <div style={{ display:'flex', gap:0, borderBottom:'2px solid #e8edf5', marginBottom:0 }}>
         {[
@@ -1174,7 +1178,17 @@ export default function MoneyRequests({ entityId, currentUser }) {
         </div>
       )}
 
-      {/* List — accordion */}
+        {/* Column headers — inside sticky block */}
+        <div style={{ display:'grid', gridTemplateColumns:'130px 90px 70px 1fr 110px 90px', gap:8,
+          padding:'8px 16px', background:'#0D5C4E', borderBottom:'1px solid #0a4a3d',
+          fontSize:10, fontWeight:800, color:'#fff', textTransform:'uppercase', letterSpacing:0.5,
+          fontFamily:"'Poppins',sans-serif" }}>
+          <span>MR #</span><span>Date</span><span>Dept</span><span>Purpose</span><span>Requested</span><span>Stage</span>
+        </div>
+
+      </div>{/* END sticky header block */}
+
+      {/* List — accordion (rows only scroll) */}
       <div style={S.card}>
         {loading ? (
           <div style={{ textAlign:'center', padding:40, color:'#aab2bd' }}>Loading…</div>
@@ -1188,13 +1202,6 @@ export default function MoneyRequests({ entityId, currentUser }) {
           </div>
         ) : (
           <div>
-            {/* Column headers */}
-            <div style={{ display:'grid', gridTemplateColumns:'130px 90px 70px 1fr 110px 90px', gap:8,
-              padding:'8px 16px', background:'#0D5C4E', borderBottom:'1px solid #0a4a3d',
-              fontSize:10, fontWeight:800, color:'#fff', textTransform:'uppercase', letterSpacing:0.5,
-              fontFamily:"'Poppins',sans-serif" }}>
-              <span>MR #</span><span>Date</span><span>Dept</span><span>Purpose</span><span>Requested</span><span>Stage</span>
-            </div>
 
             {visible.map((r, idx) => {
               const st       = stageInfo(r.status)
