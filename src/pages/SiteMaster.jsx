@@ -1503,20 +1503,24 @@ export default function SiteMaster({ entityId }) {
       {/* ══ BULK EDIT MODAL ══ */}
       {showBulkEdit && (
         <div style={S.overlay} onClick={()=>setShowBulkEdit(false)}>
-          <div style={{ ...S.modal, width:700 }} onClick={e=>e.stopPropagation()}>
-            {/* Header */}
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+          <div style={{ background:'#fff', borderRadius:16, width:720, maxHeight:'90vh', overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 20px 60px rgba(0,0,0,0.25)' }} onClick={e=>e.stopPropagation()}>
+            {/* Banner */}
+            <div style={{ background:'linear-gradient(135deg,#8C601B,#b5831c)', padding:'18px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
               <div>
-                <div style={{ fontSize:20, fontWeight:800, color:'#c62828' }}>✏️ Bulk Edit</div>
-                <div style={{ fontSize:12, color:'#6b7c93', marginTop:2 }}>
-                  Editing <strong>{selectedIds.size} sites</strong> — only filled fields will be updated. Blank = keep existing.
+                <div style={{ fontSize:10, color:'rgba(255,255,255,0.75)', fontWeight:700, textTransform:'uppercase', letterSpacing:1.5 }}>MASTERS · SITE MASTER</div>
+                <div style={{ fontSize:22, fontWeight:900, color:'#fff', lineHeight:1.1 }}>BULK EDIT</div>
+                <div style={{ fontSize:12, color:'rgba(255,255,255,0.80)', marginTop:4 }}>
+                  Editing <strong>{selectedIds.size} site{selectedIds.size>1?'s':''}</strong> — only filled fields will be updated
                 </div>
               </div>
-              <button onClick={()=>setShowBulkEdit(false)} style={{ background:'none', border:'none', fontSize:22, cursor:'pointer', color:'#6b7c93' }}>✕</button>
+              <button onClick={()=>setShowBulkEdit(false)} style={{ background:'rgba(255,255,255,0.2)', border:'none', borderRadius:8, padding:'6px 10px', cursor:'pointer', color:'#fff', fontSize:16, fontWeight:700 }}>✕</button>
             </div>
 
+            {/* Body */}
+            <div style={{ padding:'20px 24px', overflowY:'auto', flex:1 }}>
+
             {/* Selected sites preview */}
-            <div style={{ background:'#fff3e0', borderRadius:8, padding:'8px 12px', marginBottom:16, fontSize:11, color:'#8C601B', lineHeight:1.8, maxHeight:80, overflowY:'auto' }}>
+            <div style={{ background:'#FAECD6', borderRadius:8, padding:'8px 12px', marginBottom:16, fontSize:11, color:'#8C601B', lineHeight:1.8, maxHeight:80, overflowY:'auto' }}>
               {[...selectedIds].map(id => {
                 const sm = sites.find(s=>s.id===id)
                 return sm ? <span key={id} style={{ marginRight:8, fontWeight:700, fontFamily:'monospace' }}>{sm.sm_id}</span> : null
@@ -1540,7 +1544,7 @@ export default function SiteMaster({ entityId }) {
                 <label style={S.label}>Department</label>
                 <select style={S.inp} value={beFields.dept_id||''} onChange={e=>setBeFields(p=>({...p,dept_id:e.target.value}))}>
                   <option value="">— no change —</option>
-                  {depts.map(d=><option key={d.id} value={d.id}>{d.dept_code} — {d.dept_name}</option>)}
+                  {depts.filter(d=>['NISU','TISU','CISU','ITSU'].includes(d.dept_code)).map(d=><option key={d.id} value={d.id}>{d.dept_code}</option>)}
                 </select>
               </div>
 
@@ -1567,7 +1571,10 @@ export default function SiteMaster({ entityId }) {
                 <label style={S.label}>WF Code <span style={{ color:'#6b7c93', fontWeight:400, textTransform:'none' }}>(auto-fills budget %)</span></label>
                 <select style={S.inp} value={beFields.wf_code||''} onChange={e=>setBeFields(p=>({...p,wf_code:e.target.value}))}>
                   <option value="">— no change —</option>
-                  {WF_LIST.map(w=><option key={w.code} value={w.code}>{w.code} — {w.label}</option>)}
+                  {WF_LIST.map(w=>{
+                    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-/.test(w.code)
+                    return <option key={w.code} value={w.code}>{isUUID ? w.label : `[${w.code}] ${w.label}`}</option>
+                  })}
                 </select>
               </div>
 
@@ -1670,6 +1677,7 @@ export default function SiteMaster({ entityId }) {
               </button>
             </div>
           </div>
+        </div>
         </div>
       )}
 
@@ -1806,22 +1814,38 @@ const PHASES = [{ v:1, label:'Phase 1 — Pre-Site' },{ v:2, label:'Phase 2 — 
 const BKEYS  = ['team','supplier','subcon','food','overtime','petty','misc']
 const BLABELS= { team:'Team Expenses', supplier:'Supplier POs', subcon:'Subcon POs', food:'Food & Allow', overtime:'Overtime', petty:'Petty Cash', misc:'Miscellaneous' }
 
+const EMPTY_BP = { team:0,supplier:0,subcon:0,food:0,overtime:0,petty:0,misc:0 }
 function WorkflowsTab({ entityId, depts, milestoneLib, wfTemplates, onRefresh }) {
-  const [form, setForm]       = useState({ dept_id:'', wf_heading:'', budget_pct:{ team:0,supplier:0,subcon:0,food:0,overtime:0,petty:0,misc:0 } })
-  const [selML, setSelML]     = useState([])  // [{name, phase}]
-  const [custom, setCustom]   = useState('')
-  const [custPhase, setCustP] = useState(2)
-  const [editing, setEditing] = useState(null)
-  const [saving, setSaving]   = useState(false)
-  const [msg, setMsg]         = useState('')
-  const [showForm, setShowForm] = useState(false)
+  const [form, setForm]           = useState({ dept_id:'', wf_heading:'', budget_pct:{ ...EMPTY_BP } })
+  const [selML, setSelML]         = useState([])
+  const [custom, setCustom]       = useState('')
+  const [custPhase, setCustP]     = useState(2)
+  const [editing, setEditing]     = useState(null)
+  const [saving, setSaving]       = useState(false)
+  const [msg, setMsg]             = useState('')
+  const [showForm, setShowForm]   = useState(false)
+  const [wfStep, setWfStep]       = useState(1)
+  const [extraCats, setExtraCats] = useState([])   // [{key,label,pct}]
+  const [newCatName, setNewCatName] = useState('')
 
   const dept = depts.find(d => d.id === form.dept_id)
   const wfName = dept && form.wf_heading ? `${dept.dept_code} — ${form.wf_heading}` : '…'
   const libForDept = milestoneLib.filter(m => !form.dept_id || m.service_unit === dept?.dept_code)
-  const totalBP    = BKEYS.reduce((s,k)=>s+(+form.budget_pct[k]||0),0)
+  const totalBP = BKEYS.reduce((s,k)=>s+(+form.budget_pct[k]||0),0)
+                + extraCats.reduce((s,c)=>s+(+c.pct||0),0)
 
   function setBP(k,v) { setForm(p=>({...p, budget_pct:{...p.budget_pct,[k]:+v||0}})) }
+  function setExtraPct(key,v) { setExtraCats(p=>p.map(c=>c.key===key?{...c,pct:+v||0}:c)) }
+  function addExtraCat() {
+    const name = newCatName.trim()
+    if (!name) return
+    const key = name.toLowerCase().replace(/\s+/g,'-')
+    if (extraCats.some(c=>c.key===key)) return
+    setExtraCats(p=>[...p,{key,label:name,pct:0}])
+    setNewCatName('')
+  }
+  function removeExtraCat(key) { setExtraCats(p=>p.filter(c=>c.key!==key)) }
+
   function toggleML(lib) {
     setSelML(p => p.some(m=>m.name===lib.milestone_name)
       ? p.filter(m=>m.name!==lib.milestone_name)
@@ -1838,19 +1862,27 @@ function WorkflowsTab({ entityId, depts, milestoneLib, wfTemplates, onRefresh })
   }
 
   function openNew() {
-    setForm({ dept_id:'', wf_heading:'', budget_pct:{ team:0,supplier:0,subcon:0,food:0,overtime:0,petty:0,misc:0 } })
-    setSelML([]); setEditing(null); setMsg(''); setShowForm(true)
+    setForm({ dept_id:'', wf_heading:'', budget_pct:{ ...EMPTY_BP } })
+    setSelML([]); setExtraCats([]); setEditing(null); setMsg(''); setWfStep(1); setShowForm(true)
   }
 
   function openEdit(wf) {
     const bp = wf.budget_pct || {}
+    // Separate known BKEYS from extra custom categories
+    const knownBP = {}
+    const extras = []
+    BKEYS.forEach(k => { knownBP[k] = bp[k]||0 })
+    Object.entries(bp).forEach(([k,v]) => {
+      if (!BKEYS.includes(k)) extras.push({ key:k, label:k.charAt(0).toUpperCase()+k.slice(1).replace(/-/g,' '), pct:+v||0 })
+    })
     setForm({
       dept_id: wf.dept_id || '',
       wf_heading: wf.wf_heading || wf.label || '',
-      budget_pct: { team:bp.team||0, supplier:bp.supplier||0, subcon:bp.subcon||0, food:bp.food||0, overtime:bp.overtime||0, petty:bp.petty||0, misc:bp.misc||0 }
+      budget_pct: knownBP
     })
+    setExtraCats(extras)
     const mls = (wf.milestones||[]).sort((a,b)=>a.milestone_order-b.milestone_order).map(m=>({name:m.milestone_name, phase:m.phase||2}))
-    setSelML(mls); setEditing(wf); setMsg(''); setShowForm(true)
+    setSelML(mls); setEditing(wf); setMsg(''); setWfStep(1); setShowForm(true)
   }
 
   async function save() {
@@ -1864,7 +1896,7 @@ function WorkflowsTab({ entityId, depts, milestoneLib, wfTemplates, onRefresh })
       wf_heading: form.wf_heading.trim(),
       wf_name, label: wf_name,
       job_type: form.wf_heading.trim().toUpperCase().replace(/\s+/g,'-').slice(0,20),
-      budget_pct: form.budget_pct, is_active: true,
+      budget_pct: { ...form.budget_pct, ...Object.fromEntries(extraCats.map(c=>[c.key,c.pct])) }, is_active: true,
     }
     const { data:wf, error:e1 } = editing
       ? await supabase.from('workflow_templates').update(payload).eq('id',editing.id).select('id').single()
@@ -1888,19 +1920,23 @@ function WorkflowsTab({ entityId, depts, milestoneLib, wfTemplates, onRefresh })
     onRefresh()
   }
 
-  const inpS = { width:'100%', padding:'8px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:13, outline:'none', boxSizing:'border-box' }
-  const lbl  = { display:'block', fontSize:11, color:'#6b7c93', fontWeight:700, marginBottom:4, textTransform:'uppercase', letterSpacing:0.5 }
-  const sec  = { fontSize:11, fontWeight:800, color:'#5A32D4', textTransform:'uppercase', letterSpacing:1, marginBottom:10, marginTop:16, borderBottom:'2px solid #ede7f6', paddingBottom:4 }
+  // ── Styles (Masters gold palette matching site creation form) ──
+  const PP   = "'Poppins','Inter',sans-serif"
+  const PRI  = '#8C601B'
+  const inpS = { width:'100%', padding:'9px 12px', borderRadius:20, border:`1px solid ${PRI}44`, fontSize:13, color:'#172D37', background:'#fdfaf6', outline:'none', fontFamily:PP, boxSizing:'border-box' }
+  const lbl  = { display:'block', fontSize:11, fontWeight:600, color:'#53666F', marginBottom:4, fontFamily:PP }
+  const secH = { fontSize:10, fontWeight:800, color:PRI, letterSpacing:1.5, textTransform:'uppercase', marginBottom:10, marginTop:14, paddingBottom:4, borderBottom:`1.5px solid ${PRI}33` }
+  const WF_STEPS = ['Identity','Milestones','Budget Split']
 
   return (
-    <div style={{ display:'flex', gap:20 }}>
-      {/* ── Left: template list ── */}
-      <div style={{ flex:'0 0 340px' }}>
-        <div style={{ background:'#fff', borderRadius:12, padding:'16px 18px', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
-            <div style={{ fontSize:14, fontWeight:800, color:'#1a2e3d' }}>Workflow Templates ({wfTemplates.length})</div>
+    <div style={{ display:'flex', gap:16, fontFamily:PP }}>
+      {/* ── Template list ── */}
+      <div style={{ flex:'0 0 320px' }}>
+        <div style={{ background:'#fff', borderRadius:12, padding:'16px', boxShadow:'0 2px 8px rgba(140,96,27,0.08)', border:'1px solid #FAECD6' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+            <div style={{ fontSize:14, fontWeight:800, color:'#1a2e3d', fontFamily:PP }}>Workflow Templates ({wfTemplates.length})</div>
             <button onClick={openNew}
-              style={{ background:'#5A32D4', color:'#fff', border:'none', borderRadius:8, padding:'7px 14px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+              style={{ background:`linear-gradient(135deg,${PRI},#b5831c)`, color:'#fff', border:'none', borderRadius:20, padding:'6px 14px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:PP }}>
               + New
             </button>
           </div>
@@ -1909,17 +1945,17 @@ function WorkflowsTab({ entityId, depts, milestoneLib, wfTemplates, onRefresh })
               No workflows yet.<br/>Click <strong>+ New</strong> to create your first.
             </div>
           ) : wfTemplates.map(wf => (
-            <div key={wf.id} style={{ background:'#f8f9fc', borderRadius:10, padding:'10px 14px', marginBottom:8, border:'1px solid #e8edf4' }}>
+            <div key={wf.id} style={{ background:'#fdfaf6', borderRadius:10, padding:'10px 12px', marginBottom:7, border:`1px solid ${PRI}22` }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
                 <div style={{ flex:1 }}>
                   <div style={{ fontSize:13, fontWeight:700, color:'#1a2e3d' }}>{wf.wf_name||wf.label}</div>
-                  <div style={{ fontSize:11, color:'#6b7c93', marginTop:2 }}>
+                  <div style={{ fontSize:11, color:'#8C601B', marginTop:2, fontWeight:600 }}>
                     {wf.service_unit} · {(wf.milestones||[]).length} milestones
                   </div>
                 </div>
-                <div style={{ display:'flex', gap:6, flexShrink:0 }}>
-                  <button onClick={()=>openEdit(wf)} style={{ background:'#ede7f6', color:'#5A32D4', border:'none', borderRadius:6, padding:'4px 10px', fontSize:11, fontWeight:700, cursor:'pointer' }}>Edit</button>
-                  <button onClick={()=>deleteWF(wf)} style={{ background:'#ffebee', color:'#c62828', border:'none', borderRadius:6, padding:'4px 10px', fontSize:11, fontWeight:700, cursor:'pointer' }}>✕</button>
+                <div style={{ display:'flex', gap:5, flexShrink:0 }}>
+                  <button onClick={()=>openEdit(wf)} style={{ background:'#FAECD6', color:PRI, border:'none', borderRadius:6, padding:'4px 10px', fontSize:11, fontWeight:700, cursor:'pointer' }}>Edit</button>
+                  <button onClick={()=>deleteWF(wf)} style={{ background:'#ffebee', color:'#c62828', border:'none', borderRadius:6, padding:'4px 8px', fontSize:11, fontWeight:700, cursor:'pointer' }}>✕</button>
                 </div>
               </div>
             </div>
@@ -1927,108 +1963,204 @@ function WorkflowsTab({ entityId, depts, milestoneLib, wfTemplates, onRefresh })
         </div>
       </div>
 
-      {/* ── Right: editor ── */}
+      {/* ── Workflow Form Modal (FormShell style) ── */}
       {showForm && (
-        <div style={{ flex:1, background:'#fff', borderRadius:12, padding:'20px 22px', boxShadow:'0 2px 8px rgba(0,0,0,0.06)', maxHeight:'80vh', overflowY:'auto' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-            <div style={{ fontSize:16, fontWeight:800, color:'#5A32D4' }}>{editing ? '✏ Edit Workflow' : '+ New Workflow'}</div>
-            <button onClick={()=>setShowForm(false)} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color:'#aab2bd' }}>✕</button>
-          </div>
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}
+          onClick={()=>setShowForm(false)}>
+          <div style={{ width:860, maxHeight:'92vh', borderRadius:16, overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 20px 60px rgba(0,0,0,0.3)', background:'#fff' }}
+            onClick={e=>e.stopPropagation()}>
 
-          {/* Identity */}
-          <div style={sec}>1 · Identity</div>
-          <div style={{ display:'flex', gap:12, marginBottom:12 }}>
-            <div style={{ flex:1 }}>
-              <label style={lbl}>Department *</label>
-              <select style={inpS} value={form.dept_id} onChange={e=>setForm(p=>({...p,dept_id:e.target.value}))}>
-                <option value="">Select department…</option>
-                {depts.map(d=><option key={d.id} value={d.id}>{d.dept_code} — {d.dept_name}</option>)}
-              </select>
-            </div>
-            <div style={{ flex:1 }}>
-              <label style={lbl}>Workflow Heading *</label>
-              <input style={inpS} value={form.wf_heading} onChange={e=>setForm(p=>({...p,wf_heading:e.target.value}))} placeholder="e.g. New Installation Big" />
-            </div>
-          </div>
-          <div style={{ background:'#ede7f6', borderRadius:8, padding:'10px 14px', marginBottom:12 }}>
-            <div style={{ fontSize:11, color:'#5A32D4', fontWeight:700, textTransform:'uppercase', letterSpacing:0.5 }}>Auto-generated Workflow Name</div>
-            <div style={{ fontSize:16, fontWeight:900, color:'#1a2e3d', marginTop:4 }}>{wfName}</div>
-          </div>
-
-          {/* Milestones */}
-          <div style={sec}>2 · Milestones</div>
-          {PHASES.map(ph => {
-            const libRows = libForDept.filter(m=>m.phase===ph.v)
-            if (libRows.length === 0 && ph.v !== 2) return null
-            return (
-              <div key={ph.v} style={{ marginBottom:14 }}>
-                <div style={{ fontSize:12, fontWeight:700, color:'#6b7c93', marginBottom:6 }}>{ph.label}</div>
-                <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:6 }}>
-                  {libRows.map(m=>(
-                    <label key={m.id} style={{ display:'flex', alignItems:'center', gap:5, background: selML.some(x=>x.name===m.milestone_name)?'#ede7f6':'#f8f9fc', border:`1px solid ${selML.some(x=>x.name===m.milestone_name)?'#5A32D4':'#dde3ec'}`, borderRadius:20, padding:'4px 10px', fontSize:12, cursor:'pointer' }}>
-                      <input type="checkbox" checked={selML.some(x=>x.name===m.milestone_name)} onChange={()=>toggleML(m)} style={{ cursor:'pointer' }} />
-                      {m.milestone_name}
-                    </label>
-                  ))}
-                  {libRows.length === 0 && <span style={{ fontSize:11, color:'#aab2bd' }}>No library items for this phase</span>}
+            {/* Banner */}
+            <div style={{ background:`linear-gradient(135deg,${PRI} 0%,#b5831c 100%)`, padding:'18px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+              <div>
+                <div style={{ fontSize:10, color:'rgba(255,255,255,0.75)', fontWeight:700, textTransform:'uppercase', letterSpacing:1.5, fontFamily:PP }}>MASTERS</div>
+                <div style={{ fontSize:22, fontWeight:900, color:'#fff', letterSpacing:-0.5, lineHeight:1, fontFamily:PP }}>
+                  {editing ? 'Edit' : 'New'}<br/><span style={{ fontSize:28 }}>WORKFLOW</span>
                 </div>
               </div>
-            )
-          })}
-          {/* Custom add */}
-          <div style={{ display:'flex', gap:8, marginBottom:10, alignItems:'flex-end' }}>
-            <div style={{ flex:1 }}>
-              <label style={lbl}>Add Custom Milestone</label>
-              <input style={inpS} value={custom} onChange={e=>setCustom(e.target.value)} placeholder="Custom milestone name…" onKeyDown={e=>e.key==='Enter'&&addCustom()} />
+              <button onClick={()=>setShowForm(false)} style={{ background:'rgba(255,255,255,0.2)', border:'none', borderRadius:8, padding:'6px 10px', cursor:'pointer', color:'#fff', fontSize:16, fontWeight:700 }}>✕</button>
             </div>
-            <select style={{ ...inpS, flex:'0 0 160px' }} value={custPhase} onChange={e=>setCustP(+e.target.value)}>
-              {PHASES.map(p=><option key={p.v} value={p.v}>{p.label}</option>)}
-            </select>
-            <button onClick={addCustom} style={{ background:'#5A32D4', color:'#fff', border:'none', borderRadius:8, padding:'9px 14px', fontSize:13, fontWeight:700, cursor:'pointer', flexShrink:0 }}>+ Add</button>
-          </div>
-          {/* Selected milestones ordered list */}
-          {selML.length > 0 && (
-            <div style={{ background:'#f0f4f8', borderRadius:10, padding:'10px 14px', marginBottom:16 }}>
-              <div style={{ fontSize:11, fontWeight:700, color:'#5A32D4', marginBottom:8, textTransform:'uppercase' }}>Selected ({selML.length}) — drag to reorder</div>
-              {selML.map((m,i)=>(
-                <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 0', borderBottom:'1px solid #e0e7ef' }}>
-                  <span style={{ fontSize:11, color:'#aab2bd', width:20, textAlign:'center', fontWeight:700 }}>{i+1}</span>
-                  <span style={{ flex:1, fontSize:13, color:'#1a2e3d' }}>{m.name}</span>
-                  <span style={{ fontSize:10, color:'#6b7c93', background:'#e3e7f0', borderRadius:12, padding:'2px 7px' }}>Ph{m.phase}</span>
-                  <button onClick={()=>i>0&&moveML(i,-1)} disabled={i===0} style={{ background:'none', border:'none', cursor:i===0?'default':'pointer', color:i===0?'#dde3ec':'#5A32D4', fontWeight:700, padding:'2px 6px' }}>↑</button>
-                  <button onClick={()=>i<selML.length-1&&moveML(i,1)} disabled={i===selML.length-1} style={{ background:'none', border:'none', cursor:i===selML.length-1?'default':'pointer', color:i===selML.length-1?'#dde3ec':'#5A32D4', fontWeight:700, padding:'2px 6px' }}>↓</button>
-                  <button onClick={()=>removeML(i)} style={{ background:'none', border:'none', cursor:'pointer', color:'#c62828', fontWeight:700, padding:'2px 6px' }}>✕</button>
-                </div>
-              ))}
-            </div>
-          )}
 
-          {/* Budget % */}
-          <div style={sec}>3 · Budget Split %</div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px 14px', marginBottom:12 }}>
-            {BKEYS.map(k=>(
-              <div key={k} style={{ display:'flex', alignItems:'center', gap:8 }}>
-                <label style={{ ...lbl, marginBottom:0, flex:'0 0 110px', textTransform:'capitalize' }}>{BLABELS[k]}</label>
-                <input type="number" min="0" max="100" style={{ ...inpS, width:70, textAlign:'right' }}
-                  value={form.budget_pct[k]||0} onChange={e=>setBP(k,e.target.value)} />
-                <span style={{ fontSize:12, color:'#6b7c93' }}>%</span>
+            {/* Body: left sidebar + right panel */}
+            <div style={{ display:'flex', flex:1, overflow:'hidden' }}>
+              {/* Step sidebar */}
+              <div style={{ width:180, background:'#FAECD6', padding:'20px 16px', display:'flex', flexDirection:'column', gap:8, flexShrink:0 }}>
+                {WF_STEPS.map((s,i)=>{
+                  const done = wfStep > i+1
+                  const active = wfStep === i+1
+                  return (
+                    <div key={s} onClick={()=>setWfStep(i+1)}
+                      style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 10px', borderRadius:8, cursor:'pointer',
+                        background: active?PRI:'transparent', transition:'all 0.15s' }}>
+                      <div style={{ width:22, height:22, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:800, flexShrink:0,
+                        background: active?'rgba(255,255,255,0.25)' : done?PRI:'rgba(140,96,27,0.15)',
+                        color: active?'#fff' : done?'#fff' : PRI }}>
+                        {done ? '✓' : i+1}
+                      </div>
+                      <span style={{ fontSize:12, fontWeight:700, color: active?'#fff': '#53666F', fontFamily:PP }}>{s}</span>
+                    </div>
+                  )
+                })}
               </div>
-            ))}
-          </div>
-          <div style={{ background: totalBP>100?'#ffebee': totalBP===100?'#e8f5e9':'#fff3e0', borderRadius:8, padding:'8px 14px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-            <span style={{ fontSize:13, fontWeight:700, color: totalBP>100?'#c62828':totalBP===100?'#2e7d32':'#e65100' }}>
-              Total: {totalBP.toFixed(1)}% {totalBP===100?'✅':totalBP>100?'⚠ Over 100%':'— remaining: '+(100-totalBP).toFixed(1)+'%'}
-            </span>
-            {totalBP < 100 && <span style={{ fontSize:11, color:'#6b7c93' }}>Margin reserved: {(100-totalBP).toFixed(1)}%</span>}
-          </div>
 
-          {msg && <div style={{ background:msg.startsWith('✅')?'#e8f5e9':'#ffebee', color:msg.startsWith('✅')?'#2e7d32':'#c62828', borderRadius:8, padding:'8px 12px', marginBottom:12, fontSize:12, fontWeight:700 }}>{msg}</div>}
-          <div style={{ display:'flex', justifyContent:'flex-end', gap:10 }}>
-            <button onClick={()=>setShowForm(false)} style={{ background:'#f0f4f8', border:'none', borderRadius:8, padding:'9px 18px', fontSize:13, fontWeight:700, cursor:'pointer', color:'#6b7c93' }}>Cancel</button>
-            <button onClick={save} disabled={saving}
-              style={{ background:saving?'#b39ddb':'#5A32D4', color:'#fff', border:'none', borderRadius:8, padding:'9px 24px', fontSize:13, fontWeight:700, cursor:saving?'not-allowed':'pointer' }}>
-              {saving ? '⏳ Saving…' : editing ? 'Update Workflow' : 'Save Workflow'}
-            </button>
+              {/* Step content */}
+              <div style={{ flex:1, overflowY:'auto', padding:'20px 24px' }}>
+
+                {/* Step 1: Identity */}
+                {wfStep === 1 && (
+                  <div>
+                    <div style={secH}>Department &amp; Name</div>
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:16 }}>
+                      <div>
+                        <label style={lbl}>Department *</label>
+                        <select style={inpS} value={form.dept_id} onChange={e=>setForm(p=>({...p,dept_id:e.target.value}))}>
+                          <option value="">Select…</option>
+                          {depts.filter(d=>['NISU','TISU','CISU','ITSU'].includes(d.dept_code)).map(d=>
+                            <option key={d.id} value={d.id}>{d.dept_code}</option>
+                          )}
+                        </select>
+                      </div>
+                      <div>
+                        <label style={lbl}>Workflow Heading *</label>
+                        <input style={inpS} value={form.wf_heading} onChange={e=>setForm(p=>({...p,wf_heading:e.target.value}))} placeholder="e.g. Board Expansion" />
+                      </div>
+                    </div>
+                    <div style={{ background:'#FAECD6', borderRadius:10, padding:'12px 16px' }}>
+                      <div style={{ fontSize:10, color:PRI, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5 }}>Auto-generated Workflow Code</div>
+                      <div style={{ fontSize:20, fontWeight:900, color:'#172D37', marginTop:4, fontFamily:PP }}>{wfName}</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 2: Milestones */}
+                {wfStep === 2 && (
+                  <div>
+                    <div style={secH}>Select Milestones from Library</div>
+                    {PHASES.map(ph => {
+                      // Deduplicate milestones by name within each phase
+                      const seen = new Set()
+                      const libRows = libForDept.filter(m => {
+                        if (m.phase !== ph.v) return false
+                        if (seen.has(m.milestone_name)) return false
+                        seen.add(m.milestone_name)
+                        return true
+                      })
+                      if (libRows.length === 0) return null
+                      return (
+                        <div key={ph.v} style={{ marginBottom:14 }}>
+                          <div style={{ fontSize:12, fontWeight:700, color:PRI, marginBottom:6 }}>{ph.label}</div>
+                          <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                            {libRows.map(m=>{
+                              const checked = selML.some(x=>x.name===m.milestone_name)
+                              return (
+                                <label key={m.id} style={{ display:'flex', alignItems:'center', gap:5,
+                                  background: checked?'#FAECD6':'#f8f9fc', border:`1px solid ${checked?PRI:'#dde3ec'}`,
+                                  borderRadius:20, padding:'4px 10px', fontSize:12, cursor:'pointer', fontFamily:PP }}>
+                                  <input type="checkbox" checked={checked} onChange={()=>toggleML(m)} style={{ cursor:'pointer', accentColor:PRI }} />
+                                  {m.milestone_name}
+                                </label>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )
+                    })}
+
+                    {/* Custom milestone add */}
+                    <div style={secH}>Add Custom Milestone</div>
+                    <div style={{ display:'flex', gap:8, alignItems:'flex-end', marginBottom:14 }}>
+                      <input style={{ ...inpS, flex:1 }} value={custom} onChange={e=>setCustom(e.target.value)}
+                        placeholder="Custom milestone name…" onKeyDown={e=>e.key==='Enter'&&addCustom()} />
+                      <select style={{ ...inpS, flex:'0 0 170px' }} value={custPhase} onChange={e=>setCustP(+e.target.value)}>
+                        {PHASES.map(p=><option key={p.v} value={p.v}>{p.label}</option>)}
+                      </select>
+                      <button onClick={addCustom} style={{ background:PRI, color:'#fff', border:'none', borderRadius:20, padding:'9px 14px', fontSize:13, fontWeight:700, cursor:'pointer', flexShrink:0 }}>+ Add</button>
+                    </div>
+
+                    {/* Selected list */}
+                    {selML.length > 0 && (
+                      <div style={{ background:'#fdfaf6', border:`1px solid ${PRI}33`, borderRadius:10, padding:'10px 14px' }}>
+                        <div style={{ fontSize:10, fontWeight:800, color:PRI, marginBottom:8, textTransform:'uppercase', letterSpacing:0.5 }}>Selected — {selML.length} milestone{selML.length>1?'s':''}</div>
+                        {selML.map((m,i)=>(
+                          <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 0', borderBottom:'1px solid #FAECD6' }}>
+                            <span style={{ fontSize:11, color:'#aab2bd', width:20, textAlign:'center', fontWeight:700 }}>{i+1}</span>
+                            <span style={{ flex:1, fontSize:13, color:'#172D37' }}>{m.name}</span>
+                            <span style={{ fontSize:10, color:PRI, background:'#FAECD6', borderRadius:12, padding:'2px 7px' }}>Ph{m.phase}</span>
+                            <button onClick={()=>i>0&&moveML(i,-1)} disabled={i===0} style={{ background:'none',border:'none',cursor:i===0?'default':'pointer',color:i===0?'#dde3ec':PRI,fontWeight:700,padding:'2px 6px' }}>↑</button>
+                            <button onClick={()=>i<selML.length-1&&moveML(i,1)} disabled={i===selML.length-1} style={{ background:'none',border:'none',cursor:i===selML.length-1?'default':'pointer',color:i===selML.length-1?'#dde3ec':PRI,fontWeight:700,padding:'2px 6px' }}>↓</button>
+                            <button onClick={()=>removeML(i)} style={{ background:'none',border:'none',cursor:'pointer',color:'#c62828',fontWeight:700,padding:'2px 6px' }}>✕</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Step 3: Budget Split */}
+                {wfStep === 3 && (
+                  <div>
+                    <div style={secH}>Default Budget Split %</div>
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px 20px', marginBottom:14 }}>
+                      {BKEYS.map(k=>(
+                        <div key={k} style={{ display:'flex', alignItems:'center', gap:8 }}>
+                          <label style={{ ...lbl, marginBottom:0, flex:'0 0 120px' }}>{BLABELS[k]}</label>
+                          <input type="number" min="0" max="100" style={{ ...inpS, width:72, textAlign:'right', padding:'6px 10px' }}
+                            value={form.budget_pct[k]||0} onChange={e=>setBP(k,e.target.value)} />
+                          <span style={{ fontSize:12, color:'#6b7c93' }}>%</span>
+                        </div>
+                      ))}
+                      {/* Extra custom categories */}
+                      {extraCats.map(c=>(
+                        <div key={c.key} style={{ display:'flex', alignItems:'center', gap:8 }}>
+                          <label style={{ ...lbl, marginBottom:0, flex:'0 0 120px', color:PRI }}>{c.label}</label>
+                          <input type="number" min="0" max="100" style={{ ...inpS, width:72, textAlign:'right', padding:'6px 10px' }}
+                            value={c.pct||0} onChange={e=>setExtraPct(c.key,e.target.value)} />
+                          <span style={{ fontSize:12, color:'#6b7c93' }}>%</span>
+                          <button onClick={()=>removeExtraCat(c.key)} style={{ background:'none',border:'none',cursor:'pointer',color:'#c62828',fontWeight:700,fontSize:14 }}>✕</button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Add custom category */}
+                    <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:14, padding:'10px 12px', background:'#fdfaf6', border:`1px dashed ${PRI}44`, borderRadius:10 }}>
+                      <span style={{ fontSize:11, fontWeight:700, color:PRI, flexShrink:0 }}>+ Add Category</span>
+                      <input style={{ ...inpS, flex:1 }} value={newCatName} onChange={e=>setNewCatName(e.target.value)}
+                        placeholder="e.g. Training, Equipment…" onKeyDown={e=>e.key==='Enter'&&addExtraCat()} />
+                      <button onClick={addExtraCat} style={{ background:PRI, color:'#fff', border:'none', borderRadius:20, padding:'7px 14px', fontSize:12, fontWeight:700, cursor:'pointer' }}>Add</button>
+                    </div>
+
+                    {/* Total bar */}
+                    <div style={{ background: totalBP>100?'#ffebee': totalBP===100?'#e8f5e9':'#fff3e0', borderRadius:10, padding:'10px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                      <span style={{ fontSize:14, fontWeight:800, color: totalBP>100?'#c62828':totalBP===100?'#2e7d32':'#e65100', fontFamily:PP }}>
+                        Total: {totalBP.toFixed(1)}% {totalBP===100?'✅':totalBP>100?'⚠ Over 100%':''}
+                      </span>
+                      {totalBP < 100 && <span style={{ fontSize:12, color:'#6b7c93' }}>Margin reserved: {(100-totalBP).toFixed(1)}%</span>}
+                    </div>
+                  </div>
+                )}
+
+                {/* Footer nav */}
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:24, paddingTop:16, borderTop:`1px solid ${PRI}22` }}>
+                  {msg && <div style={{ flex:1, fontSize:12, fontWeight:700, color:msg.startsWith('✅')?'#2e7d32':'#c62828' }}>{msg}</div>}
+                  <div style={{ display:'flex', gap:10, marginLeft:'auto' }}>
+                    <button onClick={wfStep===1?()=>setShowForm(false):()=>setWfStep(s=>s-1)}
+                      style={{ background:'#f0f4f8', border:'none', borderRadius:20, padding:'9px 20px', fontSize:13, fontWeight:700, cursor:'pointer', color:'#6b7c93' }}>
+                      {wfStep===1?'Cancel':'← Back'}
+                    </button>
+                    {wfStep < 3
+                      ? <button onClick={()=>setWfStep(s=>s+1)}
+                          style={{ background:PRI, color:'#fff', border:'none', borderRadius:20, padding:'9px 24px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+                          Next →
+                        </button>
+                      : <button onClick={save} disabled={saving}
+                          style={{ background:saving?`${PRI}99`:PRI, color:'#fff', border:'none', borderRadius:20, padding:'9px 24px', fontSize:13, fontWeight:700, cursor:saving?'not-allowed':'pointer' }}>
+                          {saving ? '⏳ Saving…' : editing ? '✓ Update Workflow' : '✓ Save Workflow'}
+                        </button>
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
