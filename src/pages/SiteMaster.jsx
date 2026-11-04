@@ -241,6 +241,21 @@ export default function SiteMaster({ entityId }) {
   const [depts,       setDepts]       = useState([])
   const [loading,     setLoading]     = useState(true)
 
+  // ── Workflow Designer state ───────────────────────────────────
+  const [wfTemplates,  setWfTemplates]  = useState([])
+  const [milestoneLib, setMilestoneLib] = useState([])
+  const [mainTab,      setMainTab]      = useState('sites')
+  const [editingWF,    setEditingWF]    = useState(null)
+  const [wfForm,       setWfForm]       = useState({
+    dept_id:'', wf_heading:'', is_active:true,
+    budget_pct:{ team:0, supplier:0, subcon:0, food:0, overtime:0, petty:0, misc:0 }
+  })
+  const [wfMilestones, setWfMilestones] = useState([])  // [{name, phase}]
+  const [wfCustom,     setWfCustom]     = useState('')
+  const [wfCustomPhase,setWfCustomPhase]= useState(1)
+  const [savingWF,     setSavingWF]     = useState(false)
+  const [wfSaveMsg,    setWfSaveMsg]    = useState('')
+
   const [showBanner, setShowBanner] = useState(false)
   const [showForm,   setShowForm]   = useState(false)
   const [editing,    setEditing]    = useState(null)
@@ -367,7 +382,7 @@ export default function SiteMaster({ entityId }) {
 
   async function load() {
     setLoading(true)
-    const [{ data:s },{ data:p },{ data:c },{ data:e },{ data:d }] = await Promise.all([
+    const [{ data:s },{ data:p },{ data:c },{ data:e },{ data:d },{ data:wft },{ data:mlib }] = await Promise.all([
       supabase.from('site_masters').select(`
         *,
         project:project_id(project_number,project_name),
@@ -377,18 +392,48 @@ export default function SiteMaster({ entityId }) {
       supabase.from('contractors').select('id,contractor_name,contractor_code').eq('entity_id',entityId).eq('vendor_type','CONTRACTOR').eq('status','ACTIVE').order('contractor_name'),
       supabase.from('employees').select('id,full_name_en,designation,department_id').eq('entity_id',entityId).eq('is_active',true).order('full_name_en'),
       supabase.from('departments').select('id,dept_name,dept_code').eq('entity_id',entityId).eq('is_active',true).order('dept_name'),
+      supabase.from('workflow_templates').select(`*,milestones:workflow_template_milestones(*)`).eq('entity_id',entityId).eq('is_active',true).order('label'),
+      supabase.from('milestone_library').select('*').eq('entity_id',entityId).eq('is_active',true).order('phase').order('sort_order'),
     ])
     setSites(s||[]); setProjects(p||[]); setContractors(c||[]); setEmployees(e||[]); setDepts(d||[])
+    setWfTemplates(wft||[]); setMilestoneLib(mlib||[])
     setLoading(false)
   }
 
   // ── WF code helpers ──────────────────────────────────────────
+  // DB templates take precedence over hardcoded WF_CODES
   const filteredWF = useMemo(() => {
-    if (showAllWF || !form.service_unit) return WF_LIST
-    return WF_LIST.filter(w => w.depts.includes(form.service_unit))
-  }, [form.service_unit, showAllWF])
+    const dbList = wfTemplates.map(t => ({
+      code: t.id,
+      label: t.wf_name || t.label,
+      depts: [t.service_unit],
+      uom: 'Lump Sum',
+      stages: (t.milestones||[]).sort((a,b)=>a.milestone_order-b.milestone_order).map(m=>m.milestone_name),
+      budget_pct: t.budget_pct||{}
+    }))
+    const list = dbList.length > 0 ? dbList : WF_LIST
+    if (showAllWF || !form.service_unit) return list
+    return list.filter(w => w.depts.includes(form.service_unit))
+  }, [form.service_unit, showAllWF, wfTemplates])
 
   function onWFChange(code) {
+    // Try DB template first
+    const dbWF = wfTemplates.find(t => t.id === code)
+    if (dbWF) {
+      const bp = dbWF.budget_pct || {}
+      setForm(p => ({
+        ...p, wf_code: code, uom: 'Lump Sum',
+        budget_team_pct:     bp.team||0,
+        budget_supplier_pct: bp.supplier||0,
+        budget_subcon_pct:   bp.subcon||0,
+        budget_food_pct:     bp.food||0,
+        budget_overtime_pct: bp.overtime||0,
+        budget_petty_pct:    bp.petty||0,
+        budget_misc_pct:     bp.misc||0,
+      }))
+      return
+    }
+    // Fall back to hardcoded WF_CODES
     const wf = WF_CODES[code]
     if (!wf) { setF('wf_code', code); return }
     setForm(p => ({
@@ -443,8 +488,25 @@ export default function SiteMaster({ entityId }) {
     const isNew  = !editing
     const sm_id  = isNew ? await nextSmId(form.service_unit) : editing.sm_id
     const cvNum  = +form.contract_value || 0
-    const wfMeta = WF_CODES[form.wf_code] || {}
-    const defaultML = (wfMeta.stages||[]).map(name => ({ name, status:'PENDING', date:'', notes:'' }))
+
+    // Auto-generate Job# if empty: JOB-{DEPT}-{YEAR}-{NNNN}
+    let jobNo = form.job_no
+    if (!jobNo && isNew) {
+      const yr = new Date().getFullYear()
+      try {
+        const { data:jn } = await supabase.rpc('generate_job_number', { p_dept_code: form.service_unit, p_yr: yr })
+        jobNo = jn || sm_id
+      } catch { jobNo = sm_id }
+    } else if (!jobNo) {
+      jobNo = editing?.job_no || sm_id
+    }
+
+    // Build default milestones from DB template or WF_CODES fallback
+    const dbTemplate = wfTemplates.find(t => t.id === form.wf_code)
+    const defaultML = dbTemplate
+      ? (dbTemplate.milestones||[]).sort((a,b)=>a.milestone_order-b.milestone_order)
+          .map(m => ({ name:m.milestone_name, status:'PENDING', date:'', notes:'', phase:m.phase }))
+      : (WF_CODES[form.wf_code]?.stages||[]).map(name => ({ name, status:'PENDING', date:'', notes:'' }))
 
     // compute SAR values for backward compat reporting
     const sarOf = pct => cvNum * (+pct||0) / 100
@@ -461,7 +523,7 @@ export default function SiteMaster({ entityId }) {
       dept_id:form.dept_id||null,
       pm_id:form.pm_id||null,
       site_no:form.site_no||null,
-      job_no:form.job_no||sm_id,
+      job_no:jobNo,
       site_name:form.site_name||null,
       location:form.location||null,
       contractor_po:form.contractor_po||null,
@@ -729,6 +791,18 @@ export default function SiteMaster({ entityId }) {
               <div style={{ fontSize:18, fontWeight:800, color:'#1a2e3d' }}>Site Master</div>
               <div style={{ fontSize:11, color:'#6b7c93' }}>Jobs · Activities · Budget · Margin</div>
             </div>
+            <div style={{ display:'flex', gap:6, marginLeft:16 }}>
+              <button onClick={()=>setMainTab('sites')}
+                style={{ padding:'5px 14px', borderRadius:20, border:'none', cursor:'pointer', fontSize:12, fontWeight:700,
+                  background:mainTab==='sites'?'#5A32D4':'#f0f4f8', color:mainTab==='sites'?'#fff':'#6b7c93' }}>
+                📋 Sites
+              </button>
+              <button onClick={()=>setMainTab('workflows')}
+                style={{ padding:'5px 14px', borderRadius:20, border:'none', cursor:'pointer', fontSize:12, fontWeight:700,
+                  background:mainTab==='workflows'?'#5A32D4':'#f0f4f8', color:mainTab==='workflows'?'#fff':'#6b7c93' }}>
+                ⚙️ Workflows {wfTemplates.length>0?`(${wfTemplates.length})`:''}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -813,8 +887,19 @@ export default function SiteMaster({ entityId }) {
         </>}
       </div>
 
-      {/* ── Table ── */}
-      <div style={{ ...S.card, padding:0, overflow:'hidden' }} onClick={()=>{ setOpenMenu(null); setShowColMenu(false) }}>
+      {/* ══ WORKFLOWS TAB ══ */}
+      {mainTab === 'workflows' && (
+        <WorkflowsTab
+          entityId={entityId}
+          depts={depts}
+          milestoneLib={milestoneLib}
+          wfTemplates={wfTemplates}
+          onRefresh={load}
+        />
+      )}
+
+      {/* ── Table ── (Sites tab only) */}
+      {mainTab === 'sites' && <div style={{ ...S.card, padding:0, overflow:'hidden' }} onClick={()=>{ setOpenMenu(null); setShowColMenu(false) }}>
         {loading ? <div style={{ textAlign:'center', padding:40, color:'#6b7c93' }}>Loading…</div> : (
         <table style={S.tbl}>
           <thead><tr>
@@ -892,7 +977,7 @@ export default function SiteMaster({ entityId }) {
           </tbody>
         </table>
         )}
-      </div>
+      </div>}
 
       {/* ── PageBanner ── */}
       <PageBanner
@@ -977,12 +1062,19 @@ export default function SiteMaster({ entityId }) {
                             <option key={w.code} value={w.code}>[{w.code}] {w.label} — {w.uom}</option>
                           ))}
                         </select>
-                        {form.wf_code && WF_CODES[form.wf_code] && (
-                          <div style={{ marginTop:6, fontSize:11, color:'#6b7c93', background:'#f8f9fc', borderRadius:8, padding:'8px 12px' }}>
-                            <strong style={{ color:PRI }}>Activities ({WF_CODES[form.wf_code].stages.length} stages):</strong>{' '}
-                            {WF_CODES[form.wf_code].stages.join(' → ')}
-                          </div>
-                        )}
+                        {form.wf_code && (() => {
+                          const dbWF = wfTemplates.find(t=>t.id===form.wf_code)
+                          const hcWF = WF_CODES[form.wf_code]
+                          const stages = dbWF
+                            ? (dbWF.milestones||[]).sort((a,b)=>a.milestone_order-b.milestone_order).map(m=>m.milestone_name)
+                            : hcWF?.stages||[]
+                          return stages.length > 0 ? (
+                            <div style={{ marginTop:6, fontSize:11, color:'#6b7c93', background:'#f8f9fc', borderRadius:8, padding:'8px 12px' }}>
+                              <strong style={{ color:PRI }}>Activities ({stages.length} stages):</strong>{' '}
+                              {stages.join(' → ')}
+                            </div>
+                          ) : null
+                        })()}
                       </div>
 
                       {showQty && (
@@ -1008,8 +1100,14 @@ export default function SiteMaster({ entityId }) {
                           <input style={inp3()} value={form.site_no} onChange={e=>setF('site_no',e.target.value)} placeholder="Physical location ref" />
                         </div>
                         <div style={col2}>
-                          <label style={lbl3}>Job#</label>
-                          <input style={inp3()} value={form.job_no} onChange={e=>setF('job_no',e.target.value)} placeholder="Work order / client job ref" />
+                          <label style={lbl3}>Job# <span style={{ fontWeight:400, color:'#9e9e9e', textTransform:'none' }}>(leave blank to auto-generate)</span></label>
+                          <input style={inp3()} value={form.job_no} onChange={e=>setF('job_no',e.target.value)}
+                            placeholder={`e.g. JOB-${form.service_unit||'NISU'}-${new Date().getFullYear()}-0001 or client ref`} />
+                          {!form.job_no && form.service_unit && (
+                            <div style={{ fontSize:10, color:'#5A32D4', marginTop:3 }}>
+                              Auto: JOB-{form.service_unit}-{new Date().getFullYear()}-NNNN will be assigned on save
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div style={{ marginBottom:10 }}>
@@ -1685,6 +1783,241 @@ export default function SiteMaster({ entityId }) {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Workflows Tab Sub-Component ───────────────────────────────────
+const PHASES = [{ v:1, label:'Phase 1 — Pre-Site' },{ v:2, label:'Phase 2 — Field' },{ v:3, label:'Phase 3 — Closeout' }]
+const BKEYS  = ['team','supplier','subcon','food','overtime','petty','misc']
+const BLABELS= { team:'Team Expenses', supplier:'Supplier POs', subcon:'Subcon POs', food:'Food & Allow', overtime:'Overtime', petty:'Petty Cash', misc:'Miscellaneous' }
+
+function WorkflowsTab({ entityId, depts, milestoneLib, wfTemplates, onRefresh }) {
+  const [form, setForm]       = useState({ dept_id:'', wf_heading:'', budget_pct:{ team:0,supplier:0,subcon:0,food:0,overtime:0,petty:0,misc:0 } })
+  const [selML, setSelML]     = useState([])  // [{name, phase}]
+  const [custom, setCustom]   = useState('')
+  const [custPhase, setCustP] = useState(2)
+  const [editing, setEditing] = useState(null)
+  const [saving, setSaving]   = useState(false)
+  const [msg, setMsg]         = useState('')
+  const [showForm, setShowForm] = useState(false)
+
+  const dept = depts.find(d => d.id === form.dept_id)
+  const wfName = dept && form.wf_heading ? `${dept.dept_code} — ${form.wf_heading}` : '…'
+  const libForDept = milestoneLib.filter(m => !form.dept_id || m.service_unit === dept?.dept_code)
+  const totalBP    = BKEYS.reduce((s,k)=>s+(+form.budget_pct[k]||0),0)
+
+  function setBP(k,v) { setForm(p=>({...p, budget_pct:{...p.budget_pct,[k]:+v||0}})) }
+  function toggleML(lib) {
+    setSelML(p => p.some(m=>m.name===lib.milestone_name)
+      ? p.filter(m=>m.name!==lib.milestone_name)
+      : [...p, {name:lib.milestone_name, phase:lib.phase}])
+  }
+  function addCustom() {
+    if (!custom.trim()) return
+    setSelML(p => [...p, { name:custom.trim(), phase:custPhase }])
+    setCustom('')
+  }
+  function removeML(i) { setSelML(p=>p.filter((_,idx)=>idx!==i)) }
+  function moveML(i, dir) {
+    setSelML(p=>{const a=[...p];[a[i],a[i+dir]]=[a[i+dir],a[i]];return a})
+  }
+
+  function openNew() {
+    setForm({ dept_id:'', wf_heading:'', budget_pct:{ team:0,supplier:0,subcon:0,food:0,overtime:0,petty:0,misc:0 } })
+    setSelML([]); setEditing(null); setMsg(''); setShowForm(true)
+  }
+
+  function openEdit(wf) {
+    const bp = wf.budget_pct || {}
+    setForm({
+      dept_id: wf.dept_id || '',
+      wf_heading: wf.wf_heading || wf.label || '',
+      budget_pct: { team:bp.team||0, supplier:bp.supplier||0, subcon:bp.subcon||0, food:bp.food||0, overtime:bp.overtime||0, petty:bp.petty||0, misc:bp.misc||0 }
+    })
+    const mls = (wf.milestones||[]).sort((a,b)=>a.milestone_order-b.milestone_order).map(m=>({name:m.milestone_name, phase:m.phase||2}))
+    setSelML(mls); setEditing(wf); setMsg(''); setShowForm(true)
+  }
+
+  async function save() {
+    if (!form.dept_id || !form.wf_heading.trim()) { setMsg('⚠ Department and Heading are required.'); return }
+    setSaving(true); setMsg('')
+    const deptObj = depts.find(d=>d.id===form.dept_id)
+    const wf_name = `${deptObj?.dept_code||''} — ${form.wf_heading}`
+    const payload = {
+      entity_id: entityId, dept_id: form.dept_id,
+      service_unit: deptObj?.dept_code||'',
+      wf_heading: form.wf_heading.trim(),
+      wf_name, label: wf_name,
+      job_type: form.wf_heading.trim().toUpperCase().replace(/\s+/g,'-').slice(0,20),
+      budget_pct: form.budget_pct, is_active: true,
+    }
+    const { data:wf, error:e1 } = editing
+      ? await supabase.from('workflow_templates').update(payload).eq('id',editing.id).select('id').single()
+      : await supabase.from('workflow_templates').insert(payload).select('id').single()
+    if (e1) { setMsg(`❌ ${e1.message}`); setSaving(false); return }
+    const tmplId = editing ? editing.id : wf.id
+    if (editing) await supabase.from('workflow_template_milestones').delete().eq('template_id', tmplId)
+    if (selML.length > 0) {
+      await supabase.from('workflow_template_milestones').insert(
+        selML.map((m,i)=>({ template_id:tmplId, milestone_order:i+1, milestone_name:m.name, phase:m.phase, is_optional:false }))
+      )
+    }
+    setMsg('✅ Workflow saved'); setSaving(false)
+    setShowForm(false); setEditing(null)
+    onRefresh()
+  }
+
+  async function deleteWF(wf) {
+    if (!window.confirm(`Delete workflow "${wf.wf_name||wf.label}"?`)) return
+    await supabase.from('workflow_templates').delete().eq('id', wf.id)
+    onRefresh()
+  }
+
+  const inpS = { width:'100%', padding:'8px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:13, outline:'none', boxSizing:'border-box' }
+  const lbl  = { display:'block', fontSize:11, color:'#6b7c93', fontWeight:700, marginBottom:4, textTransform:'uppercase', letterSpacing:0.5 }
+  const sec  = { fontSize:11, fontWeight:800, color:'#5A32D4', textTransform:'uppercase', letterSpacing:1, marginBottom:10, marginTop:16, borderBottom:'2px solid #ede7f6', paddingBottom:4 }
+
+  return (
+    <div style={{ display:'flex', gap:20 }}>
+      {/* ── Left: template list ── */}
+      <div style={{ flex:'0 0 340px' }}>
+        <div style={{ background:'#fff', borderRadius:12, padding:'16px 18px', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+            <div style={{ fontSize:14, fontWeight:800, color:'#1a2e3d' }}>Workflow Templates ({wfTemplates.length})</div>
+            <button onClick={openNew}
+              style={{ background:'#5A32D4', color:'#fff', border:'none', borderRadius:8, padding:'7px 14px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+              + New
+            </button>
+          </div>
+          {wfTemplates.length === 0 ? (
+            <div style={{ textAlign:'center', padding:'30px 0', color:'#aab2bd', fontSize:13 }}>
+              No workflows yet.<br/>Click <strong>+ New</strong> to create your first.
+            </div>
+          ) : wfTemplates.map(wf => (
+            <div key={wf.id} style={{ background:'#f8f9fc', borderRadius:10, padding:'10px 14px', marginBottom:8, border:'1px solid #e8edf4' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:'#1a2e3d' }}>{wf.wf_name||wf.label}</div>
+                  <div style={{ fontSize:11, color:'#6b7c93', marginTop:2 }}>
+                    {wf.service_unit} · {(wf.milestones||[]).length} milestones
+                  </div>
+                </div>
+                <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+                  <button onClick={()=>openEdit(wf)} style={{ background:'#ede7f6', color:'#5A32D4', border:'none', borderRadius:6, padding:'4px 10px', fontSize:11, fontWeight:700, cursor:'pointer' }}>Edit</button>
+                  <button onClick={()=>deleteWF(wf)} style={{ background:'#ffebee', color:'#c62828', border:'none', borderRadius:6, padding:'4px 10px', fontSize:11, fontWeight:700, cursor:'pointer' }}>✕</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Right: editor ── */}
+      {showForm && (
+        <div style={{ flex:1, background:'#fff', borderRadius:12, padding:'20px 22px', boxShadow:'0 2px 8px rgba(0,0,0,0.06)', maxHeight:'80vh', overflowY:'auto' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+            <div style={{ fontSize:16, fontWeight:800, color:'#5A32D4' }}>{editing ? '✏ Edit Workflow' : '+ New Workflow'}</div>
+            <button onClick={()=>setShowForm(false)} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color:'#aab2bd' }}>✕</button>
+          </div>
+
+          {/* Identity */}
+          <div style={sec}>1 · Identity</div>
+          <div style={{ display:'flex', gap:12, marginBottom:12 }}>
+            <div style={{ flex:1 }}>
+              <label style={lbl}>Department *</label>
+              <select style={inpS} value={form.dept_id} onChange={e=>setForm(p=>({...p,dept_id:e.target.value}))}>
+                <option value="">Select department…</option>
+                {depts.map(d=><option key={d.id} value={d.id}>{d.dept_code} — {d.dept_name}</option>)}
+              </select>
+            </div>
+            <div style={{ flex:1 }}>
+              <label style={lbl}>Workflow Heading *</label>
+              <input style={inpS} value={form.wf_heading} onChange={e=>setForm(p=>({...p,wf_heading:e.target.value}))} placeholder="e.g. New Installation Big" />
+            </div>
+          </div>
+          <div style={{ background:'#ede7f6', borderRadius:8, padding:'10px 14px', marginBottom:12 }}>
+            <div style={{ fontSize:11, color:'#5A32D4', fontWeight:700, textTransform:'uppercase', letterSpacing:0.5 }}>Auto-generated Workflow Name</div>
+            <div style={{ fontSize:16, fontWeight:900, color:'#1a2e3d', marginTop:4 }}>{wfName}</div>
+          </div>
+
+          {/* Milestones */}
+          <div style={sec}>2 · Milestones</div>
+          {PHASES.map(ph => {
+            const libRows = libForDept.filter(m=>m.phase===ph.v)
+            if (libRows.length === 0 && ph.v !== 2) return null
+            return (
+              <div key={ph.v} style={{ marginBottom:14 }}>
+                <div style={{ fontSize:12, fontWeight:700, color:'#6b7c93', marginBottom:6 }}>{ph.label}</div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:6 }}>
+                  {libRows.map(m=>(
+                    <label key={m.id} style={{ display:'flex', alignItems:'center', gap:5, background: selML.some(x=>x.name===m.milestone_name)?'#ede7f6':'#f8f9fc', border:`1px solid ${selML.some(x=>x.name===m.milestone_name)?'#5A32D4':'#dde3ec'}`, borderRadius:20, padding:'4px 10px', fontSize:12, cursor:'pointer' }}>
+                      <input type="checkbox" checked={selML.some(x=>x.name===m.milestone_name)} onChange={()=>toggleML(m)} style={{ cursor:'pointer' }} />
+                      {m.milestone_name}
+                    </label>
+                  ))}
+                  {libRows.length === 0 && <span style={{ fontSize:11, color:'#aab2bd' }}>No library items for this phase</span>}
+                </div>
+              </div>
+            )
+          })}
+          {/* Custom add */}
+          <div style={{ display:'flex', gap:8, marginBottom:10, alignItems:'flex-end' }}>
+            <div style={{ flex:1 }}>
+              <label style={lbl}>Add Custom Milestone</label>
+              <input style={inpS} value={custom} onChange={e=>setCustom(e.target.value)} placeholder="Custom milestone name…" onKeyDown={e=>e.key==='Enter'&&addCustom()} />
+            </div>
+            <select style={{ ...inpS, flex:'0 0 160px' }} value={custPhase} onChange={e=>setCustP(+e.target.value)}>
+              {PHASES.map(p=><option key={p.v} value={p.v}>{p.label}</option>)}
+            </select>
+            <button onClick={addCustom} style={{ background:'#5A32D4', color:'#fff', border:'none', borderRadius:8, padding:'9px 14px', fontSize:13, fontWeight:700, cursor:'pointer', flexShrink:0 }}>+ Add</button>
+          </div>
+          {/* Selected milestones ordered list */}
+          {selML.length > 0 && (
+            <div style={{ background:'#f0f4f8', borderRadius:10, padding:'10px 14px', marginBottom:16 }}>
+              <div style={{ fontSize:11, fontWeight:700, color:'#5A32D4', marginBottom:8, textTransform:'uppercase' }}>Selected ({selML.length}) — drag to reorder</div>
+              {selML.map((m,i)=>(
+                <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 0', borderBottom:'1px solid #e0e7ef' }}>
+                  <span style={{ fontSize:11, color:'#aab2bd', width:20, textAlign:'center', fontWeight:700 }}>{i+1}</span>
+                  <span style={{ flex:1, fontSize:13, color:'#1a2e3d' }}>{m.name}</span>
+                  <span style={{ fontSize:10, color:'#6b7c93', background:'#e3e7f0', borderRadius:12, padding:'2px 7px' }}>Ph{m.phase}</span>
+                  <button onClick={()=>i>0&&moveML(i,-1)} disabled={i===0} style={{ background:'none', border:'none', cursor:i===0?'default':'pointer', color:i===0?'#dde3ec':'#5A32D4', fontWeight:700, padding:'2px 6px' }}>↑</button>
+                  <button onClick={()=>i<selML.length-1&&moveML(i,1)} disabled={i===selML.length-1} style={{ background:'none', border:'none', cursor:i===selML.length-1?'default':'pointer', color:i===selML.length-1?'#dde3ec':'#5A32D4', fontWeight:700, padding:'2px 6px' }}>↓</button>
+                  <button onClick={()=>removeML(i)} style={{ background:'none', border:'none', cursor:'pointer', color:'#c62828', fontWeight:700, padding:'2px 6px' }}>✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Budget % */}
+          <div style={sec}>3 · Budget Split %</div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px 14px', marginBottom:12 }}>
+            {BKEYS.map(k=>(
+              <div key={k} style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <label style={{ ...lbl, marginBottom:0, flex:'0 0 110px', textTransform:'capitalize' }}>{BLABELS[k]}</label>
+                <input type="number" min="0" max="100" style={{ ...inpS, width:70, textAlign:'right' }}
+                  value={form.budget_pct[k]||0} onChange={e=>setBP(k,e.target.value)} />
+                <span style={{ fontSize:12, color:'#6b7c93' }}>%</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ background: totalBP>100?'#ffebee': totalBP===100?'#e8f5e9':'#fff3e0', borderRadius:8, padding:'8px 14px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <span style={{ fontSize:13, fontWeight:700, color: totalBP>100?'#c62828':totalBP===100?'#2e7d32':'#e65100' }}>
+              Total: {totalBP.toFixed(1)}% {totalBP===100?'✅':totalBP>100?'⚠ Over 100%':'— remaining: '+(100-totalBP).toFixed(1)+'%'}
+            </span>
+            {totalBP < 100 && <span style={{ fontSize:11, color:'#6b7c93' }}>Margin reserved: {(100-totalBP).toFixed(1)}%</span>}
+          </div>
+
+          {msg && <div style={{ background:msg.startsWith('✅')?'#e8f5e9':'#ffebee', color:msg.startsWith('✅')?'#2e7d32':'#c62828', borderRadius:8, padding:'8px 12px', marginBottom:12, fontSize:12, fontWeight:700 }}>{msg}</div>}
+          <div style={{ display:'flex', justifyContent:'flex-end', gap:10 }}>
+            <button onClick={()=>setShowForm(false)} style={{ background:'#f0f4f8', border:'none', borderRadius:8, padding:'9px 18px', fontSize:13, fontWeight:700, cursor:'pointer', color:'#6b7c93' }}>Cancel</button>
+            <button onClick={save} disabled={saving}
+              style={{ background:saving?'#b39ddb':'#5A32D4', color:'#fff', border:'none', borderRadius:8, padding:'9px 24px', fontSize:13, fontWeight:700, cursor:saving?'not-allowed':'pointer' }}>
+              {saving ? '⏳ Saving…' : editing ? 'Update Workflow' : 'Save Workflow'}
+            </button>
           </div>
         </div>
       )}
