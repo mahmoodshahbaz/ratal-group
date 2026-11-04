@@ -1963,48 +1963,27 @@ function WorkflowsTab({ entityId, depts, milestoneLib, wfTemplates, onRefresh })
         </div>
       </div>
 
-      {/* ── Workflow Form Modal (FormShell style) ── */}
-      {showForm && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}
-          onClick={()=>setShowForm(false)}>
-          <div style={{ width:860, maxHeight:'92vh', borderRadius:16, overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 20px 60px rgba(0,0,0,0.3)', background:'#fff' }}
-            onClick={e=>e.stopPropagation()}>
-
-            {/* Banner */}
-            <div style={{ background:`linear-gradient(135deg,${PRI} 0%,#b5831c 100%)`, padding:'18px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+      {/* ── Workflow Form Modal ── */}
+      <FormShell
+        isOpen={showForm}
+        onClose={()=>setShowForm(false)}
+        chapterName="Masters"
+        title={[editing ? 'EDIT' : 'NEW', 'Workflow']}
+        description="Create workflow templates with milestones and a default budget split."
+        steps={WF_STEPS}
+        currentStep={wfStep}
+        onBack={wfStep===1 ? ()=>setShowForm(false) : ()=>setWfStep(s=>s-1)}
+        onNext={wfStep < 3 ? ()=>setWfStep(s=>s+1) : save}
+        backLabel={wfStep===1 ? 'Cancel' : '← Back'}
+        nextLabel={wfStep < 3 ? 'Next →' : (saving ? '⏳ Saving…' : editing ? '✓ Update' : '✓ Save Workflow')}
+        nextDisabled={saving}
+      >
+        {msg && (
+          <div style={{ padding:'8px 12px', borderRadius:8, marginBottom:12, fontSize:12, fontWeight:700,
+            background: msg.startsWith('✅')?'#e8f5e9':'#ffebee',
+            color:      msg.startsWith('✅')?'#2e7d32':'#c62828' }}>{msg}</div>
+        )}
               <div>
-                <div style={{ fontSize:10, color:'rgba(255,255,255,0.75)', fontWeight:700, textTransform:'uppercase', letterSpacing:1.5, fontFamily:PP }}>MASTERS</div>
-                <div style={{ fontSize:22, fontWeight:900, color:'#fff', letterSpacing:-0.5, lineHeight:1, fontFamily:PP }}>
-                  {editing ? 'Edit' : 'New'}<br/><span style={{ fontSize:28 }}>WORKFLOW</span>
-                </div>
-              </div>
-              <button onClick={()=>setShowForm(false)} style={{ background:'rgba(255,255,255,0.2)', border:'none', borderRadius:8, padding:'6px 10px', cursor:'pointer', color:'#fff', fontSize:16, fontWeight:700 }}>✕</button>
-            </div>
-
-            {/* Body: left sidebar + right panel */}
-            <div style={{ display:'flex', flex:1, overflow:'hidden' }}>
-              {/* Step sidebar */}
-              <div style={{ width:180, background:'#FAECD6', padding:'20px 16px', display:'flex', flexDirection:'column', gap:8, flexShrink:0 }}>
-                {WF_STEPS.map((s,i)=>{
-                  const done = wfStep > i+1
-                  const active = wfStep === i+1
-                  return (
-                    <div key={s} onClick={()=>setWfStep(i+1)}
-                      style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 10px', borderRadius:8, cursor:'pointer',
-                        background: active?PRI:'transparent', transition:'all 0.15s' }}>
-                      <div style={{ width:22, height:22, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:800, flexShrink:0,
-                        background: active?'rgba(255,255,255,0.25)' : done?PRI:'rgba(140,96,27,0.15)',
-                        color: active?'#fff' : done?'#fff' : PRI }}>
-                        {done ? '✓' : i+1}
-                      </div>
-                      <span style={{ fontSize:12, fontWeight:700, color: active?'#fff': '#53666F', fontFamily:PP }}>{s}</span>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Step content */}
-              <div style={{ flex:1, overflowY:'auto', padding:'20px 24px' }}>
 
                 {/* Step 1: Identity */}
                 {wfStep === 1 && (
@@ -2139,31 +2118,8 @@ function WorkflowsTab({ entityId, depts, milestoneLib, wfTemplates, onRefresh })
                   </div>
                 )}
 
-                {/* Footer nav */}
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:24, paddingTop:16, borderTop:`1px solid ${PRI}22` }}>
-                  {msg && <div style={{ flex:1, fontSize:12, fontWeight:700, color:msg.startsWith('✅')?'#2e7d32':'#c62828' }}>{msg}</div>}
-                  <div style={{ display:'flex', gap:10, marginLeft:'auto' }}>
-                    <button onClick={wfStep===1?()=>setShowForm(false):()=>setWfStep(s=>s-1)}
-                      style={{ background:'#f0f4f8', border:'none', borderRadius:20, padding:'9px 20px', fontSize:13, fontWeight:700, cursor:'pointer', color:'#6b7c93' }}>
-                      {wfStep===1?'Cancel':'← Back'}
-                    </button>
-                    {wfStep < 3
-                      ? <button onClick={()=>setWfStep(s=>s+1)}
-                          style={{ background:PRI, color:'#fff', border:'none', borderRadius:20, padding:'9px 24px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
-                          Next →
-                        </button>
-                      : <button onClick={save} disabled={saving}
-                          style={{ background:saving?`${PRI}99`:PRI, color:'#fff', border:'none', borderRadius:20, padding:'9px 24px', fontSize:13, fontWeight:700, cursor:saving?'not-allowed':'pointer' }}>
-                          {saving ? '⏳ Saving…' : editing ? '✓ Update Workflow' : '✓ Save Workflow'}
-                        </button>
-                    }
-                  </div>
-                </div>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
+      </FormShell>
     </div>
   )
 }
