@@ -1276,40 +1276,57 @@ export default function SiteMaster({ entityId }) {
       })()}
 
       {/* ══ DETAIL MODAL ══ */}
-      {detail && (
-        <div style={S.overlay} onClick={()=>setDetail(null)}>
-          <div style={{ ...S.modal, width:940 }} onClick={e=>e.stopPropagation()}>
-            {/* Detail Header */}
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16 }}>
-              <div>
-                <div style={{ fontSize:20, fontWeight:800, color:'#5A32D4', fontFamily:'monospace' }}>{detail.sm_id}</div>
-                <div style={{ fontSize:14, color:'#1a2e3d', fontWeight:600, marginTop:2 }}>{detail.site_name||detail.job_no}</div>
-                <div style={{ display:'flex', gap:8, marginTop:4, alignItems:'center' }}>
+      {/* ══ SITE DETAIL MODAL ══ */}
+      {(() => {
+        const DETAIL_TABS = ['overview','milestones','budget','completions']
+        const detailTabIdx = DETAIL_TABS.indexOf(detailTab)+1
+        const detailNextLabel = detailTab==='milestones'
+          ? (savingML ? '⏳ Saving…' : '💾 Save Progress')
+          : detailTab==='budget' && detail && !detail.budget_locked
+            ? '🔒 Lock Budget'
+            : '✏ Edit'
+        const detailNextAction = detail ? (
+          detailTab==='milestones' ? saveMilestones
+          : detailTab==='budget' && !detail.budget_locked ? lockBudget
+          : ()=>{ setDetail(null); openEdit(detail) }
+        ) : undefined
+        return (
+          <FormShell
+            isOpen={!!detail}
+            onClose={()=>setDetail(null)}
+            chapterName="Masters"
+            title={['SITE', detail?.sm_id||'', detail?.site_name||detail?.job_no||'']}
+            description={detail ? [
+              detail.service_unit,
+              detail.wf_code || 'No WF Code',
+              detail.status?.replace(/_/g,' '),
+              detail.location && `📍 ${detail.location}`,
+            ].filter(Boolean).join(' · ') : ''}
+            steps={['Overview','Milestones','Budget','Completions']}
+            currentStep={detailTabIdx||1}
+            onStepClick={n=>setDetailTab(DETAIL_TABS[n-1])}
+            onBack={()=>setDetail(null)}
+            onNext={detailNextAction}
+            backLabel="✕ Close"
+            nextLabel={detailNextLabel}
+            nextDisabled={savingML}
+          >
+            {/* Status bar */}
+            {detail && (
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14, padding:'8px 12px', background:'#FAECD6', borderRadius:8 }}>
+                <div style={{ display:'flex', gap:8, alignItems:'center' }}>
                   {detail.wf_code && <span style={{ ...S.badge('#00695c'), fontSize:10 }}>{detail.wf_code}</span>}
-                  {detail.site_no && <span style={{ fontSize:11, color:'#6b7c93' }}>Site: <strong>{detail.site_no}</strong></span>}
-                  {detail.job_no  && <span style={{ fontSize:11, color:'#6b7c93' }}>Job: <strong>{detail.job_no}</strong></span>}
+                  {detail.site_no && <span style={{ fontSize:11, color:'#8C601B', fontWeight:600 }}>Site: <strong>{detail.site_no}</strong></span>}
+                  {detail.job_no  && <span style={{ fontSize:11, color:'#8C601B', fontWeight:600 }}>Job: <strong>{detail.job_no}</strong></span>}
                 </div>
-              </div>
-              <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-                <select style={{ ...S.inp, maxWidth:210, fontSize:12 }} value={detail.status} onChange={e=>updateStatus(detail,e.target.value)}>
+                <select style={{ ...S.inp, maxWidth:200, fontSize:12 }} value={detail.status} onChange={e=>updateStatus(detail,e.target.value)}>
                   {STATUSES.map(s=><option key={s} value={s}>{s.replace(/_/g,' ')}</option>)}
                 </select>
-                <button style={{ ...S.btn(), padding:'7px 14px', fontSize:12 }} onClick={()=>{ setDetail(null); openEdit(detail) }}>Edit</button>
-                <button style={{ background:'none', border:'none', fontSize:22, cursor:'pointer', color:'#6b7c93' }} onClick={()=>setDetail(null)}>✕</button>
               </div>
-            </div>
-
-            {/* Tabs */}
-            <div style={{ marginBottom:20 }}>
-              {['overview','milestones','budget','completions'].map(t=>(
-                <button key={t} style={S.tab(detailTab===t)} onClick={()=>setDetailTab(t)}>
-                  {t.charAt(0).toUpperCase()+t.slice(1)}
-                </button>
-              ))}
-            </div>
+            )}
 
             {/* ── Tab: OVERVIEW ── */}
-            {detailTab==='overview' && (
+            {detailTab==='overview' && detail && (
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
                 <div style={S.section}>
                   <div style={S.secTitle}>Site Details</div>
@@ -1354,7 +1371,6 @@ export default function SiteMaster({ entityId }) {
                       <div key={l} style={S.kv}><span style={{ color:'#6b7c93', fontWeight:600 }}>{l}</span><span style={{ fontWeight:700 }}>{v}</span></div>
                     ))}
                   </div>
-                  {/* Margin summary card */}
                   {+detail.contract_value>0 && (()=>{
                     const cv2  = +detail.contract_value
                     const cost = BUDGET_ROWS.reduce((a,r)=>a+(cv2*(+detail[r.pctKey]||0)/100),0)
@@ -1383,14 +1399,11 @@ export default function SiteMaster({ entityId }) {
             )}
 
             {/* ── Tab: MILESTONES ── */}
-            {detailTab==='milestones' && (
+            {detailTab==='milestones' && detail && (
               <div>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
-                  <div style={{ fontSize:12, color:'#6b7c93' }}>
-                    {milestones.filter(m=>m.status==='COMPLETED').length} / {milestones.length} stages completed
-                    {detail.wf_code && <span style={{ marginLeft:8, ...S.badge('#00695c'), fontSize:10 }}>{detail.wf_code}</span>}
-                  </div>
-                  <button style={S.btn()} onClick={saveMilestones} disabled={savingML}>{savingML?'Saving…':'Save Progress'}</button>
+                <div style={{ fontSize:12, color:'#6b7c93', marginBottom:14 }}>
+                  {milestones.filter(m=>m.status==='COMPLETED').length} / {milestones.length} stages completed
+                  {detail.wf_code && <span style={{ marginLeft:8, ...S.badge('#00695c'), fontSize:10 }}>{detail.wf_code}</span>}
                 </div>
                 {milestones.length===0 && (
                   <div style={{ color:'#aab2bd', fontSize:13, textAlign:'center', padding:30 }}>
@@ -1418,25 +1431,20 @@ export default function SiteMaster({ entityId }) {
             )}
 
             {/* ── Tab: BUDGET ── */}
-            {detailTab==='budget' && (
+            {detailTab==='budget' && detail && (
               <div>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
-                  <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-                    <span style={S.badge(detail.budget_locked?'#2e7d32':'#e65100')}>
-                      {detail.budget_locked?'🔒 Budget Locked':'🔓 Budget Open'}
-                    </span>
-                    {detail.budget_locked_at && <span style={{ fontSize:11, color:'#6b7c93' }}>Locked {fmt(detail.budget_locked_at)}</span>}
-                  </div>
-                  {!detail.budget_locked && <button style={S.btn('#c62828')} onClick={lockBudget}>Lock Budget</button>}
+                <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:14 }}>
+                  <span style={S.badge(detail.budget_locked?'#2e7d32':'#e65100')}>
+                    {detail.budget_locked?'🔒 Budget Locked':'🔓 Budget Open'}
+                  </span>
+                  {detail.budget_locked_at && <span style={{ fontSize:11, color:'#6b7c93' }}>Locked {fmt(detail.budget_locked_at)}</span>}
                 </div>
-
-                {/* Contract value header */}
                 {+detail.contract_value>0 && (
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:14 }}>
                     {[
                       { l:'Contract Value', v:SAR(detail.contract_value), c:'#2e7d32' },
                       { l:'Budget Cost', v:SAR(BUDGET_ROWS.reduce((a,r)=>a+(+detail.contract_value*(+detail[r.pctKey]||0)/100),0)), c:'#1565c0' },
-                      { l:'Budget Margin', v:(()=>{ const tc=BUDGET_ROWS.reduce((a,r)=>a+(+detail[r.pctKey]||0),0); const mh2=marginHealth(tc); return <span style={{ color:mh2.color }}>{(100-tc).toFixed(1)}%  {mh2.label.split('%')[1]?.trim()}</span> })(), c:'#172D37' },
+                      { l:'Budget Margin', v:(()=>{ const tc=BUDGET_ROWS.reduce((a,r)=>a+(+detail[r.pctKey]||0),0); const mh2=marginHealth(tc); return <span style={{ color:mh2.color }}>{(100-tc).toFixed(1)}% {mh2.label.split('%')[1]?.trim()}</span> })(), c:'#172D37' },
                     ].map(x=>(
                       <div key={x.l} style={{ background:'#f8f9fc', borderRadius:8, padding:'10px 14px' }}>
                         <div style={{ fontSize:10, color:'#6b7c93', fontWeight:700, textTransform:'uppercase', letterSpacing:0.5 }}>{x.l}</div>
@@ -1445,7 +1453,6 @@ export default function SiteMaster({ entityId }) {
                     ))}
                   </div>
                 )}
-
                 <table style={S.tbl}>
                   <thead><tr>
                     <th style={S.th}>Category</th>
@@ -1494,12 +1501,12 @@ export default function SiteMaster({ entityId }) {
             )}
 
             {/* ── Tab: COMPLETIONS ── */}
-            {detailTab==='completions' && (
+            {detailTab==='completions' && detail && (
               <CompletionsTab projectId={detail.project_id} smId={detail.sm_id} />
             )}
-          </div>
-        </div>
-      )}
+          </FormShell>
+        )
+      })()}
 
       {/* ══ BULK EDIT MODAL ══ */}
       <FormShell

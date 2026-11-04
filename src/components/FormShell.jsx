@@ -54,6 +54,7 @@ export default function FormShell({
   description  = '',
   steps        = [],
   currentStep  = 1,           // 1-based
+  onStepClick,                // optional: (n) => void — makes sidebar steps clickable
   onBack,
   onNext,
   backLabel    = 'Back',
@@ -192,12 +193,15 @@ export default function FormShell({
                 const active = n === currentStep
                 const done   = n < currentStep
                 return (
-                  <div key={i} style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '5px 8px', borderRadius: 4,
-                    background: active ? `${L3}15` : 'transparent',
-                    borderLeft: active ? `3px solid ${L3}` : '3px solid transparent',
-                  }}>
+                  <div key={i}
+                    onClick={onStepClick ? () => onStepClick(n) : undefined}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '5px 8px', borderRadius: 4,
+                      background: active ? `${L3}15` : 'transparent',
+                      borderLeft: active ? `3px solid ${L3}` : '3px solid transparent',
+                      cursor: onStepClick ? 'pointer' : 'default',
+                    }}>
                     <div style={{
                       width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
                       background: done || active ? L3 : 'transparent',
