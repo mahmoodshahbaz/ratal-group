@@ -1929,38 +1929,36 @@ function WorkflowsTab({ entityId, depts, milestoneLib, wfTemplates, onRefresh })
   const WF_STEPS = ['Identity','Milestones','Budget Split']
 
   return (
-    <div style={{ display:'flex', gap:16, fontFamily:PP }}>
+    <div style={{ fontFamily:PP }}>
       {/* ── Template list ── */}
-      <div style={{ flex:'0 0 320px' }}>
-        <div style={{ background:'#fff', borderRadius:12, padding:'16px', boxShadow:'0 2px 8px rgba(140,96,27,0.08)', border:'1px solid #FAECD6' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-            <div style={{ fontSize:14, fontWeight:800, color:'#1a2e3d', fontFamily:PP }}>Workflow Templates ({wfTemplates.length})</div>
-            <button onClick={openNew}
-              style={{ background:`linear-gradient(135deg,${PRI},#b5831c)`, color:'#fff', border:'none', borderRadius:20, padding:'6px 14px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:PP }}>
-              + New
-            </button>
+      <div style={{ background:'#fff', borderRadius:12, padding:'16px 20px', boxShadow:'0 2px 8px rgba(140,96,27,0.08)', border:'1px solid #FAECD6' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+          <div style={{ fontSize:14, fontWeight:800, color:'#1a2e3d', fontFamily:PP }}>Workflow Templates ({wfTemplates.length})</div>
+          <button onClick={openNew}
+            style={{ background:`linear-gradient(135deg,${PRI},#b5831c)`, color:'#fff', border:'none', borderRadius:20, padding:'6px 18px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:PP }}>
+            + New
+          </button>
+        </div>
+        {wfTemplates.length === 0 ? (
+          <div style={{ textAlign:'center', padding:'40px 0', color:'#aab2bd', fontSize:13 }}>
+            No workflows yet. Click <strong>+ New</strong> to create your first.
           </div>
-          {wfTemplates.length === 0 ? (
-            <div style={{ textAlign:'center', padding:'30px 0', color:'#aab2bd', fontSize:13 }}>
-              No workflows yet.<br/>Click <strong>+ New</strong> to create your first.
-            </div>
-          ) : wfTemplates.map(wf => (
-            <div key={wf.id} style={{ background:'#fdfaf6', borderRadius:10, padding:'10px 12px', marginBottom:7, border:`1px solid ${PRI}22` }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:'#1a2e3d' }}>{wf.wf_name||wf.label}</div>
-                  <div style={{ fontSize:11, color:'#8C601B', marginTop:2, fontWeight:600 }}>
-                    {wf.service_unit} · {(wf.milestones||[]).length} milestones
-                  </div>
+        ) : (
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(240px, 1fr))', gap:10 }}>
+            {wfTemplates.map(wf => (
+              <div key={wf.id} style={{ background:'#fdfaf6', borderRadius:10, padding:'12px 14px', border:`1px solid ${PRI}22`, display:'flex', flexDirection:'column', gap:6 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:'#1a2e3d', lineHeight:1.3 }}>{wf.wf_name||wf.label}</div>
+                <div style={{ fontSize:11, color:PRI, fontWeight:600 }}>
+                  {wf.service_unit} · {(wf.milestones||[]).length} milestones
                 </div>
-                <div style={{ display:'flex', gap:5, flexShrink:0 }}>
-                  <button onClick={()=>openEdit(wf)} style={{ background:'#FAECD6', color:PRI, border:'none', borderRadius:6, padding:'4px 10px', fontSize:11, fontWeight:700, cursor:'pointer' }}>Edit</button>
-                  <button onClick={()=>deleteWF(wf)} style={{ background:'#ffebee', color:'#c62828', border:'none', borderRadius:6, padding:'4px 8px', fontSize:11, fontWeight:700, cursor:'pointer' }}>✕</button>
+                <div style={{ display:'flex', gap:6, marginTop:4 }}>
+                  <button onClick={()=>openEdit(wf)} style={{ flex:1, background:'#FAECD6', color:PRI, border:'none', borderRadius:6, padding:'5px 0', fontSize:11, fontWeight:700, cursor:'pointer' }}>✏ Edit</button>
+                  <button onClick={()=>deleteWF(wf)} style={{ background:'#ffebee', color:'#c62828', border:'none', borderRadius:6, padding:'5px 10px', fontSize:11, fontWeight:700, cursor:'pointer' }}>✕</button>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── Workflow Form Modal ── */}
