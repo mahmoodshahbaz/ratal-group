@@ -1362,7 +1362,22 @@ export default function MoneyRequests({ entityId, currentUser }) {
             currentStep={mrStep}
             onBack={mrStep===1 ? () => { setShowCreate(false); resetCreate() } : () => setMrStep(1)}
             backLabel={mrStep===1 ? 'Cancel' : 'Back'}
-            onNext={mrStep===1 ? () => setMrStep(2) : createMR}
+            onNext={mrStep===1 ? () => {
+              // Validate IBAN presence before advancing to attachments step
+              const missingIban = lines.filter(ln => {
+                if (!ln.party_type) return false
+                const isGov = ln.party_type === 'Government'
+                const isANB = ['ANB-77','ANB-39'].includes(ln.party_type)
+                if (isGov || isANB) return false   // SADAD / fixed IBAN — always present
+                return !ln.iban                     // any other party type must have IBAN
+              })
+              if (missingIban.length > 0) {
+                const names = missingIban.map(ln => ln.party_name || ln.party_type || 'line').join(', ')
+                alert(`⚠️ Missing IBAN\n\nThe following lines are missing an IBAN number:\n${names}\n\nPlease enter the IBAN before continuing.`)
+                return
+              }
+              setMrStep(2)
+            } : createMR}
             nextLabel={mrStep===1 ? 'Save & Next →' : (saving ? '⏳ Saving…' : editingMR ? `↩ Resubmit — SAR ${totalAmt > 0 ? totalAmt.toLocaleString() : '0'}` : `💰 Submit${totalAmt > 0 ? ` — SAR ${totalAmt.toLocaleString()}` : ''}`)}
             nextDisabled={mrStep===1 ? totalAmt <= 0 : saving}
           >
@@ -1417,11 +1432,11 @@ export default function MoneyRequests({ entityId, currentUser }) {
 
                   {/* Column headers — part of the sticky block so they never scroll away */}
                   <div style={{ display:'grid',
-                    gridTemplateColumns:'minmax(110px,1.5fr) 100px 110px 85px 115px 140px 28px',
-                    gap:8, background:'#f0f4fa', borderRadius:8,
+                    gridTemplateColumns:'minmax(130px,1.8fr) 95px 105px 80px 110px 28px',
+                    gap:6, background:'#f0f4fa', borderRadius:8,
                     border:'1px solid #e3e9f0' }}>
-                    {['Name','Txn Type','Expense Type','Project','IBAN / SADAD','Amount (SAR)',''].map((h,hi) => (
-                      <div key={hi} style={{ padding:'5px 14px', fontSize:9.5, fontWeight:800,
+                    {['Name / IBAN','Txn Type','Expense','Project','Amount (SAR)',''].map((h,hi) => (
+                      <div key={hi} style={{ padding:'5px 12px', fontSize:9.5, fontWeight:800,
                         color:'#8a9ab5', textTransform:'uppercase', letterSpacing:0.5 }}>{h}</div>
                     ))}
                   </div>
@@ -1464,47 +1479,84 @@ export default function MoneyRequests({ entityId, currentUser }) {
                     const rSel        = { ...fSel, fontSize:11, padding:'7px 10px', paddingRight:22 }
                     const rInp        = { ...fInp, fontSize:11, padding:'7px 10px' }
 
+                    // IBAN presence check (for warning indicator)
+                    const ibanMissing = !isGov && !isANB && !ln.iban && !!ln.party_type
+
                     return (
                       <div key={i} style={{ display:'grid',
-                        gridTemplateColumns:'minmax(110px,1.5fr) 100px 110px 85px 115px 140px 28px',
-                        gap:8, padding:'8px 14px', alignItems:'center',
+                        gridTemplateColumns:'minmax(130px,1.8fr) 95px 105px 80px 110px 28px',
+                        gap:6, padding:'8px 12px', alignItems:'start',
                         borderBottom:'1px solid #f0f5fa', background:'#fff' }}>
 
-                        {/* Party Name (contextual) */}
-                        {isEmployee && (
-                          <select style={rSel} value={ln.party_id}
-                            onChange={e => {
-                              const emp = deptEmpsAll.find(x => x.id === e.target.value)
-                              handleCreatePartySelect(i, 'Employee', e.target.value, emp?.full_name_en || '')
-                            }}>
-                            <option value="">— Employee —</option>
-                            {deptEmpsAll.map(e => <option key={e.id} value={e.id}>{e.full_name_en}</option>)}
-                          </select>
-                        )}
-                        {vendorType && (
-                          <select style={rSel} value={ln.party_id}
-                            onChange={e => {
-                              const con = partyCons.find(c => c.id === e.target.value)
-                              handleCreatePartySelect(i, ln.party_type, e.target.value, con?.contractor_name || con?.company_name || '')
-                            }}>
-                            <option value="">— {ln.party_type} —</option>
-                            {partyCons.map(c => <option key={c.id} value={c.id}>{c.contractor_name || c.company_name}</option>)}
-                          </select>
-                        )}
-                        {isGov && (
-                          <input style={rInp} placeholder="Entity name…" value={ln.party_name}
-                            onChange={e => updateCreateLine(i, { party_name: e.target.value })} />
-                        )}
-                        {isANB && (
-                          <div style={{ padding:'7px 10px', background:rp.bg, borderRadius:8,
-                            fontSize:12, fontWeight:800, color:rp.color }}>
-                            {ln.party_name} ✓
-                          </div>
-                        )}
-                        {ln.party_type === 'Others' && (
-                          <input style={rInp} placeholder="Party name…" value={ln.party_name}
-                            onChange={e => updateCreateLine(i, { party_name: e.target.value })} />
-                        )}
+                        {/* Party Name + IBAN stacked below */}
+                        <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                          {/* Name selector/input */}
+                          {isEmployee && (
+                            <select style={rSel} value={ln.party_id}
+                              onChange={e => {
+                                const emp = deptEmpsAll.find(x => x.id === e.target.value)
+                                handleCreatePartySelect(i, 'Employee', e.target.value, emp?.full_name_en || '')
+                              }}>
+                              <option value="">— Employee —</option>
+                              {deptEmpsAll.map(e => <option key={e.id} value={e.id}>{e.full_name_en}</option>)}
+                            </select>
+                          )}
+                          {vendorType && (
+                            <select style={rSel} value={ln.party_id}
+                              onChange={e => {
+                                const con = partyCons.find(c => c.id === e.target.value)
+                                handleCreatePartySelect(i, ln.party_type, e.target.value, con?.contractor_name || con?.company_name || '')
+                              }}>
+                              <option value="">— {ln.party_type} —</option>
+                              {partyCons.map(c => <option key={c.id} value={c.id}>{c.contractor_name || c.company_name}</option>)}
+                            </select>
+                          )}
+                          {isGov && (
+                            <input style={rInp} placeholder="Entity name…" value={ln.party_name}
+                              onChange={e => updateCreateLine(i, { party_name: e.target.value })} />
+                          )}
+                          {isANB && (
+                            <div style={{ padding:'7px 10px', background:rp.bg, borderRadius:8,
+                              fontSize:12, fontWeight:800, color:rp.color }}>
+                              {ln.party_name} ✓
+                            </div>
+                          )}
+                          {ln.party_type === 'Others' && (
+                            <input style={rInp} placeholder="Party name…" value={ln.party_name}
+                              onChange={e => updateCreateLine(i, { party_name: e.target.value })} />
+                          )}
+
+                          {/* IBAN / SADAD — compact sub-row */}
+                          {isGov ? (
+                            <input style={{ ...rInp, fontSize:10, padding:'4px 8px',
+                              background:'#fffde7', borderColor:'#f9c00d' }}
+                              placeholder="SADAD #…" value={ln.sadad_no}
+                              onChange={e => updateCreateLine(i, { sadad_no: e.target.value })} />
+                          ) : isANB ? (
+                            <div style={{ fontSize:10, color:rp.color, background:rp.bg,
+                              borderRadius:5, padding:'2px 7px', fontWeight:700, alignSelf:'flex-start' }}>
+                              {ln.iban} ✓
+                            </div>
+                          ) : ln.iban_options?.length > 1 ? (
+                            <select style={{ ...rSel, fontSize:10, padding:'4px 8px' }} value={ln.iban}
+                              onChange={e => updateCreateLine(i, { iban: e.target.value })}>
+                              {ln.iban_options.map(b => (
+                                <option key={b.id} value={b.iban}>{b.iban}{b.is_primary ? ' ★' : ''}</option>
+                              ))}
+                            </select>
+                          ) : ln.party_type ? (
+                            <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                              <input style={{ ...rInp, fontSize:10, padding:'4px 8px', flex:1,
+                                borderColor: ibanMissing ? '#ff9800' : (ln.iban ? '#c5d9f0' : '#dde6f0'),
+                                background: ibanMissing ? '#fff8f0' : '#f8faff' }}
+                                placeholder="IBAN (SA76…)" value={ln.iban}
+                                onChange={e => updateCreateLine(i, { iban: e.target.value })} />
+                              {ibanMissing && (
+                                <span title="IBAN required" style={{ fontSize:13, flexShrink:0 }}>⚠️</span>
+                              )}
+                            </div>
+                          ) : null}
+                        </div>
 
                         {/* Transaction Type */}
                         <select style={rSel} value={ln.payment_type}
@@ -1530,26 +1582,6 @@ export default function MoneyRequests({ entityId, currentUser }) {
                             <option key={p3.id} value={p3.id}>{p3.project_number || p3.project_no}</option>
                           ))}
                         </select>
-
-                        {/* IBAN / SADAD */}
-                        {isGov ? (
-                          <input style={{ ...rInp, background:'#fffde7', borderColor:'#f9c00d' }}
-                            placeholder="SADAD…" value={ln.sadad_no}
-                            onChange={e => updateCreateLine(i, { sadad_no: e.target.value })} />
-                        ) : isANB ? (
-                          <div style={{ padding:'7px 10px', background:rp.bg, borderRadius:8,
-                            fontSize:11, fontWeight:800, color:rp.color }}>{ln.iban}</div>
-                        ) : ln.iban_options?.length > 1 ? (
-                          <select style={rSel} value={ln.iban}
-                            onChange={e => updateCreateLine(i, { iban: e.target.value })}>
-                            {ln.iban_options.map(b => (
-                              <option key={b.id} value={b.iban}>{b.iban}{b.is_primary ? ' ★' : ''}</option>
-                            ))}
-                          </select>
-                        ) : (
-                          <input style={rInp} placeholder="SA76…" value={ln.iban}
-                            onChange={e => updateCreateLine(i, { iban: e.target.value })} />
-                        )}
 
                         {/* Amount — SAR badge + full-width number input */}
                         <div style={{ display:'flex', alignItems:'center', gap:4 }}>
