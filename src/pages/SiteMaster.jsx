@@ -281,6 +281,7 @@ export default function SiteMaster({ entityId }) {
   const [beFields,      setBeFields]      = useState({})   // only fields the user fills in
   const [beSaving,      setBeSaving]      = useState(false)
   const [beMsg,         setBeMsg]         = useState('')
+  const [beStep,        setBeStep]        = useState(1)
 
   function toggleSelect(id) {
     setSelectedIds(prev => {
@@ -362,7 +363,7 @@ export default function SiteMaster({ entityId }) {
       setBeMsg(`✅ ${ids.length} sites updated`)
       setSelectedIds(new Set())
       await load()
-      setTimeout(()=>{ setShowBulkEdit(false); setBeFields({}); setBeMsg('') }, 2000)
+      setTimeout(()=>{ setShowBulkEdit(false); setBeFields({}); setBeMsg(''); setBeStep(1) }, 2000)
     } catch(e) { setBeMsg(`❌ ${e.message}`) }
     finally    { setBeSaving(false) }
   }
@@ -858,7 +859,7 @@ export default function SiteMaster({ entityId }) {
             <div style={{ display:'flex', gap:8, marginLeft:'auto', alignItems:'center' }}>
               {selectedIds.size > 0 && (
                 <button style={{ ...S.btn('#c62828'), padding:'10px 16px', boxShadow:'0 3px 8px rgba(198,40,40,0.30)', animation:'none' }}
-                  onClick={()=>{ setBeFields({}); setBeMsg(''); setShowBulkEdit(true) }}>
+                  onClick={()=>{ setBeFields({}); setBeMsg(''); setBeStep(1); setShowBulkEdit(true) }}>
                   ✏️ Bulk Edit ({selectedIds.size})
                 </button>
               )}
@@ -1501,33 +1502,37 @@ export default function SiteMaster({ entityId }) {
       )}
 
       {/* ══ BULK EDIT MODAL ══ */}
-      {showBulkEdit && (
-        <div style={S.overlay} onClick={()=>setShowBulkEdit(false)}>
-          <div style={{ background:'#fff', borderRadius:16, width:720, maxHeight:'90vh', overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 20px 60px rgba(0,0,0,0.25)' }} onClick={e=>e.stopPropagation()}>
-            {/* Banner */}
-            <div style={{ background:'linear-gradient(135deg,#8C601B,#b5831c)', padding:'18px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
-              <div>
-                <div style={{ fontSize:10, color:'rgba(255,255,255,0.75)', fontWeight:700, textTransform:'uppercase', letterSpacing:1.5 }}>MASTERS · SITE MASTER</div>
-                <div style={{ fontSize:22, fontWeight:900, color:'#fff', lineHeight:1.1 }}>BULK EDIT</div>
-                <div style={{ fontSize:12, color:'rgba(255,255,255,0.80)', marginTop:4 }}>
-                  Editing <strong>{selectedIds.size} site{selectedIds.size>1?'s':''}</strong> — only filled fields will be updated
-                </div>
-              </div>
-              <button onClick={()=>setShowBulkEdit(false)} style={{ background:'rgba(255,255,255,0.2)', border:'none', borderRadius:8, padding:'6px 10px', cursor:'pointer', color:'#fff', fontSize:16, fontWeight:700 }}>✕</button>
-            </div>
+      <FormShell
+        isOpen={showBulkEdit}
+        onClose={()=>{ setShowBulkEdit(false); setBeStep(1) }}
+        chapterName="Masters"
+        title={['BULK', 'Edit']}
+        description={`Editing ${selectedIds.size} site${selectedIds.size>1?'s':''} — only filled fields will be updated.`}
+        steps={['Site Fields', 'Budget Override']}
+        currentStep={beStep||1}
+        onBack={!beStep||beStep===1 ? ()=>setShowBulkEdit(false) : ()=>setBeStep(1)}
+        onNext={!beStep||beStep===1 ? ()=>setBeStep(2) : saveBulkEdit}
+        backLabel={!beStep||beStep===1 ? 'Cancel' : '← Back'}
+        nextLabel={!beStep||beStep===2 ? (beSaving ? '⏳ Saving…' : `Apply to ${selectedIds.size} Sites`) : 'Next →'}
+        nextDisabled={beSaving}
+      >
+        {beMsg && (
+          <div style={{ padding:'8px 12px', borderRadius:8, marginBottom:12, fontSize:12, fontWeight:700,
+            background: beMsg.startsWith('✅')?'#e8f5e9':'#ffebee',
+            color:      beMsg.startsWith('✅')?'#2e7d32':'#c62828' }}>{beMsg}</div>
+        )}
+        <div>
 
-            {/* Body */}
-            <div style={{ padding:'20px 24px', overflowY:'auto', flex:1 }}>
+          {/* Selected sites preview */}
+          <div style={{ background:'#FAECD6', borderRadius:8, padding:'8px 12px', marginBottom:16, fontSize:11, color:'#8C601B', lineHeight:1.8, maxHeight:72, overflowY:'auto' }}>
+            {[...selectedIds].map(id => {
+              const sm = sites.find(s=>s.id===id)
+              return sm ? <span key={id} style={{ marginRight:8, fontWeight:700, fontFamily:'monospace' }}>{sm.sm_id}</span> : null
+            })}
+          </div>
 
-            {/* Selected sites preview */}
-            <div style={{ background:'#FAECD6', borderRadius:8, padding:'8px 12px', marginBottom:16, fontSize:11, color:'#8C601B', lineHeight:1.8, maxHeight:80, overflowY:'auto' }}>
-              {[...selectedIds].map(id => {
-                const sm = sites.find(s=>s.id===id)
-                return sm ? <span key={id} style={{ marginRight:8, fontWeight:700, fontFamily:'monospace' }}>{sm.sm_id}</span> : null
-              })}
-            </div>
-
-            {/* Correction fields — only fill what you want to change */}
+          {/* Step 1: Site Fields */}
+          {(!beStep||beStep===1) && (
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
 
               {/* Status */}
@@ -1596,9 +1601,10 @@ export default function SiteMaster({ entityId }) {
                 <input type="date" style={S.inp} value={beFields.end_date||''} onChange={e=>setBeFields(p=>({...p,end_date:e.target.value}))} />
               </div>
             </div>
+          )}
 
-            {/* Budget % override — only shown if NOT using WF Code auto-fill */}
-            {!beFields.wf_code && (() => {
+          {/* Step 2: Budget Override */}
+          {beStep===2 && (() => {
               const PCT_FIELDS = [
                 { key:'budget_team_pct',     label:'Team %'     },
                 { key:'budget_supplier_pct', label:'Supplier %' },
@@ -1653,33 +1659,17 @@ export default function SiteMaster({ entityId }) {
                 </div>
               )
             })()}
+          )}
 
-            {/* What will change summary */}
-            {Object.keys(beFields).filter(k=>beFields[k]).length > 0 && (
-              <div style={{ background:'#e8f5e9', borderRadius:8, padding:'8px 12px', marginBottom:14, fontSize:11, color:'#2e7d32' }}>
-                <strong>Will update:</strong> {Object.keys(beFields).filter(k=>beFields[k]).join(', ')}
-                {beFields.wf_code && WF_CODES[beFields.wf_code] && ' (+ all 7 budget % lines)'}
-              </div>
-            )}
-
-            {beMsg && (
-              <div style={{ padding:'8px 12px', borderRadius:8, marginBottom:12, fontSize:12, fontWeight:700,
-                background: beMsg.startsWith('✅') ? '#e8f5e9' : '#ffebee',
-                color:      beMsg.startsWith('✅') ? '#2e7d32' : '#c62828',
-              }}>{beMsg}</div>
-            )}
-
-            <div style={{ display:'flex', justifyContent:'flex-end', gap:10 }}>
-              <button onClick={()=>{ setBeFields({}); setBeMsg('') }} style={{ ...S.btn('#6b7c93'), padding:'9px 18px' }}>Reset</button>
-              <button onClick={saveBulkEdit} disabled={beSaving}
-                style={{ ...S.btn(beSaving?'#ccc':'#c62828'), padding:'9px 24px', fontSize:13, cursor:beSaving?'not-allowed':'pointer' }}>
-                {beSaving ? '⏳ Saving…' : `Apply to ${selectedIds.size} Sites`}
-              </button>
+          {/* What will change summary (shown on step 1) */}
+          {(!beStep||beStep===1) && Object.keys(beFields).filter(k=>beFields[k]).length > 0 && (
+            <div style={{ background:'#e8f5e9', borderRadius:8, padding:'8px 12px', marginTop:8, fontSize:11, color:'#2e7d32' }}>
+              <strong>Will update:</strong> {Object.keys(beFields).filter(k=>beFields[k]).join(', ')}
+              {beFields.wf_code && WF_CODES[beFields.wf_code] && ' (+ all 7 budget % lines)'}
             </div>
-          </div>
+          )}
         </div>
-        </div>
-      )}
+      </FormShell>
 
       {/* ══ BULK UPLOAD MODAL ══ */}
       {showBulk && (
