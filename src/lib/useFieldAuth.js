@@ -249,7 +249,7 @@ export function useFieldAuth() {
       if (masterIds.length) {
         const { data: masters } = await supabase
           .from('site_masters')
-          .select('id, sm_id, site_name, job_no')
+          .select('id, sm_id, site_name, job_no, wf_code, milestones')
           .in('id', masterIds)
         ;(masters || []).forEach(m => { masterMap[m.id] = m })
       }
@@ -257,10 +257,21 @@ export function useFieldAuth() {
       // Shape into the format FormSiteCompletion expects
       const assignments = (rawAssignments || []).map(a => {
         const m = masterMap[a.site_master_id] || {}
+        // Extract ordered milestone names from site_masters.milestones JSON
+        // so the mobile form shows the same stages as the desktop WF Code milestones
+        let site_milestone_names = null
+        try {
+          const ml = typeof m.milestones === 'string' ? JSON.parse(m.milestones) : m.milestones
+          if (Array.isArray(ml) && ml.length > 0) {
+            site_milestone_names = ml.map(ms => ms.name || ms).filter(Boolean)
+          }
+        } catch {}
         return {
           ...a,
-          site_number: m.sm_id || m.job_no || '—',
-          site_name:   m.site_name || '',
+          site_number:          m.sm_id || m.job_no || '—',
+          site_name:            m.site_name || '',
+          wf_code:              m.wf_code || null,
+          site_milestone_names, // null = use hardcoded MILESTONE_SETS fallback
         }
       })
 

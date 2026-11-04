@@ -169,7 +169,10 @@ export default function FormSiteCompletion() {
   const scopeType    = assignment?.scope_type || 'GENERAL'
   const scopeColor   = SCOPE_COLOR[scopeType] || TH.orange
   const scopeIcon    = SCOPE_ICON[scopeType] || '🏕️'
-  const milestones   = MILESTONE_SETS[scopeType] || MILESTONE_SETS.GENERAL
+  // Prefer site-specific milestones seeded from WF Code; fall back to hardcoded sets
+  const milestones   = (assignment?.site_milestone_names?.length > 0)
+    ? assignment.site_milestone_names
+    : (MILESTONE_SETS[scopeType] || MILESTONE_SETS.GENERAL)
   const checkedCount = milestones.filter(m => checked[m]).length
   const totalCount   = milestones.length
   const pct          = totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 0
@@ -409,7 +412,7 @@ export default function FormSiteCompletion() {
 
       <Header
         title={assignment.site_number}
-        subtitle={`${scopeType.replace(/_/g,' ')} · tap milestones to mark done`}
+        subtitle={`${assignment.wf_code || scopeType.replace(/_/g,' ')} · tap milestones to mark done`}
         showBack={assignments.length > 1}
         onBack={() => { setStep(1); setAssignment(null); setChecked({}); setPrevDone({}) }}
       />
