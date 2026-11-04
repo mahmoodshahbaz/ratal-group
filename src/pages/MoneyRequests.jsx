@@ -1030,31 +1030,34 @@ export default function MoneyRequests({ entityId, currentUser }) {
       chapterColor={MC}
       chapterSubtitle="Money Requests, disbursements and field cash management"
       sectionTitle=""
-      onNew={() => setShowBanner(true)}
-      newLabel="+ New Request"
-      filters={['Pending', 'History']}
-      activeFilter={mainTab === 'pending' ? 'Pending' : 'History'}
-      onFilter={f => { setMainTab(f === 'Pending' ? 'pending' : 'history'); setExpandedId(null) }}
-    >{/* Custom table content begins — all original logic preserved below */}
+    >{/* Custom table content — all sticky header handled inside children */}
 
       {/* ── STICKY HEADER BLOCK: tabs + KPI + filters + column headers ── */}
       <div style={{ position:'sticky', top:0, zIndex:20, background:'#fff',
         boxShadow:'0 2px 10px rgba(0,0,0,0.07)', marginLeft:-1, marginRight:-1 }}>
 
-      {/* Main tabs */}
-      <div style={{ display:'flex', gap:0, borderBottom:'2px solid #e8edf5', marginBottom:0 }}>
-        {[
-          { key:'pending', label:`⏳ Pending`, count: pendingAll.length },
-          { key:'history', label:`📋 History`, count: null },
-        ].map(t => (
-          <button key={t.key} onClick={() => { setMainTab(t.key); setExpandedId(null) }}
-            style={{ border:'none', background:'none', padding:'10px 22px', cursor:'pointer', fontSize:13, fontWeight:700,
-              color: mainTab === t.key ? '#0D5C4E' : '#6b7c93',
-              borderBottom: mainTab === t.key ? '2px solid #0D5C4E' : '2px solid transparent',
-              marginBottom:-2 }}>
-            {t.label}{t.count !== null ? ` (${t.count})` : ''}
-          </button>
-        ))}
+      {/* Main tabs + New Request button */}
+      <div style={{ display:'flex', alignItems:'center', borderBottom:'2px solid #e8edf5' }}>
+        <div style={{ display:'flex', gap:0, flex:1 }}>
+          {[
+            { key:'pending', label:`⏳ Pending`, count: pendingAll.length },
+            { key:'history', label:`📋 History`, count: null },
+          ].map(t => (
+            <button key={t.key} onClick={() => { setMainTab(t.key); setExpandedId(null) }}
+              style={{ border:'none', background:'none', padding:'10px 22px', cursor:'pointer', fontSize:13, fontWeight:700,
+                color: mainTab === t.key ? '#0D5C4E' : '#6b7c93',
+                borderBottom: mainTab === t.key ? '2px solid #0D5C4E' : '2px solid transparent',
+                marginBottom:-2 }}>
+              {t.label}{t.count !== null ? ` (${t.count})` : ''}
+            </button>
+          ))}
+        </div>
+        <button onClick={() => setShowBanner(true)}
+          style={{ marginRight:4, padding:'7px 16px', background:MC, color:'#fff', border:'none',
+            borderRadius:8, fontWeight:700, fontSize:12, cursor:'pointer', fontFamily:'inherit',
+            boxShadow:`0 2px 8px ${MC}55` }}>
+          + New Request
+        </button>
       </div>
 
       {/* KPI Strip — reactive to tab & filters */}
