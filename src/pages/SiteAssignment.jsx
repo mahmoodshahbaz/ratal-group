@@ -352,10 +352,14 @@ export default function SiteAssignment({ entityId }) {
   }
 
   // ── Filter employees by dept ──────────────────────────────────
-  const filteredEmployees = useMemo(() =>
-    selectedDept ? employees.filter(e => e.department_id === selectedDept) : employees,
-    [employees, selectedDept]
-  )
+  // If employees have department_id set → filter. If NONE match (data not tagged yet) → show all with a warning.
+  const { filteredEmployees, empDeptWarn } = useMemo(() => {
+    if (!selectedDept) return { filteredEmployees: employees, empDeptWarn: false }
+    const deptOnly = employees.filter(e => e.department_id === selectedDept)
+    if (deptOnly.length > 0) return { filteredEmployees: deptOnly, empDeptWarn: false }
+    // No employees tagged to this dept — fall back to ALL employees and show a warning
+    return { filteredEmployees: employees, empDeptWarn: true }
+  }, [employees, selectedDept])
 
   // ── Filter projects by dept ───────────────────────────────────
   // Primary: match project.department_id (set when project is edited in Projects module)
@@ -776,8 +780,14 @@ export default function SiteAssignment({ entityId }) {
         {/* ── EMPLOYEE TAB ─────────────────────────────────── */}
         {activeTab === 'EMPLOYEE' && (
           empRows.length === 0
-            ? <EmptyState msg={selectedDept ? 'No employees in this department.' : 'Select a department above to filter the roster.'} />
-            : empRows.map(row => {
+            ? <EmptyState msg={selectedDept ? 'No employees tagged to this department — go to Masters → Employees and set their Department field.' : 'Select a department above to filter the roster.'} />
+            : <>
+              {empDeptWarn && (
+                <div style={{ margin:'8px 14px', padding:'10px 14px', background:'#fff8e1', border:'1px solid #ffe082', borderRadius:8, fontSize:12, color:'#5f4200' }}>
+                  ⚠️ No employees are tagged to this department yet — showing <strong>all employees</strong>. To filter by department, go to <strong>Masters → Employees</strong> and set each employee's <em>Department</em> field to their correct department.
+                </div>
+              )}
+              {empRows.map(row => {
               const emp        = employees.find(e => e.id === row.id)
               const sites      = sitesForProject(row.projectId)
               const isAssigned = !!row.existingId
@@ -902,7 +912,8 @@ export default function SiteAssignment({ entityId }) {
                   }
                 </div>
               )
-            })
+            })}
+            </>
         )}
 
         {/* ── SUB-CONTRACTOR TAB ───────────────────────────── */}

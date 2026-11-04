@@ -791,18 +791,6 @@ export default function SiteMaster({ entityId }) {
               <div style={{ fontSize:18, fontWeight:800, color:'#1a2e3d' }}>Site Master</div>
               <div style={{ fontSize:11, color:'#6b7c93' }}>Jobs · Activities · Budget · Margin</div>
             </div>
-            <div style={{ display:'flex', gap:6, marginLeft:16 }}>
-              <button onClick={()=>setMainTab('sites')}
-                style={{ padding:'5px 14px', borderRadius:20, border:'none', cursor:'pointer', fontSize:12, fontWeight:700,
-                  background:mainTab==='sites'?'#5A32D4':'#f0f4f8', color:mainTab==='sites'?'#fff':'#6b7c93' }}>
-                📋 Sites
-              </button>
-              <button onClick={()=>setMainTab('workflows')}
-                style={{ padding:'5px 14px', borderRadius:20, border:'none', cursor:'pointer', fontSize:12, fontWeight:700,
-                  background:mainTab==='workflows'?'#5A32D4':'#f0f4f8', color:mainTab==='workflows'?'#fff':'#6b7c93' }}>
-                ⚙️ Workflows {wfTemplates.length>0?`(${wfTemplates.length})`:''}
-              </button>
-            </div>
           </div>
         </div>
 
@@ -885,6 +873,28 @@ export default function SiteMaster({ entityId }) {
             </div>
           </div>
         </>}
+      </div>
+
+      {/* ══ MAIN TAB BAR ══ */}
+      <div style={{ display:'flex', borderBottom:'3px solid #e0e7ef', marginBottom:14, background:'#fff', borderRadius:'10px 10px 0 0', overflow:'hidden', boxShadow:'0 2px 8px rgba(90,50,212,0.08)' }}>
+        <button
+          onClick={()=>setMainTab('sites')}
+          style={{ flex:1, padding:'14px 20px', border:'none', cursor:'pointer', fontSize:14, fontWeight:700, transition:'all 0.18s',
+            background: mainTab==='sites' ? 'linear-gradient(135deg,#5A32D4,#7c4dff)' : '#f8f9fc',
+            color: mainTab==='sites' ? '#fff' : '#6b7c93',
+            borderBottom: mainTab==='sites' ? '3px solid #5A32D4' : '3px solid transparent',
+            marginBottom: -3 }}>
+          📋 Sites&nbsp;&nbsp;<span style={{ fontSize:12, opacity:0.85, fontWeight:600 }}>({sites.length})</span>
+        </button>
+        <button
+          onClick={()=>setMainTab('workflows')}
+          style={{ flex:1, padding:'14px 20px', border:'none', cursor:'pointer', fontSize:14, fontWeight:700, transition:'all 0.18s',
+            background: mainTab==='workflows' ? 'linear-gradient(135deg,#5A32D4,#7c4dff)' : '#f8f9fc',
+            color: mainTab==='workflows' ? '#fff' : '#6b7c93',
+            borderBottom: mainTab==='workflows' ? '3px solid #5A32D4' : '3px solid transparent',
+            marginBottom: -3 }}>
+          ⚙️ Workflow Designer&nbsp;&nbsp;<span style={{ fontSize:12, opacity:0.85, fontWeight:600 }}>({wfTemplates.length} templates)</span>
+        </button>
       </div>
 
       {/* ══ WORKFLOWS TAB ══ */}
@@ -1058,9 +1068,10 @@ export default function SiteMaster({ entityId }) {
                         </div>
                         <select style={inp3()} value={form.wf_code} onChange={e=>onWFChange(e.target.value)}>
                           <option value="">Select workflow code…</option>
-                          {filteredWF.map(w=>(
-                            <option key={w.code} value={w.code}>[{w.code}] {w.label} — {w.uom}</option>
-                          ))}
+                          {filteredWF.map(w=>{
+                            const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-/.test(w.code)
+                            return <option key={w.code} value={w.code}>{isUUID ? w.label : `[${w.code}] ${w.label}`}</option>
+                          })}
                         </select>
                         {form.wf_code && (() => {
                           const dbWF = wfTemplates.find(t=>t.id===form.wf_code)
