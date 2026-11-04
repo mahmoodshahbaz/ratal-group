@@ -204,7 +204,7 @@ export default function SiteAssignment({ entityId }) {
     if (!entityId) return
     async function loadMasters() {
       setMasterLoading(true)
-      const [{ data: d }, { data: p }, { data: sm }, { data: e }, { data: s }, { data: sj }] = await Promise.all([
+      const [{ data: d }, { data: p }, { data: sm }, { data: sj }, { data: e }, { data: s }] = await Promise.all([
         supabase.from('departments').select('id,dept_name,dept_code')
           .eq('entity_id', entityId).eq('is_active', true).order('dept_name'),
         supabase.from('projects').select('id,project_number,project_name,status,department_id')
