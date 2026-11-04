@@ -138,12 +138,26 @@ export default function FormSiteCompletion() {
   useEffect(() => {
     if (!assignment?.id || isPreview) return
     setLoadingPrev(true)
+
+    // Seed from site_masters.milestones status (desktop progress) —
+    // any milestone already marked COMPLETED on desktop shows as pre-ticked here
+    const masterDone = {}
+    if (assignment.site_milestones?.length) {
+      assignment.site_milestones.forEach(m => {
+        if (m.status === 'COMPLETED' && m.name) masterDone[m.name] = true
+      })
+    }
+
+    // Also merge in site_assignments.completed_milestones (mobile submissions)
     supabase.from('site_assignments').select('completed_milestones').eq('id', assignment.id).maybeSingle()
       .then(({ data }) => {
+        const combined = { ...masterDone }
         if (data?.completed_milestones?.length) {
-          const map = {}
-          data.completed_milestones.forEach(n => { map[n] = true })
-          setPrevDone(map); setChecked(map)
+          data.completed_milestones.forEach(n => { combined[n] = true })
+        }
+        if (Object.keys(combined).length > 0) {
+          setPrevDone(combined)
+          setChecked(combined)
         }
         setLoadingPrev(false)
       })

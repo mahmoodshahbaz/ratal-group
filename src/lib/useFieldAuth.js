@@ -257,13 +257,16 @@ export function useFieldAuth() {
       // Shape into the format FormSiteCompletion expects
       const assignments = (rawAssignments || []).map(a => {
         const m = masterMap[a.site_master_id] || {}
-        // Extract ordered milestone names from site_masters.milestones JSON
-        // so the mobile form shows the same stages as the desktop WF Code milestones
+        // Extract milestone data from site_masters.milestones JSON
+        // so the mobile form shows the same stages as the desktop WF Code milestones,
+        // AND pre-checks milestones already marked COMPLETED on desktop.
         let site_milestone_names = null
+        let site_milestones = null
         try {
           const ml = typeof m.milestones === 'string' ? JSON.parse(m.milestones) : m.milestones
           if (Array.isArray(ml) && ml.length > 0) {
             site_milestone_names = ml.map(ms => ms.name || ms).filter(Boolean)
+            site_milestones = ml  // full objects: [{name, status, date, notes}]
           }
         } catch {}
         return {
@@ -272,6 +275,7 @@ export function useFieldAuth() {
           site_name:            m.site_name || '',
           wf_code:              m.wf_code || null,
           site_milestone_names, // null = use hardcoded MILESTONE_SETS fallback
+          site_milestones,      // null = no status info; used to pre-check desktop-completed milestones
         }
       })
 
