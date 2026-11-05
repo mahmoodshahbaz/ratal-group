@@ -376,17 +376,16 @@ export default function FormFieldPayment() {
     try {
       const bank = (DEPT_CARDS[sessionDept]||[]).find(c=>c.value===card)?.bank
       if(!bank) return
-      const {data:atmLines} = await sb.from('money_request_lines').select('money_request_id,iban,amount,department_name').eq('iban',bank)
-      if(!atmLines?.length){ setPools({}); return }
+      const {data:atmLines,error:atmErr} = await sb.from('money_request_lines').select('money_request_id,iban,amount').eq('iban',bank)
+      if(atmErr||!atmLines?.length){ setPools({}); return }
 
       const mrAtmMap={}
       for(const l of atmLines){
-        if(!mrAtmMap[l.money_request_id]) mrAtmMap[l.money_request_id]={atm_amount:0,dept_name:l.department_name}
+        if(!mrAtmMap[l.money_request_id]) mrAtmMap[l.money_request_id]={atm_amount:0}
         mrAtmMap[l.money_request_id].atm_amount+=parseFloat(l.amount)||0
-        if(l.department_name) mrAtmMap[l.money_request_id].dept_name=l.department_name
       }
       const mrIds=Object.keys(mrAtmMap)
-      const {data:mrs} = await sb.from('money_requests').select('id,request_number,request_date,department_name').in('id',mrIds).in('status',['OPEN','ACTIVE','APPROVED']).order('request_date',{ascending:true})
+      const {data:mrs} = await sb.from('money_requests').select('id,request_number,request_date,department_name').in('id',mrIds).in('status',['OPEN','ACTIVE','APPROVED','ISSUED','FUNDS_SENT']).order('request_date',{ascending:true})
       if(!mrs?.length){ setPools({}); return }
 
       const {data:priorAllocs} = await sb.from('field_payment_mr_allocations').select('money_request_id,allocated_amount').in('money_request_id',mrIds).eq('is_over_distributed',false)
@@ -400,7 +399,7 @@ export default function FormFieldPayment() {
       for(const mr of mrs){
         const atmData=mrAtmMap[mr.id]; if(!atmData) continue
         const atmAmt=atmData.atm_amount, prior=priorByMr[mr.id]||0, remaining=Math.max(0,atmAmt-prior)
-        const deptName=(mr.department_name||atmData.dept_name||'').toUpperCase()
+        const deptName=(mr.department_name||'').toUpperCase()
         const deptCode=depts.find(d=>deptName.includes(d))
         if(!deptCode) continue
         newPools[deptCode].mrs.push({id:mr.id,request_number:mr.request_number,request_date:mr.request_date,atm_amount:atmAmt,prior_distributed:prior,remaining})
