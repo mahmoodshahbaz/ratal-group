@@ -762,6 +762,9 @@ export default function FormLanding() {
           emp.nationality
             ? { label: isAr ? 'الجنسية' : 'Nationality', value: emp.nationality }
             : null,
+          emp.department?.dept_code || emp.dept_code
+            ? { label: isAr ? 'القسم' : 'Department', value: emp.department?.dept_code || emp.dept_code }
+            : null,
           auth.assignments?.length > 0
             ? { label: isAr ? 'المواقع المخصصة' : 'Active Sites', value: `${auth.assignments.length} ${isAr ? 'موقع' : auth.assignments.length === 1 ? 'site' : 'sites'}` }
             : null,
