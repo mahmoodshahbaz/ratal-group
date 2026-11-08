@@ -252,21 +252,12 @@ export function useFieldAuth() {
         return
       }
 
-      // ── OTP Activation gate ───────────────────────────────────────────────
-      // If the RPC returns activated_at = null, the token needs OTP before access
-      if (result.activated_at === null || result.activated_at === undefined) {
-        // Check if the DB actually has the activated_at column (older schema won't)
-        // We detect: RPC explicitly returns activated_at field as null (not missing)
-        if ('activated_at' in (result || {})) {
-          setState(s => ({
-            ...s,
-            loading:         false,
-            needsActivation: true,
-            activationToken: token,
-          }))
-          return
-        }
-      }
+      // ── OTP Activation gate (DISABLED — edge function not deployed yet) ────
+      // Re-enable when supabase/functions/qr-activate is deployed:
+      // if (result.activated_at === null && 'activated_at' in (result || {})) {
+      //   setState(s => ({ ...s, loading: false, needsActivation: true, activationToken: token }))
+      //   return
+      // }
       // ─────────────────────────────────────────────────────────────────────
 
       // Build qt-compatible object from RPC result
