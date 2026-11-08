@@ -483,6 +483,7 @@ export default function Overtime({ entityId, role }) {
         }}
         nextLabel={wizardStep === 3 ? (saving ? 'Submitting…' : 'Submit OT Request') : 'Next →'}
         nextDisabled={saving}
+        subjectLabel={{ line1: depts.find(d=>d.id===deptId)?.dept_code || deptName || null, line2: employees.find(e=>e.id===empId)?.full_name_en || null }}
       >
         {/* ── Step 1: Request Details ── */}
         {wizardStep === 0 && (

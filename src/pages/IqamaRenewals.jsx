@@ -639,11 +639,12 @@ export default function IqamaRenewals({ entityId }) {
         title={['New', 'Iqama', 'Renewal']}
         steps={['Batch Details', 'Add Employees']}
         currentStep={step}
-        onBack={() => setStep(1)}
-        backLabel="Back"
+        onBack={step === 1 ? () => { setShowForm(false); setStep(1) } : () => setStep(1)}
+        backLabel={step === 1 ? 'Cancel' : 'Back'}
         onNext={step === 1 ? goToStep2 : saveBatch}
         nextLabel={step === 1 ? 'Next: Add Employees' : (saving ? 'Saving…' : 'Create Batch')}
         nextDisabled={saving || (step === 2 && levyExceeded)}
+        subjectLabel={batchForm.sadad_number || null}
       >
         {/* ── Step 1: Batch Details ── */}
         {step === 1 && (

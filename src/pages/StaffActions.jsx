@@ -410,11 +410,12 @@ export default function StaffActions({ entityId }) {
         title={['New', 'Staff Action', 'Request']}
         steps={['Action Details', 'Notes & Submit']}
         currentStep={wizardStep}
-        onBack={() => setWizardStep(1)}
-        backLabel="Back"
+        onBack={wizardStep === 1 ? () => { setShowModal(false); setWizardStep(1) } : () => setWizardStep(1)}
+        backLabel={wizardStep === 1 ? 'Cancel' : 'Back'}
         onNext={wizardStep === 1 ? () => setWizardStep(2) : submitSar}
         nextLabel={wizardStep === 1 ? 'Next: Notes & Submit' : (saving ? 'Submitting…' : 'Submit SAR')}
         nextDisabled={saving || !form.employee_id || !form.reason || (isAdmin && !activeDeptId) || (form.action_type === 'RELEASE' && !form.last_working_day) || (form.action_type === 'TRANSFER' && !form.transfer_to_dept_id)}
+        subjectLabel={{ line1: (myDept || depts.find(d=>d.id===activeDeptId))?.dept_code || (myDept || depts.find(d=>d.id===activeDeptId))?.dept_name || null, line2: employees.find(e=>e.id===form.employee_id)?.full_name || null }}
       >
         {/* ── STEP 1: Action Details ── */}
         {wizardStep === 1 && (

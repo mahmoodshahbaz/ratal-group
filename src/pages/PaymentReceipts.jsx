@@ -619,6 +619,7 @@ export default function PaymentReceipts({ entityId, entityName, entityNameEn, en
         } : saveReceipt}
         nextLabel={wizardStep<2 ? 'Save & Next' : (saving ? '⏳ Saving…' : '💰 Post Receipt')}
         nextDisabled={saving && wizardStep===2}
+        subjectLabel={{ line1: contractors.find(c=>c.id===form.customer_id)?.contractor_name || null, line2: form.receipt_number || null }}
       >
         <div style={{ fontFamily:"'Poppins', sans-serif" }}>
 

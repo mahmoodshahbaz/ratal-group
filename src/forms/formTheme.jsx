@@ -73,7 +73,7 @@ export function FormPage({ theme, isAr, langToggle, children, variant = 'light' 
   const hdrClr = variant === 'dark' ? MP.textOnDark : MP.textDark
   const subClr = variant === 'dark' ? MP.textMutedDark : MP.textMutedLight
   return (
-    <div style={{ minHeight: '100vh', background: bg, fontFamily: MP.font, direction: isAr ? 'rtl' : 'ltr' }}>
+    <div style={{ minHeight: '100dvh', background: bg, fontFamily: MP.font, direction: isAr ? 'rtl' : 'ltr' }}>
       {/* Header bar */}
       <div style={{ background: hdrBg, padding: '14px 18px', borderBottom: `1px solid ${variant === 'dark' ? '#3A3D35' : '#E4E0D3'}` }}>
         <div style={{ maxWidth: 520, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -259,7 +259,7 @@ export function SuccessScreen({ theme, reqNumber, isAr, onAnother }) {
 // ── Login required screen ─────────────────────────────────────────────────────
 export function LoginRequired() {
   return (
-    <div style={{ minHeight: '100vh', background: MP.cream, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: MP.font }}>
+    <div style={{ minHeight: '100dvh', background: MP.cream, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: MP.font }}>
       <div style={{ background: MP.lightCard, borderRadius: 16, border: `1px solid #E4E0D3`, padding: 40, textAlign: 'center', maxWidth: 340, margin: '20px' }}>
         <div style={{ fontSize: 44, marginBottom: 14 }}>🔐</div>
         <div style={{ fontSize: 17, fontWeight: 700, color: MP.textDark, marginBottom: 8 }}>Sign in required</div>

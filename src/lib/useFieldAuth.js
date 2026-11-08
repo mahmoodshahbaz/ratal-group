@@ -20,6 +20,33 @@ import { supabase } from './supabase'
 
 const STORAGE_KEY  = 'accsys_field_token'
 const ENTITY_KEY   = 'accsys_field_entity'
+const DEVICE_KEY   = 'accsys_device_id'
+
+// Persistent device fingerprint — generated once per browser profile
+function getDeviceId() {
+  let id = localStorage.getItem(DEVICE_KEY)
+  if (!id) {
+    const arr = new Uint8Array(12)
+    crypto.getRandomValues(arr)
+    id = Array.from(arr).map(b => b.toString(16).padStart(2,'0')).join('')
+    localStorage.setItem(DEVICE_KEY, id)
+  }
+  return id
+}
+
+const ACTIVATE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/qr-activate`
+
+async function callActivate(action, payload) {
+  const res = await fetch(ACTIVATE_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({ action, ...payload }),
+  })
+  return res.json()
+}
 
 // ── Role definitions ────────────────────────────────────────────────────────
 
@@ -60,13 +87,21 @@ export const ROLE_COLORS = {
 // Does NOT include eligibility checks (food/overtime) — those are applied separately
 
 export const ROLE_FORM_ACCESS = {
-  STAFF_TECH:       ['expense_daily','expense_claim','food_allowance','overtime','site_completion','payment_validation'],
-  STAFF_SUPERVISOR: ['expense_daily','expense_claim','food_allowance','overtime','site_completion','money_request','po_request','payment_validation'],
-  STAFF_PM:         ['expense_daily','expense_claim','food_allowance','overtime','site_completion','money_request','po_request','field_payment','payment_validation','dh_dashboard'],
+  // Field Technician — daily submissions only; no site completion, no PO/MR
+  STAFF_TECH:       ['expense_daily','expense_claim','food_allowance','overtime','payment_validation'],
+  // Supervisor — adds PO Request (sub-contractor POs); no money request, no site completion
+  STAFF_SUPERVISOR: ['expense_daily','expense_claim','food_allowance','overtime','po_request','payment_validation'],
+  // Project Manager — adds Money Request (requires DH approval); no field payment
+  STAFF_PM:         ['expense_daily','expense_claim','food_allowance','overtime','po_request','money_request','payment_validation'],
+  // Department Head — full field access including site completion, field payment, sub-con claims
   STAFF_DH:         ['expense_daily','expense_claim','food_allowance','overtime','site_completion','money_request','po_request','field_payment','subcon_claim','car_maintenance','payment_validation','dh_dashboard'],
+  // Sub-Contractor — site completion and their own claims only
   SUBCONTRACTOR:    ['site_completion','subcon_claim','payment_validation'],
-  OUTSOURCED:       ['expense_daily','expense_claim','site_completion','payment_validation'],
-  DRIVER:           ['expense_daily','expense_claim','car_maintenance','payment_validation'],
+  // Outsourced Staff — daily expense and claim only
+  OUTSOURCED:       ['expense_daily','expense_claim','payment_validation'],
+  // Driver — same base as TECH plus car maintenance
+  DRIVER:           ['expense_daily','expense_claim','food_allowance','overtime','car_maintenance','payment_validation'],
+  // Finance / Admin — full access, same as DH
   FINANCE:          ['expense_daily','expense_claim','food_allowance','overtime','site_completion','money_request','po_request','field_payment','subcon_claim','car_maintenance','payment_validation','dh_dashboard'],
 }
 
@@ -74,19 +109,25 @@ export const ROLE_FORM_ACCESS = {
 
 export function useFieldAuth() {
   const [state, setState] = useState({
-    loading:        true,
-    employee:       null,   // full employee object from DB
-    role:           null,   // string from ROLES
-    employmentType: null,   // STAFF | OUTSOURCED | SUBCONTRACTOR
-    entityId:       null,
-    assignments:    [],     // site_assignments[] for this employee
-    allowedForms:   [],     // keys of forms this role+eligibility can see
-    error:          null,   // null | 'no_token' | 'invalid_token' | 'token_inactive' | 'token_expired' | 'employee_inactive'
-    debugError:     null,   // actual Supabase error message for debugging
-    tokenId:        null,
-    siteScopeId:    null,   // site_master_id — if set, token is scoped to one site
-    boundMobile:    null,   // bound IMEI/mobile for this token
-    expiresAt:      null,   // token expiry timestamp
+    loading:          true,
+    employee:         null,   // full employee object from DB
+    role:             null,   // string from ROLES
+    employmentType:   null,   // STAFF | OUTSOURCED | SUBCONTRACTOR
+    entityId:         null,
+    assignments:      [],     // site_assignments[] for this employee
+    allowedForms:     [],     // keys of forms this role+eligibility can see
+    error:            null,   // null | 'no_token' | 'invalid_token' | 'token_inactive' | 'token_expired' | 'employee_inactive'
+    debugError:       null,   // actual Supabase error message for debugging
+    tokenId:          null,
+    siteScopeId:      null,   // site_master_id — if set, token is scoped to one site
+    boundMobile:      null,   // bound IMEI/mobile for this token
+    expiresAt:        null,   // token expiry timestamp
+    // OTP activation
+    needsActivation:  false,  // true when token exists but activated_at IS NULL
+    activationToken:  null,   // the raw token string — needed to call qr-activate
+    otpSending:       false,
+    otpSent:          false,
+    otpError:         null,
   })
 
   useEffect(() => {
@@ -210,6 +251,23 @@ export function useFieldAuth() {
         sessionStorage.removeItem(STORAGE_KEY)
         return
       }
+
+      // ── OTP Activation gate ───────────────────────────────────────────────
+      // If the RPC returns activated_at = null, the token needs OTP before access
+      if (result.activated_at === null || result.activated_at === undefined) {
+        // Check if the DB actually has the activated_at column (older schema won't)
+        // We detect: RPC explicitly returns activated_at field as null (not missing)
+        if ('activated_at' in (result || {})) {
+          setState(s => ({
+            ...s,
+            loading:         false,
+            needsActivation: true,
+            activationToken: token,
+          }))
+          return
+        }
+      }
+      // ─────────────────────────────────────────────────────────────────────
 
       // Build qt-compatible object from RPC result
       const qt = {
@@ -352,10 +410,52 @@ export function useFieldAuth() {
       employmentType: null, entityId: null,
       assignments: [], allowedForms: [], error: 'no_token', tokenId: null,
       siteScopeId: null, boundMobile: null, expiresAt: null,
+      needsActivation: false, activationToken: null,
+      otpSending: false, otpSent: false, otpError: null,
     })
   }
 
-  return { ...state, logout }
+  /** Request OTP — called when the activation screen first shows */
+  async function requestOTP() {
+    const token = state.activationToken
+    if (!token) return
+    setState(s => ({ ...s, otpSending: true, otpError: null }))
+    try {
+      const res = await callActivate('request_otp', { token })
+      if (res.error) {
+        setState(s => ({ ...s, otpSending: false, otpError: res.error }))
+      } else {
+        setState(s => ({ ...s, otpSending: false, otpSent: true }))
+      }
+    } catch (e) {
+      setState(s => ({ ...s, otpSending: false, otpError: 'Network error. Please try again.' }))
+    }
+  }
+
+  /** Verify OTP — called when employee submits the 6-digit code */
+  async function verifyOTP(otp) {
+    const token = state.activationToken
+    if (!token || !otp) return
+    setState(s => ({ ...s, otpSending: true, otpError: null }))
+    try {
+      const res = await callActivate('verify_otp', { token, otp, device_id: getDeviceId() })
+      if (res.error) {
+        const msg = res.error === 'invalid_otp'    ? 'Incorrect OTP. Please try again.'
+                  : res.error === 'otp_expired'    ? 'OTP has expired. Please request a new one.'
+                  : res.error === 'no_otp_requested' ? 'Please request an OTP first.'
+                  : res.error
+        setState(s => ({ ...s, otpSending: false, otpError: msg }))
+      } else {
+        // OTP verified — now complete normal token validation
+        setState(s => ({ ...s, otpSending: false, needsActivation: false, loading: true }))
+        await validateToken(token)
+      }
+    } catch (e) {
+      setState(s => ({ ...s, otpSending: false, otpError: 'Network error. Please try again.' }))
+    }
+  }
+
+  return { ...state, logout, requestOTP, verifyOTP }
 }
 
 // ── Helpers exported for use in individual forms ─────────────────────────────

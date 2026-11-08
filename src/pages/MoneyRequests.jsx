@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { printDocument } from '../lib/templatePrint'
+import { useDriveUpload } from '../hooks/useDriveUpload'
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
 import FormShell from '../components/FormShell'
@@ -137,6 +138,7 @@ const EMPTY_LINE = {
   party_type:'', party_id:'', party_name:'',
   payment_type:'', expense_type:'', project_id:'',
   iban:'', sadad_no:'', iban_options:[], amount:'', remarks:'',
+  alias_name:'',   // IBAN holder name when different from payee (same-bank routing to save charges)
 }
 const EMPTY_DIST = { party_type:'EMPLOYEE', party_id:'', party_name:'', gross_amount:'', vat_amount:'0', account_code:'EXP-001', purpose:'', iban_used:'' }
 
@@ -170,7 +172,9 @@ export default function MoneyRequests({ entityId, currentUser }) {
   const [lines,           setLines]           = useState([{ ...EMPTY_LINE }])
   const [mrStep,          setMrStep]          = useState(1)   // 1=Request Details, 2=Attachments
   const [mrAttachments,   setMrAttachments]   = useState([])
+  const [mrUploadProg,    setMrUploadProg]    = useState(null)  // null | {done,total}
   const mrFileRef = useRef(null)
+  const { upload: uploadDrive, uploading: driveUploading } = useDriveUpload()
   const [depts,         setDepts]         = useState([])   // [{id, dept_code, dept_name, dept_head_id, pm_id, supervisor_id}]
   const [deptEmployees, setDeptEmployees] = useState([])   // Tier-1 FK staff (Requestor dropdown)
   const [deptAllEmps,   setDeptAllEmps]   = useState([])   // ALL employees in dept (Payment Lines party)
@@ -532,6 +536,7 @@ export default function MoneyRequests({ entityId, currentUser }) {
       supplier_name: l.party_name    || null,
       account_code: l.expense_type   || null,
       iban:         l.party_type === 'Government' ? (l.sadad_no || null) : (l.iban || null),
+      alias_name:   l.alias_name     || null,
       project_id:   l.project_id     || null,
       amount:       parseFloat(l.amount),
       remarks:      l.remarks        || null,
@@ -610,6 +615,26 @@ export default function MoneyRequests({ entityId, currentUser }) {
       alert('Failed to save MR lines:\n' + linesErr.message + '\n\nIf you see "column does not exist", run FIX_MR_LINES_COLUMNS.sql in Supabase SQL Editor first.')
       return
     }
+    // ── Upload attachments to Drive ──────────────────────────────────────────
+    if (mrAttachments.length > 0) {
+      const plate = mr.request_number || mr.id
+      setMrUploadProg({ done: 0, total: mrAttachments.length })
+      const attachUrls = []
+      for (let idx = 0; idx < mrAttachments.length; idx++) {
+        setMrUploadProg({ done: idx, total: mrAttachments.length })
+        try {
+          const result = await uploadDrive(mrAttachments[idx], 'vouchers', `MR-${plate}`)
+          if (result?.viewUrl) attachUrls.push(result.viewUrl)
+        } catch (_) { /* non-fatal — keep going */ }
+      }
+      setMrUploadProg(null)
+      if (attachUrls.length > 0) {
+        await supabase.from('money_requests')
+          .update({ attachment_urls: attachUrls })
+          .eq('id', mr.id)
+      }
+    }
+
     // ── Auto-print + Drive save on submit ────────────────────────────────────
     try {
       const reqEmp    = employees.find(e => e.id === form.requested_by)
@@ -673,6 +698,7 @@ export default function MoneyRequests({ entityId, currentUser }) {
     setEditingMR(null)
     setMrStep(1)
     setMrAttachments([])
+    setMrUploadProg(null)
   }
 
   // ─── Start Edit (Recall & Edit / Edit & Resubmit) ─────────────────────────
@@ -736,6 +762,7 @@ export default function MoneyRequests({ entityId, currentUser }) {
       iban_options: [],
       amount:       l.amount != null ? l.amount.toString() : '',
       remarks:      l.remarks       || '',
+      alias_name:   l.alias_name    || '',
     }))
     setLines(formLines.length > 0 ? formLines : [{ ...EMPTY_LINE }])
 
@@ -1388,8 +1415,9 @@ export default function MoneyRequests({ entityId, currentUser }) {
               }
               setMrStep(2)
             } : createMR}
-            nextLabel={mrStep===1 ? 'Save & Next →' : (saving ? '⏳ Saving…' : editingMR ? `↩ Resubmit — SAR ${totalAmt > 0 ? totalAmt.toLocaleString() : '0'}` : `💰 Submit${totalAmt > 0 ? ` — SAR ${totalAmt.toLocaleString()}` : ''}`)}
-            nextDisabled={mrStep===1 ? totalAmt <= 0 : saving}
+            nextLabel={mrStep===1 ? 'Next: Attachments →' : (saving || driveUploading) ? '⏳ Saving…' : editingMR ? `↩ Resubmit — SAR ${totalAmt > 0 ? totalAmt.toLocaleString() : '0'}` : `💰 Submit${totalAmt > 0 ? ` — SAR ${totalAmt.toLocaleString()}` : ''}`}
+            nextDisabled={mrStep===1 ? totalAmt <= 0 : (saving || driveUploading)}
+            subjectLabel={{ line1: form.department || null, line2: editingMR?.request_number || null }}
           >
           <div style={{ fontFamily:"'Poppins','Inter',sans-serif" }}>
 
@@ -1493,10 +1521,10 @@ export default function MoneyRequests({ entityId, currentUser }) {
                     const ibanMissing = !isGov && !isANB && !ln.iban && !!ln.party_type
 
                     return (
-                      <div key={i} style={{ display:'grid',
+                      <div key={i} style={{ borderBottom:'1px solid #f0f5fa', background:'#fff' }}>
+                      <div style={{ display:'grid',
                         gridTemplateColumns:'minmax(100px,1.4fr) 68px 88px 66px 100px 76px 28px',
-                        gap:6, padding:'7px 10px', alignItems:'center',
-                        borderBottom:'1px solid #f0f5fa', background:'#fff' }}>
+                        gap:6, padding:'7px 10px', alignItems:'center' }}>
 
                         {/* Party Name */}
                         {isEmployee && (
@@ -1601,6 +1629,23 @@ export default function MoneyRequests({ entityId, currentUser }) {
                                 display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>✕</button>
                           : <div />}
                       </div>
+
+                      {/* Alias sub-row — only for Bank-Transfer / Online lines */}
+                      {(ln.payment_type === 'Bank-Transfer' || ln.payment_type === 'Online') && (
+                        <div style={{ display:'flex', alignItems:'center', gap:8,
+                          padding:'4px 10px 8px', background:'#fffde7',
+                          borderTop:'1px dashed #f9d835' }}>
+                          <span style={{ fontSize:10, fontWeight:800, color:'#b7791f',
+                            whiteSpace:'nowrap', letterSpacing:0.5 }}>🔀 VIA ALIAS</span>
+                          <input
+                            style={{ ...rInp, flex:1, fontSize:11, background:'#fffff0',
+                              borderColor: ln.alias_name ? '#f9d835' : '#e8e0b0' }}
+                            placeholder="IBAN holder name if different from payee (leave blank if same person)…"
+                            value={ln.alias_name || ''}
+                            onChange={e => updateCreateLine(i, { alias_name: e.target.value })} />
+                        </div>
+                      )}
+                    </div>
                     )
                   }
 
@@ -1726,7 +1771,15 @@ export default function MoneyRequests({ entityId, currentUser }) {
                       ))}
                     </div>
                   )}
-                  <input ref={mrFileRef} type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                  {mrUploadProg && (
+                    <div style={{ marginBottom:12, background:'#e8f5e9', border:'1.5px solid #a5d6a7', borderRadius:9, padding:'10px 14px', fontSize:12, fontWeight:700, color:'#2e7d32' }}>
+                      ⏳ Uploading {mrUploadProg.done + 1} / {mrUploadProg.total}…
+                      <div style={{ marginTop:6, height:4, background:'#c8e6c9', borderRadius:4 }}>
+                        <div style={{ height:4, background:'#43a047', borderRadius:4, width:`${((mrUploadProg.done+1)/mrUploadProg.total)*100}%`, transition:'width 0.3s' }} />
+                      </div>
+                    </div>
+                  )}
+                  <input ref={mrFileRef} type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.docx"
                     style={{ display:'none' }}
                     onChange={e=>setMrAttachments(a=>[...a,...Array.from(e.target.files)])} />
                   <button onClick={()=>mrFileRef.current?.click()}
@@ -1734,7 +1787,7 @@ export default function MoneyRequests({ entityId, currentUser }) {
                     <span style={{ fontSize:20 }}>+</span> Add Attachment (Quote, Invoice, Receipt…)
                   </button>
                   <div style={{ padding:'12px 14px', background:'#fffde7', borderRadius:9, border:'1px solid #ffe082', fontSize:11, color:'#7a6000' }}>
-                    ℹ Files upload to Google Drive when the request is saved. Supported: PDF, JPG, PNG, DOC, XLS (max 25 MB each). Zero attachments allowed.
+                    ℹ Files upload to Google Drive when the request is saved. Supported: PDF, JPG, PNG, WEBP, HEIC, DOCX (max 10 MB each). Zero attachments is fine.
                   </div>
                 </div>
               )}
@@ -1896,7 +1949,14 @@ export default function MoneyRequests({ entityId, currentUser }) {
                       : detailLines.map(ln => (
                         <tr key={ln.id} style={{ borderTop:'1px solid #f0f4f8' }}>
                           <td style={{ padding:'8px 10px' }}><span style={S.chip('#e3f2fd','#1565c0')}>{ln.line_type?.replace(/_/g,' ')}</span></td>
-                          <td style={{ padding:'8px 10px', fontSize:12 }}>{ln.supplier_name || '—'}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12 }}>
+                            {ln.supplier_name || '—'}
+                            {ln.alias_name && (
+                              <span style={{ display:'block', fontSize:10, color:'#b7791f', marginTop:2 }}>
+                                🔀 via {ln.alias_name}
+                              </span>
+                            )}
+                          </td>
                           <td style={{ padding:'8px 10px', fontSize:11, color:'#6b7c93' }}>{ln.account_code || '—'}</td>
                           <td style={{ padding:'8px 10px', fontSize:13, fontWeight:700 }}>SAR {(ln.amount || 0).toLocaleString()}</td>
                         </tr>

@@ -60,6 +60,7 @@ export default function FormShell({
   backLabel    = 'Back',
   nextLabel    = 'Save & Next',
   nextDisabled = false,
+  subjectLabel = null,   // e.g. employee name, PO#, plate — shown at sidebar bottom
   children,
 }) {
   if (!isOpen) return null
@@ -140,9 +141,9 @@ export default function FormShell({
 
             {/* Chapter label */}
             <div style={{
-              fontSize: 9, fontWeight: 800, color: L3,
-              letterSpacing: 2.2, textTransform: 'uppercase',
-              marginTop: 4, marginBottom: 16, fontFamily: PP,
+              fontSize: 13, fontWeight: 800, color: L3,
+              letterSpacing: 1.8, textTransform: 'uppercase',
+              marginTop: 2, marginBottom: 14, fontFamily: PP,
             }}>
               {chapterName}
             </div>
@@ -187,7 +188,7 @@ export default function FormShell({
             )}
 
             {/* Vertical step list */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1 }}>
               {steps.map((name, i) => {
                 const n      = i + 1
                 const active = n === currentStep
@@ -226,6 +227,43 @@ export default function FormShell({
                 )
               })}
             </div>
+
+            {/* Subject label footer — primary key of the record being created/edited */}
+            {subjectLabel && (typeof subjectLabel === 'string' ? !!subjectLabel : !!(subjectLabel.line1 || subjectLabel.line2)) && (
+              <div style={{
+                marginTop: 14,
+                borderTop: `1px solid ${L3}30`,
+                paddingTop: 10,
+                fontFamily: PP,
+              }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: L3, letterSpacing: 1.4,
+                  textTransform: 'uppercase', marginBottom: 3 }}>
+                  For
+                </div>
+                {typeof subjectLabel === 'string' ? (
+                  <div style={{ fontSize: 12, fontWeight: 800, color: MAIN,
+                    lineHeight: 1.3, wordBreak: 'break-word' }}>
+                    {subjectLabel}
+                  </div>
+                ) : (
+                  <>
+                    {subjectLabel.line1 && (
+                      <div style={{ fontSize: 12, fontWeight: 800, color: MAIN,
+                        lineHeight: 1.3, wordBreak: 'break-word' }}>
+                        {subjectLabel.line1}
+                      </div>
+                    )}
+                    {subjectLabel.line2 && (
+                      <div style={{ fontSize: 10, fontWeight: 600, color: L3,
+                        lineHeight: 1.4, wordBreak: 'break-word', marginTop: 2,
+                        fontFamily: PP }}>
+                        {subjectLabel.line2}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* ══════════ L4 WHITE CARD ══════════ */}

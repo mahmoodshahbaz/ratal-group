@@ -1,0 +1,318 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Templates Preview</title>
+<style>body{margin:0;padding:30px 20px;background:#dee2e6;font-family:Arial,sans-serif;}.label{background:#1a2e3d;color:#fff;font-size:11px;font-weight:700;padding:6px 16px;border-radius:4px 4px 0 0;display:inline-block;}.wrapper{box-shadow:0 4px 24px rgba(0,0,0,.2);margin-bottom:48px;}</style>
+</head><body>
+<div class="label">Template 1 — Expense Record Voucher</div>
+<div class="wrapper"><!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Expense Record Voucher — EXP-2026-0847</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Arial,sans-serif;background:#fff;font-size:11px;color:#1a2e3d;}
+  .page{width:794px;margin:0 auto;padding:24px 32px 56px;position:relative;background:#fff;}
+  .co-name{font-size:15px;font-weight:700;color:#1a2e3d;}
+  .co-sub{font-size:9px;color:#555;margin-top:1px;}
+  .rpt-title{font-size:13px;font-weight:700;color:#8B2500;margin-top:4px;text-transform:uppercase;letter-spacing:.3px;}
+  .rpt-sub{font-size:11px;font-weight:700;color:#8B2500;margin-top:1px;}
+  .meta{font-size:8.5px;color:#888;margin:10px 0 6px;display:flex;justify-content:space-between;}
+  /* info grid */
+  .info-tbl{width:100%;border-collapse:collapse;margin-bottom:10px;}
+  .info-tbl td{padding:5px 10px;border:1px solid #c8d4e0;font-size:10px;}
+  .info-tbl .lbl{background:#1a3a5c;color:#fff;font-weight:700;width:100px;}
+  .info-tbl .val{background:#fff;color:#1a2e3d;font-weight:600;}
+  /* date chips row */
+  .date-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;margin-bottom:10px;border:1px solid #c8d4e0;}
+  .date-cell{padding:7px 12px;border-right:1px solid #c8d4e0;text-align:center;}
+  .date-cell:last-child{border-right:none;}
+  .date-cell-lbl{font-size:8px;font-weight:700;color:#fff;background:#1a3a5c;padding:2px 6px;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px;display:block;}
+  .date-cell-val{font-size:11px;font-weight:700;color:#1a2e3d;}
+  /* photo box */
+  .photo-box{border:1px solid #c8d4e0;margin-bottom:10px;}
+  .photo-hdr{background:#1a3a5c;color:#fff;font-size:9px;font-weight:700;padding:4px 10px;text-transform:uppercase;letter-spacing:.3px;}
+  .photo-body{padding:8px;text-align:center;min-height:200px;display:flex;align-items:center;justify-content:center;background:#f8f9fa;}
+  /* amount table */
+  .amt-tbl{width:100%;border-collapse:collapse;margin-bottom:10px;}
+  .amt-tbl td{padding:5px 10px;border:1px solid #c8d4e0;font-size:10px;}
+  .amt-tbl .lbl{background:#f0f4f8;font-weight:600;color:#1a3a5c;width:60%;}
+  .amt-tbl .val{text-align:right;font-weight:700;}
+  .amt-tbl .total-row td{background:#3D1A00;color:#fff;font-size:12px;font-weight:800;}
+  /* purpose / notes */
+  .notes-box{border:1px solid #c8d4e0;margin-bottom:10px;}
+  .notes-hdr{background:#1a3a5c;color:#fff;font-size:9px;font-weight:700;padding:4px 10px;text-transform:uppercase;letter-spacing:.3px;}
+  .notes-body{padding:7px 10px;font-size:10px;color:#1a2e3d;line-height:1.6;min-height:32px;}
+  /* signature strip */
+  .sig-strip{display:grid;gap:0;border:1px solid #c8d4e0;margin-top:16px;}
+  .sig-cell{padding:8px 10px;border-right:1px solid #c8d4e0;text-align:center;}
+  .sig-cell:last-child{border-right:none;}
+  .sig-role{font-size:9px;font-weight:700;color:#fff;background:#1a3a5c;padding:3px 6px;display:block;text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px;}
+  .sig-line{border-top:1.5px solid #555;margin:28px 8px 4px;}
+  .sig-name{font-size:9.5px;font-weight:700;color:#1a2e3d;}
+  .sig-label{font-size:8.5px;color:#888;font-style:italic;}
+  /* thumb+sig box in CPV */
+  .receipt-boxes{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0 4px;}
+  .receipt-box{border:1.5px solid #bbb;border-radius:3px;text-align:center;padding:3px;min-height:50px;display:flex;flex-direction:column;justify-content:flex-end;}
+  .receipt-box.thumb{border-style:dashed;background:#fafafa;}
+  .receipt-box-lbl{font-size:7px;font-weight:700;color:#888;text-transform:uppercase;padding-bottom:2px;}
+  /* footer */
+  .page-footer{position:absolute;bottom:0;left:0;right:0;border-top:1px solid #c8d4e0;padding:5px 32px;font-size:8px;color:#aaa;display:flex;justify-content:space-between;}
+
+.info-tbl .lbl{width:120px;}
+</style></head><body>
+<div class="page">
+
+  <!-- HEADER -->
+  <table style="width:100%;margin-bottom:4px;"><tr>
+    <td style="vertical-align:top;">
+      <div class="co-name">Ratal Advanced Technologies</div>
+      <div class="co-sub">Advanced Communication &amp; Computer Systems</div>
+      <div class="rpt-title">Expense Record Voucher</div>
+      <div class="rpt-sub">Ahmed Al-Rashidi &mdash; Site Operations</div>
+    </td>
+    <td style="text-align:right;vertical-align:top;">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=REF%3AEXP-2026-0847%20EMP%3AAhmed%20Al-Rashidi%20PRJ%3APRJ-0094%20AMT%3A393.99%20DATE%3A2026-11-07" width="90" height="90" alt="QR" style="border:1px solid #ddd;padding:2px;"/>
+    </td>
+  </tr></table>
+
+  <div class="meta">
+    <span>Generated: 07/11/2026</span>
+    <span>Ref: EXP-2026-0847</span>
+  </div>
+
+  <!-- INFO GRID -->
+  <table class="info-tbl">
+    <tr>
+      <td class="lbl">Department</td><td class="val">Site Operations</td>
+      <td class="lbl">Employee</td><td class="val" style="color:#8B2500;font-weight:700;">Ahmed Al-Rashidi</td>
+    </tr>
+    <tr>
+      <td class="lbl">Emp. No.</td><td class="val">EMP-0142</td>
+      <td class="lbl">Date</td><td class="val">07/11/2026</td>
+    </tr>
+    <tr>
+      <td class="lbl">Project No.</td><td class="val">PRJ-0094</td>
+      <td class="lbl">Project Name</td><td class="val">Riyadh Metro Extension — Package 3</td>
+    </tr>
+    <tr>
+      <td class="lbl">Site No.</td><td class="val">S-1142</td>
+      <td class="lbl">Category</td><td class="val">Fuel / Petrol</td>
+    </tr>
+    <tr>
+      <td class="lbl">Vendor / Supplier</td><td class="val">Al-Jazeera Petroleum Station</td>
+      <td class="lbl">Invoice No.</td><td class="val">INV-20260303-441</td>
+    </tr>
+    <tr>
+      <td class="lbl">Vendor VAT No.</td><td class="val">310891234500003</td>
+      <td class="lbl">Receipt Type</td><td class="val">Simplified Invoice</td>
+    </tr>
+  </table>
+
+  <!-- DATE COMPARISON ROW -->
+  <div class="date-row">
+    <div class="date-cell"><span class="date-cell-lbl">Invoice Date</span><div class="date-cell-val">03/03/2026</div></div>
+    <div class="date-cell"><span class="date-cell-lbl">Expense Recorded</span><div class="date-cell-val">07/11/2026</div></div>
+    <div class="date-cell"><span class="date-cell-lbl">Submitted On</span><div class="date-cell-val">07/11/2026</div></div>
+  </div>
+
+  <!-- RECEIPT PHOTO -->
+  <div class="photo-box">
+    <div class="photo-hdr">Receipt / Invoice Photo — Cross-Verification</div>
+    <div class="photo-body"><img src="https://lh3.googleusercontent.com/d/1BxiMVs0XRA5nFXmhLvqPzs9ED5fRYpT8" style="max-width:100%;max-height:360px;display:block;" alt="Receipt" onerror="this.style.display='none';this.nextSibling.style.display='block'"/><div style="display:none;font-size:10px;color:#aaa;padding:16px;">Photo on file (Drive) — open to view<br><small style='word-break:break-all;'>https://lh3.googleusercontent.com/d/1BxiMVs0XRA5nFXmhLvqPzs9ED5fRYpT8</small></div></div>
+  </div>
+
+  <!-- AMOUNTS -->
+  <table class="amt-tbl">
+    <tr><td class="lbl">Net Amount (Excl. VAT)</td><td class="val">SAR 342.60</td></tr>
+    <tr><td class="lbl">VAT Amount (15%)</td><td class="val">SAR 51.39</td></tr>
+    <tr class="total-row"><td class="lbl" style="color:#fff;">Total Amount (Incl. VAT)</td><td class="val">SAR 393.99</td></tr>
+  </table>
+
+  <div class="notes-box"><div class="notes-hdr">Notes</div><div class="notes-body">Fuel for site generator — 95 litres</div></div>
+
+  <!-- SIGNATURE STRIP — 3 columns -->
+  <div class="sig-strip" style="grid-template-columns:1fr 1fr 1fr;">
+    <div class="sig-cell">
+      <span class="sig-role">Employee</span>
+      <div class="sig-line"></div>
+      <div class="sig-name">Ahmed Al-Rashidi</div>
+      <div class="sig-label">Name / Date</div>
+    </div>
+    <div class="sig-cell">
+      <span class="sig-role">DH — Approved</span>
+      <div class="sig-line"></div>
+      <div class="sig-name">Khalid Al-Otaibi</div>
+      <div class="sig-label">Name / Date</div>
+    </div>
+    <div class="sig-cell">
+      <span class="sig-role">Finance / Accounts</span>
+      <div class="sig-line"></div>
+      <div class="sig-name">Accounts</div>
+      <div class="sig-label">Name / Date</div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <span>Ratal Advanced Technologies — Expense Record Voucher</span>
+    <span>EXP-2026-0847</span>
+    <span>07/11/2026</span>
+  </div>
+</div></body></html></div>
+<div class="label">Template 2 — Cash Payment Voucher</div>
+<div class="wrapper"><!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Cash Payment Voucher — CPV-2026-0192</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Arial,sans-serif;background:#fff;font-size:11px;color:#1a2e3d;}
+  .page{width:794px;margin:0 auto;padding:24px 32px 56px;position:relative;background:#fff;}
+  .co-name{font-size:15px;font-weight:700;color:#1a2e3d;}
+  .co-sub{font-size:9px;color:#555;margin-top:1px;}
+  .rpt-title{font-size:13px;font-weight:700;color:#8B2500;margin-top:4px;text-transform:uppercase;letter-spacing:.3px;}
+  .rpt-sub{font-size:11px;font-weight:700;color:#8B2500;margin-top:1px;}
+  .meta{font-size:8.5px;color:#888;margin:10px 0 6px;display:flex;justify-content:space-between;}
+  /* info grid */
+  .info-tbl{width:100%;border-collapse:collapse;margin-bottom:10px;}
+  .info-tbl td{padding:5px 10px;border:1px solid #c8d4e0;font-size:10px;}
+  .info-tbl .lbl{background:#1a3a5c;color:#fff;font-weight:700;width:100px;}
+  .info-tbl .val{background:#fff;color:#1a2e3d;font-weight:600;}
+  /* date chips row */
+  .date-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;margin-bottom:10px;border:1px solid #c8d4e0;}
+  .date-cell{padding:7px 12px;border-right:1px solid #c8d4e0;text-align:center;}
+  .date-cell:last-child{border-right:none;}
+  .date-cell-lbl{font-size:8px;font-weight:700;color:#fff;background:#1a3a5c;padding:2px 6px;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px;display:block;}
+  .date-cell-val{font-size:11px;font-weight:700;color:#1a2e3d;}
+  /* photo box */
+  .photo-box{border:1px solid #c8d4e0;margin-bottom:10px;}
+  .photo-hdr{background:#1a3a5c;color:#fff;font-size:9px;font-weight:700;padding:4px 10px;text-transform:uppercase;letter-spacing:.3px;}
+  .photo-body{padding:8px;text-align:center;min-height:200px;display:flex;align-items:center;justify-content:center;background:#f8f9fa;}
+  /* amount table */
+  .amt-tbl{width:100%;border-collapse:collapse;margin-bottom:10px;}
+  .amt-tbl td{padding:5px 10px;border:1px solid #c8d4e0;font-size:10px;}
+  .amt-tbl .lbl{background:#f0f4f8;font-weight:600;color:#1a3a5c;width:60%;}
+  .amt-tbl .val{text-align:right;font-weight:700;}
+  .amt-tbl .total-row td{background:#3D1A00;color:#fff;font-size:12px;font-weight:800;}
+  /* purpose / notes */
+  .notes-box{border:1px solid #c8d4e0;margin-bottom:10px;}
+  .notes-hdr{background:#1a3a5c;color:#fff;font-size:9px;font-weight:700;padding:4px 10px;text-transform:uppercase;letter-spacing:.3px;}
+  .notes-body{padding:7px 10px;font-size:10px;color:#1a2e3d;line-height:1.6;min-height:32px;}
+  /* signature strip */
+  .sig-strip{display:grid;gap:0;border:1px solid #c8d4e0;margin-top:16px;}
+  .sig-cell{padding:8px 10px;border-right:1px solid #c8d4e0;text-align:center;}
+  .sig-cell:last-child{border-right:none;}
+  .sig-role{font-size:9px;font-weight:700;color:#fff;background:#1a3a5c;padding:3px 6px;display:block;text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px;}
+  .sig-line{border-top:1.5px solid #555;margin:28px 8px 4px;}
+  .sig-name{font-size:9.5px;font-weight:700;color:#1a2e3d;}
+  .sig-label{font-size:8.5px;color:#888;font-style:italic;}
+  /* thumb+sig box in CPV */
+  .receipt-boxes{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0 4px;}
+  .receipt-box{border:1.5px solid #bbb;border-radius:3px;text-align:center;padding:3px;min-height:50px;display:flex;flex-direction:column;justify-content:flex-end;}
+  .receipt-box.thumb{border-style:dashed;background:#fafafa;}
+  .receipt-box-lbl{font-size:7px;font-weight:700;color:#888;text-transform:uppercase;padding-bottom:2px;}
+  /* footer */
+  .page-footer{position:absolute;bottom:0;left:0;right:0;border-top:1px solid #c8d4e0;padding:5px 32px;font-size:8px;color:#aaa;display:flex;justify-content:space-between;}
+</style></head><body>
+<div class="page">
+
+  <!-- HEADER -->
+  <table style="width:100%;margin-bottom:4px;"><tr>
+    <td style="vertical-align:top;">
+      <div class="co-name">Ratal Advanced Technologies</div>
+      <div class="co-sub">Advanced Communication &amp; Computer Systems</div>
+      <div class="rpt-title">Cash Payment Voucher</div>
+      <div class="rpt-sub">Abdullah Salim Al-Harbi &mdash; Site Operations</div>
+    </td>
+    <td style="text-align:right;vertical-align:top;">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=VOUCHER%3ACPV-2026-0192%0ADATE%3A07%2F11%2F2026%0APAYEE%3AAbdullah%20Salim%20Al-Harbi%0AIQAMA%3A2456789012%0AAMOUNT%3ASAR%201%2C250.00%0APURPOSE%3ALabour%20work%20at%20Site%20S-1142%20%E2%80%94%205%20days%20manual%20labour%20for%20cable%20trenching%20and%20backfi" width="90" height="90" alt="QR" style="border:1px solid #ddd;padding:2px;"/>
+    </td>
+  </tr></table>
+
+  <div class="meta">
+    <span>Generated: 07/11/2026</span>
+    <span>Ref: CPV-2026-0192</span>
+  </div>
+
+  <!-- INFO GRID -->
+  <table class="info-tbl">
+    <tr>
+      <td class="lbl">Voucher No.</td><td class="val">CPV-2026-0192</td>
+      <td class="lbl">Date</td><td class="val">07/11/2026</td>
+    </tr>
+    <tr>
+      <td class="lbl">Department</td><td class="val">Site Operations</td>
+      <td class="lbl">Project No.</td><td class="val">PRJ-0094</td>
+    </tr>
+    <tr>
+      <td class="lbl">Paid By</td><td class="val">Khalid Al-Otaibi</td>
+      <td class="lbl">Approved By</td><td class="val">Mohammed Al-Shahrani</td>
+    </tr>
+    <tr>
+      <td class="lbl">Payment Method</td><td class="val">Cash</td>
+      <td class="lbl">Receipt Type</td><td class="val">Informal Receipt</td>
+    </tr>
+    <tr>
+      <td class="lbl">Payee Name</td><td class="val" style="color:#8B2500;font-weight:700;">Abdullah Salim Al-Harbi</td>
+      <td class="lbl">Iqama No.</td><td class="val" style="font-weight:700;letter-spacing:.5px;">2456789012</td>
+    </tr>
+    <tr>
+      <td class="lbl">Mobile</td><td class="val">0501234567</td>
+      <td class="lbl">Party Type</td><td class="val">INDIVIDUAL</td>
+    </tr>
+    
+    <tr><td class="lbl" colspan="1" style="background:#7a1010;color:#fff;">⚠ Justification</td>
+    <td class="val" colspan="3" style="background:#fff9f9;color:#7a1010;">Local worker, no VAT registration. Informal handwritten receipt obtained and attached.</td></tr>
+  </table>
+
+  <!-- AMOUNT -->
+  <table class="amt-tbl">
+    <tr><td class="lbl">Amount Paid / المبلغ المدفوع</td><td class="val" style="font-size:14px;">SAR 1,250.00</td></tr>
+    <tr class="total-row"><td class="lbl" style="color:#fff;">Total in Words</td><td class="val" style="font-style:italic;font-size:9.5px;">As stated above only</td></tr>
+  </table>
+
+  <!-- PURPOSE -->
+  <div class="notes-box">
+    <div class="notes-hdr">Purpose / سبب الدفع</div>
+    <div class="notes-body">Labour work at Site S-1142 — 5 days manual labour for cable trenching and backfilling<br><em style="color:#888;">Worker confirmed receipt verbally</em></div>
+  </div>
+
+  
+  <div class="photo-box">
+    <div class="photo-hdr">Supporting Document / Receipt Copy</div>
+    <div class="photo-body"><div style="font-size:10px;color:#bbb;padding:24px 20px;text-align:center;">📷 Attach receipt / document photo here</div></div></div>
+
+  <!-- SIGNATURE STRIP — 3 columns, last col has Signature+Thumb+QR -->
+  <div class="sig-strip" style="grid-template-columns:1fr 1fr 1fr;">
+    <div class="sig-cell">
+      <span class="sig-role">Paid By</span>
+      <div class="sig-line"></div>
+      <div class="sig-name">Khalid Al-Otaibi</div>
+      <div class="sig-label">Name / Date</div>
+    </div>
+    <div class="sig-cell">
+      <span class="sig-role">DH — Approved</span>
+      <div class="sig-line"></div>
+      <div class="sig-name">Mohammed Al-Shahrani</div>
+      <div class="sig-label">Name / Date</div>
+    </div>
+    <div class="sig-cell" style="border-right:none;">
+      <span class="sig-role">Received By / المستلم</span>
+      <div class="receipt-boxes">
+        <div class="receipt-box">
+          <div class="receipt-box-lbl">Signature / التوقيع</div>
+        </div>
+        <div class="receipt-box thumb">
+          <div class="receipt-box-lbl">Thumb Impression<br>بصمة الإبهام</div>
+        </div>
+      </div>
+      <div class="sig-name">Abdullah Salim Al-Harbi</div>
+      <div style="font-size:8px;color:#1565c0;font-weight:700;">Iqama: 2456789012</div>
+      <div style="margin-top:5px;text-align:center;">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=50x50&data=CONFIRM%3ACPV-2026-0192%20PAYEE%3AAbdullah%20Salim%20Al-Harbi" width="50" height="50" style="border:1px solid #ddd;" alt="Payee QR"/>
+        <div style="font-size:7px;color:#aaa;">Scan to confirm</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <span>Ratal Advanced Technologies — Cash Payment Voucher</span>
+    <span>CPV-2026-0192</span>
+    <span>07/11/2026</span>
+  </div>
+</div></body></html></div>
+</body></html>

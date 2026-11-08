@@ -21,6 +21,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase }       from '../lib/supabase'
 import { uploadToDrive }  from '../hooks/useDriveUpload'
 import { useFieldAuth }   from '../lib/useFieldAuth'
+import OTPActivationScreen from '../components/OTPActivationScreen'
 import { COA }            from '../lib/autoPost'
 import { MP }             from './formTheme'
 
@@ -536,14 +537,15 @@ function getPage(t) {
   return {
     maxWidth:480, margin:'0 auto',
     fontFamily: MP.font,
-    background: t.bg || MP.cream, minHeight:'100vh', boxSizing:'border-box',
+    background: t.bg || MP.cream, minHeight:'100dvh', boxSizing:'border-box',
+    colorScheme: t.variant === 'dark' ? 'dark' : 'light',
   }
 }
 // Backward compat alias (some render paths use PAGE directly)
 const PAGE = {
   maxWidth:480, margin:'0 auto',
   fontFamily: MP.font,
-  background: MP.cream, minHeight:'100vh', boxSizing:'border-box',
+  background: MP.cream, minHeight:'100dvh', boxSizing:'border-box',
 }
 
 function SCard({ children, style={}, dark=false }) {
@@ -702,14 +704,18 @@ function StepHeader({ stepId, t, emp, devMode, onBack, children }) {
 }
 
 // ─── Info banner ───────────────────────────────────────────────────────────────
-function Banner({ type='info', children }) {
+function Banner({ type='info', children, dark=false }) {
   const styles = {
-    info:    { bg:'#eff6ff', color:'#1d4ed8', border:'#bfdbfe' },
-    success: { bg:'#f0fdf4', color:'#15803d', border:'#bbf7d0' },
-    warn:    { bg:'#fffbeb', color:'#92400e', border:'#fde68a' },
-    error:   { bg:'#fef2f2', color:'#991b1b', border:'#fecaca' },
+    info:    { light:{ bg:'#eff6ff', color:'#1d4ed8', border:'#bfdbfe' },
+               dark: { bg:'rgba(59,111,232,0.15)', color:'#93B4F4', border:'rgba(59,111,232,0.3)' } },
+    success: { light:{ bg:'#f0fdf4', color:'#15803d', border:'#bbf7d0' },
+               dark: { bg:'rgba(76,175,130,0.15)', color:'#86EFAC', border:'rgba(76,175,130,0.3)' } },
+    warn:    { light:{ bg:'#fffbeb', color:'#92400e', border:'#fde68a' },
+               dark: { bg:'rgba(247,210,99,0.15)', color:MP.yellow, border:'rgba(247,210,99,0.3)' } },
+    error:   { light:{ bg:'#fef2f2', color:'#991b1b', border:'#fecaca' },
+               dark: { bg:'rgba(239,68,68,0.15)',  color:'#FCA5A5', border:'rgba(239,68,68,0.3)' } },
   }
-  const s = styles[type] || styles.info
+  const s = (styles[type] || styles.info)[dark ? 'dark' : 'light']
   return (
     <div style={{ background:s.bg, border:`1.5px solid ${s.border}`, borderRadius:12,
       padding:'11px 14px', fontSize:13, color:s.color, lineHeight:1.6, marginBottom:12,
@@ -801,7 +807,7 @@ function NavBar({ onBack, onNext, nextLabel='Next →', nextColor, disabled, loa
   const disabledClr = dark ? '#5A5D55' : '#A7AAA0'
   return (
     <div style={{ background:navBg,
-      borderTop:`1px solid ${navBorder}`, padding:'12px 14px 24px', boxSizing:'border-box',
+      borderTop:`1px solid ${navBorder}`, padding:`12px 14px calc(24px + env(safe-area-inset-bottom, 0px))`, boxSizing:'border-box',
       display:'flex', gap:10 }}>
       {onBack && (
         <button onClick={onBack}
@@ -845,7 +851,7 @@ export default function FormDailyExpense() {
   // ── Scan / OCR state ─────────────────────────────────────────────────────────
   const [photo,         setPhoto]         = useState(null)
   const [photoFile,     setPhotoFile]     = useState(null)
-  const [invoiceType,   setInvoiceType]   = useState(null) // null | 'QR' | 'PRINTED' | 'HANDWRITTEN'
+  const [invoiceType,   setInvoiceType]   = useState('QR') // 'QR' | 'PRINTED' | 'HANDWRITTEN'
   // scanStatus: 'idle'|'scanning'|'qr_ok'|'no_scan'|'handwritten'
   const [scanStatus,    setScanStatus]    = useState('idle')
   const [scanData,      setScanData]      = useState(null)   // decoded ZATCA QR fields
@@ -885,7 +891,17 @@ export default function FormDailyExpense() {
   const [submitErr,     setSubmitErr]     = useState(null)
   const [successData,   setSuccessData]   = useState(null)
 
-  const fileRef = useRef()
+  const fileRef         = useRef()
+  // ── Crop modal state ─────────────────────────────────────────────────────────
+  const [showCrop,        setShowCrop]        = useState(false)
+  const [originalPhotoUrl,setOriginalPhotoUrl]= useState(null)
+  const originalFileRef   = useRef(null)
+  const imgCropRef        = useRef(null)
+  const cropperRef        = useRef(null)
+  // ── Live QR scan state ───────────────────────────────────────────────────────
+  const [liveQRActive,    setLiveQRActive]    = useState(false)
+  const videoRef          = useRef(null)
+  const streamRef         = useRef(null)
 
   // ── Derived values ─────────────────────────────────────────────────────────────
   const rawAmount  = parseFloat(amount)  || 0
@@ -913,6 +929,47 @@ export default function FormDailyExpense() {
       document.head.appendChild(link)
     }
   }, [])
+
+  // ── Load cropperjs from CDN ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!document.getElementById('cropper-css')) {
+      const link = document.createElement('link')
+      link.id = 'cropper-css'; link.rel = 'stylesheet'
+      link.href = 'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css'
+      document.head.appendChild(link)
+    }
+    if (!document.getElementById('cropper-js')) {
+      const s = document.createElement('script')
+      s.id = 'cropper-js'
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js'
+      document.head.appendChild(s)
+    }
+  }, [])
+
+  // ── Initialise Cropper when modal opens ───────────────────────────────────────
+  useEffect(() => {
+    if (!showCrop) return
+    let isMounted = true
+    function initCropper() {
+      if (!isMounted || !imgCropRef.current) return
+      if (cropperRef.current) { cropperRef.current.destroy(); cropperRef.current = null }
+      cropperRef.current = new window.Cropper(imgCropRef.current, {
+        viewMode: 1, dragMode: 'move', aspectRatio: NaN,
+        autoCropArea: 0.92, movable: true, zoomable: true,
+        rotatable: false, scalable: false, background: false,
+        guides: true, highlight: true,
+      })
+    }
+    if (typeof window.Cropper !== 'undefined') {
+      initCropper()
+    } else {
+      const iv = setInterval(() => { if (typeof window.Cropper !== 'undefined') { clearInterval(iv); initCropper() } }, 80)
+    }
+    return () => {
+      isMounted = false
+      if (cropperRef.current) { cropperRef.current.destroy(); cropperRef.current = null }
+    }
+  }, [showCrop, originalPhotoUrl])
 
   // ── Dev mode loaders ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -998,11 +1055,69 @@ export default function FormDailyExpense() {
     }
   }
 
-  // ─── PHOTO HANDLER — PDF.js → ZXing → BarcodeDetector → jsQR → OCR ─────────
+  // ─── CROP MODAL — confirm / skip ─────────────────────────────────────────────
+  function skipCrop() {
+    setPhoto(originalPhotoUrl)
+    setPhotoFile(originalFileRef.current)
+    setShowCrop(false)
+  }
+  async function confirmCrop() {
+    if (!cropperRef.current) { skipCrop(); return }
+    const canvas = cropperRef.current.getCroppedCanvas({ maxWidth: 2048, maxHeight: 2048, imageSmoothingEnabled: true })
+    if (!canvas) { skipCrop(); return }
+    canvas.toBlob(blob => {
+      if (!blob) { skipCrop(); return }
+      const croppedFile = new File([blob], 'invoice_cropped.jpg', { type: 'image/jpeg' })
+      setPhoto(URL.createObjectURL(blob))
+      setPhotoFile(croppedFile)
+      setShowCrop(false)
+    }, 'image/jpeg', 0.92)
+  }
+
+  // ─── LIVE QR SCAN via BarcodeDetector ────────────────────────────────────────
+  async function startLiveQRScan() {
+    if (!('BarcodeDetector' in window) || !navigator.mediaDevices?.getUserMedia) {
+      alert('Live QR scan not supported in this browser — please take a photo of the invoice instead.')
+      return
+    }
+    try {
+      setLiveQRActive(true)
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      streamRef.current = stream
+      if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play() }
+      const det = new BarcodeDetector({ formats: ['qr_code'] })
+      const tick = async () => {
+        if (!streamRef.current || !videoRef.current) return
+        try {
+          const codes = await det.detect(videoRef.current)
+          for (const c of codes) {
+            const p = decodeZATCAQR(c.rawValue)
+            if (p.vatNumber || p.seller) { applyQRData(p); stopLiveQRScan(); return }
+          }
+        } catch {}
+        if (streamRef.current) requestAnimationFrame(tick)
+      }
+      requestAnimationFrame(tick)
+    } catch (e) {
+      console.warn('[LiveQR]', e.message)
+      setLiveQRActive(false)
+    }
+  }
+  function stopLiveQRScan() {
+    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null }
+    setLiveQRActive(false)
+  }
+
+  // ─── PHOTO HANDLER — opens crop modal + runs QR/OCR scan in background ───────
   async function handlePhotoSelect(file) {
     if (!file) return
-    setPhotoFile(file)
-    setPhoto(URL.createObjectURL(file))
+    // Store original file for QR decoding (full resolution) and as crop fallback
+    originalFileRef.current = file
+    const url = URL.createObjectURL(file)
+    setOriginalPhotoUrl(url)
+    setPhoto(null); setPhotoFile(null)   // cleared until crop confirmed/skipped
+    setShowCrop(true)
+    // Start QR + OCR scan immediately on original file (runs while crop modal is open)
     setScanData(null); setOcrParsed(null); setOcrProgress(0); setDupWarning(null)
     setScanStatus('scanning')
     let qrFound = false
@@ -1242,6 +1357,7 @@ export default function FormDailyExpense() {
           receipt_url:      receiptUrl,
           remarks:          remarks.trim()    || null,
           late_reason:      lateReason.trim() || null,
+          dept_code:        emp?.dept_code    || null,
         }
       })
       if (err)           throw err
@@ -1260,8 +1376,9 @@ export default function FormDailyExpense() {
   }
 
   function reset() {
-    setStep('scan'); setPhoto(null); setPhotoFile(null)
-    setInvoiceType(null); setScanStatus('idle'); setScanData(null); setOcrParsed(null); setOcrProgress(0)
+    setStep('scan'); setPhoto(null); setPhotoFile(null); setShowCrop(false); setOriginalPhotoUrl(null)
+    setLiveQRActive(false); if (streamRef.current) { streamRef.current.getTracks().forEach(t=>t.stop()); streamRef.current=null }
+    setInvoiceType('QR'); setScanStatus('idle'); setScanData(null); setOcrParsed(null); setOcrProgress(0)
     setVendorName(''); setInvoiceDate(''); setInvoiceNumber('')
     setVatMode('disabled'); setVatNumber(''); setVatPaid(false); setAmount('')
     setCategory(''); setRemarks(''); setLateReason('')
@@ -1271,6 +1388,7 @@ export default function FormDailyExpense() {
   }
 
   // ─── AUTH GUARD ───────────────────────────────────────────────────────────────
+  if (!devMode && auth.needsActivation) return <OTPActivationScreen auth={auth} />
   if (!devMode) {
     if (auth.loading) return (
       <div style={{ ...PAGE, display:'flex', alignItems:'center', justifyContent:'center' }}>
@@ -1286,6 +1404,71 @@ export default function FormDailyExpense() {
           <div style={{ fontSize:52 }}>🔒</div>
           <div style={{ fontSize:17, fontWeight:700, color:'#dc2626', marginTop:12 }}>Access Required</div>
           <div style={{ fontSize:13, color:'#64748b', marginTop:8 }}>Scan your QR code to log an expense.</div>
+        </div>
+      </div>
+    )
+  }
+
+  // ─── ASSIGNMENT GATE ─────────────────────────────────────────────────────────
+  if (!devMode && emp && assignments.length === 0) {
+    return (
+      <div style={{ background:MP.cream, minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:MP.font }}>
+        <div style={{ background:'#fff', borderRadius:24, padding:'36px 28px', maxWidth:340, textAlign:'center', boxShadow:'0 8px 32px rgba(0,0,0,.12)', margin:20 }}>
+          <div style={{ fontSize:52, marginBottom:12 }}>🏗️</div>
+          <div style={{ fontSize:17, fontWeight:800, color:'#1a2e3d', marginBottom:8, fontFamily:MP.font }}>No Active Site Assignment</div>
+          <div style={{ fontSize:13, color:'#64748b', lineHeight:1.6, marginBottom:20 }}>
+            <strong>{emp.full_name_en}</strong>, you don't have an active site assignment.<br/>
+            Expenses must be linked to a site. Please contact your DH.
+          </div>
+          <button onClick={() => window.location.href='/forms'}
+            style={{ background:MP.yellow, color:MP.textDark, border:'none', borderRadius:14, padding:'13px 24px',
+              fontSize:14, fontWeight:700, cursor:'pointer', width:'100%', fontFamily:MP.font }}>
+            ← Back to Forms
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ─── CROP MODAL OVERLAY ───────────────────────────────────────────────────────
+  if (showCrop) {
+    return (
+      <div style={{ position:'fixed', inset:0, zIndex:9999, background:'#111', display:'flex', flexDirection:'column', fontFamily:MP.font }}>
+        {/* Header */}
+        <div style={{ padding:'14px 16px', background:'#000', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
+          <div>
+            <div style={{ color:'#fff', fontWeight:800, fontSize:15 }}>Trim Background</div>
+            <div style={{ color:'#aaa', fontSize:11, marginTop:1 }}>Drag handles to remove desk / background from the photo</div>
+          </div>
+          <div style={{ display:'flex', gap:8 }}>
+            <button onClick={skipCrop}
+              style={{ padding:'9px 14px', borderRadius:10, border:'1px solid #555', background:'#333',
+                color:'#ddd', cursor:'pointer', fontWeight:600, fontSize:12, fontFamily:MP.font }}>
+              Skip
+            </button>
+            <button onClick={confirmCrop}
+              style={{ padding:'9px 18px', borderRadius:10, border:'none', background:MP.yellow,
+                color:'#000', cursor:'pointer', fontWeight:800, fontSize:13, fontFamily:MP.font }}>
+              ✓ Done
+            </button>
+          </div>
+        </div>
+        {/* Cropper image area */}
+        <div style={{ flex:1, overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', background:'#222' }}>
+          <img ref={imgCropRef} src={originalPhotoUrl} alt="invoice"
+            style={{ maxWidth:'100%', maxHeight:'100%', display:'block' }} />
+        </div>
+        {/* QR scan status while crop modal is open */}
+        <div style={{ padding:'10px 16px', background:'#000', textAlign:'center', flexShrink:0 }}>
+          {scanStatus === 'scanning' && (
+            <div style={{ color:'#94a3b8', fontSize:12 }}>⏳ Reading QR code in background…</div>
+          )}
+          {scanStatus === 'qr_ok' && (
+            <div style={{ color:'#4ade80', fontSize:12, fontWeight:700 }}>✅ QR decoded — fields auto-filled</div>
+          )}
+          {scanStatus === 'no_scan' && (
+            <div style={{ color:'#fbbf24', fontSize:12 }}>⚠️ No QR found — please verify fields manually</div>
+          )}
         </div>
       </div>
     )
@@ -1368,7 +1551,7 @@ export default function FormDailyExpense() {
       <div style={getPage(ts)}>
         <StepHeader stepId="scan" t={ts} emp={emp} devMode={devMode}
           onBack={null}>
-          <div style={{ fontSize:12, color:'rgba(255,255,255,.55)', marginTop:4 }}>
+          <div style={{ fontSize:12, color: ts.variant === 'dark' ? 'rgba(255,255,255,.55)' : MP.textMutedLight, marginTop:4 }}>
             {monthCount > 0 ? `${monthCount} expense${monthCount!==1?'s':''} this month` : 'No expenses this month yet'}
           </div>
         </StepHeader>
@@ -1383,19 +1566,21 @@ export default function FormDailyExpense() {
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8, marginBottom:16 }}>
               {[
-                { key:'QR',          icon:'📱', label:'ZATCA QR',   desc:'Saudi tax invoice', color:'#0ea5e9' },
-                { key:'PRINTED',     icon:'🖨️', label:'Printed',    desc:'No QR code',        color:'#f97316' },
-                { key:'HANDWRITTEN', icon:'✍️', label:'Handwritten', desc:'No VAT',            color:'#a78bfa' },
+                { key:'QR',          icon:'📱', label:'ZATCA QR',    desc:'Saudi tax invoice' },
+                { key:'PRINTED',     icon:'🖨️', label:'Printed',     desc:'No QR code'        },
+                { key:'HANDWRITTEN', icon:'✍️', label:'Handwritten', desc:'No VAT'             },
               ].map(it => {
                 const sel = invoiceType === it.key
                 return (
                   <button key={it.key} type="button"
                     onClick={() => { setInvoiceType(it.key); if (it.key==='HANDWRITTEN') setHandwritten() }}
-                    style={{ padding:'13px 6px', borderRadius:14, border:`2px solid ${sel?it.color:it.color+'30'}`,
-                      background: sel?`${it.color}15`:'#fff', cursor:'pointer',
-                      display:'flex', flexDirection:'column', alignItems:'center', gap:5, boxSizing:'border-box' }}>
+                    style={{ padding:'13px 6px', borderRadius:14,
+                      border: sel ? `2px solid ${MP.yellow}` : `1.5px solid #E4E0D3`,
+                      background: sel ? '#FDF8E8' : MP.lightCard, cursor:'pointer',
+                      display:'flex', flexDirection:'column', alignItems:'center', gap:5, boxSizing:'border-box',
+                      boxShadow: sel ? `0 0 0 3px ${MP.yellow}30` : 'none' }}>
                     <span style={{ fontSize:22 }}>{it.icon}</span>
-                    <span style={{ fontSize:10, fontWeight:800, color:sel?it.color:'#475569' }}>{it.label}</span>
+                    <span style={{ fontSize:10, fontWeight:800, color: sel ? '#7A5C00' : '#475569' }}>{it.label}</span>
                     <span style={{ fontSize:9, color:'#94a3b8', textAlign:'center' }}>{it.desc}</span>
                   </button>
                 )
@@ -1437,29 +1622,59 @@ export default function FormDailyExpense() {
                   <input ref={fileRef} type="file" accept="image/*,application/pdf" capture="environment" style={{ display:'none' }}
                     onChange={e => handlePhotoSelect(e.target.files[0])} />
 
-                  {!photo ? (
-                    <button onClick={() => { if (!invoiceType) setInvoiceType('QR'); fileRef.current?.click() }}
-                      style={{ width:'100%', padding:'28px 16px', borderRadius:16, border:`2px dashed ${ts.color}50`,
-                        background:`${ts.color}06`, color:ts.color, cursor:'pointer', boxSizing:'border-box',
-                        display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
-                      <div style={{ width:56, height:56, borderRadius:16, background:`${ts.color}15`,
-                        display:'flex', alignItems:'center', justifyContent:'center', fontSize:28 }}>📷</div>
-                      <span style={{ fontSize:14, fontWeight:800 }}>Tap to photograph invoice</span>
-                      <span style={{ fontSize:11, opacity:.6 }}>
-                        {invoiceType === 'QR'
-                          ? 'Point directly at the QR code for best results'
-                          : 'Capture the full invoice clearly'}
-                      </span>
-                    </button>
-                  ) : (
+                  {/* Live QR camera stream */}
+                  {liveQRActive && (
+                    <div style={{ position:'relative', borderRadius:14, overflow:'hidden', background:'#000' }}>
+                      <video ref={videoRef} style={{ width:'100%', maxHeight:300, display:'block' }} playsInline muted />
+                      <div style={{ position:'absolute', inset:0, border:'3px solid #22c55e', borderRadius:14, pointerEvents:'none', opacity:.7 }} />
+                      <button onClick={stopLiveQRScan}
+                        style={{ position:'absolute', top:10, right:10, background:'rgba(0,0,0,.65)',
+                          color:'#fff', border:'none', borderRadius:20, width:30, height:30, cursor:'pointer', fontWeight:800, fontSize:13 }}>✕</button>
+                      <div style={{ position:'absolute', bottom:0, left:0, right:0, background:'rgba(0,0,0,.5)',
+                        padding:'8px', textAlign:'center', color:'#fff', fontSize:12, fontWeight:700 }}>
+                        📱 Point at the QR code…
+                      </div>
+                    </div>
+                  )}
+                  {!photo && !liveQRActive ? (
+                    <div>
+                      {/* Primary: Take Photo */}
+                      <button onClick={() => fileRef.current?.click()}
+                        style={{ width:'100%', padding:'28px 16px', borderRadius:16, border:`2px dashed ${ts.color}50`,
+                          background:`${ts.color}06`, color:ts.color, cursor:'pointer', boxSizing:'border-box',
+                          display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
+                        <div style={{ width:56, height:56, borderRadius:16, background:`${ts.color}15`,
+                          display:'flex', alignItems:'center', justifyContent:'center', fontSize:28 }}>📷</div>
+                        <span style={{ fontSize:14, fontWeight:800 }}>Tap to photograph invoice</span>
+                        <span style={{ fontSize:11, opacity:.6 }}>
+                          {invoiceType === 'QR' ? 'Point at the invoice — QR auto-fills fields' : 'Capture the full invoice clearly'}
+                        </span>
+                      </button>
+                      {/* Secondary: Scan QR first */}
+                      <div style={{ textAlign:'center', marginTop:12 }}>
+                        <button onClick={startLiveQRScan}
+                          style={{ background:'none', border:'none', color:'#64748b', fontSize:12, cursor:'pointer',
+                            fontFamily:MP.font, textDecoration:'underline', padding:'4px 0' }}>
+                          📱 Scan QR code first
+                        </button>
+                        <div style={{ fontSize:10, color:'#94a3b8', marginTop:2 }}>
+                          QR fills fields — you'll still need to photograph the invoice
+                        </div>
+                      </div>
+                    </div>
+                  ) : !liveQRActive && photo ? (
                     <div style={{ position:'relative', borderRadius:14, overflow:'hidden',
                       boxShadow:`0 4px 16px ${ts.color}30` }}>
                       <img src={photo} alt="invoice" style={{ width:'100%', maxHeight:220, objectFit:'cover', display:'block' }} />
-                      <button onClick={() => { setPhoto(null); setPhotoFile(null); setScanStatus('idle'); setScanData(null); setOcrParsed(null); setInvoiceType(null) }}
+                      <button onClick={() => { setPhoto(null); setPhotoFile(null); setScanStatus('idle'); setScanData(null); setOcrParsed(null); setInvoiceType('QR') }}
                         style={{ position:'absolute', top:10, right:10, background:'rgba(0,0,0,.55)',
                           color:'#fff', border:'none', borderRadius:20, width:30, height:30, cursor:'pointer', fontWeight:800, fontSize:13 }}>✕</button>
+                      <button onClick={() => fileRef.current?.click()}
+                        style={{ position:'absolute', bottom:10, right:10, background:'rgba(0,0,0,.55)',
+                          color:'#fff', border:'1px solid rgba(255,255,255,.4)', borderRadius:10, padding:'5px 10px',
+                          cursor:'pointer', fontWeight:600, fontSize:11 }}>Retake</button>
                     </div>
-                  )}
+                  ) : null}
 
                   {/* Scan status */}
                   {scanStatus === 'scanning' && (
@@ -1637,10 +1852,11 @@ export default function FormDailyExpense() {
                 type="number" inputMode="decimal" placeholder="0.00"
                 value={amount} onChange={e => setAmount(e.target.value)}
                 style={{ width:'100%', padding:'18px 16px', borderRadius:16,
-                  border:'none',
-                  fontSize:24, fontWeight:700, textAlign:'center', color:'#fff',
+                  border: `2px solid ${rawAmount > 0 ? ts.color : '#D5D2C5'}`,
+                  fontSize:28, fontWeight:800, textAlign:'center',
+                  color: rawAmount > 0 ? ts.dark : MP.textMutedLight,
                   outline:'none', boxSizing:'border-box', fontFamily:MP.font,
-                  background:'#843BF1' }}
+                  background: MP.lightCard, transition:'border-color .15s, color .15s' }}
               />
               {rawAmount > 0 && (
                 <div style={{ textAlign:'center', fontSize:12, color:'#64748b', marginTop:6 }}>
@@ -2027,9 +2243,9 @@ export default function FormDailyExpense() {
           )}
 
           {/* Errors */}
-          {submitErr && <Banner type="error">⛔ {submitErr}</Banner>}
+          {submitErr && <Banner type="error" dark>⛔ {submitErr}</Banner>}
           {isHardBlock && (
-            <Banner type="error">🚫 Invoice is {late.days} days old — submission blocked. Contact Accounts.</Banner>
+            <Banner type="error" dark>🚫 Invoice is {late.days} days old — submission blocked. Contact Accounts.</Banner>
           )}
 
           {/* Submit */}

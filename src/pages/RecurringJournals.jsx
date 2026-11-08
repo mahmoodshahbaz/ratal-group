@@ -204,6 +204,7 @@ function TemplateModal({ entityId, existing, coa, onClose, onSaved }) {
       onNext={wizardStep < 2 ? goNext : save}
       nextLabel={wizardStep < 2 ? 'Next →' : (saving ? 'Saving…' : isEdit ? '✓ Save Changes' : '✓ Create Template')}
       nextDisabled={saving || (wizardStep === 2 && !balanced)}
+      subjectLabel={hdr.name || null}
     >
       <div style={{ flex:1, overflowY:'auto', padding:'14px 18px', fontFamily:"'Poppins',sans-serif" }}>
         {err && <div style={{ background:'#ffebee', color:'#c62828', borderRadius:4, padding:'8px 12px', fontSize:12, marginBottom:12 }}>{err}</div>}

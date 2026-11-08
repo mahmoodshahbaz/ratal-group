@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useFieldAuth }                      from '../lib/useFieldAuth'
+import OTPActivationScreen                   from '../components/OTPActivationScreen'
 import { supabase }                          from '../lib/supabase'
 
 const fmt     = (n) => Number(n || 0).toLocaleString('en-SA', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
@@ -23,7 +24,7 @@ function AuthGuard({ error }) {
   }
   const m = msgs[error] || msgs.no_token
   return (
-    <div style={{ minHeight:'100vh', background:'#111', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
+    <div style={{ minHeight:'100dvh', background:'#111', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
       <div style={{ background:'#1e1e1e', borderRadius:20, padding:40, maxWidth:340, width:'100%', textAlign:'center' }}>
         <div style={{ fontSize:52, marginBottom:14 }}>{m.icon}</div>
         <div style={{ fontSize:18, fontWeight:800, color:'#ef5350', marginBottom:8 }}>{m.title}</div>
@@ -122,8 +123,10 @@ export default function FormPaymentValidation() {
   }
 
   // ── Loading ──────────────────────────────────────────────────────────────
+  if (auth.needsActivation) return <OTPActivationScreen auth={auth} />
+
   if (auth.loading) return (
-    <div style={{ minHeight:'100vh', background:'#111', display:'flex', alignItems:'center', justifyContent:'center' }}>
+    <div style={{ minHeight:'100dvh', background:'#111', display:'flex', alignItems:'center', justifyContent:'center' }}>
       <div style={{ color:'#aaa', fontSize:14 }}>⏳ Verifying…</div>
     </div>
   )
@@ -326,7 +329,7 @@ export default function FormPaymentValidation() {
       {!loading && pending.length > 0 && (
         <div style={{
           flexShrink:  0,
-          padding:     '12px 16px 28px',
+          padding:     `12px 16px calc(28px + env(safe-area-inset-bottom, 0px))`,
           background:  '#111',
           borderTop:   '1px solid #1e1e1e',
         }}>

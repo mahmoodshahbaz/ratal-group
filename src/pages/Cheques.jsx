@@ -117,11 +117,12 @@ function ChequeModal({ isOpen, cheque_type, entityId, existing, onClose, onSaved
         : isIssued ? ['Add','Issued','Cheque'] : ['Add','Received','Cheque']}
       steps={['Cheque Details','GL & Reference']}
       currentStep={wizardStep}
-      onBack={() => setWizardStep(w => w - 1)}
-      backLabel="Back"
+      onBack={wizardStep === 1 ? () => { setShowModal(false); setEditing(null) } : () => setWizardStep(w => w - 1)}
+      backLabel={wizardStep === 1 ? 'Cancel' : 'Back'}
       onNext={() => wizardStep < 2 ? setWizardStep(w => w + 1) : save()}
       nextLabel={wizardStep === 2 ? (saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Cheque') : 'Next →'}
       nextDisabled={saving || (wizardStep === 1 && !step1Valid)}
+      subjectLabel={form.cheque_number || null}
     >
       {wizardStep === 1 && (
         <div style={{ fontFamily:'Poppins,sans-serif' }}>

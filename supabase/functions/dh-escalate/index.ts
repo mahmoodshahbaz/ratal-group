@@ -53,12 +53,14 @@ Deno.serve(async () => {
   const { data: unacked, error } = await supabase
     .from('money_requests')
     .select(`
-      id, entity_id, mr_number, title, amount, funds_sent_at,
-      party_id, party_name, dh_acked_at, dh_blocked,
-      department_id, requested_by, requested_by_id
+      id, entity_id, mr_number, request_number, title, purpose,
+      amount, funds_sent_at, party_id, party_name, contractor_id,
+      dh_acked_at, dh_ack_status, dh_blocked,
+      department_id, requested_by
     `)
     .eq('status', 'FUNDS_SENT')
     .is('dh_acked_at', null)
+    .neq('dh_ack_status', 'CONFIRMED')   // safety: skip field-confirmed ones
     .not('funds_sent_at', 'is', null)
 
   if (error) {
@@ -75,7 +77,14 @@ Deno.serve(async () => {
   }
 
   for (const mr of (unacked || [])) {
-    const age = daysSince(mr.funds_sent_at)
+    const age    = daysSince(mr.funds_sent_at)
+    // Prefer mr_number (mobile-submitted), fallback to request_number (admin-assigned)
+    const mrRef  = mr.mr_number || mr.request_number || mr.id.slice(0, 8)
+    // Prefer party_name, fallback to purpose or title
+    const party  = mr.party_name || mr.title || mr.purpose || 'Party'
+    // The employee who raised the request (UUID FK)
+    const raisedBy: string | null = mr.requested_by || null
+
     try {
 
       // ── 2. 30+ days: block the party ──────────────────────────────────────────
@@ -85,13 +94,12 @@ Deno.serve(async () => {
           .update({ dh_blocked: true })
           .eq('id', mr.id)
 
-        // Insert a block notification for admins
         await supabase.from('notifications').insert({
           entity_id:   mr.entity_id,
-          employee_id: mr.requested_by_id || null,
+          employee_id: raisedBy,
           type:        'DH_PAYMENT_ACK',
-          title:       `⛔ BLOCKED: ${mr.mr_number} — ${mr.party_name || 'Party'} (${age} days unacknowledged)`,
-          body:        `Money Request ${mr.mr_number} has not been acknowledged by the DH for ${age} days. New MRs for this party are now BLOCKED until acknowledged.`,
+          title:       `⛔ BLOCKED: ${mrRef} — ${party} (${age} days unacknowledged)`,
+          body:        `Money Request ${mrRef} has not been acknowledged by the DH for ${age} days. New MRs for this party are now BLOCKED until acknowledged.`,
           metadata:    { mr_id: mr.id, amount: mr.amount, age_days: age, escalation: 'BLOCKED' },
         })
 
@@ -102,19 +110,19 @@ Deno.serve(async () => {
       if (age >= 15 && age < 30) {
         await supabase.from('notifications').insert({
           entity_id:   mr.entity_id,
-          employee_id: mr.requested_by_id || null,
+          employee_id: raisedBy,
           type:        'DH_PAYMENT_ACK',
-          title:       `⚠️ WARNING: ${mr.mr_number} overdue ${age} days`,
-          body:        `DH has not acknowledged ${mr.mr_number} (${mr.party_name || ''}) for ${age} days. Blocking in ${30 - age} days if not acknowledged.`,
+          title:       `⚠️ WARNING: ${mrRef} overdue ${age} days`,
+          body:        `DH has not acknowledged ${mrRef} (${party}) for ${age} days. Blocking in ${30 - age} days if not acknowledged.`,
           metadata:    { mr_id: mr.id, amount: mr.amount, age_days: age, escalation: 'WARNING' },
         })
 
         results.warnings++
       }
 
-      // ── 4. 0-15 days: daily Telegram reminder to DH ────────────────────────────
+      // ── 4. 0-15 days: daily reminder to DH ────────────────────────────────────
       if (age < 30) {
-        // Find DH for this department: employee with designation 'Department Head' in the dept
+        // Find DH for this department
         let dhEmpId: string | null = null
         if (mr.department_id) {
           const { data: dhEmp } = await supabase
@@ -125,21 +133,20 @@ Deno.serve(async () => {
             .ilike('designation', '%Department Head%')
             .eq('is_active', true)
             .limit(1)
-            .single()
+            .maybeSingle()
           dhEmpId = dhEmp?.id || null
         }
 
-        // Fallback: use requested_by_id (the person who raised the MR)
-        if (!dhEmpId) dhEmpId = mr.requested_by_id || null
+        // Fallback: notify the person who raised the MR
+        if (!dhEmpId) dhEmpId = raisedBy
 
         if (dhEmpId) {
-          // Insert reminder notification (will trigger field-notify webhook → Telegram)
           await supabase.from('notifications').insert({
             entity_id:   mr.entity_id,
             employee_id: dhEmpId,
             type:        'DH_PAYMENT_ACK',
-            title:       `Payment Acknowledgment Required — ${mr.mr_number}`,
-            body:        `SAR ${Number(mr.amount || 0).toLocaleString()} has been disbursed for ${mr.party_name || 'your team'}. Please acknowledge in the DH Command Centre. Day ${age} of 30.`,
+            title:       `Payment Acknowledgment Required — ${mrRef}`,
+            body:        `SAR ${Number(mr.amount || 0).toLocaleString()} has been disbursed for ${party}. Please acknowledge in the DH Command Centre. Day ${age} of 30.`,
             metadata:    { mr_id: mr.id, amount: mr.amount, age_days: age, escalation: 'REMINDER' },
           })
           results.reminders++
@@ -149,7 +156,7 @@ Deno.serve(async () => {
       results.processed++
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      results.errors.push(`${mr.mr_number}: ${msg}`)
+      results.errors.push(`${mrRef}: ${msg}`)
     }
   }
 

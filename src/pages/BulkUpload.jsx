@@ -58,7 +58,7 @@ const SHEET_CONFIGS = {
       passport_expiry:       'passport_expiry',
       ot_allowed:            'ot_allowed',
       loan_allowed:          'loan_allowed',
-      food_allowance_eligible:'food_allowance_eligible',
+      food_allowance_eligible:'fa_eligible',
       ticket_eligible:       'ticket_eligible',
       date_of_joining:       'date_of_joining',
       contract_end_date:     'contract_end_date',
@@ -66,7 +66,7 @@ const SHEET_CONFIGS = {
       remarks:               'remarks',
       // photo handled separately
     },
-    boolCols: ['ot_allowed','loan_allowed','food_allowance_eligible','ticket_eligible','wps_allowed'],
+    boolCols: ['ot_allowed','loan_allowed','fa_eligible','ticket_eligible','wps_allowed'],
     numCols:  ['basic','hra','conveyance','technical_allowance'],
     dateCols: ['date_of_joining','contract_end_date','date_of_leaving','national_id_expiry','passport_expiry'],
   },

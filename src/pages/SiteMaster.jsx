@@ -304,16 +304,30 @@ export default function SiteMaster({ entityId }) {
     if (beFields.contractor_id) patch.contractor_id = beFields.contractor_id
     if (beFields.wf_code) {
       patch.wf_code = beFields.wf_code
-      const wf = WF_CODES[beFields.wf_code]
-      if (wf) {
-        patch.uom = wf.uom
-        patch.budget_team_pct     = wf.pct.team
-        patch.budget_supplier_pct = wf.pct.supplier
-        patch.budget_subcon_pct   = wf.pct.subcon
-        patch.budget_food_pct     = wf.pct.food
-        patch.budget_overtime_pct = wf.pct.overtime
-        patch.budget_petty_pct    = wf.pct.petty
-        patch.budget_misc_pct     = wf.pct.misc
+      // Check DB template first (UUID codes), then fall back to hardcoded WF_CODES
+      const dbWF = wfTemplates.find(t => t.id === beFields.wf_code)
+      if (dbWF) {
+        const bp = dbWF.budget_pct || {}
+        patch.uom = 'Lump Sum'
+        patch.budget_team_pct     = bp.team||0
+        patch.budget_supplier_pct = bp.supplier||0
+        patch.budget_subcon_pct   = bp.subcon||0
+        patch.budget_food_pct     = bp.food||0
+        patch.budget_overtime_pct = bp.overtime||0
+        patch.budget_petty_pct    = bp.petty||0
+        patch.budget_misc_pct     = bp.misc||0
+      } else {
+        const wf = WF_CODES[beFields.wf_code]
+        if (wf) {
+          patch.uom = wf.uom
+          patch.budget_team_pct     = wf.pct.team
+          patch.budget_supplier_pct = wf.pct.supplier
+          patch.budget_subcon_pct   = wf.pct.subcon
+          patch.budget_food_pct     = wf.pct.food
+          patch.budget_overtime_pct = wf.pct.overtime
+          patch.budget_petty_pct    = wf.pct.petty
+          patch.budget_misc_pct     = wf.pct.misc
+        }
       }
     }
     if (beFields.work_type)   patch.work_type   = beFields.work_type
@@ -333,6 +347,13 @@ export default function SiteMaster({ entityId }) {
       setBeMsg(`⛔ Total budget % = ${manualPctTotal}% — exceeds 100%. Please reduce before saving.`)
       return
     }
+
+    // Apply manually entered budget %s from Step 2 (only if not already set by wf_code auto-fill)
+    PCT_KEYS_BE.forEach(k => {
+      if (!Object.prototype.hasOwnProperty.call(patch, k) && beFields[k] !== undefined && beFields[k] !== '') {
+        patch[k] = +beFields[k]
+      }
+    })
 
     // For records where we change contract_value or wf_code, recompute SAR budgets per-record
     setBeSaving(true); setBeMsg('')
@@ -416,6 +437,23 @@ export default function SiteMaster({ entityId }) {
     if (showAllWF || !form.service_unit) return list
     return list.filter(w => w.depts.includes(form.service_unit))
   }, [form.service_unit, showAllWF, wfTemplates])
+
+  // All WF options for Bulk Edit — no service_unit filtering
+  const beWFList = useMemo(() =>
+    wfTemplates.length > 0
+      ? wfTemplates.map(t => ({ code: t.id, label: t.wf_name || t.label }))
+      : WF_LIST,
+  [wfTemplates])
+
+  // Resolve a stored wf_code (UUID or string key) → human-readable label
+  function resolveWFLabel(code) {
+    if (!code) return ''
+    const dbMatch = wfTemplates.find(t => t.id === code)
+    if (dbMatch) return dbMatch.wf_name || dbMatch.label || code
+    const hcMatch = WF_CODES[code]
+    if (hcMatch) return `[${code}] ${hcMatch.label}`
+    return code
+  }
 
   function onWFChange(code) {
     // Try DB template first
@@ -950,13 +988,12 @@ export default function SiteMaster({ entityId }) {
                   </td>
                   <td style={{ ...S.td, ...nw, fontWeight:800, color:'#5A32D4', fontFamily:'monospace', fontSize:12 }}>{sm.sm_id}</td>
                   <td style={{ ...S.td, ...nw }}>
-                    <div style={{ fontSize:12, fontWeight:600, color:'#1a2e3d' }}>{depts.find(d=>d.id===sm.dept_id)?.dept_name||'—'}</div>
-                    <div style={{ fontSize:10, color:'#6b7c93', marginTop:1 }}><span style={S.badge()}>{sm.service_unit}</span></div>
+                    <span style={S.badge()}>{sm.service_unit||'—'}</span>
                   </td>
                   <td style={{ ...S.td, ...nw, fontFamily:'monospace', fontSize:11, color:'#1565c0' }}>{sm.site_no||'—'}</td>
                   <td style={{ ...S.td, fontSize:12, maxWidth:200, ...nw }}>{sm.site_name||'—'}</td>
                   <td style={{ ...S.td, ...nw, fontFamily:'monospace', fontSize:11 }}>{sm.job_no||'—'}</td>
-                  {colVis.wf_code  && <td style={{ ...S.td, ...nw }}>{sm.wf_code?<span style={{ ...S.badge('#00695c'), fontSize:10 }}>{sm.wf_code}</span>:'—'}</td>}
+                  {colVis.wf_code  && <td style={{ ...S.td, ...nw }}>{sm.wf_code?<span style={{ ...S.badge('#00695c'), fontSize:10 }}>{resolveWFLabel(sm.wf_code)}</span>:'—'}</td>}
                   <td style={{ ...S.td, ...nw }}>
                     <span style={{ background:(STATUS_COLORS[sm.status]||'#9e9e9e')+'18', color:STATUS_COLORS[sm.status]||'#9e9e9e', padding:'2px 9px', borderRadius:20, fontSize:10, fontWeight:700 }}>
                       {(sm.status||'PENDING').replace(/_/g,' ')}
@@ -1030,6 +1067,7 @@ export default function SiteMaster({ entityId }) {
             onNext={smStep<4 ? () => setSmStep(s=>s+1) : save}
             nextLabel={smStep<4 ? 'Save & Next' : (saving ? 'Saving…' : editing ? '✓ Update Site' : '✓ Create Site')}
             nextDisabled={saving && smStep===4}
+            subjectLabel={{ line1: (d=>d?.dept_code||d?.dept_name||null)(depts.find(d=>d.id===form.dept_id)), line2: form.site_no || null }}
           >
           <div style={{ fontFamily:PP }}>
 
@@ -1298,7 +1336,7 @@ export default function SiteMaster({ entityId }) {
             title={['SITE', detail?.sm_id||'', detail?.site_name||detail?.job_no||'']}
             description={detail ? [
               detail.service_unit,
-              detail.wf_code || 'No WF Code',
+              resolveWFLabel(detail.wf_code) || 'No WF Code',
               detail.status?.replace(/_/g,' '),
               detail.location && `📍 ${detail.location}`,
             ].filter(Boolean).join(' · ') : ''}
@@ -1315,7 +1353,7 @@ export default function SiteMaster({ entityId }) {
             {detail && (
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14, padding:'8px 12px', background:'#FAECD6', borderRadius:8 }}>
                 <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-                  {detail.wf_code && <span style={{ ...S.badge('#00695c'), fontSize:10 }}>{detail.wf_code}</span>}
+                  {detail.wf_code && <span style={{ ...S.badge('#00695c'), fontSize:10 }}>{resolveWFLabel(detail.wf_code)}</span>}
                   {detail.site_no && <span style={{ fontSize:11, color:'#8C601B', fontWeight:600 }}>Site: <strong>{detail.site_no}</strong></span>}
                   {detail.job_no  && <span style={{ fontSize:11, color:'#8C601B', fontWeight:600 }}>Job: <strong>{detail.job_no}</strong></span>}
                 </div>
@@ -1333,7 +1371,7 @@ export default function SiteMaster({ entityId }) {
                   {[
                     ['SM ID',       detail.sm_id],
                     ['Service Unit',detail.service_unit],
-                    ['WF Code',     detail.wf_code||'—'],
+                    ['WF Code',     resolveWFLabel(detail.wf_code)||'—'],
                     ['Site#',       detail.site_no||'—'],
                     ['Job#',        detail.job_no||'—'],
                     ['Site Name',   detail.site_name||'—'],
@@ -1583,7 +1621,7 @@ export default function SiteMaster({ entityId }) {
                 <label style={S.label}>WF Code <span style={{ color:'#6b7c93', fontWeight:400, textTransform:'none' }}>(auto-fills budget %)</span></label>
                 <select style={S.inp} value={beFields.wf_code||''} onChange={e=>setBeFields(p=>({...p,wf_code:e.target.value}))}>
                   <option value="">— no change —</option>
-                  {WF_LIST.map(w=>{
+                  {beWFList.map(w=>{
                     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-/.test(w.code)
                     return <option key={w.code} value={w.code}>{isUUID ? w.label : `[${w.code}] ${w.label}`}</option>
                   })}
@@ -1666,7 +1704,6 @@ export default function SiteMaster({ entityId }) {
                 </div>
               )
             })()}
-          )}
 
           {/* What will change summary (shown on step 1) */}
           {(!beStep||beStep===1) && Object.keys(beFields).filter(k=>beFields[k]).length > 0 && (

@@ -1157,7 +1157,7 @@ function PaymentLine({ line, idx, sessionDept, cardDepts, employees, allEmployee
                 <label style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer', fontSize:13, color:'#475569', padding:'8px 0' }}>
                   <input type="checkbox" checked={line.use_proxy} onChange={e=>onUpdate({use_proxy:e.target.checked})}
                     style={{ width:18, height:18, accentColor:lColor }} />
-                  Someone else physically received this (proxy / agent)
+                  🔀 Transfer via alias — money sent to a different person's IBAN (same bank / save charges)
                 </label>
                 {line.use_proxy&&(
                   <div style={{ marginTop:6 }}>
@@ -1398,7 +1398,8 @@ const S = {
   page:{
     maxWidth:480, margin:'0 auto', padding:'14px 12px 80px',
     fontFamily:"'Segoe UI',system-ui,-apple-system,sans-serif",
-    background:'#f0f2f5', minHeight:'100vh', boxSizing:'border-box',
+    background:'#f0f2f5', minHeight:'100dvh', boxSizing:'border-box',
+    color:'#0f172a', colorScheme:'light',
   },
   body:{ padding:'14px 14px 6px' },
   shadow:'0 4px 24px rgba(0,0,0,0.10)',

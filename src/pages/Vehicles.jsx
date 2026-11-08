@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useExpandable, ExpandableRow, DetailField, DetailRow, DetailSection, DetailActions } from '../components/ExpandableRow'
 import { printDocument, openPrintWindow } from '../lib/templatePrint'
+import { useDriveUpload } from '../hooks/useDriveUpload'
 
 // Vehicle Management Module
 // Tracks: vehicle register, expiry docs (Insurance/MVPI/Registration/Saher), maintenance log
@@ -58,6 +59,7 @@ const EMPTY_VEH = {
   fleet_value:0,
   odometer_reading:0, status:'ACTIVE', notes:'',
   ins_expiry:'', mvpi_expiry:'', reg_expiry:'', saher_expiry:'',
+  attachment_urls:[],
   // Rental fields
   rental_contractor_id:'',
   rental_company:'', rental_vat_no:'',
@@ -124,7 +126,9 @@ export default function Vehicles({ entityId }) {
   const [savingVeh,       setSavingVeh]       = useState(false)
   const [vehStep,         setVehStep]         = useState(1)  // 1-4 wizard steps
   const [vehAttachments,  setVehAttachments]  = useState([])
+  const [vehUploadProg,   setVehUploadProg]   = useState(null)
   const vehFileRef = useRef(null)
+  const { upload: uploadDrive, uploading: driveUploading } = useDriveUpload()
 
   const [detailVeh,   setDetailVeh] = useState(null)
   const [detailTab,   setDetailTab] = useState('info')  // info | docs | maintenance
@@ -195,7 +199,7 @@ export default function Vehicles({ entityId }) {
   }
 
   function openEditVeh(v) {
-    setEditVeh(v); setVehStep(1); setVehAttachments([])
+    setEditVeh(v); setVehStep(1); setVehAttachments([]); setVehUploadProg(null)
     setVehForm({
       ownership_type:v.ownership_type||'OWN',
       plate_number:v.plate_number||'', vehicle_type:v.vehicle_type||'SUV',
@@ -206,6 +210,7 @@ export default function Vehicles({ entityId }) {
       odometer_reading:v.odometer_reading||0, status:v.status||'ACTIVE', notes:v.notes||'',
       ins_expiry:v.ins_expiry||'', mvpi_expiry:v.mvpi_expiry||'',
       reg_expiry:v.reg_expiry||'', saher_expiry:v.saher_expiry||'',
+      attachment_urls: Array.isArray(v.attachment_urls) ? v.attachment_urls : [],
       rental_contractor_id:v.rental_contractor_id||'',
       rental_company:v.rental_company||'', rental_vat_no:v.rental_vat_no||'',
       rent_start:v.rent_start||'', rent_end:v.rent_end||'',
@@ -219,6 +224,22 @@ export default function Vehicles({ entityId }) {
   async function saveVehicle() {
     if (!vehForm.plate_number) { alert('Plate number is required'); return }
     setSavingVeh(true)
+
+    // Upload any new attachments to Drive (folder: fleet)
+    const newUrls = []
+    if (vehAttachments.length > 0) {
+      const prefix = `VEH-${vehForm.plate_number.replace(/[^a-zA-Z0-9]/g,'-')}`
+      for (let i = 0; i < vehAttachments.length; i++) {
+        setVehUploadProg(`${i + 1}/${vehAttachments.length}`)
+        try {
+          const result = await uploadDrive(vehAttachments[i], 'fleet', prefix)
+          if (result?.viewUrl) newUrls.push(result.viewUrl)
+        } catch { /* non-fatal */ }
+      }
+      setVehUploadProg(null)
+    }
+    const existingUrls = Array.isArray(vehForm.attachment_urls) ? vehForm.attachment_urls : []
+
     const isRent = vehForm.ownership_type === 'RENT'
     const base = {
       ownership_type:   vehForm.ownership_type,
@@ -257,6 +278,7 @@ export default function Vehicles({ entityId }) {
       base.km_per_month   = +vehForm.km_per_month   || 0
       base.km_extra_rate  = +vehForm.km_extra_rate  || 0
     }
+    base.attachment_urls = [...existingUrls, ...newUrls]
     const payload = base
 
     const { data:saved, error } = editVeh
@@ -273,7 +295,7 @@ export default function Vehicles({ entityId }) {
       syncToCompliance(entityId,vId,pl,'REGISTRATION',vehForm.reg_expiry),
       syncToCompliance(entityId,vId,pl,'SAHER',       vehForm.saher_expiry),
     ])
-    setSavingVeh(false); setShowVehForm(false); load()
+    setSavingVeh(false); setShowVehForm(false); setVehAttachments([]); setVehUploadProg(null); load()
   }
 
   async function deactivate(id) {
@@ -788,8 +810,9 @@ export default function Vehicles({ entityId }) {
           onBack={assignStep === 1 ? closeAssign : () => setAssignStep(1)}
           backLabel={assignStep === 1 ? 'Cancel' : 'Back'}
           onNext={assignStep === 1 ? () => setAssignStep(2) : saveAssignment}
-          nextLabel={assignStep === 1 ? 'Next → Employee' : '🔑 Register Assignment'}
+          nextLabel={assignStep === 1 ? 'Next: Employee Information →' : '🔑 Register Assignment'}
           nextDisabled={assignStep === 1 ? !assignForm.vehicle_id : (savingAssign || availableVehicles.length === 0 || activeEmpAssignments.has(assignForm.employee_id))}
+          subjectLabel={assignForm.plate_number || null}
         >
         <div style={{ fontFamily: PP }}>
 
@@ -878,7 +901,7 @@ export default function Vehicles({ entityId }) {
                       {assignStep===2 && <>
                         <div style={{ fontSize:9, fontWeight:800, color:PRI, letterSpacing:1.5, textTransform:'uppercase', marginBottom:10, paddingBottom:4, borderBottom:'1.5px solid #e0e0ea' }}>Department · Employee · ID</div>
                         {/* One-row layout: Dept + Employee + Iqama# */}
-                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1.4fr 1fr', gap:12, marginBottom:14 }}>
+                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1.4fr 1fr', gap:12, marginBottom:assignForm.employee_id && activeEmpAssignments.has(assignForm.employee_id) ? 8 : 14 }}>
                           <div>
                             <label style={lblA}>Department</label>
                             <select style={inpA()} value={assignForm.department_id} onChange={e=>onAssignDeptChange(e.target.value)}>
@@ -897,16 +920,6 @@ export default function Vehicles({ entityId }) {
                                 </option>
                               })}
                             </select>
-                            {/* Warning if selected employee already holds a car */}
-                            {assignForm.employee_id && activeEmpAssignments.has(assignForm.employee_id) && (() => {
-                              const held = activeEmpAssignments.get(assignForm.employee_id)
-                              return (
-                                <div style={{ marginTop:6, background:'#ffebee', border:'1.5px solid #ef9a9a', borderRadius:8, padding:'8px 12px', fontSize:11, color:'#c62828', fontWeight:600 }}>
-                                  🚫 This employee is already holding <strong>{held.plate_number}</strong> (assigned {held.assignment_date}).
-                                  Record the return date for that vehicle before assigning a new one.
-                                </div>
-                              )
-                            })()}
                           </div>
                           <div>
                             <label style={lblA}>Iqama # / License # {assignForm.iqama_dl && <span style={{ fontSize:9, background:PRI, color:'#fff', borderRadius:4, padding:'1px 6px', marginLeft:4 }}>AUTO</span>}</label>
@@ -914,6 +927,16 @@ export default function Vehicles({ entityId }) {
                               value={assignForm.iqama_dl} readOnly placeholder="Auto-populated" />
                           </div>
                         </div>
+                        {/* Warning if selected employee already holds a car — full width */}
+                        {assignForm.employee_id && activeEmpAssignments.has(assignForm.employee_id) && (() => {
+                          const held = activeEmpAssignments.get(assignForm.employee_id)
+                          return (
+                            <div style={{ marginBottom:14, background:'#ffebee', border:'1.5px solid #ef9a9a', borderRadius:8, padding:'10px 14px', fontSize:11, color:'#c62828', fontWeight:600 }}>
+                              🚫 This employee is already holding <strong>{held.plate_number}</strong> (assigned {held.assignment_date}).
+                              Record the return date for that vehicle before assigning a new one.
+                            </div>
+                          )
+                        })()}
                         <div style={{ fontSize:9, fontWeight:800, color:PRI, letterSpacing:1.5, textTransform:'uppercase', marginBottom:8, paddingBottom:4, borderBottom:'1.5px solid #e0e0ea' }}>Traffic Penalty Rule</div>
                         <div style={{ background:'#f8f8fc', border:'1.5px solid #e0e0ea', borderRadius:12, padding:'14px 16px' }}>
                           <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:12, alignItems:'start' }}>
@@ -1059,8 +1082,11 @@ export default function Vehicles({ entityId }) {
         onBack={vehStep === 1 ? () => setShowVehForm(false) : () => setVehStep(s => s - 1)}
         backLabel={vehStep === 1 ? 'Cancel' : 'Back'}
         onNext={vehStep < 4 ? () => setVehStep(s => s + 1) : saveVehicle}
-        nextLabel={vehStep < 4 ? 'Save & Next' : (editVeh ? '✓ Update Vehicle' : '✓ Save Vehicle')}
-        nextDisabled={savingVeh && vehStep === 4}
+        nextLabel={vehStep < 4
+          ? `Next: ${['Documents','Attachments','Notes & Review'][vehStep-1]} →`
+          : (savingVeh || driveUploading) ? '⏳ Saving…' : (editVeh ? '✓ Update Vehicle' : '✓ Save Vehicle')}
+        nextDisabled={savingVeh || driveUploading}
+        subjectLabel={vehForm.plate_number || null}
       >
         {(() => {
         const PP = "'Poppins','Inter',sans-serif"
@@ -1236,19 +1262,48 @@ export default function Vehicles({ entityId }) {
                         <div style={{ marginBottom:14, fontSize:12, color:'#53666F', lineHeight:1.7 }}>
                           Attach vehicle photos, insurance certificates, MVPI reports, or registration documents. All files go to Google Drive.
                         </div>
+
+                        {/* Saved attachments (edit mode) */}
+                        {vehForm.attachment_urls.length > 0 && (
+                          <>
+                            <div style={{ fontSize:10, fontWeight:800, color:'#2e7d32', textTransform:'uppercase', letterSpacing:1, marginBottom:6 }}>Saved Attachments</div>
+                            {vehForm.attachment_urls.map((url, i) => (
+                              <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', background:'#e8f5e9', borderRadius:8, marginBottom:6, border:'1px solid #a5d6a7' }}>
+                                <span style={{ fontSize:16 }}>🔗</span>
+                                <a href={url} target="_blank" rel="noreferrer" style={{ flex:1, fontSize:12, color:'#1b5e20', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                                  {url.split('/').pop()?.split('?')[0] || `File ${i+1}`}
+                                </a>
+                                <button onClick={()=>setVehForm(f=>({...f, attachment_urls:f.attachment_urls.filter((_,j)=>j!==i)}))}
+                                  style={{ background:'#fee2e2', border:'none', borderRadius:5, color:'#c62828', padding:'2px 8px', cursor:'pointer', fontSize:11, fontWeight:700 }}>✕</button>
+                              </div>
+                            ))}
+                            <div style={{ marginBottom:12 }} />
+                          </>
+                        )}
+
+                        {/* Pending upload queue */}
                         {vehAttachments.length > 0 && (
-                          <div style={{ marginBottom:12 }}>
+                          <>
+                            <div style={{ fontSize:10, fontWeight:800, color:'#0064a0', textTransform:'uppercase', letterSpacing:1, marginBottom:6 }}>Pending Upload</div>
                             {vehAttachments.map((file, i)=>(
-                              <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', background:'#f8fafc', borderRadius:8, marginBottom:6, border:'1px solid #e0e8f0' }}>
+                              <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', background:'#f0f7ff', borderRadius:8, marginBottom:6, border:'1px solid #b0cfe8' }}>
                                 <span style={{ fontSize:16 }}>📎</span>
                                 <span style={{ flex:1, fontSize:12, color:'#172D37', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{file.name}</span>
                                 <span style={{ fontSize:11, color:'#53666F' }}>{(file.size/1024).toFixed(0)} KB</span>
                                 <button onClick={()=>setVehAttachments(a=>a.filter((_,j)=>j!==i))} style={{ background:'#fee2e2', border:'none', borderRadius:5, color:'#c62828', padding:'2px 8px', cursor:'pointer', fontSize:11, fontWeight:700 }}>✕</button>
                               </div>
                             ))}
+                          </>
+                        )}
+
+                        {/* Upload progress bar */}
+                        {vehUploadProg && (
+                          <div style={{ background:'#e3f2fd', borderRadius:8, padding:'10px 14px', marginBottom:10, fontSize:12, fontWeight:700, color:'#0064a0' }}>
+                            ⏳ Uploading {vehUploadProg}…
                           </div>
                         )}
-                        <input ref={vehFileRef} type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+
+                        <input ref={vehFileRef} type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.docx"
                           style={{ display:'none' }}
                           onChange={e=>setVehAttachments(a=>[...a,...Array.from(e.target.files)])} />
                         <button onClick={()=>vehFileRef.current?.click()}
@@ -1256,7 +1311,7 @@ export default function Vehicles({ entityId }) {
                           <span style={{ fontSize:18 }}>+</span> Add Attachment
                         </button>
                         <div style={{ padding:'10px 14px', background:'#fffde7', borderRadius:8, border:'1px solid #ffe082', fontSize:11, color:'#7a6000' }}>
-                          ℹ Files upload to Google Drive on save. Supported: PDF, JPG, PNG, DOC (max 25 MB each).
+                          ℹ Files upload to Google Drive on save. Supported: PDF, JPG, PNG, DOCX (max 10 MB each).
                         </div>
                       </>}
 

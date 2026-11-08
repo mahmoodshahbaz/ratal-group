@@ -114,15 +114,15 @@ const ALL_FORMS = [
   { key:'dh_dashboard',        label:'DH Dashboard',        icon:'📊' },
 ]
 
-// ── Role-to-form map (must mirror useFieldAuth.js ROLE_FORM_ACCESS) ──────────
+// ── Role-to-form map (mirrors useFieldAuth.js ROLE_FORM_ACCESS) ──────────────
 const ROLE_FORM_ACCESS = {
-  STAFF_TECH:       ['expense_daily','expense_claim','food_allowance','overtime','site_completion','payment_validation'],
-  STAFF_SUPERVISOR: ['expense_daily','expense_claim','food_allowance','overtime','site_completion','money_request','po_request','payment_validation'],
-  STAFF_PM:         ['expense_daily','expense_claim','food_allowance','overtime','site_completion','money_request','po_request','field_payment','payment_validation','dh_dashboard'],
+  STAFF_TECH:       ['expense_daily','expense_claim','food_allowance','overtime','payment_validation'],
+  STAFF_SUPERVISOR: ['expense_daily','expense_claim','food_allowance','overtime','po_request','payment_validation'],
+  STAFF_PM:         ['expense_daily','expense_claim','food_allowance','overtime','po_request','money_request','payment_validation'],
   STAFF_DH:         ['expense_daily','expense_claim','food_allowance','overtime','site_completion','money_request','po_request','field_payment','subcon_claim','car_maintenance','payment_validation','dh_dashboard'],
   SUBCONTRACTOR:    ['site_completion','subcon_claim','payment_validation'],
-  OUTSOURCED:       ['expense_daily','expense_claim','site_completion','payment_validation'],
-  DRIVER:           ['expense_daily','expense_claim','car_maintenance','payment_validation'],
+  OUTSOURCED:       ['expense_daily','expense_claim','payment_validation'],
+  DRIVER:           ['expense_daily','expense_claim','food_allowance','overtime','car_maintenance','payment_validation'],
   FINANCE:          ['expense_daily','expense_claim','food_allowance','overtime','site_completion','money_request','po_request','field_payment','subcon_claim','car_maintenance','payment_validation','dh_dashboard'],
 }
 
@@ -351,14 +351,25 @@ export default function QRManager({ entityId, entityCode, isAr }) {
     // grantedValue: true = force-grant, false = force-deny, null = delete override
     setPermSaving(formKey)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      await supabase.rpc('upsert_token_form_override', {
+      // Note: p_admin_id = null — we don't pass auth user UUID because it's a
+      // different UUID space from employees(id), which would cause an FK violation.
+      const { data: rpcResult, error: rpcErr } = await supabase.rpc('upsert_token_form_override', {
         p_token_id: showPerms.id,
         p_form_key: formKey,
         p_granted:  grantedValue,
-        p_admin_id: user?.id || null,
+        p_admin_id: null,
       })
-      // Refresh deltas
+      if (rpcErr) {
+        console.error('savePermOverride RPC error:', rpcErr)
+        alert(`Failed to save permission: ${rpcErr.message}`)
+        return
+      }
+      if (rpcResult?.error) {
+        console.error('savePermOverride DB error:', rpcResult.error)
+        alert(`Failed to save permission: ${rpcResult.error}`)
+        return
+      }
+      // Refresh deltas from DB
       const { data } = await supabase
         .from('qr_token_forms')
         .select('form_key, is_granted')

@@ -25,7 +25,7 @@ const ORANGE = '#ea580c'
 // ── Error Screen ───────────────────────────────────────────────────────────
 function ErrorScreen({ icon, title, body }) {
   return (
-    <div style={{ minHeight:'100vh', background:'#0f172a', display:'flex', alignItems:'center', justifyContent:'center', padding:24, fontFamily:FF }}>
+    <div style={{ minHeight:'100dvh', background:'#0f172a', display:'flex', alignItems:'center', justifyContent:'center', padding:24, fontFamily:FF }}>
       <div style={{ background:'#1e293b', borderRadius:24, padding:'40px 28px', maxWidth:360, width:'100%', textAlign:'center' }}>
         <div style={{ fontSize:56, marginBottom:16 }}>{icon}</div>
         <div style={{ fontSize:19, fontWeight:800, color:'#f87171', marginBottom:10 }}>{title}</div>
@@ -38,7 +38,7 @@ function ErrorScreen({ icon, title, body }) {
 // ── Already Confirmed Screen ───────────────────────────────────────────────
 function AlreadyConfirmed({ name, amount, confirmedAt }) {
   return (
-    <div style={{ minHeight:'100vh', background:'#0f172a', display:'flex', alignItems:'center', justifyContent:'center', padding:24, fontFamily:FF }}>
+    <div style={{ minHeight:'100dvh', background:'#0f172a', display:'flex', alignItems:'center', justifyContent:'center', padding:24, fontFamily:FF }}>
       <div style={{ background:'#1e293b', borderRadius:24, padding:'40px 28px', maxWidth:360, width:'100%', textAlign:'center' }}>
         <div style={{ fontSize:52, marginBottom:16 }}>✅</div>
         <div style={{ fontSize:19, fontWeight:800, color:'#4ade80', marginBottom:8 }}>Already Confirmed</div>
@@ -61,7 +61,7 @@ function AlreadyConfirmed({ name, amount, confirmedAt }) {
 // ── Success Screen ─────────────────────────────────────────────────────────
 function SuccessScreen({ name, amount, sessionDate, confirmedAt }) {
   return (
-    <div style={{ minHeight:'100vh', background:'#0f172a', display:'flex', flexDirection:'column', fontFamily:FF }}>
+    <div style={{ minHeight:'100dvh', background:'#0f172a', display:'flex', flexDirection:'column', fontFamily:FF }}>
 
       {/* Green gradient hero */}
       <div style={{
@@ -232,7 +232,7 @@ export default function FormPaymentConfirm() {
 
   // ── Render guards ────────────────────────────────────────────────────────
   if (loading) return (
-    <div style={{ minHeight:'100vh', background:'#0f172a', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:FF }}>
+    <div style={{ minHeight:'100dvh', background:'#0f172a', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:FF }}>
       <div style={{ textAlign:'center' }}>
         <div style={{ width:48, height:48, borderRadius:'50%', border:'3px solid #334155', borderTopColor:'#22c55e', margin:'0 auto 16px', animation:'spin 0.8s linear infinite' }}/>
         <div style={{ fontSize:13, color:'#64748b' }}>Loading payment details…</div>
@@ -341,7 +341,7 @@ export default function FormPaymentConfirm() {
 
       {/* Pinned confirm button */}
       <div style={{
-        flexShrink:0, padding:'14px 20px 32px',
+        flexShrink:0, padding:`14px 20px calc(32px + env(safe-area-inset-bottom, 0px))`,
         background:'#0f172a', borderTop:'1px solid #1e293b',
       }}>
         <button

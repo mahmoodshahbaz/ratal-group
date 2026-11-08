@@ -684,6 +684,9 @@ export default function Invoices({ entityId, entityCode, entityVatNumber, entity
   const [dept,        setDept]        = useState('')
   const [projectNo,   setProjectNo]   = useState('')
   const [selDeptKey,  setSelDeptKey]  = useState('')   // cascade: dept filter for project dropdown
+  const [deptsList,   setDeptsList]   = useState([])   // all departments for entity
+  const [projsList,   setProjsList]   = useState([])   // all projects for entity
+  const [selProjId,   setSelProjId]   = useState('')   // cascade: selected project UUID
   const [selProjNum,  setSelProjNum]  = useState('')   // cascade: project filter for PO dropdown
   const [poNumber,    setPoNumber]    = useState('')
   const [refInvNo,    setRefInvNo]    = useState('')
@@ -786,13 +789,17 @@ export default function Invoices({ entityId, entityCode, entityVatNumber, entity
 
   async function load() {
     setLoading(true)
-    const [{ data:inv }, { data:cons }, { data:entData }] = await Promise.all([
+    const [{ data:inv }, { data:cons }, { data:entData }, { data:dpts }, { data:prjs }] = await Promise.all([
       supabase.from('invoices').select('*').eq('entity_id',entityId).order('invoice_date',{ascending:false}),
       supabase.from('contractors').select('*').eq('entity_id',entityId).eq('vendor_type','CONTRACTOR').order('contractor_name'),
       supabase.from('entities').select('cr_number,address,entity_address').eq('id',entityId).maybeSingle(),
+      supabase.from('departments').select('id,dept_code,dept_name').eq('entity_id',entityId).eq('is_active',true).order('dept_code'),
+      supabase.from('projects').select('id,project_number,project_name,department_id').eq('entity_id',entityId).order('project_number'),
     ])
     if (entData) { setEntityCR(entData.cr_number||''); setEntityAddr(entData.address||entData.entity_address||'') }
-setInvoices(inv||[])
+    setDeptsList(dpts||[])
+    setProjsList(prjs||[])
+    setInvoices(inv||[])
     setContractors(cons||[])
     // Load payment allocations for ISSUED invoices to show outstanding balance
     const issuedIds = (inv||[]).filter(i=>i.status==='ISSUED').map(i=>i.id)
@@ -826,7 +833,7 @@ setInvoices(inv||[])
     else { setCurrency('SAR'); setExchangeRate('') }
     setCustVat(con?.vat_number || con?.tax_number || '')
     setCustAddr(con?.address || con?.contractor_address || '')
-    if (!cId) { setAllPos([]); setRetInvoices([]); return }
+    if (!cId) { setAllPos([]); setRetInvoices([]); setSelDeptKey(''); setSelProjId(''); setSelProjNum(''); return }
     const [{ data: pos }, { data: retInvs }] = await Promise.all([
       supabase.from('incoming_pos').select('*, departments(dept_name,dept_code), projects(project_number,project_name), incoming_po_items(*)').eq('entity_id',entityId).eq('contractor_id',cId).in('status',['ACTIVE','INVOICED']).order('po_date',{ascending:false}),
       supabase.from('invoices').select('id,invoice_number,invoice_date,retention_amount,retention_pct,status').eq('entity_id',entityId).eq('contractor_id',cId).gt('retention_amount',0).in('status',['ISSUED','PAID']).order('invoice_date',{ascending:false}),
@@ -840,8 +847,8 @@ setInvoices(inv||[])
     const po = allPos.find(p=>p.id===poId); if (!po) return
     setSelectedPo(po); setBillingMode(po.billing_mode||'QTY'); setRetentionPct(po.retention_pct||0)
     setPoNumber(po.contractor_po_number||'')
-    const dKey=po.departments?.dept_code||po.departments?.dept_name||''; setDept(po.departments?.dept_name||dKey); setSelDeptKey(dKey)
-    const pNum=po.projects?.project_number||''; setProjectNo(pNum); setSelProjNum(pNum)
+    const deptRec=po.departments; const dKey=po.department_id||''; setSelDeptKey(dKey); setDept(deptRec?.dept_code||deptRec?.dept_name||'')
+    const pNum=po.projects?.project_number||''; setProjectNo(pNum); setSelProjNum(pNum); setSelProjId(po.project_id||'')
     setPaymentTerms(po.payment_terms || po.payment_condition || '')
     const items = po.incoming_po_items||[]
     if ((po.billing_mode||'QTY')==='QTY') {
@@ -1219,6 +1226,7 @@ setInvoices(inv||[])
         onNext={wizardStep<4 ? () => setWizardStep(s=>s+1) : () => save(false)}
         nextLabel={wizardStep<4 ? 'Save & Next' : (saving ? 'Submitting…' : '✓ Save Invoice')}
         nextDisabled={saving && wizardStep===4}
+        subjectLabel={{ line1: contractors.find(c=>c.id===custId)?.contractor_name || null, line2: null }}
       >
 
                     {/* ── STEP 1: Entity & Client ── */}
@@ -1311,22 +1319,17 @@ setInvoices(inv||[])
                       </div>
                       {/* ── CASCADE: Dept → Project → PO ── */}
                       {(()=>{
-                        // Derive unique depts from allPos
-                        const deptMap = {}
-                        allPos.forEach(po=>{ const d=po.departments; if(d){ const k=d.dept_code||d.dept_name||''; if(k&&!deptMap[k]) deptMap[k]=d.dept_name||d.dept_code||k } })
-                        const depts = Object.entries(deptMap) // [[code, name], ...]
+                        // Projects filtered by selected dept — from directly-loaded projects list
+                        const filteredProjs = selDeptKey
+                          ? projsList.filter(p=>p.department_id===selDeptKey)
+                          : projsList
 
-                        // Projects filtered by selected dept
-                        const projMap = {}
-                        allPos.filter(po=>!selDeptKey||(po.departments?.dept_code||po.departments?.dept_name||''===selDeptKey)).forEach(po=>{ const p=po.projects; if(p){ const k=p.project_number||''; if(k&&!projMap[k]) projMap[k]=p.project_name||k } })
-                        const projs = Object.entries(projMap) // [[num, name], ...]
-
-                        // POs filtered by dept + project
+                        // POs filtered by dept + project — using UUID FKs
+                        // A PO with no project_id (null) is always shown regardless of project selection
+                        // A PO with no department_id (null) is always shown regardless of dept selection
                         const filteredPos = allPos.filter(po=>{
-                          const dKey=po.departments?.dept_code||po.departments?.dept_name||''
-                          const pKey=po.projects?.project_number||''
-                          if(selDeptKey && dKey!==selDeptKey) return false
-                          if(selProjNum && pKey!==selProjNum) return false
+                          if(selDeptKey && po.department_id && po.department_id!==selDeptKey) return false
+                          if(selProjId  && po.project_id  && po.project_id!==selProjId)      return false
                           return true
                         })
 
@@ -1337,10 +1340,13 @@ setInvoices(inv||[])
                               {!custId
                                 ? <div style={{ ...S.inp, background:'#f5f5f5', color:'#aab2bd', fontSize:12 }}>Select contractor first</div>
                                 : <select style={S.inp} value={selDeptKey} onChange={e=>{
-                                    const v=e.target.value; setSelDeptKey(v); setSelProjNum(''); onPoChange(''); setDept(deptMap[v]||v)
+                                    const v=e.target.value
+                                    const rec=deptsList.find(d=>d.id===v)
+                                    setSelDeptKey(v); setSelProjId(''); setSelProjNum(''); setProjectNo(''); onPoChange('')
+                                    setDept(rec?.dept_code||rec?.dept_name||'')
                                   }}>
                                     <option value="">— All Departments —</option>
-                                    {depts.map(([code,name])=><option key={code} value={code}>{name}</option>)}
+                                    {deptsList.map(d=><option key={d.id} value={d.id}>{d.dept_code||d.dept_name}</option>)}
                                   </select>
                               }
                             </div>
@@ -1348,11 +1354,13 @@ setInvoices(inv||[])
                               <label style={S.label}>Project No.</label>
                               {!custId
                                 ? <div style={{ ...S.inp, background:'#f5f5f5', color:'#aab2bd', fontSize:12 }}>—</div>
-                                : <select style={{ ...S.inp, background:selDeptKey?undefined:'#f9f9f9' }} value={selProjNum} disabled={!selDeptKey} onChange={e=>{
-                                    const v=e.target.value; setSelProjNum(v); onPoChange(''); setProjectNo(v)
+                                : <select style={{ ...S.inp, background:selDeptKey?undefined:'#f9f9f9' }} value={selProjId} disabled={!selDeptKey} onChange={e=>{
+                                    const v=e.target.value
+                                    const rec=projsList.find(p=>p.id===v)
+                                    setSelProjId(v); setSelProjNum(rec?.project_number||''); setProjectNo(rec?.project_number||''); onPoChange('')
                                   }}>
                                     <option value="">— Select Project —</option>
-                                    {projs.map(([num,name])=><option key={num} value={num}>{num}{name&&name!==num?' — '+name:''}</option>)}
+                                    {filteredProjs.map(p=><option key={p.id} value={p.id}>{p.project_number}{p.project_name&&p.project_name!==p.project_number?' — '+p.project_name:''}</option>)}
                                   </select>
                               }
                             </div>
@@ -1362,7 +1370,7 @@ setInvoices(inv||[])
                               <label style={S.label}>Contractor PO#</label>
                               {!custId
                                 ? <div style={{ padding:'7px 10px', borderRadius:6, border:'1px solid #dde3ec', fontSize:11, color:'#aab2bd' }}>Select contractor in Step 1 first</div>
-                                : <select style={{ ...S.inp, background:selProjNum?undefined:'#f9f9f9' }} value={selectedPo?.id||''} onChange={e=>onPoChange(e.target.value)}>
+                                : <select style={{ ...S.inp, background:selProjId?undefined:'#f9f9f9' }} value={selectedPo?.id||''} onChange={e=>onPoChange(e.target.value)}>
                                     <option value="">— No PO (manual) —</option>
                                     {filteredPos.map(po=>{
                                       const pct=po.total_value>0?((po.total_invoiced_ex_vat||0)/po.total_value*100).toFixed(0):0

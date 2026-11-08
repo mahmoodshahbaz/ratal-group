@@ -15,7 +15,7 @@ const corsHeaders = {
 }
 
 // Roles an ADMIN is allowed to assign (cannot assign SUPERADMIN or ADMIN)
-const ADMIN_ASSIGNABLE_ROLES = ['DEPT_HEAD','PROJECT_MANAGER','TRAVEL_AGENT','FIELD_EMPLOYEE','VIEWER']
+const ADMIN_ASSIGNABLE_ROLES = ['DEPT_HEAD','PROJECT_MANAGER','SUPERVISOR','TRAVEL_AGENT','FIELD_EMPLOYEE','VIEWER']
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -30,9 +30,19 @@ Deno.serve(async (req) => {
       })
     }
 
+    // Support both legacy SUPABASE_SERVICE_ROLE_KEY and new SUPABASE_SECRET_KEYS
+    const legacyKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    let serviceRoleKey = legacyKey
+    if (!serviceRoleKey) {
+      try {
+        const secretKeys = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') ?? '{}')
+        serviceRoleKey = secretKeys.service_role ?? ''
+      } catch { /* ignore */ }
+    }
+
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      serviceRoleKey,
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
     const supabaseAnon = createClient(

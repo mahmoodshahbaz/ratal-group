@@ -139,6 +139,15 @@ const BLANK = {
   status:'ACTIVE', disposal_date:'', disposal_proceeds:'', disposal_notes:'', notes:'',
 }
 
+function FRow({ label, children, required }) {
+  return (
+    <div>
+      <label style={S.lbl}>{label}{required&&<span style={{color:'#c62828'}}> *</span>}</label>
+      {children}
+    </div>
+  )
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // Tab 1 — Asset Register
 // ═══════════════════════════════════════════════════════════════════
@@ -152,6 +161,16 @@ function AssetRegister({ entityId, assets, reload }) {
   const [asOf,       setAsOf]       = useState(new Date().toISOString().slice(0,10))
   const [showBanner, setShowBanner] = useState(false)
   const [wizardStep, setWizardStep] = useState(1)
+  const [depts,      setDepts]      = useState([])
+  const [employees,  setEmps]       = useState([])
+
+  useEffect(() => {
+    if (!entityId) return
+    supabase.from('departments').select('id,dept_code,dept_name').eq('entity_id', entityId).order('dept_code')
+      .then(({ data }) => setDepts(data || []))
+    supabase.from('employees').select('id,full_name,full_name_en,department_id').eq('entity_id', entityId).eq('status','ACTIVE').order('full_name')
+      .then(({ data }) => setEmps(data || []))
+  }, [entityId])
 
   function resetForm() { setForm({...BLANK}); setWizardStep(1) }
 
@@ -218,14 +237,7 @@ function AssetRegister({ entityId, assets, reload }) {
   const totalNBV  = visible.reduce((s,a) => s + calcNBV(a, asOf), 0)
   const totalAccum = totalCost - totalNBV
 
-  function FRow({ label, children, required }) {
-    return (
-      <div>
-        <label style={S.lbl}>{label}{required&&<span style={{color:'#c62828'}}> *</span>}</label>
-        {children}
-      </div>
-    )
-  }
+
 
   return (
     <>
@@ -346,6 +358,7 @@ function AssetRegister({ entityId, assets, reload }) {
         onNext={wizardStep<3 ? () => setWizardStep(s=>s+1) : save}
         nextLabel={wizardStep<3 ? 'Next →' : (saving ? 'Saving…' : '✓ Save Asset')}
         nextDisabled={saving}
+        subjectLabel={{ line1: form.department || null, line2: form.asset_name || null }}
       >
         <div style={{ flex:1, overflowY:'auto', padding:'14px 18px', fontFamily:"'Poppins',sans-serif" }}>
 
@@ -364,9 +377,22 @@ function AssetRegister({ entityId, assets, reload }) {
                   {STATUSES.map(s=><option key={s} value={s}>{s}</option>)}
                 </select>
               </FRow>
-              <FRow label="Department"><input value={form.department} onChange={e=>setForm(f=>({...f,department:e.target.value}))} style={S.inp} /></FRow>
+              <FRow label="Department">
+                <select value={form.department} onChange={e=>setForm(f=>({...f,department:e.target.value,assigned_to:''}))} style={S.inp}>
+                  <option value="">— Select dept —</option>
+                  {depts.map(d=><option key={d.id} value={d.dept_code||d.dept_name}>{d.dept_code||d.dept_name}</option>)}
+                </select>
+              </FRow>
               <FRow label="Location"><input value={form.location} onChange={e=>setForm(f=>({...f,location:e.target.value}))} style={S.inp} /></FRow>
-              <FRow label="Assigned To"><input value={form.assigned_to} onChange={e=>setForm(f=>({...f,assigned_to:e.target.value}))} style={S.inp} /></FRow>
+              <FRow label="Assigned To">
+                <select value={form.assigned_to} onChange={e=>setForm(f=>({...f,assigned_to:e.target.value}))} style={S.inp}>
+                  <option value="">— Select employee —</option>
+                  {(form.department
+                    ? employees.filter(e => (depts.find(d=>d.dept_code===form.department||d.dept_name===form.department))?.id === e.department_id)
+                    : employees
+                  ).map(e=><option key={e.id} value={e.full_name||e.full_name_en}>{e.full_name||e.full_name_en}</option>)}
+                </select>
+              </FRow>
               <FRow label="Serial Number"><input value={form.serial_number} onChange={e=>setForm(f=>({...f,serial_number:e.target.value}))} style={S.inp} /></FRow>
             </div>
           )}

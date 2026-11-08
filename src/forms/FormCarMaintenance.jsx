@@ -18,6 +18,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useFieldAuth } from '../lib/useFieldAuth'
+import OTPActivationScreen from '../components/OTPActivationScreen'
 import { supabase }     from '../lib/supabase'
 import { uploadToDrive } from '../hooks/useDriveUpload'
 
@@ -159,7 +160,8 @@ const SArea = ({ style={}, accent, ...props }) => (
 
 const PAGE = { maxWidth:480, margin:'0 auto', padding:'0 0 80px',
   fontFamily:"'SF Pro Display',-apple-system,'Segoe UI',system-ui,sans-serif",
-  background:'#f5f6fa', minHeight:'100vh', boxSizing:'border-box' }
+  background:'#f5f6fa', minHeight:'100dvh', boxSizing:'border-box',
+  color:'#0f172a', colorScheme:'light' }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
@@ -436,6 +438,7 @@ export default function FormCarMaintenance() {
   const employee = DEV_MODE ? DEV_EMPLOYEE : auth.employee
 
   // ── Guards ─────────────────────────────────────────────────────────────────
+  if(!DEV_MODE && auth.needsActivation) return <OTPActivationScreen auth={auth} />
   if(!DEV_MODE && auth.loading) return (
     <div style={{ ...PAGE, display:'flex', alignItems:'center', justifyContent:'center' }}>
       <div style={{ textAlign:'center', color:'#94a3b8' }}>
@@ -598,7 +601,7 @@ export default function FormCarMaintenance() {
 
   // ── ACCIDENT GUIDE ──────────────────────────────────────────────────────────
   if(screen === 'accident_guide') return (
-    <div style={{ ...PAGE, background:'#0f172a', minHeight:'100vh' }}>
+    <div style={{ ...PAGE, background:'#0f172a', minHeight:'100dvh' }}>
       {/* SOS Header — full bleed */}
       <div style={{ background:'linear-gradient(135deg,#7f1d1d,#dc2626)', padding:'52px 22px 30px', borderRadius:'0 0 30px 30px', marginBottom:20, textAlign:'center' }}>
         <div style={{ fontSize:52, marginBottom:12 }}>🚨</div>

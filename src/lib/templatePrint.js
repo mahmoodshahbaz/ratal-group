@@ -2709,234 +2709,205 @@ function buildOvertimeReport(d) {
   </body></html>`
 }
 
-// ─── Cash Payment Voucher — Iqama + QR + informal party support ──────────────
+// ─── Cash Payment Voucher — house style (Ratal template family) ──────────────
 function buildCashPaymentVoucher(d) {
   const fmtSAR = n => parseFloat(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
   const fmtD   = s => { if (!s) return '—'; const p=(s.split('T')[0]||'').split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:s }
+  const driveUrl = url => {
+    if (!url) return ''
+    const m1 = url.match(/\/d\/([a-zA-Z0-9_-]{20,})/)
+    if (m1) return `https://lh3.googleusercontent.com/d/${m1[1]}`
+    const m2 = url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/)
+    if (m2) return `https://lh3.googleusercontent.com/d/${m2[1]}`
+    return url
+  }
 
-  // ── Build QR data string — scannable on any phone ────────────────────────
   const qrData = [
     `VOUCHER:${d.voucher_number||'CPV'}`,
     `DATE:${fmtD(d.payment_date)}`,
     `PAYEE:${d.payee_name||''}`,
     d.iqama_number  ? `IQAMA:${d.iqama_number}`    : null,
     d.vat_number    ? `VAT:${d.vat_number}`         : null,
-    d.cr_number     ? `CR:${d.cr_number}`           : null,
     `AMOUNT:SAR ${fmtSAR(d.amount||0)}`,
-    `METHOD:${d.payment_method||'CASH'}`,
     `PURPOSE:${(d.purpose||'').substring(0,80)}`,
     `ENTITY:${d.entity_name||'Ratal Advanced Technologies'}`,
-    `APPROVED:${d.approved_by||''}`,
-    `REF:${d.reference_number||d.voucher_number||''}`,
   ].filter(Boolean).join('\n')
+  const qrSrc    = `https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(qrData)}`
+  const payeeQrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=56x56&data=${encodeURIComponent('CONFIRM:'+encodeURIComponent(d.voucher_number||'CPV')+' AMT:'+encodeURIComponent(d.amount||0)+' PAYEE:'+encodeURIComponent(d.payee_name||''))}`
 
-  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(qrData)}`
+  const partyType = d.party_type || 'INDIVIDUAL'
+  const idLabel   = partyType === 'COMPANY' ? 'VAT Reg. No' : 'Iqama No.'
+  const idValue   = partyType === 'COMPANY' ? (d.vat_number||'—') : (d.iqama_number||'—')
 
-  // ── Party type config ────────────────────────────────────────────────────
-  const partyType = d.party_type || 'INDIVIDUAL'  // COMPANY | INDIVIDUAL | INFORMAL
-  const partyConfig = {
-    COMPANY:    { label:'Registered Company', color:'#1565c0', bg:'#e3f2fd', idLabel:'VAT Reg. No', idValue: d.vat_number||'—', id2Label:'CR Number', id2Value: d.cr_number||'—' },
-    INDIVIDUAL: { label:'Individual',         color:'#2e7d32', bg:'#e8f5e9', idLabel:'Iqama No',    idValue: d.iqama_number||'—', id2Label:'Mobile',    id2Value: d.payee_mobile||'—' },
-    INFORMAL:   { label:'Informal Party',     color:'#e65100', bg:'#fff3e0', idLabel:'Iqama / ID',  idValue: d.iqama_number||d.vat_number||'Not Available', id2Label:'Mobile', id2Value: d.payee_mobile||'—' },
-  }
-  const pc = partyConfig[partyType] || partyConfig.INDIVIDUAL
+  const rcptType = d.receipt_type || 'INFORMAL_RECEIPT'
+  const rcptLabels = { VAT_INVOICE:'VAT Invoice', SIMPLIFIED:'Simplified Invoice', INFORMAL_RECEIPT:'Informal Receipt', NO_RECEIPT:'No Receipt' }
+  const rcptLabel = rcptLabels[rcptType] || rcptType
 
-  // ── Receipt type config ──────────────────────────────────────────────────
-  const rcptType = d.receipt_type || 'INFORMAL'
-  const rcptConfig = {
-    VAT_INVOICE:      { label:'VAT Invoice',       color:'#2e7d32', bg:'#e8f5e9' },
-    SIMPLIFIED:       { label:'Simplified Invoice',color:'#1565c0', bg:'#e3f2fd' },
-    INFORMAL_RECEIPT: { label:'Informal Receipt',  color:'#e65100', bg:'#fff3e0' },
-    NO_RECEIPT:       { label:'No Receipt',        color:'#b71c1c', bg:'#ffebee' },
-  }
-  const rc = rcptConfig[rcptType] || rcptConfig.INFORMAL_RECEIPT
-  const needsJustification = rcptType === 'INFORMAL_RECEIPT' || rcptType === 'NO_RECEIPT' || partyType === 'INFORMAL'
+  const needsJustification = rcptType==='INFORMAL_RECEIPT' || rcptType==='NO_RECEIPT' || partyType==='INFORMAL'
+  const justRow = needsJustification ? `
+      <tr>
+        <td class="lbl" style="background:#7a1010;color:#fff;">⚠ Justification</td>
+        <td class="val" colspan="3" style="background:#fff9f9;color:#7a1010;">
+          ${d.justification||'DH justification required — to be filled here: _______________________________________________'}
+        </td>
+      </tr>` : ''
 
-  // ── Payment method labels ────────────────────────────────────────────────
-  const methodLabels = { CASH:'Cash', BANK_TRANSFER:'Bank Transfer', CHEQUE:'Cheque', SADAD:'SADAD' }
-  const methodLabel  = methodLabels[d.payment_method] || d.payment_method || 'Cash'
+  const docPhotoSrc    = driveUrl(d.document_url || d.photo_url)
+  const iqamaPhotoSrc  = driveUrl(d.iqama_photo_url)
 
-  // ── Iqama photo block (optional) ─────────────────────────────────────────
-  const iqamaPhotoBlock = d.iqama_photo_url ? `
-    <div style="margin-bottom:12px;">
-      <div style="font-size:10px;font-weight:700;color:#1a2e3d;margin-bottom:5px;border-bottom:1px solid #e0e6ef;padding-bottom:4px;">🪪 IQAMA / ID COPY</div>
-      <div style="text-align:center;background:#f5f7fa;border:1.5px dashed #c0cad8;border-radius:6px;padding:6px;">
-        <img src="${d.iqama_photo_url}" style="max-width:100%;max-height:160px;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.1);" alt="Iqama Copy" onerror="this.style.display='none'"/>
-      </div>
-    </div>` : ''
-
-  // ── Supporting document photo ─────────────────────────────────────────────
-  const docPhotoBlock = d.document_url || d.photo_url ? `
-    <div style="margin-bottom:12px;">
-      <div style="font-size:10px;font-weight:700;color:#1a2e3d;margin-bottom:5px;border-bottom:1px solid #e0e6ef;padding-bottom:4px;">📄 SUPPORTING DOCUMENT / RECEIPT</div>
-      <div style="text-align:center;background:#f5f7fa;border:1.5px dashed #c0cad8;border-radius:6px;padding:6px;">
-        <img src="${d.document_url||d.photo_url}" style="max-width:100%;max-height:200px;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.1);" alt="Receipt/Document" onerror="this.style.display='none';this.nextSibling.style.display='block'"/>
-        <div style="display:none;font-size:10px;color:#aaa;padding:16px;">Document on file — Drive URL: ${d.document_url||d.photo_url}</div>
-      </div>
-    </div>` : `
-    <div style="background:#fafafa;border:1.5px dashed #ddd;border-radius:6px;padding:14px;text-align:center;color:#bbb;font-size:10px;margin-bottom:12px;">
-      📄 No supporting document attached
+  const docPhotoBlock = `
+    <div class="photo-box">
+      <div class="photo-hdr">📄 Supporting Document / Receipt Copy</div>
+      <div class="photo-body">${docPhotoSrc
+        ? `<img src="${docPhotoSrc}" style="max-width:100%;max-height:200px;display:block;" alt="Receipt" onerror="this.style.display='none'"/>`
+        : `<div style="font-size:10px;color:#bbb;padding:24px;text-align:center;">📷 Attach receipt / document photo here</div>`
+      }</div>
     </div>`
 
-  // ── Justification box (red — for informal/no-receipt) ────────────────────
-  const justificationBlock = needsJustification ? `
-    <div style="background:#ffebee;border:2px solid #ef9a9a;border-radius:6px;padding:10px 14px;margin-bottom:12px;">
-      <div style="font-weight:800;color:#b71c1c;font-size:11px;margin-bottom:4px;">
-        ⚠️ NON-STANDARD PAYMENT — DH AUTHORISATION REQUIRED
+  const iqamaPhotoBlock = iqamaPhotoSrc ? `
+    <div class="photo-box" style="margin-bottom:10px;">
+      <div class="photo-hdr">🪪 Iqama / ID Copy</div>
+      <div class="photo-body">
+        <img src="${iqamaPhotoSrc}" style="max-width:100%;max-height:160px;display:block;" alt="Iqama"/>
       </div>
-      <div style="font-size:10px;color:#c62828;margin-bottom:6px;">
-        ${partyType==='INFORMAL'?'Payee has no formal VAT/CR registration. ':''}${rcptType==='NO_RECEIPT'?'No receipt provided. ':''}${rcptType==='INFORMAL_RECEIPT'?'Informal receipt only — not a tax invoice. ':''}
-      </div>
-      ${d.justification ? `
-      <div style="background:#fff;border:1px solid #ef9a9a;border-radius:4px;padding:8px;font-size:10px;color:#1a2e3d;">
-        <strong>DH Justification:</strong> ${d.justification}
-      </div>` : `
-      <div style="background:#fff;border:1px dashed #ef9a9a;border-radius:4px;padding:8px;font-size:10px;color:#9e9e9e;font-style:italic;">
-        DH justification to be written here: _______________________________________________
-        ___________________________________________________________________________________
-      </div>`}
     </div>` : ''
+
+  const HOUSE_CSS = `
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:Arial,sans-serif;background:#fff;font-size:11px;color:#1a2e3d;}
+    .page{width:794px;margin:0 auto;padding:24px 32px 56px;position:relative;background:#fff;}
+    .co-name{font-size:15px;font-weight:700;color:#1a2e3d;}
+    .co-sub{font-size:9px;color:#555;margin-top:1px;}
+    .rpt-title{font-size:13px;font-weight:700;color:#8B2500;margin-top:4px;text-transform:uppercase;letter-spacing:.3px;}
+    .rpt-sub{font-size:11px;font-weight:700;color:#8B2500;margin-top:1px;}
+    .meta{font-size:8.5px;color:#888;margin:10px 0 6px;display:flex;justify-content:space-between;}
+    .info-tbl{width:100%;border-collapse:collapse;margin-bottom:10px;}
+    .info-tbl td{padding:5px 10px;border:1px solid #c8d4e0;font-size:10px;}
+    .info-tbl .lbl{background:#1a3a5c;color:#fff;font-weight:700;width:110px;}
+    .info-tbl .val{background:#fff;color:#1a2e3d;font-weight:600;}
+    .amt-tbl{width:100%;border-collapse:collapse;margin-bottom:10px;}
+    .amt-tbl td{padding:6px 10px;border:1px solid #c8d4e0;font-size:10px;}
+    .amt-tbl .lbl{background:#f0f4f8;font-weight:600;color:#1a3a5c;width:60%;}
+    .amt-tbl .val{text-align:right;font-weight:700;}
+    .amt-tbl .total-row td{background:#3D1A00;color:#fff;font-size:12px;font-weight:800;}
+    .notes-box{border:1px solid #c8d4e0;margin-bottom:10px;}
+    .notes-hdr{background:#1a3a5c;color:#fff;font-size:9px;font-weight:700;padding:4px 10px;text-transform:uppercase;letter-spacing:.3px;}
+    .notes-body{padding:7px 10px;font-size:10px;color:#1a2e3d;line-height:1.6;min-height:32px;}
+    .photo-box{border:1px solid #c8d4e0;margin-bottom:10px;}
+    .photo-hdr{background:#1a3a5c;color:#fff;font-size:9px;font-weight:700;padding:4px 10px;text-transform:uppercase;letter-spacing:.3px;}
+    .photo-body{padding:8px;text-align:center;min-height:150px;display:flex;align-items:center;justify-content:center;background:#f8f9fa;}
+    .sig-strip{display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid #c8d4e0;margin-top:16px;}
+    .sig-cell{padding:8px 10px;border-right:1px solid #c8d4e0;text-align:center;}
+    .sig-cell:last-child{border-right:none;}
+    .sig-role{font-size:9px;font-weight:700;color:#fff;background:#1a3a5c;padding:3px 6px;display:block;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px;}
+    .sig-line{border-top:1.5px solid #555;margin:28px 8px 4px;}
+    .sig-name{font-size:9.5px;font-weight:700;color:#1a2e3d;}
+    .sig-label{font-size:8.5px;color:#888;font-style:italic;}
+    .rcv-boxes{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0 5px;}
+    .rcv-box{border:1.5px solid #bbb;border-radius:3px;text-align:center;padding:3px;min-height:52px;display:flex;flex-direction:column;justify-content:flex-end;}
+    .rcv-box.thumb{border-style:dashed;background:#fafafa;}
+    .rcv-box-lbl{font-size:7px;font-weight:700;color:#888;text-transform:uppercase;padding-bottom:2px;}
+    .page-footer{position:absolute;bottom:0;left:0;right:0;border-top:1px solid #c8d4e0;padding:5px 32px;font-size:8px;color:#aaa;display:flex;justify-content:space-between;}
+    @media print{body{background:#fff;}.page{width:100%;padding:12mm 15mm 18mm;}@page{size:A4;margin:0;}}
+  `
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8">
   <title>Cash Payment Voucher — ${d.voucher_number||''}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'Poppins',Arial,sans-serif;background:#fff;font-size:11px;color:#1a2e3d;}
-    .page{width:794px;min-height:1123px;margin:0 auto;padding:36px 48px 65px;position:relative;background:#fff;}
-    .cpv-header{background:linear-gradient(135deg,#212121 0%,#37474f 100%);color:#fff;padding:14px 20px;border-radius:8px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-start;}
-    .cpv-number{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:5px;padding:4px 12px;font-size:13px;font-weight:800;letter-spacing:.5px;margin-top:6px;display:inline-block;}
-    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px 20px;margin-bottom:10px;}
-    .info-row{display:flex;gap:6px;font-size:10px;}
-    .info-label{color:#7a8a9a;font-weight:600;min-width:100px;}
-    .info-val{color:#1a2e3d;font-weight:700;}
-    .party-box{border:2px solid ${pc.color};border-radius:8px;padding:10px 14px;margin-bottom:12px;background:${pc.bg};}
-    .party-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
-    .party-type-badge{background:${pc.color};color:#fff;font-size:9px;font-weight:800;padding:2px 10px;border-radius:20px;text-transform:uppercase;}
-    .party-name{font-size:14px;font-weight:800;color:#1a2e3d;}
-    .iqama-highlight{background:#1a2e3d;color:#fff;padding:4px 12px;border-radius:5px;font-size:12px;font-weight:800;letter-spacing:1px;display:inline-block;margin-top:4px;}
-    .amount-box{background:#f0f4ff;border:2px solid #c5d0e6;border-radius:8px;padding:12px 16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;}
-    .amount-main{font-size:22px;font-weight:800;color:#1a2e3d;}
-    .amount-words{font-size:9.5px;color:#555;font-style:italic;margin-top:3px;}
-    .method-badge{background:#37474f;color:#fff;padding:5px 14px;border-radius:6px;font-size:11px;font-weight:700;}
-    .purpose-box{background:#f7f9fc;border-left:3px solid #37474f;padding:8px 12px;margin-bottom:12px;font-size:10px;color:#1a2e3d;}
-    .receipt-badge{display:inline-flex;align-items:center;gap:5px;background:${rc.bg};color:${rc.color};border:1.5px solid ${rc.color};border-radius:5px;padding:3px 10px;font-size:10px;font-weight:700;margin-bottom:10px;}
-    .sig-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:18px;}
-    .sig-box{border-top:1.5px solid #555;padding-top:6px;text-align:center;font-size:9.5px;color:#555;}
-    .sig-iqama{font-size:9px;color:#1565c0;font-weight:700;margin-top:3px;letter-spacing:.3px;}
-    .page-footer{position:absolute;bottom:0;left:0;right:0;border-top:1px solid #ddd;padding:6px 48px;font-size:9px;color:#888;display:flex;justify-content:space-between;}
-    .qr-scan-note{font-size:8px;color:#fff;opacity:.7;text-align:center;margin-top:3px;}
-    @media print{body{background:#fff;}.page{width:100%;min-height:297mm;padding:15mm 18mm 20mm;}@page{size:A4;margin:0;}}
-  </style></head><body>
+  <style>${HOUSE_CSS}</style></head><body>
   <div class="page">
 
-    <!-- ── HEADER ───────────────────────────────────────────────────────── -->
-    <div class="cpv-header">
-      <div style="flex:1;">
-        <div style="font-size:10px;opacity:.7;text-transform:uppercase;letter-spacing:1px;">${d.entity_name||'Ratal Advanced Technologies'}</div>
-        <div style="font-size:20px;font-weight:800;margin:4px 0 2px;">CASH PAYMENT VOUCHER</div>
-        <div style="font-size:9px;opacity:.7;">Advanced Communication &amp; Computer Systems</div>
-        <div class="cpv-number">${d.voucher_number||'CPV-—'}</div>
-      </div>
-      <div style="text-align:right;margin-left:16px;">
-        <img src="${qrSrc}" width="110" height="110"
-          style="border:2px solid rgba(255,255,255,.35);border-radius:6px;padding:3px;background:#fff;"
-          alt="Scan to verify"/>
-        <div class="qr-scan-note">📱 Scan to verify payment</div>
-      </div>
+    <!-- HEADER -->
+    <table style="width:100%;margin-bottom:4px;"><tr>
+      <td style="vertical-align:top;">
+        <div class="co-name">${d.entity_name||'Ratal Advanced Technologies'}</div>
+        <div class="co-sub">Advanced Communication &amp; Computer Systems</div>
+        <div class="rpt-title">Cash Payment Voucher</div>
+        <div class="rpt-sub">${d.payee_name||'—'} &mdash; ${d.department||'—'}</div>
+      </td>
+      <td style="text-align:right;vertical-align:top;">
+        <img src="${qrSrc}" width="90" height="90" alt="QR" style="border:1px solid #ddd;padding:2px;"/>
+      </td>
+    </tr></table>
+
+    <div class="meta">
+      <span>Generated: ${fmtD(d.payment_date)}</span>
+      <span>Ref: ${d.voucher_number||'—'}</span>
     </div>
 
-    <!-- ── VOUCHER META ──────────────────────────────────────────────────── -->
-    <div class="info-grid" style="background:#f7f9fc;border:1px solid #e0e6ef;border-radius:6px;padding:8px 14px;margin-bottom:12px;">
-      <div class="info-row"><span class="info-label">Voucher Date:</span><span class="info-val">${fmtD(d.payment_date)}</span></div>
-      <div class="info-row"><span class="info-label">Voucher No:</span><span class="info-val">${d.voucher_number||'—'}</span></div>
-      <div class="info-row"><span class="info-label">Project / Job:</span><span class="info-val">${d.project_no||d.job_no||'—'} ${d.project_name?'— '+d.project_name:''}</span></div>
-      <div class="info-row"><span class="info-label">Department:</span><span class="info-val">${d.department||'—'}</span></div>
-      <div class="info-row"><span class="info-label">Paid By:</span><span class="info-val">${d.paid_by||d.prepared_by||'—'}</span></div>
-      <div class="info-row"><span class="info-label">Approved By:</span><span class="info-val">${d.approved_by||'—'}</span></div>
+    <!-- INFO GRID -->
+    <table class="info-tbl">
+      <tr>
+        <td class="lbl">Voucher No.</td><td class="val">${d.voucher_number||'—'}</td>
+        <td class="lbl">Date</td><td class="val">${fmtD(d.payment_date)}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Department</td><td class="val">${d.department||'—'}</td>
+        <td class="lbl">Project No.</td><td class="val">${d.project_no||'—'} ${d.project_name?'— '+d.project_name:''}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Paid By</td><td class="val">${d.paid_by||d.prepared_by||'—'}</td>
+        <td class="lbl">Approved By</td><td class="val">${d.approved_by||'—'}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Payment Method</td><td class="val">${d.payment_method||'Cash'}</td>
+        <td class="lbl">Receipt Type</td><td class="val">${rcptLabel}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Payee Name</td><td class="val" style="color:#8B2500;font-weight:700;">${d.payee_name||'—'}</td>
+        <td class="lbl">${idLabel}</td><td class="val" style="font-weight:700;letter-spacing:.5px;">${idValue}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Mobile</td><td class="val">${d.payee_mobile||'—'}</td>
+        <td class="lbl">Party Type</td><td class="val">${partyType}</td>
+      </tr>
+      ${justRow}
+    </table>
+
+    <!-- AMOUNT -->
+    <table class="amt-tbl">
+      <tr><td class="lbl">Amount Paid / المبلغ المدفوع</td><td class="val" style="font-size:14px;">SAR ${fmtSAR(d.amount||0)}</td></tr>
+      <tr class="total-row"><td>Amount in Words</td><td style="text-align:right;font-weight:800;font-style:italic;font-size:9.5px;">${d.amount_words||'As stated above only'}</td></tr>
+    </table>
+
+    <!-- PURPOSE -->
+    <div class="notes-box">
+      <div class="notes-hdr">Purpose / سبب الدفع</div>
+      <div class="notes-body">${d.purpose||d.work_description||'—'}${d.notes?'<br><em style="color:#888;">'+d.notes+'</em>':''}</div>
     </div>
 
-    <!-- ── PAYEE / PARTY ─────────────────────────────────────────────────── -->
-    <div class="party-box">
-      <div class="party-header">
-        <div style="font-size:9.5px;font-weight:700;color:${pc.color};text-transform:uppercase;">Payment To / المستفيد</div>
-        <span class="party-type-badge">${pc.label}</span>
-      </div>
-      <div class="party-name">${d.payee_name||'—'}</div>
-      <div style="display:flex;gap:20px;margin-top:6px;flex-wrap:wrap;">
-        <div>
-          <div style="font-size:9px;color:#7a8a9a;font-weight:600;">${pc.idLabel}</div>
-          <div class="iqama-highlight">${pc.idValue}</div>
-        </div>
-        <div>
-          <div style="font-size:9px;color:#7a8a9a;font-weight:600;margin-top:0;">${pc.id2Label}</div>
-          <div style="font-size:11px;font-weight:700;color:#1a2e3d;margin-top:4px;">${pc.id2Value}</div>
-        </div>
-        ${d.payee_bank_name || d.iban ? `
-        <div>
-          <div style="font-size:9px;color:#7a8a9a;font-weight:600;">IBAN / Bank</div>
-          <div style="font-size:10px;font-weight:700;color:#1a2e3d;margin-top:4px;">${d.iban||'—'} ${d.payee_bank_name?'('+d.payee_bank_name+')':''}</div>
-        </div>` : ''}
-      </div>
-    </div>
-
-    <!-- ── AMOUNT + METHOD ───────────────────────────────────────────────── -->
-    <div class="amount-box">
-      <div>
-        <div style="font-size:9px;color:#7a8a9a;font-weight:600;text-transform:uppercase;margin-bottom:2px;">Amount Paid</div>
-        <div class="amount-main">SAR ${fmtSAR(d.amount||0)}</div>
-        <div class="amount-words">${numToWordsEn(parseFloat(d.amount||0))}</div>
-      </div>
-      <div style="text-align:right;">
-        <div style="font-size:9px;color:#7a8a9a;font-weight:600;margin-bottom:4px;">Payment Method</div>
-        <div class="method-badge">${methodLabel}</div>
-        ${d.reference_number?`<div style="font-size:9px;color:#7a8a9a;margin-top:4px;">Ref: ${d.reference_number}</div>`:''}
-        ${d.account_code?`<div style="font-size:9px;color:#7a8a9a;">A/C: ${d.account_code}</div>`:''}
-      </div>
-    </div>
-
-    <!-- ── PURPOSE / DESCRIPTION ─────────────────────────────────────────── -->
-    <div class="purpose-box">
-      <div style="font-weight:700;margin-bottom:3px;font-size:10px;">Purpose / سبب الدفع</div>
-      <div style="line-height:1.5;">${d.purpose||d.work_description||'—'}</div>
-      ${d.notes?`<div style="margin-top:4px;color:#555;font-style:italic;">${d.notes}</div>`:''}
-    </div>
-
-    <!-- ── RECEIPT TYPE BADGE ─────────────────────────────────────────────── -->
-    <div style="margin-bottom:10px;">
-      <span style="font-size:9.5px;color:#7a8a9a;font-weight:600;margin-right:8px;">Receipt Type:</span>
-      <span class="receipt-badge">${rc.label}</span>
-    </div>
-
-    <!-- ── JUSTIFICATION (if informal / no receipt) ──────────────────────── -->
-    ${justificationBlock}
-
-    <!-- ── IQAMA COPY (if uploaded) ──────────────────────────────────────── -->
     ${iqamaPhotoBlock}
-
-    <!-- ── SUPPORTING DOCUMENT ──────────────────────────────────────────── -->
     ${docPhotoBlock}
 
-    <!-- ── SIGNATURES ────────────────────────────────────────────────────── -->
-    <div class="sig-grid">
-      <div class="sig-box">
-        <div style="height:38px;"></div>
-        <div style="font-weight:700;">${d.paid_by||d.prepared_by||'Cashier / Finance'}</div>
-        <div>Paid By</div>
-        <div style="color:#888;font-size:9px;margin-top:2px;">${fmtD(d.payment_date)}</div>
+    <!-- SIGNATURE STRIP -->
+    <div class="sig-strip">
+      <div class="sig-cell">
+        <span class="sig-role">Paid By</span>
+        <div class="sig-line"></div>
+        <div class="sig-name">${d.paid_by||d.prepared_by||'Name'}</div>
+        <div class="sig-label">Name / Date</div>
       </div>
-      <div class="sig-box">
-        <div style="height:38px;"></div>
-        <div style="font-weight:700;">${d.approved_by||'Department Head'}</div>
-        <div>Approved By</div>
-        <div style="color:#888;font-size:9px;margin-top:2px;">${fmtD(d.payment_date)}</div>
+      <div class="sig-cell">
+        <span class="sig-role">DH — Approved</span>
+        <div class="sig-line"></div>
+        <div class="sig-name">${d.approved_by||'Name'}</div>
+        <div class="sig-label">Name / Date</div>
       </div>
-      <div class="sig-box">
-        <div style="height:38px;"></div>
-        <div style="font-weight:700;">${d.payee_name||'Payee / المستلم'}</div>
-        <div>Received By (Signature)</div>
-        ${d.iqama_number?`<div class="sig-iqama">Iqama: ${d.iqama_number}</div>`:''}
-        ${d.vat_number&&partyType==='COMPANY'?`<div class="sig-iqama">VAT: ${d.vat_number}</div>`:''}
+      <div class="sig-cell">
+        <span class="sig-role">Received By / المستلم</span>
+        <div class="rcv-boxes">
+          <div class="rcv-box">
+            <div class="rcv-box-lbl">Signature / التوقيع</div>
+          </div>
+          <div class="rcv-box thumb">
+            <div class="rcv-box-lbl">Thumb Impression<br>بصمة الإبهام</div>
+          </div>
+        </div>
+        <div class="sig-name">${d.payee_name||'Name'}</div>
+        ${d.iqama_number?`<div style="font-size:8px;color:#1565c0;font-weight:700;margin-top:2px;">Iqama: ${d.iqama_number}</div>`:''}
+        <div style="margin-top:5px;">
+          <img src="${payeeQrSrc}" width="50" height="50" style="border:1px solid #ddd;" alt="Payee QR"/>
+          <div style="font-size:7px;color:#aaa;margin-top:1px;">Scan to confirm receipt</div>
+        </div>
       </div>
     </div>
 
@@ -3061,143 +3032,177 @@ function buildSubConCert(d) {
   </div></body></html>`
 }
 
-// ─── Expense Record Voucher — with photo + late-submission callout ────────────
+// ─── Expense Record Voucher — house style (Ratal template family) ────────────
 function buildExpenseVoucher(d) {
   const fmtSAR = n => parseFloat(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
-  const fmtD   = s => { if (!s) return '—'; const p=s.split('T')[0].split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:s }
+  const fmtD   = s => { if (!s) return '—'; const p=(s.split('T')[0]||'').split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:s }
+  const driveUrl = url => {
+    if (!url) return ''
+    const m1 = url.match(/\/d\/([a-zA-Z0-9_-]{20,})/)
+    if (m1) return `https://lh3.googleusercontent.com/d/${m1[1]}`
+    const m2 = url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/)
+    if (m2) return `https://lh3.googleusercontent.com/d/${m2[1]}`
+    return url
+  }
 
   const expDate  = d.date || d.expense_date || ''
   const invDate  = d.invoice_date || ''
-  const subDate  = d.submitted_at ? (d.submitted_at).split('T')[0] : expDate
+  const subDate  = d.submitted_at ? d.submitted_at.split('T')[0] : expDate
   const qrData   = `REF:${d.record_number||d.expense_id||'EXP'} EMP:${d.employee_name||''} PRJ:${d.project_no||''} AMT:${d.total||d.total_amount||''} DATE:${expDate}`
-  const qrSrc    = `https://api.qrserver.com/v1/create-qr-code/?size=85x85&data=${encodeURIComponent(qrData)}`
+  const qrSrc    = `https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(qrData)}`
+  const photoSrc = driveUrl(d.photo_url)
 
-  const photoBlock = d.photo_url ? `
-    <div style="margin-bottom:0;">
-      <div style="font-size:9.5px;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #e8edf2;">Receipt / Invoice Photo — Cross-Verification</div>
-      <div style="text-align:center;background:#f5f7fa;border:1px solid #d0d8e4;border-radius:6px;padding:10px;min-height:220px;display:flex;align-items:center;justify-content:center;">
-        <img src="${d.photo_url}" style="max-width:100%;max-height:380px;border-radius:4px;box-shadow:0 2px 12px rgba(0,0,0,.15);display:block;" alt="Receipt Photo"
-          onerror="this.style.display='none';this.nextSibling.style.display='flex'"/>
-        <div style="display:none;flex-direction:column;align-items:center;gap:6px;color:#aab;font-size:10px;padding:20px;">
-          <div style="font-size:28px;">📷</div>
-          <div>Photo stored on Drive — open via link to view</div>
-          <div style="font-size:9px;word-break:break-all;color:#bbc;">${d.photo_url}</div>
-        </div>
-      </div>
-      <div style="font-size:9px;color:#8a9ab0;text-align:center;margin-top:5px;">Photo submitted via mobile field form on ${fmtD(subDate)}</div>
-    </div>` : `
-    <div style="background:#f8f9fa;border:1.5px dashed #d0d8e4;border-radius:6px;padding:32px 20px;text-align:center;color:#b0bec5;">
-      <div style="font-size:28px;margin-bottom:6px;">📷</div>
-      <div style="font-size:10px;font-weight:600;">No receipt photo attached to this record</div>
-      <div style="font-size:9px;margin-top:3px;">Employee should attach photo when submitting via mobile form</div>
-    </div>`
+  const photoImg = photoSrc
+    ? `<img src="${photoSrc}" style="max-width:100%;max-height:360px;display:block;" alt="Receipt"
+        onerror="this.style.display='none';this.nextSibling.style.display='block'"/>
+       <div style="display:none;font-size:10px;color:#aaa;padding:16px;text-align:center;">
+         Photo on file (Drive) — open link to view<br>
+         <small style="word-break:break-all;">${photoSrc}</small>
+       </div>`
+    : `<div style="font-size:10px;color:#bbb;padding:30px;text-align:center;">📷 No receipt photo attached</div>`
+
+  const HOUSE_CSS = `
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:Arial,sans-serif;background:#fff;font-size:11px;color:#1a2e3d;}
+    .page{width:794px;margin:0 auto;padding:24px 32px 56px;position:relative;background:#fff;}
+    .co-name{font-size:15px;font-weight:700;color:#1a2e3d;}
+    .co-sub{font-size:9px;color:#555;margin-top:1px;}
+    .rpt-title{font-size:13px;font-weight:700;color:#8B2500;margin-top:4px;text-transform:uppercase;letter-spacing:.3px;}
+    .rpt-sub{font-size:11px;font-weight:700;color:#8B2500;margin-top:1px;}
+    .meta{font-size:8.5px;color:#888;margin:10px 0 6px;display:flex;justify-content:space-between;}
+    .info-tbl{width:100%;border-collapse:collapse;margin-bottom:10px;}
+    .info-tbl td{padding:5px 10px;border:1px solid #c8d4e0;font-size:10px;}
+    .info-tbl .lbl{background:#1a3a5c;color:#fff;font-weight:700;width:110px;}
+    .info-tbl .val{background:#fff;color:#1a2e3d;font-weight:600;}
+    .date-row{display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid #c8d4e0;margin-bottom:10px;}
+    .date-cell{padding:0;border-right:1px solid #c8d4e0;text-align:center;}
+    .date-cell:last-child{border-right:none;}
+    .date-cell-lbl{font-size:8px;font-weight:700;color:#fff;background:#1a3a5c;padding:3px 6px;text-transform:uppercase;letter-spacing:.3px;display:block;}
+    .date-cell-val{font-size:11px;font-weight:700;color:#1a2e3d;padding:5px 6px;display:block;}
+    .photo-box{border:1px solid #c8d4e0;margin-bottom:10px;}
+    .photo-hdr{background:#1a3a5c;color:#fff;font-size:9px;font-weight:700;padding:4px 10px;text-transform:uppercase;letter-spacing:.3px;}
+    .photo-body{padding:8px;text-align:center;min-height:200px;display:flex;align-items:center;justify-content:center;background:#f8f9fa;}
+    .amt-tbl{width:100%;border-collapse:collapse;margin-bottom:10px;}
+    .amt-tbl td{padding:5px 10px;border:1px solid #c8d4e0;font-size:10px;}
+    .amt-tbl .lbl{background:#f0f4f8;font-weight:600;color:#1a3a5c;width:60%;}
+    .amt-tbl .val{text-align:right;font-weight:700;}
+    .amt-tbl .total-row td{background:#3D1A00;color:#fff;font-size:12px;font-weight:800;}
+    .notes-box{border:1px solid #c8d4e0;margin-bottom:10px;}
+    .notes-hdr{background:#1a3a5c;color:#fff;font-size:9px;font-weight:700;padding:4px 10px;text-transform:uppercase;letter-spacing:.3px;}
+    .notes-body{padding:7px 10px;font-size:10px;color:#1a2e3d;line-height:1.6;}
+    .sig-strip{display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid #c8d4e0;margin-top:16px;}
+    .sig-cell{padding:8px 10px;border-right:1px solid #c8d4e0;text-align:center;}
+    .sig-cell:last-child{border-right:none;}
+    .sig-role{font-size:9px;font-weight:700;color:#fff;background:#1a3a5c;padding:3px 6px;display:block;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px;}
+    .sig-line{border-top:1.5px solid #555;margin:28px 8px 4px;}
+    .sig-name{font-size:9.5px;font-weight:700;color:#1a2e3d;}
+    .sig-label{font-size:8.5px;color:#888;font-style:italic;}
+    .page-footer{position:absolute;bottom:0;left:0;right:0;border-top:1px solid #c8d4e0;padding:5px 32px;font-size:8px;color:#aaa;display:flex;justify-content:space-between;}
+    @media print{body{background:#fff;}.page{width:100%;padding:12mm 15mm 18mm;}@page{size:A4;margin:0;}}
+  `
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8">
-  <title>Expense Record — ${d.record_number||d.expense_id||''}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'Poppins',Arial,sans-serif;background:#fff;font-size:11px;color:#1a2e3d;}
-    .page{width:794px;min-height:1123px;margin:0 auto;padding:28px 40px 60px;position:relative;background:#fff;}
-    .hdr{background:#1a2e3d;color:#fff;padding:14px 18px 14px 20px;border-radius:8px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;}
-    .hdr-title{font-size:15px;font-weight:800;letter-spacing:.5px;}
-    .hdr-sub{font-size:9.5px;opacity:.7;margin-top:3px;}
-    .top-strip{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0;background:#f0f4f8;border:1px solid #d8e2ee;border-radius:7px;margin-bottom:14px;overflow:hidden;}
-    .ts-cell{padding:9px 14px;border-right:1px solid #d8e2ee;}
-    .ts-cell:last-child{border-right:none;}
-    .ts-label{font-size:8.5px;font-weight:700;color:#7a8a9a;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;}
-    .ts-val{font-size:12px;font-weight:700;color:#1a2e3d;}
-    .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #d8e2ee;border-radius:7px;overflow:hidden;margin-bottom:14px;}
-    .dg-row{display:contents;}
-    .dg-label{padding:7px 14px;font-size:9.5px;font-weight:600;color:#7a8a9a;background:#f7f9fc;border-bottom:1px solid #edf0f5;}
-    .dg-val{padding:7px 14px;font-size:10px;font-weight:600;color:#1a2e3d;background:#fff;border-bottom:1px solid #edf0f5;}
-    .dg-label:nth-last-child(2),.dg-val:nth-last-child(1){border-bottom:none;}
-    .dates-bar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;}
-    .date-chip{background:#f7f9fc;border:1px solid #d8e2ee;border-radius:6px;padding:8px 12px;text-align:center;}
-    .date-chip-label{font-size:8.5px;color:#7a8a9a;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;}
-    .date-chip-val{font-size:11px;font-weight:700;color:#1a2e3d;}
-    .amount-box{background:#e8f5e9;border:1px solid #a5d6a7;border-radius:7px;padding:10px 14px;margin-bottom:14px;}
-    .amt-row{display:flex;justify-content:space-between;padding:3px 0;font-size:10.5px;}
-    .amt-total{display:flex;justify-content:space-between;border-top:1.5px solid #388e3c;padding-top:7px;margin-top:5px;font-size:14px;font-weight:800;color:#2e7d32;}
-    .sig-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:18px;}
-    .sig-box{border-top:1.5px solid #555;padding-top:6px;text-align:center;font-size:9.5px;color:#555;}
-    .page-footer{position:absolute;bottom:0;left:0;right:0;border-top:1px solid #e0e6ef;padding:6px 40px;font-size:8.5px;color:#8a9ab0;display:flex;justify-content:space-between;}
-    @media print{body{background:#fff;}.page{width:100%;min-height:297mm;padding:12mm 15mm 18mm;}@page{size:A4;margin:0;}}
-  </style></head><body>
+  <title>Expense Record Voucher — ${d.record_number||d.expense_id||''}</title>
+  <style>${HOUSE_CSS}</style></head><body>
   <div class="page">
 
-    <!-- Header -->
-    <div class="hdr">
-      <div>
-        <div class="hdr-title">EXPENSE RECORD VOUCHER</div>
-        <div class="hdr-sub">${d.entity_name||'Ratal Advanced Technologies'} &nbsp;·&nbsp; ${d.record_number||d.expense_id||''}</div>
-      </div>
-      <img src="${qrSrc}" width="70" height="70" style="border:2px solid rgba(255,255,255,.25);border-radius:5px;padding:2px;" alt="QR"/>
+    <!-- HEADER -->
+    <table style="width:100%;margin-bottom:4px;"><tr>
+      <td style="vertical-align:top;">
+        <div class="co-name">${d.entity_name||'Ratal Advanced Technologies'}</div>
+        <div class="co-sub">Advanced Communication &amp; Computer Systems</div>
+        <div class="rpt-title">Expense Record Voucher</div>
+        <div class="rpt-sub">${d.employee_name||'—'} &mdash; ${d.department||'—'}</div>
+      </td>
+      <td style="text-align:right;vertical-align:top;">
+        <img src="${qrSrc}" width="90" height="90" alt="QR" style="border:1px solid #ddd;padding:2px;"/>
+      </td>
+    </tr></table>
+
+    <div class="meta">
+      <span>Generated: ${fmtD(subDate)}</span>
+      <span>Ref: ${d.record_number||d.expense_id||'—'}</span>
     </div>
 
-    <!-- Top 4 key fields -->
-    <div class="top-strip">
-      <div class="ts-cell">
-        <div class="ts-label">Employee Name</div>
-        <div class="ts-val">${d.employee_name||'—'}</div>
+    <!-- INFO GRID -->
+    <table class="info-tbl">
+      <tr>
+        <td class="lbl">Department</td><td class="val">${d.department||'—'}</td>
+        <td class="lbl">Employee</td><td class="val" style="color:#8B2500;font-weight:700;">${d.employee_name||'—'}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Emp. No.</td><td class="val">${d.emp_no||'—'}</td>
+        <td class="lbl">Date</td><td class="val">${fmtD(expDate)}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Project No.</td><td class="val">${d.project_no||'—'}</td>
+        <td class="lbl">Project Name</td><td class="val">${d.project_name||'—'}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Site No.</td><td class="val">${d.site_no||'—'}</td>
+        <td class="lbl">Category</td><td class="val">${d.category||'—'}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Vendor / Supplier</td><td class="val">${d.vendor||d.vendor_name||'—'}</td>
+        <td class="lbl">Invoice No.</td><td class="val">${d.invoice_number||'—'}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Vendor VAT No.</td><td class="val">${d.vat_number||'—'}</td>
+        <td class="lbl">Receipt Type</td><td class="val">${d.receipt_type||'Tax Invoice'}</td>
+      </tr>
+    </table>
+
+    <!-- DATE COMPARISON ROW -->
+    <div class="date-row">
+      <div class="date-cell">
+        <span class="date-cell-lbl">Invoice Date</span>
+        <span class="date-cell-val">${fmtD(invDate)||'—'}</span>
       </div>
-      <div class="ts-cell">
-        <div class="ts-label">Project No.</div>
-        <div class="ts-val">${d.project_no||d.job_no||'—'}</div>
+      <div class="date-cell">
+        <span class="date-cell-lbl">Expense Recorded</span>
+        <span class="date-cell-val">${fmtD(expDate)||'—'}</span>
       </div>
-      <div class="ts-cell">
-        <div class="ts-label">Date of Submission</div>
-        <div class="ts-val">${fmtD(subDate)}</div>
-      </div>
-      <div class="ts-cell">
-        <div class="ts-label">Site No / Job #</div>
-        <div class="ts-val">${d.site_no||d.job_no||d.project_no||'—'}</div>
+      <div class="date-cell">
+        <span class="date-cell-lbl">Submitted On</span>
+        <span class="date-cell-val">${fmtD(subDate)||'—'}</span>
       </div>
     </div>
 
-    <!-- Expense details -->
-    <div class="detail-grid">
-      <div class="dg-label">Project Name</div><div class="dg-val">${d.project_name||'—'}</div>
-      <div class="dg-label">Department</div><div class="dg-val">${d.department||'—'}</div>
-      <div class="dg-label">Vendor / Supplier</div><div class="dg-val">${d.vendor||d.vendor_name||'—'}</div>
-      <div class="dg-label">Invoice Number</div><div class="dg-val">${d.invoice_number||'—'}</div>
-      <div class="dg-label">Vendor VAT Number</div><div class="dg-val">${d.vat_number||'—'}</div>
-      <div class="dg-label">Expense Category</div><div class="dg-val">${d.category||'—'}</div>
+    <!-- RECEIPT PHOTO -->
+    <div class="photo-box">
+      <div class="photo-hdr">Receipt / Invoice Photo — Cross-Verification</div>
+      <div class="photo-body">${photoImg}</div>
     </div>
 
-    <!-- Dates — side by side for cross-check, no alarm styling -->
-    <div class="dates-bar">
-      <div class="date-chip">
-        <div class="date-chip-label">Invoice Date</div>
-        <div class="date-chip-val">${fmtD(invDate)||'—'}</div>
+    <!-- AMOUNTS -->
+    <table class="amt-tbl">
+      <tr><td class="lbl">Net Amount (Excl. VAT)</td><td class="val">SAR ${fmtSAR(d.net_amount||d.amount||0)}</td></tr>
+      <tr><td class="lbl">VAT Amount (15%)</td><td class="val">SAR ${fmtSAR(d.vat_amount||0)}</td></tr>
+      <tr class="total-row"><td>Total Amount (Incl. VAT)</td><td style="text-align:right;font-weight:800;">SAR ${fmtSAR(d.total||d.total_amount||(parseFloat(d.net_amount||0)+parseFloat(d.vat_amount||0)))}</td></tr>
+    </table>
+
+    ${d.notes ? `<div class="notes-box"><div class="notes-hdr">Notes</div><div class="notes-body">${d.notes}</div></div>` : ''}
+
+    <!-- SIGNATURE STRIP -->
+    <div class="sig-strip">
+      <div class="sig-cell">
+        <span class="sig-role">Employee</span>
+        <div class="sig-line"></div>
+        <div class="sig-name">${d.employee_name||'Name'}</div>
+        <div class="sig-label">Name / Date</div>
       </div>
-      <div class="date-chip">
-        <div class="date-chip-label">Expense Recorded</div>
-        <div class="date-chip-val">${fmtD(expDate)||'—'}</div>
+      <div class="sig-cell">
+        <span class="sig-role">DH — Approved</span>
+        <div class="sig-line"></div>
+        <div class="sig-name">${d.dh_name||'Name'}</div>
+        <div class="sig-label">Name / Date</div>
       </div>
-      <div class="date-chip">
-        <div class="date-chip-label">Submitted On</div>
-        <div class="date-chip-val">${fmtD(subDate)||'—'}</div>
+      <div class="sig-cell">
+        <span class="sig-role">Finance / Accounts</span>
+        <div class="sig-line"></div>
+        <div class="sig-name">Accounts</div>
+        <div class="sig-label">Name / Date</div>
       </div>
-    </div>
-
-    <!-- Receipt Photo — centrepiece -->
-    ${photoBlock}
-
-    <!-- Amounts -->
-    <div class="amount-box" style="margin-top:14px;">
-      <div class="amt-row"><span>Net Amount (Excl. VAT)</span><span>SAR ${fmtSAR(d.net_amount||d.amount||0)}</span></div>
-      <div class="amt-row"><span>VAT Amount (15%)</span><span>SAR ${fmtSAR(d.vat_amount||0)}</span></div>
-      <div class="amt-total"><span>Total (Incl. VAT)</span><span>SAR ${fmtSAR(d.total||d.total_amount||(parseFloat(d.net_amount||0)+parseFloat(d.vat_amount||0)))}</span></div>
-    </div>
-
-    ${d.notes ? `<div style="background:#f7f9fc;border:1px solid #d8e2ee;border-radius:5px;padding:7px 12px;font-size:10px;margin-bottom:10px;"><strong style="color:#5a6a7a;">Notes:</strong> ${d.notes}</div>` : ''}
-
-    <!-- Signatures -->
-    <div class="sig-grid">
-      <div class="sig-box"><div style="height:36px;"></div><div style="font-weight:700;">${d.employee_name||'Employee'}</div><div>Submitted By</div></div>
-      <div class="sig-box"><div style="height:36px;"></div><div style="font-weight:700;">${d.dh_name||'Department Head'}</div><div>Approved By (DH)</div></div>
-      <div class="sig-box"><div style="height:36px;"></div><div style="font-weight:700;">Finance / Accounts</div><div>Verified By</div></div>
     </div>
 
     <div class="page-footer">

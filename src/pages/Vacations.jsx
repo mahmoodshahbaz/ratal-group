@@ -802,6 +802,7 @@ export default function Vacations({ entityId, role }) {
         }}
         nextLabel={wizardStep === 2 ? (saving ? '⏳ Saving…' : editItem ? '✓ Update' : '+ Submit Request') : 'Next →'}
         nextDisabled={saving}
+        subjectLabel={{ line1: (d=>d?.dept_code||d?.dept_name||null)(departments.find(d=>d.id===form.department_id)), line2: employees.find(e=>e.id===form.employee_id)?.full_name_en || null }}
       >
 
         {/* ══════════════════════════════════════════

@@ -52,20 +52,39 @@
 
 body {
   margin: 0;
+  /* Force light color-scheme on body so iOS Safari / Chrome dark-mode
+     adaptations never apply white text on light-background form screens. */
+  color-scheme: light;
+  color: #0f172a;
 }
 
-/* Force light rendering on all form controls so dark-mode OS/browser
-   never applies white text on white inputs in the ACCSYS forms. */
-input, select, textarea, button {
+/* ── Mobile viewport helpers ───────────────────────────────────────────────
+   --sab  safe-area-inset-bottom  (iPhone home indicator / rounded corners)
+   --sat  safe-area-inset-top     (iPhone notch / Dynamic Island)
+   These resolve to 0 on non-notched devices / when viewport-fit=cover is off.
+   Usage:  paddingBottom: 'calc(16px + var(--sab))'
+           paddingTop:    'calc(12px + var(--sat))'
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sat: env(safe-area-inset-top,    0px);
+  --sal: env(safe-area-inset-left,   0px);
+  --sar: env(safe-area-inset-right,  0px);
+}
+
+/* Force light rendering on all form controls and the root container —
+   prevents dark-mode OS/browser from inverting native form control colors. */
+#root {
   color-scheme: light;
 }
 
+input, select, textarea, button {
+  color-scheme: light;
+  color: inherit;
+}
+
 #root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
+  width: 100%;
   min-height: 100svh;
   display: flex;
   flex-direction: column;

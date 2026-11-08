@@ -927,6 +927,7 @@ export default function Payments({ entityId, entityName, entityNameEn }) {
         onNext={wizardStep<3 ? () => setWizardStep(s=>s+1) : markPaid}
         nextLabel={wizardStep<3 ? 'Save & Next →' : (saving ? '⏳ Saving…' : `✅ Mark as Paid — SAR ${fmt(lineTotal)}`)}
         nextDisabled={wizardStep===3 && (saving || mrLines.length===0 || !reference.trim())}
+        subjectLabel={{ line1: (depts.find(d=>d.id===selMR?.department_id)?.dept_code || selMR?.department_name) || null, line2: (reference.trim() || selMR?.request_number || selMR?.mr_number) || null }}
       >
         <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
 

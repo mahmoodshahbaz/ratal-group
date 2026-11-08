@@ -13,6 +13,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useFieldAuth, ROLE_COLORS }          from '../lib/useFieldAuth'
+import OTPActivationScreen                   from '../components/OTPActivationScreen'
 import { useDHLedger }                         from '../lib/useDHLedger'
 import { supabase }                            from '../lib/supabase'
 
@@ -32,7 +33,7 @@ const C = {
 }
 
 const S = {
-  page:    { minHeight:'100vh', background:C.bg, paddingBottom:40 },
+  page:    { minHeight:'100dvh', background:C.bg, paddingBottom:40, color:'#0f172a', colorScheme:'light' },
   header:  { background:'linear-gradient(135deg,#1a2540,#263859)', color:'#fff', padding:'20px 18px 16px' },
   h1:      { fontSize:20, fontWeight:900, marginBottom:2 },
   sub:     { fontSize:12, opacity:0.7 },
@@ -72,7 +73,7 @@ const TABS = [
 function AuthGuard({ error, role }) {
   if (role && !['STAFF_DH','STAFF_PM','FINANCE'].includes(role)) {
     return (
-      <div style={{ minHeight:'100vh', background:C.bg, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
+      <div style={{ minHeight:'100dvh', background:C.bg, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
         <div style={{ ...S.card, textAlign:'center', padding:32, borderRadius:20, maxWidth:340 }}>
           <div style={{ fontSize:48, marginBottom:12 }}>🚫</div>
           <div style={{ fontWeight:800, color:C.red, marginBottom:8 }}>Access Restricted</div>
@@ -89,7 +90,7 @@ function AuthGuard({ error, role }) {
   }
   const m = msgs[error] || msgs.no_token
   return (
-    <div style={{ minHeight:'100vh', background:C.bg, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
+    <div style={{ minHeight:'100dvh', background:C.bg, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
       <div style={{ ...S.card, textAlign:'center', padding:40, borderRadius:20, maxWidth:340 }}>
         <div style={{ fontSize:56, marginBottom:12 }}>{m.icon}</div>
         <div style={{ fontWeight:800, color:C.red, marginBottom:8 }}>{m.title}</div>
@@ -1077,9 +1078,11 @@ export default function FormDHDashboard() {
   const auth     = useFieldAuth()
   const [tab, setTab] = useState('cash')
 
+  if (auth.needsActivation) return <OTPActivationScreen auth={auth} />
+
   if (auth.loading) {
     return (
-      <div style={{ minHeight:'100vh', background:C.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ minHeight:'100dvh', background:C.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
         <div style={{ textAlign:'center', color:C.muted }}>
           <div style={{ fontSize:36, marginBottom:12 }}>⏳</div>
           <div>Loading command centre…</div>

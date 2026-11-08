@@ -320,8 +320,8 @@ export default function ChartOfAccounts({ entityId }) {
         title={modal === 'add' ? ['Add', 'Account', 'to COA'] : ['Edit', 'Account', form.account_code || '']}
         steps={STEPS}
         currentStep={wizardStep}
-        onBack={() => setWizardStep(s => s - 1)}
-        backLabel="Back"
+        onBack={wizardStep === 1 ? closeModal : () => setWizardStep(s => s - 1)}
+        backLabel={wizardStep === 1 ? 'Cancel' : 'Back'}
         onNext={() => {
           if (wizardStep < STEPS.length) {
             if (!form.account_code.trim()) { setError('Account code is required'); return }
@@ -334,6 +334,7 @@ export default function ChartOfAccounts({ entityId }) {
         }}
         nextLabel={wizardStep < STEPS.length ? 'Next →' : (saving ? 'Saving…' : modal === 'add' ? 'Add Account' : 'Save Changes')}
         nextDisabled={saving}
+        subjectLabel={(form.account_code && form.account_name) ? `${form.account_code} ${form.account_name}` : (form.account_name || null)}
       >
         {error && <div style={S.err}>{error}</div>}
 

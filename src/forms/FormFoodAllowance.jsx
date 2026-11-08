@@ -15,6 +15,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useFieldAuth } from '../lib/useFieldAuth'
+import OTPActivationScreen from '../components/OTPActivationScreen'
 
 // ── Food Allowance Theme (scoped — do NOT export) ───────────────────────────
 const FT = {
@@ -126,6 +127,7 @@ export default function FormFoodAllowance() {
   const [siteMasterId,      setSiteMasterId]      = useState('')
   const [assignmentId,      setAssignmentId]      = useState('')
   const [assignmentLoading, setAssignmentLoading] = useState(false)
+  const [assignmentChecked, setAssignmentChecked] = useState(false)
   const [manualOverride,    setManualOverride]    = useState(false)
 
   // Screen 3 — Rate + optional team toggle
@@ -260,6 +262,7 @@ export default function FormFoodAllowance() {
       console.error('[FoodAllowance] loadEmployeeAssignment error:', err)
     } finally {
       setAssignmentLoading(false)
+      setAssignmentChecked(true)
     }
   }
 
@@ -432,9 +435,10 @@ export default function FormFoodAllowance() {
   }
 
   // ─── Auth guard (QR token) ────────────────────────────────────────────────────
+  if (!devMode && auth.needsActivation) return <OTPActivationScreen auth={auth} />
   if (!devMode) {
     if (auth.loading) return (
-      <div style={{ minHeight:'100vh', background:FT.cream, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:FONT }}>
+      <div style={{ minHeight:'100dvh', background:FT.cream, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:FONT, color:FT.text, colorScheme:'light' }}>
         <div style={{ textAlign:'center' }}>
           <div style={{ fontSize:36, marginBottom:12 }}>⏳</div>
           <div style={{ fontSize:14, color:FT.mutedLight }}>Checking access…</div>
@@ -442,11 +446,59 @@ export default function FormFoodAllowance() {
       </div>
     )
     if (auth.error || !auth.employee) return (
-      <div style={{ minHeight:'100vh', background:FT.cream, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:FONT }}>
+      <div style={{ minHeight:'100dvh', background:FT.cream, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:FONT, color:FT.text, colorScheme:'light' }}>
         <div style={{ background:FT.lightCard, borderRadius:20, padding:36, maxWidth:320, textAlign:'center', boxShadow:'0 4px 20px rgba(16,63,52,0.1)', margin:20, border:`1px solid ${FT.border}` }}>
           <div style={{ width:72, height:72, borderRadius:'50%', background:FT.forest, display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, margin:'0 auto 16px' }}>🔒</div>
           <div style={{ fontSize:16, fontWeight:700, color:FT.text, marginBottom:8 }}>Access Required</div>
           <div style={{ fontSize:13, color:FT.mutedLight, lineHeight:1.6 }}>Scan your QR code to submit a food allowance request.</div>
+        </div>
+      </div>
+    )
+  }
+
+  // ─── ELIGIBILITY GATES ───────────────────────────────────────────────────────
+  const selEmpRecord = employees.find(e => e.id === empId)
+  const faEligible   = selEmpRecord ? selEmpRecord.fa_eligible !== false : true
+
+  // Gate 1 — employee not eligible for FA
+  if (!devMode && empId && !faEligible) {
+    return (
+      <div style={{ minHeight:'100dvh', background:FT.cream, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:FONT, colorScheme:'light' }}>
+        <div style={{ background:FT.lightCard, borderRadius:24, padding:'36px 28px', maxWidth:340, textAlign:'center',
+          boxShadow:'0 8px 32px rgba(16,63,52,0.12)', margin:20, border:`1px solid ${FT.border}` }}>
+          <div style={{ fontSize:52, marginBottom:12 }}>🚫</div>
+          <div style={{ fontSize:17, fontWeight:800, color:FT.text, marginBottom:8 }}>Not Eligible for Food Allowance</div>
+          <div style={{ fontSize:13, color:FT.mutedLight, lineHeight:1.6, marginBottom:20 }}>
+            <strong>{empName || 'This employee'}</strong> is not marked as food-allowance eligible.<br/>
+            Please contact HR to update eligibility.
+          </div>
+          <button onClick={() => window.location.href='/forms'}
+            style={{ background:FT.forest, color:'#fff', border:'none', borderRadius:14, padding:'13px 24px',
+              fontSize:14, fontWeight:700, cursor:'pointer', width:'100%', fontFamily:FONT }}>
+            ← Back to Forms
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Gate 2 — no active site assignment
+  if (!devMode && assignmentChecked && !assignmentLoading && empId && !assignmentId) {
+    return (
+      <div style={{ minHeight:'100dvh', background:FT.cream, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:FONT, colorScheme:'light' }}>
+        <div style={{ background:FT.lightCard, borderRadius:24, padding:'36px 28px', maxWidth:340, textAlign:'center',
+          boxShadow:'0 8px 32px rgba(16,63,52,0.12)', margin:20, border:`1px solid ${FT.border}` }}>
+          <div style={{ fontSize:52, marginBottom:12 }}>🏗️</div>
+          <div style={{ fontSize:17, fontWeight:800, color:FT.text, marginBottom:8 }}>No Active Site Assignment</div>
+          <div style={{ fontSize:13, color:FT.mutedLight, lineHeight:1.6, marginBottom:20 }}>
+            <strong>{empName || 'This employee'}</strong> doesn't have an active site assignment.<br/>
+            Food allowance must be linked to a site. Please contact your DH.
+          </div>
+          <button onClick={() => window.location.href='/forms'}
+            style={{ background:FT.forest, color:'#fff', border:'none', borderRadius:14, padding:'13px 24px',
+              fontSize:14, fontWeight:700, cursor:'pointer', width:'100%', fontFamily:FONT }}>
+            ← Back to Forms
+          </button>
         </div>
       </div>
     )
@@ -1057,6 +1109,8 @@ export default function FormFoodAllowance() {
       fontFamily: FONT,
       direction: isAr ? 'rtl' : 'ltr',
       background: FT.cream,
+      color: FT.text,
+      colorScheme: 'light',
     }}>
       {header}
       {progressBar}

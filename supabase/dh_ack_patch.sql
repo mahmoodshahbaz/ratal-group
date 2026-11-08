@@ -13,10 +13,10 @@ ALTER TABLE money_requests
 
 -- Backfill funds_sent_at for existing FUNDS_SENT rows (use updated_at as proxy)
 UPDATE money_requests
-   SET funds_sent_at = updated_at
+   SET funds_sent_at = created_at
  WHERE status IN ('FUNDS_SENT','DH_ACKNOWLEDGED','SETTLED','CLOSED')
    AND funds_sent_at IS NULL
-   AND updated_at IS NOT NULL;
+   AND created_at IS NOT NULL;
 
 -- Index for fast escalation queries
 CREATE INDEX IF NOT EXISTS idx_mr_funds_sent_unacked

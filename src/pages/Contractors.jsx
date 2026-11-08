@@ -211,7 +211,6 @@ export default function Contractors({ entityId }) {
       contractor_code: finalCode || null,
       contractor_name:    name.trim(),
       contractor_name_ar: nameAr.trim() || null,
-      company_name:       name.trim(),
       vendor_type:     vendorType,
       contact_person:  contact || null,
       contact_email:   email   || null,
@@ -549,6 +548,7 @@ export default function Contractors({ entityId }) {
             onNext={step===3 ? save : step<4 ? () => setStep(s=>s+1) : () => { setOpen(false); resetForm() }}
             nextLabel={step===3 ? (saving ? 'Saving…' : editing ? '✓ Update Party' : '✓ Save Party') : step===4 ? 'Done' : 'Save & Next'}
             nextDisabled={saving && step===3}
+            subjectLabel={name || null}
           >
           <div style={{ fontFamily:PP }}>
 

@@ -2,11 +2,11 @@ import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
 import FormShell from '../components/FormShell'
 import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
-const MC = GROUP_COLORS.Masters       // Masters chapter (Ch02)
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useExpandable, ExpandableRow, DetailField, DetailRow, DetailSection, DetailActions } from '../components/ExpandableRow'
 import { printDocument, openPrintWindow } from '../lib/templatePrint'
+const MC = GROUP_COLORS.Masters       // Masters chapter (Ch02)
 
 // ─── Theme ──────────────────────────────────────────────────────
 const T = {
@@ -621,6 +621,7 @@ export default function Projects({ entityId, role }) {
             onNext={step<3 ? () => setStep(s=>s+1) : save}
             nextLabel={step<3 ? 'Save & Next' : (saving ? 'Saving…' : editing ? '✓ Update Project' : '✓ Create Project')}
             nextDisabled={saving && step===3}
+            subjectLabel={{ line1: projName || null, line2: projNum || null }}
           >
           <div style={{ fontFamily:"'Poppins','Inter',sans-serif" }}>
 

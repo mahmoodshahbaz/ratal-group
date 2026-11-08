@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useFieldAuth }                from '../lib/useFieldAuth'
+import OTPActivationScreen             from '../components/OTPActivationScreen'
 import { supabase }                    from '../lib/supabase'
 import { uploadToDrive }               from '../hooks/useDriveUpload'
 
@@ -164,6 +165,7 @@ export default function FormSiteCompletion() {
   }, [assignment])
 
   // ── Loading ──────────────────────────────────────────────────────────────
+  if (auth.needsActivation && !isPreview) return <OTPActivationScreen auth={auth} />
   if (auth.loading && !isPreview) return (
     <div style={{ minHeight:'100dvh', background:TH.bg, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:FF }}>
       <div style={{ textAlign:'center' }}>

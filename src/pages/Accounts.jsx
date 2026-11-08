@@ -157,8 +157,8 @@ function BankAccountsTab({ entityId }) {
         title={editId ? ['Edit', 'Bank', 'Account'] : ['Add', 'Bank', 'Account']}
         steps={STEPS}
         currentStep={wizardStep}
-        onBack={() => setWizardStep(s => s - 1)}
-        backLabel="Back"
+        onBack={wizardStep === 1 ? closeModal : () => setWizardStep(s => s - 1)}
+        backLabel={wizardStep === 1 ? 'Cancel' : 'Back'}
         onNext={() => {
           if (wizardStep < STEPS.length) {
             if (!form.account_name.trim()) { setErr('Account name is required'); return }
@@ -167,6 +167,7 @@ function BankAccountsTab({ entityId }) {
         }}
         nextLabel={wizardStep < STEPS.length ? 'Next →' : (saving ? 'Saving…' : editId ? 'Save Changes' : 'Add Account')}
         nextDisabled={saving}
+        subjectLabel={{ line1: form.bank_name || form.account_name || null, line2: form.account_number || null }}
       >
         {err && <div style={S.err}>{err}</div>}
 
@@ -374,8 +375,8 @@ function FixedAssetsTab({ entityId }) {
         title={editId ? ['Edit', 'Fixed', 'Asset'] : ['Add', 'Fixed', 'Asset']}
         steps={STEPS}
         currentStep={wizardStep}
-        onBack={() => setWizardStep(s => s - 1)}
-        backLabel="Back"
+        onBack={wizardStep === 1 ? closeModal : () => setWizardStep(s => s - 1)}
+        backLabel={wizardStep === 1 ? 'Cancel' : 'Back'}
         onNext={() => {
           if (wizardStep < STEPS.length) {
             if (!form.asset_name.trim()) { setErr('Asset name is required'); return }
@@ -384,6 +385,7 @@ function FixedAssetsTab({ entityId }) {
         }}
         nextLabel={wizardStep < STEPS.length ? 'Next →' : (saving ? 'Saving…' : editId ? 'Save Changes' : 'Add Asset')}
         nextDisabled={saving}
+        subjectLabel={form.asset_name || null}
       >
         {err && <div style={S.err}>{err}</div>}
 
@@ -563,8 +565,8 @@ function CapitalAccountsTab({ entityId }) {
         title={editId ? ['Edit', 'Capital', 'Account'] : ['Add', 'Capital', 'Account']}
         steps={STEPS}
         currentStep={wizardStep}
-        onBack={() => setWizardStep(s => s - 1)}
-        backLabel="Back"
+        onBack={wizardStep === 1 ? closeModal : () => setWizardStep(s => s - 1)}
+        backLabel={wizardStep === 1 ? 'Cancel' : 'Back'}
         onNext={() => {
           if (wizardStep < STEPS.length) {
             if (!form.capital_name.trim()) { setErr('Capital name is required'); return }
@@ -573,6 +575,7 @@ function CapitalAccountsTab({ entityId }) {
         }}
         nextLabel={wizardStep < STEPS.length ? 'Next →' : (saving ? 'Saving…' : editId ? 'Save Changes' : 'Add Account')}
         nextDisabled={saving}
+        subjectLabel={form.capital_name || null}
       >
         {err && <div style={S.err}>{err}</div>}
 
@@ -731,8 +734,8 @@ function LoanAccountsTab({ entityId }) {
         title={editId ? ['Edit', 'Loan', 'Account'] : ['Add', 'Loan', 'Account']}
         steps={STEPS}
         currentStep={wizardStep}
-        onBack={() => setWizardStep(s => s - 1)}
-        backLabel="Back"
+        onBack={wizardStep === 1 ? closeModal : () => setWizardStep(s => s - 1)}
+        backLabel={wizardStep === 1 ? 'Cancel' : 'Back'}
         onNext={() => {
           if (wizardStep < STEPS.length) {
             if (!form.loan_name.trim()) { setErr('Loan name is required'); return }
@@ -742,6 +745,7 @@ function LoanAccountsTab({ entityId }) {
         }}
         nextLabel={wizardStep < STEPS.length ? 'Next →' : (saving ? 'Saving…' : editId ? 'Save Changes' : 'Add Loan')}
         nextDisabled={saving}
+        subjectLabel={form.loan_name || null}
       >
         {err && <div style={S.err}>{err}</div>}
 

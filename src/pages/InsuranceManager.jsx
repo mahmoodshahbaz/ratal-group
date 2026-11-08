@@ -792,10 +792,12 @@ export default function InsuranceManager({ entityId }) {
         title={['New', tab.charAt(0) + tab.slice(1).toLowerCase(), 'Policy']}
         steps={['Policy Details', tab === 'HEALTH' ? 'Members' : tab === 'VEHICLE' ? 'Vehicles' : 'Shipment Info']}
         currentStep={step}
-        onBack={() => setStep(1)}
+        onBack={step === 1 ? () => { setShowForm(false); setStep(1) } : () => setStep(s => s - 1)}
+        backLabel={step === 1 ? 'Cancel' : 'Back'}
         onNext={step === 1 ? goToStep2 : savePolicy}
         nextLabel={step === 1 ? 'Next →' : saving ? 'Saving…' : 'Create Policy'}
         nextDisabled={saving}
+        subjectLabel={{ line1: policyForm.insurer_name || null, line2: policyForm.master_policy_number || null }}
       >
 
         {/* ── Step 1: Policy Details ── */}

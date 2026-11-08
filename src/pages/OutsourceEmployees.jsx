@@ -2,8 +2,6 @@ import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
 import FormShell from '../components/FormShell'
 import { GROUP_COLORS } from '../styles/appStyles'
-const MC = GROUP_COLORS.HR
-const L3 = '#795338'
 
 /**
  * OutsourceEmployees.jsx  v2
@@ -28,6 +26,8 @@ const L3 = '#795338'
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { QRButton } from '../components/QRCard'
+const MC = GROUP_COLORS.HR
+const L3 = '#795338'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const SAR    = v => `SAR ${(+v||0).toLocaleString('en',{minimumFractionDigits:0,maximumFractionDigits:0})}`
@@ -511,6 +511,7 @@ export default function OutsourceEmployees({ entityId, entityCode }) {
         }
         nextLabel={wizardStep<3 ? 'Next →' : (saving?'Saving…':'Save Person')}
         nextDisabled={saving}
+        subjectLabel={nf.full_name_en || null}
       >
 
         {/* ── STEP 1: Person Details ── */}

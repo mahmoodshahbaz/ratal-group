@@ -24,6 +24,7 @@
 import { useState, useEffect } from 'react'
 import { supabase }            from '../lib/supabase'
 import { useFieldAuth }        from '../lib/useFieldAuth'
+import OTPActivationScreen     from '../components/OTPActivationScreen'
 import { postClaimSettlementJE } from '../lib/autoPost'
 import { EXPENSE_CATEGORIES }  from './FormDailyExpense'
 
@@ -93,7 +94,7 @@ const STATUS_META = {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const S = {
-  wrap:    { minHeight:'100vh', background:'#f0f2f5', display:'flex', flexDirection:'column', alignItems:'center', paddingBottom:40 },
+  wrap:    { minHeight:'100dvh', background:'#f0f2f5', display:'flex', flexDirection:'column', alignItems:'center', paddingBottom:40, color:'#0f172a', colorScheme:'light' },
   header:  { width:'100%', background:'linear-gradient(135deg,#0d47a1,#1565c0)', padding:'20px 20px 28px', color:'#fff', boxSizing:'border-box' },
   hTitle:  { fontSize:20, fontWeight:800, marginBottom:2 },
   hSub:    { fontSize:13, opacity:0.82 },
@@ -367,6 +368,7 @@ export default function FormExpenseClaim() {
   }
 
   // ── Guards ────────────────────────────────────────────────
+  if (!devMode && auth.needsActivation) return <OTPActivationScreen auth={auth} />
   if ((auth.loading && !devMode) || (loading && devMode && !devEmpId)) return <div style={{ padding:40, textAlign:'center', color:'#6b7c93' }}>Loading…</div>
   if (!devMode && (auth.error || !auth.employee)) return (
     <div style={{ padding:40, textAlign:'center', color:'#c62828' }}>

@@ -627,6 +627,7 @@ export default function Loans({ entityId }) {
         }
         nextLabel={eosStep < 6 ? `Next →` : 'Confirm & Post EOS'}
         nextDisabled={false}
+        subjectLabel={{ line1: (d=>d?.dept_code||d?.dept_name||null)(depts.find(d=>d.id===eosForm.dept_id)), line2: eosEmps.find(e=>e.id===eosForm.employee_id)?.full_name || null }}
       >
         {/* ── STEP 1: Employee & Departure ────────────────────────── */}
         {eosStep === 1 && (() => {
@@ -1234,11 +1235,12 @@ export default function Loans({ entityId }) {
         title={['New', 'Salary', 'Loan']}
         steps={['Loan Details', 'Schedule & Notes']}
         currentStep={loanStep}
-        onBack={() => setLoanStep(1)}
-        backLabel="Back"
+        onBack={loanStep === 1 ? () => { setShowForm(false); setLoanStep(1) } : () => setLoanStep(1)}
+        backLabel={loanStep === 1 ? 'Cancel' : 'Back'}
         onNext={loanStep === 1 ? () => { if (!form.employee_id) { alert('Select employee'); return } if (!form.loan_amount || +form.loan_amount<=0) { alert('Enter loan amount'); return } setLoanStep(2) } : saveLoan}
         nextLabel={loanStep === 1 ? 'Next: Schedule & Notes' : (saving ? 'Saving…' : 'Approve Loan')}
         nextDisabled={saving}
+        subjectLabel={{ line1: (d=>d?.dept_code||d?.dept_name||null)(depts.find(d=>d.id===form.dept_id)), line2: employees.find(e=>e.id===form.employee_id)?.full_name || null }}
       >
         {loanStep === 1 && (() => {
           const loanEmp   = employees.find(e=>e.id===form.employee_id)
@@ -1368,37 +1370,100 @@ export default function Loans({ entityId }) {
         formTitle={['New', 'Penalty', 'Record']}
         heading="Record a traffic or HR penalty"
         iconLabel="Loans & EOS"
-        workflowSteps={['Violation Details', 'Vehicle & Driver', 'Posting']}
-        description="Enter the Traffic Authority details, then select the plate number — the system identifies the responsible driver automatically. Driver-borne fines go to payroll deduction; company-borne go to Accounts Payable."
+        workflowSteps={['Select Vehicle', 'Violation Details', 'Posting']}
+        description="Start with the plate number — the system auto-identifies the driver. Then fill in the Traffic Authority details. Driver-borne fines go to payroll deduction; company-borne go to Accounts Payable."
       />
 
-      {/* PENALTY FORMSHELL */}
+      {/* PENALTY FORMSHELL — vehicle-first 3-step flow */}
       <FormShell
         isOpen={showPF}
         onClose={() => { setShowPF(false); setPenStep(1) }}
         chapterName="HR"
         title={['New', 'Penalty', 'Record']}
-        steps={['Violation Details', 'Vehicle & Driver', 'Posting']}
+        steps={['Select Vehicle', 'Violation Details', 'Posting']}
         currentStep={penStep}
         onBack={() => penStep === 1 ? (setShowPF(false), setPenStep(1)) : setPenStep(s=>s-1)}
         backLabel={penStep === 1 ? 'Cancel' : 'Back'}
         onNext={
           penStep === 1 ? () => {
-            if (!pForm.penalty_category) { alert('Select penalty category'); return }
-            if (!pForm.violation_date)   { alert('Enter violation date'); return }
-            if (!pForm.amount || +pForm.amount<=0) { alert('Enter amount'); return }
+            if (!pForm.plate_number) { alert('Select a plate number'); return }
             setPenStep(2)
           } :
           penStep === 2 ? () => {
-            if (!pForm.plate_number) { alert('Select plate number'); return }
+            if (!pForm.penalty_category) { alert('Select penalty category'); return }
+            if (!pForm.violation_date)   { alert('Enter violation date'); return }
+            if (!pForm.amount || +pForm.amount<=0) { alert('Enter amount'); return }
             setPenStep(3)
           } : savePenalty
         }
-        nextLabel={penStep < 3 ? `Next: ${['Vehicle & Driver','Posting'][penStep-1]} →` : (saving ? 'Saving…' : 'Save Penalty')}
+        nextLabel={penStep < 3 ? `Next: ${['Violation Details','Posting'][penStep-1]} →` : (saving ? 'Saving…' : 'Save Penalty')}
         nextDisabled={saving}
+        subjectLabel={{ line1: (d=>d?.dept_code||d?.dept_name||null)(depts.find(d=>d.id===employees.find(e=>e.id===pForm.employee_id)?.department_id)), line2: employees.find(e=>e.id===pForm.employee_id)?.full_name || null }}
       >
-        {/* ── STEP 1: Violation Details ─────────────────────────── */}
+        {/* ── STEP 1: Select Vehicle ────────────────────────────── */}
         {penStep === 1 && (
+          <div>
+            <div style={{ marginBottom:14 }}>
+              <label style={S.label}>Plate Number *</label>
+              <select style={S.inp} value={pForm.plate_number} onChange={e=>{
+                const plate = e.target.value
+                const rec   = plateMap[plate]
+                pf('plate_number', plate)
+                pf('vehicle_plate', plate)
+                pf('employee_id',   rec?.employee_id || '')
+                pf('dept_id',       rec?.emp?.department_id || '')
+              }}>
+                <option value="">— Select Vehicle Plate —</option>
+                {vehicles.length > 0
+                  ? vehicles.map(v=>{
+                      const driver = plateMap[v.plate_number]
+                      return <option key={v.id} value={v.plate_number}>
+                        {v.plate_number}{v.make?' — '+v.make+(v.model?' '+v.model:''):''}{driver?.emp?' · '+(driver.emp.full_name||driver.emp.full_name_en||'') : ' · Unassigned'}
+                      </option>
+                    })
+                  : Object.keys(plateMap).map(plate=>{
+                      const d = plateMap[plate]
+                      return <option key={plate} value={plate}>{plate}{d?.emp ? ' · '+(d.emp.full_name||d.emp.full_name_en||'') : ' · Unassigned'}</option>
+                    })
+                }
+              </select>
+            </div>
+
+            {/* Driver card — shown immediately after plate selection */}
+            {pForm.plate_number && (() => {
+              const rec = plateMap[pForm.plate_number]
+              const emp = rec?.emp
+              if (!emp) return (
+                <div style={{ background:'#fff3e0', borderRadius:8, padding:'14px 16px', fontSize:12, color:'#e65100', marginBottom:12, border:'1px solid #ffcc80' }}>
+                  <strong>⚠ No driver currently assigned to this vehicle.</strong><br/>
+                  <span style={{ color:'#795548' }}>Penalty will be posted as a Company expense.</span>
+                </div>
+              )
+              return (
+                <div style={{ background:'#f0f4f8', borderRadius:8, padding:'16px 18px', marginBottom:12, border:'1px solid #cfd8dc' }}>
+                  <div style={{ fontSize:11, fontWeight:800, color:'#6b7c93', letterSpacing:1, marginBottom:10 }}>🚗 CURRENT DRIVER</div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px 24px', fontSize:13 }}>
+                    <div><span style={{ color:'#90a4ae', fontWeight:700, fontSize:11 }}>NAME</span><br/><strong>{emp.full_name||emp.full_name_en||'—'}</strong></div>
+                    <div><span style={{ color:'#90a4ae', fontWeight:700, fontSize:11 }}>EMP #</span><br/>{emp.employee_number||'—'}</div>
+                    <div><span style={{ color:'#90a4ae', fontWeight:700, fontSize:11 }}>DEPT</span><br/>{depts.find(d=>d.id===emp.department_id)?.dept_code || '—'}</div>
+                    <div><span style={{ color:'#90a4ae', fontWeight:700, fontSize:11 }}>IQAMA</span><br/>{emp.iqama_number||'—'}</div>
+                    <div><span style={{ color:'#90a4ae', fontWeight:700, fontSize:11 }}>MOBILE</span><br/>{emp.mobile||'—'}</div>
+                    {rec.assignment_date && <div><span style={{ color:'#90a4ae', fontWeight:700, fontSize:11 }}>ASSIGNED</span><br/>{fmt(rec.assignment_date)}</div>}
+                  </div>
+                </div>
+              )
+            })()}
+
+            {!pForm.plate_number && (
+              <div style={{ padding:'28px 0', textAlign:'center', color:'#90a4ae', fontSize:13 }}>
+                Select a plate above to identify the responsible driver.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── STEP 2: Violation Details ─────────────────────────── */}
+        {penStep === 2 && (
           <div>
             {/* Category */}
             <div style={{ marginBottom:14 }}>
@@ -1423,13 +1488,17 @@ export default function Loans({ entityId }) {
             {/* Responsibility badge — auto-set, manual for OTHER */}
             {pForm.penalty_category && (() => {
               const meta = catMeta(pForm.penalty_category)
+              const rec  = plateMap[pForm.plate_number]
+              const emp  = rec?.emp
               return (
-                <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14, flexWrap:'wrap' }}>
                   <span style={{ fontSize:11, fontWeight:700, color:'#6b7c93' }}>RESPONSIBILITY:</span>
                   <span style={{ padding:'4px 14px', borderRadius:20, fontSize:12, fontWeight:800,
                     background: pForm.penalty_type==='EMPLOYEE_BORNE'?'#ffebee':'#fff3e0',
                     color:      pForm.penalty_type==='EMPLOYEE_BORNE'?'#c62828':'#e65100' }}>
-                    {pForm.penalty_type==='EMPLOYEE_BORNE' ? '👤 Driver / Employee → Payroll Deduction' : '🏢 Company → Accounts Payable'}
+                    {pForm.penalty_type==='EMPLOYEE_BORNE'
+                      ? `👤 ${emp?.full_name||emp?.full_name_en||'Driver'} → Payroll Deduction`
+                      : '🏢 Company → Accounts Payable'}
                   </span>
                   {meta.owner===null && (
                     <select style={{ ...S.inp, width:'auto', fontSize:12 }} value={pForm.penalty_type} onChange={e=>pf('penalty_type',e.target.value)}>
@@ -1467,105 +1536,42 @@ export default function Loans({ entityId }) {
           </div>
         )}
 
-        {/* ── STEP 2: Vehicle & Driver ──────────────────────────── */}
-        {penStep === 2 && (
-          <div>
-
-            <div style={{ marginBottom:14 }}>
-              <label style={S.label}>Plate Number *</label>
-              <select style={S.inp} value={pForm.plate_number} onChange={e=>{
-                const plate = e.target.value
-                const rec   = plateMap[plate]
-                pf('plate_number', plate)
-                pf('vehicle_plate', plate)
-                pf('employee_id',   rec?.employee_id || '')
-                pf('dept_id',       rec?.emp?.department_id || '')
-              }}>
-                <option value="">— Select Vehicle Plate —</option>
-                {vehicles.length > 0
-                  ? vehicles.map(v=>{
-                      const driver = plateMap[v.plate_number]
-                      return <option key={v.id} value={v.plate_number}>
-                        {v.plate_number}{v.make?' — '+v.make+(v.model?' '+v.model:''):''}{driver?.emp?' · '+( driver.emp.full_name||driver.emp.full_name_en||'') : ' · Unassigned'}
-                      </option>
-                    })
-                  : Object.keys(plateMap).map(plate=>{
-                      const d = plateMap[plate]
-                      return <option key={plate} value={plate}>{plate}{d?.emp ? ' · '+(d.emp.full_name||d.emp.full_name_en||'') : ' · Unassigned'}</option>
-                    })
-                }
-              </select>
-            </div>
-
-            {/* Driver card — shown after plate selection */}
-            {pForm.plate_number && (() => {
-              const rec = plateMap[pForm.plate_number]
-              const emp = rec?.emp
-              if (!emp) return (
-                <div style={{ background:'#fff3e0', borderRadius:6, padding:'12px 14px', fontSize:12, color:'#e65100', marginBottom:12 }}>
-                  <strong>⚠ No driver currently assigned to this vehicle.</strong><br/>
-                  <span style={{ color:'#795548' }}>Penalty will be posted as a Company expense.</span>
-                </div>
-              )
-              return (
-                <div style={{ background:'#f0f4f8', borderRadius:6, padding:'14px 16px', marginBottom:12 }}>
-                  <div style={{ fontSize:11, fontWeight:800, color:'#6b7c93', letterSpacing:1, marginBottom:8 }}>🚗 CURRENT DRIVER DETAILS</div>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px 20px', fontSize:12 }}>
-                    <div><span style={{ color:'#90a4ae', fontWeight:700 }}>Name:</span> <strong>{emp.full_name||emp.full_name_en||'—'}</strong></div>
-                    <div><span style={{ color:'#90a4ae', fontWeight:700 }}>Employee #:</span> {emp.employee_number||'—'}</div>
-                    <div><span style={{ color:'#90a4ae', fontWeight:700 }}>Department:</span> {depts.find(d=>d.id===emp.department_id)?.dept_code || '—'}</div>
-                    <div><span style={{ color:'#90a4ae', fontWeight:700 }}>Iqama / ID:</span> {emp.iqama_number||'—'}</div>
-                    <div><span style={{ color:'#90a4ae', fontWeight:700 }}>Mobile:</span> {emp.mobile||'—'}</div>
-                    {rec.assignment_date && <div><span style={{ color:'#90a4ae', fontWeight:700 }}>Assigned since:</span> {fmt(rec.assignment_date)}</div>}
-                  </div>
-                  {/* Responsibility reminder */}
-                  <div style={{ marginTop:10, padding:'6px 12px', borderRadius:4, background: pForm.penalty_type==='EMPLOYEE_BORNE'?'#ffebee':'#fff3e0',
-                    color: pForm.penalty_type==='EMPLOYEE_BORNE'?'#c62828':'#e65100', fontSize:11, fontWeight:700 }}>
-                    {pForm.penalty_type==='EMPLOYEE_BORNE'
-                      ? `👤 ${emp.full_name||emp.full_name_en} is responsible → Payroll deduction`
-                      : '🏢 Company responsible → Accounts Payable'}
-                  </div>
-                </div>
-              )
-            })()}
-          </div>
-        )}
-
         {/* ── STEP 3: Posting ───────────────────────────────────── */}
         {penStep === 3 && (() => {
-          const meta = catMeta(pForm.penalty_category)
-          const rec  = plateMap[pForm.plate_number]
-          const emp  = rec?.emp
+          const meta  = catMeta(pForm.penalty_category)
+          const rec   = plateMap[pForm.plate_number]
+          const emp   = rec?.emp
           const isEmp = pForm.penalty_type === 'EMPLOYEE_BORNE'
           return (
             <div>
+              {/* Summary card at the top of step 3 */}
+              <div style={{ background:'#F7F2ED', borderRadius:8, padding:'14px 16px', fontSize:12, color:L3, lineHeight:2, marginBottom:18, border:'1px solid #d7c9ba' }}>
+                <div style={{ fontWeight:800, marginBottom:6, fontSize:11, letterSpacing:1, color:'#6b7c93' }}>PENALTY SUMMARY</div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'2px 20px' }}>
+                  <div><strong>Vehicle:</strong> {pForm.plate_number||'—'}</div>
+                  {emp && <div><strong>Driver:</strong> {emp.full_name||emp.full_name_en} · {emp.employee_number}</div>}
+                  <div><strong>Category:</strong> {meta?.label||'—'}</div>
+                  <div><strong>Amount:</strong> <span style={{ fontSize:14, fontWeight:900, color: isEmp?'#c62828':'#e65100' }}>{SAR(+pForm.amount)}</span></div>
+                  {pForm.violation_ref  && <div><strong>Ref #:</strong> {pForm.violation_ref}</div>}
+                  {pForm.violation_date && <div><strong>Date:</strong> {fmt(pForm.violation_date)}</div>}
+                </div>
+                <div style={{ marginTop:8, padding:'5px 12px', borderRadius:20, display:'inline-block', fontSize:11, fontWeight:800,
+                  background:isEmp?'#ffebee':'#fff3e0', color:isEmp?'#c62828':'#e65100' }}>
+                  {isEmp ? `👤 ${emp?.full_name||emp?.full_name_en||'Driver'} → Payroll Deduction` : '🏢 Company → Accounts Payable'}
+                </div>
+              </div>
+
               <div style={{ marginBottom:14 }}>
                 <label style={S.label}>{isEmp ? 'Payroll Deduction Month' : 'AP Payment Month'}</label>
                 <input type="month" style={S.inp} value={pForm.deduction_month} onChange={e=>pf('deduction_month',e.target.value)} />
                 <div style={{ fontSize:11, color:'#90a4ae', marginTop:4 }}>
-                  {isEmp ? 'Fine will be deducted from this employee\'s payroll run for the selected month.'
+                  {isEmp ? "Fine will be deducted from this employee's payroll run for the selected month."
                          : 'Fine will be recorded as an Accounts Payable entry for the selected month.'}
                 </div>
               </div>
               <div style={{ marginBottom:14 }}>
                 <label style={S.label}>Notes</label>
                 <textarea style={{ ...S.inp, height:52, resize:'vertical' }} value={pForm.notes} onChange={e=>pf('notes',e.target.value)} />
-              </div>
-              {/* Summary card */}
-              <div style={{ background:'#F7F2ED', borderRadius:6, padding:'12px 14px', fontSize:12, color:L3, lineHeight:1.9 }}>
-                <div style={{ fontWeight:800, marginBottom:6, fontSize:11, letterSpacing:1, color:'#6b7c93' }}>PENALTY SUMMARY</div>
-                <div><strong>Vehicle:</strong> {pForm.plate_number||'—'}</div>
-                {emp && <div><strong>Driver:</strong> {emp.full_name||emp.full_name_en} · {emp.employee_number}</div>}
-                <div><strong>Category:</strong> {meta?.label||'—'} &nbsp;
-                  <span style={{ padding:'2px 10px', borderRadius:12, fontSize:11, fontWeight:800,
-                    background:isEmp?'#ffebee':'#fff3e0', color:isEmp?'#c62828':'#e65100' }}>
-                    {isEmp ? 'Payroll Deduction' : 'Accounts Payable'}
-                  </span>
-                </div>
-                {pForm.violation_ref  && <div><strong>Ref #:</strong> {pForm.violation_ref}</div>}
-                {pForm.violation_date && <div><strong>Violation Date:</strong> {fmt(pForm.violation_date)}</div>}
-                <div><strong>Amount:</strong> <span style={{ fontSize:14, fontWeight:800 }}>{SAR(+pForm.amount)}</span></div>
-                {pForm.offence && <div><strong>Offence:</strong> {pForm.offence}</div>}
               </div>
             </div>
           )

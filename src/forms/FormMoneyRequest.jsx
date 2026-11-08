@@ -96,8 +96,9 @@ const EMPTY_LINE = {
 
 // ── Shared style helpers ─────────────────────────────────────────────────────
 const page = (bg='#f1f5f9') => ({
-  minHeight:'100vh', background:bg, display:'flex', flexDirection:'column',
+  minHeight:'100dvh', background:bg, display:'flex', flexDirection:'column',
   fontFamily:"'Segoe UI',Arial,sans-serif", maxWidth:480, margin:'0 auto',
+  color:'#0f172a', colorScheme:'light',
 })
 const header = {
   background: TH.navyDark,

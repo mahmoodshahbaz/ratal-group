@@ -587,13 +587,15 @@ function ReviewRow({ label, value, highlight }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const sPage = {
-  minHeight:    '100vh',
+  minHeight:    '100dvh',
   background:   C.bg,
   display:      'flex',
   flexDirection:'column',
   alignItems:   'center',
   padding:      '0 0 40px',
   fontFamily:   'Poppins, system-ui, sans-serif',
+  color:        C.text,
+  colorScheme:  'dark',
 }
 
 const sHeader = {

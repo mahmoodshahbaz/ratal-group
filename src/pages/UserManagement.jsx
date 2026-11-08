@@ -9,16 +9,17 @@ import FormShell from '../components/FormShell'
 // SUPERADMIN: all users, all entities, all roles, can delete
 // ADMIN:      own entity only, DEPT_HEAD and below only, no delete
 
-const ALL_ROLES = ['SUPERADMIN','ADMIN','DEPT_HEAD','PROJECT_MANAGER','TRAVEL_AGENT','FIELD_EMPLOYEE','VIEWER']
+const ALL_ROLES = ['SUPERADMIN','ADMIN','DEPT_HEAD','PROJECT_MANAGER','SUPERVISOR','TRAVEL_AGENT','FIELD_EMPLOYEE','VIEWER']
 
 // Roles that ADMIN is allowed to assign (cannot touch SUPERADMIN or ADMIN)
-const ADMIN_ROLES = ['DEPT_HEAD','PROJECT_MANAGER','TRAVEL_AGENT','FIELD_EMPLOYEE','VIEWER']
+const ADMIN_ROLES = ['DEPT_HEAD','PROJECT_MANAGER','SUPERVISOR','TRAVEL_AGENT','FIELD_EMPLOYEE','VIEWER']
 
 const ROLE_META = {
   SUPERADMIN:       { color:'#5A32D4', bg:'#ede7f6', icon:'👑', desc:'Full access to all entities. Can manage users.' },
   ADMIN:            { color:'#1565C0', bg:'#e3f2fd', icon:'🛡', desc:'Full access to their assigned entity. Can manage lower-role users.' },
-  DEPT_HEAD:        { color:'#00695c', bg:'#e0f2f1', icon:'🏛', desc:'Sees HR, approvals, staff actions. Submits SARs and money requests.' },
-  PROJECT_MANAGER:  { color:'#2e7d32', bg:'#e8f5e9', icon:'📁', desc:'Manages projects and site masters. Can submit requests.' },
+  DEPT_HEAD:        { color:'#00695c', bg:'#e0f2f1', icon:'🏛', desc:'Department view: approvals, staff submissions, money requests. No payroll or QR management.' },
+  PROJECT_MANAGER:  { color:'#2e7d32', bg:'#e8f5e9', icon:'📁', desc:'Project and site view: submissions, PO requests, site completions.' },
+  SUPERVISOR:       { color:'#6a1b9a', bg:'#f3e5f5', icon:'🔍', desc:'Team supervision: views their team submissions and site progress.' },
   TRAVEL_AGENT:     { color:'#1565C0', bg:'#e8eaf6', icon:'✈️', desc:'Handles tickets, customers, BSP, and refunds.' },
   FIELD_EMPLOYEE:   { color:'#e65100', bg:'#fff3e0', icon:'👷', desc:'Submits expense, food, overtime requests via mobile forms.' },
   VIEWER:           { color:'#aab2bd', bg:'#f5f7fa', icon:'👁',  desc:'Read-only access to the dashboard only.' },
@@ -577,6 +578,7 @@ export default function UserManagement({ entityId: propEntityId }) {
         onNext={inviteStep===1 ? () => { if(selectedEmp&&form.role&&(form.email||selectedEmp?.email)) setInviteStep(2) } : invite}
         nextLabel={inviteStep===1 ? 'Save & Next' : (saving ? 'Sending…' : 'Send Invite')}
         nextDisabled={inviteStep===1 ? !selectedEmp||!form.role||(!form.email&&!selectedEmp?.email) : saving}
+        subjectLabel={{ line1: selectedEmp?.dept_code || null, line2: selectedEmp?.full_name || selectedEmp?.full_name_en || null }}
       >
         <div>
 

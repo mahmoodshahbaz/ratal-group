@@ -138,7 +138,7 @@ function ScanQRScreen({ error, debugError }) {
   const isAr   = lang === 'ar'
   const errMsg = error && error !== 'no_token' ? ERROR_MESSAGES[error] : null
   return (
-    <div style={{ minHeight:'100vh', background:MP.charcoal, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:32, fontFamily:MP.font, textAlign:'center' }}>
+    <div style={{ minHeight:'100dvh', background:MP.charcoal, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:32, fontFamily:MP.font, textAlign:'center' }}>
       <div style={{ fontSize:13, fontWeight:700, color:MP.textMutedDark, letterSpacing:3, marginBottom:48, textTransform:'uppercase' }}>ACCSYS</div>
       <div style={{ width:110, height:110, background:'rgba(247,210,99,0.08)', borderRadius:28, display:'flex', alignItems:'center', justifyContent:'center', fontSize:52, marginBottom:32, border:`1.5px solid rgba(247,210,99,0.25)` }}>📱</div>
       <div style={{ fontSize:22, fontWeight:700, color:MP.textOnDark, marginBottom:10, fontFamily:MP.font }}>{isAr ? 'امسح رمز QR للمتابعة' : 'Scan Your QR Code'}</div>
@@ -155,10 +155,105 @@ function ScanQRScreen({ error, debugError }) {
   )
 }
 
+// ── OTP Activation screen ─────────────────────────────────────────────────────
+function OTPActivationScreen({ auth }) {
+  const [otpInput, setOtpInput]   = useState('')
+  const [requested, setRequested] = useState(false)
+
+  // Auto-request OTP on first render
+  useEffect(() => {
+    if (!requested) {
+      setRequested(true)
+      auth.requestOTP()
+    }
+  }, [])
+
+  function handleDigit(val) {
+    const digits = val.replace(/\D/g,'').slice(0,6)
+    setOtpInput(digits)
+  }
+
+  function handleVerify() {
+    if (otpInput.length === 6) auth.verifyOTP(otpInput)
+  }
+
+  return (
+    <div style={{ minHeight:'100dvh', background:MP.charcoal, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:24, fontFamily:MP.font }}>
+      <div style={{ fontSize:13, fontWeight:700, color:MP.textMutedDark, letterSpacing:3, marginBottom:40, textTransform:'uppercase' }}>ACCSYS</div>
+
+      {/* Lock icon */}
+      <div style={{ width:90, height:90, background:'rgba(247,210,99,0.08)', borderRadius:24, display:'flex', alignItems:'center', justifyContent:'center', fontSize:40, marginBottom:28, border:`1.5px solid rgba(247,210,99,0.25)` }}>🔑</div>
+
+      <div style={{ fontSize:20, fontWeight:700, color:MP.textOnDark, marginBottom:8, textAlign:'center' }}>Activate Your QR Access</div>
+      <div style={{ fontSize:13, color:MP.textMutedDark, lineHeight:1.6, marginBottom:28, maxWidth:300, textAlign:'center' }}>
+        {auth.otpSent
+          ? 'An OTP has been sent to your manager. Ask them for the 6-digit code.'
+          : auth.otpSending
+          ? 'Sending OTP to your manager…'
+          : 'Requesting activation code…'}
+      </div>
+
+      {/* OTP input */}
+      {auth.otpSent && (
+        <div style={{ width:'100%', maxWidth:320 }}>
+          <input
+            type="tel"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={6}
+            value={otpInput}
+            onChange={e => handleDigit(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleVerify()}
+            placeholder="Enter 6-digit OTP"
+            style={{
+              width:'100%', padding:'16px', fontSize:28, fontWeight:900, letterSpacing:12,
+              textAlign:'center', border:`2px solid ${otpInput.length===6 ? MP.yellow : 'rgba(255,255,255,0.15)'}`,
+              borderRadius:14, background:'rgba(255,255,255,0.08)', color:MP.textOnDark,
+              outline:'none', boxSizing:'border-box', fontFamily:MP.font,
+              caretColor: MP.yellow,
+            }}
+            autoFocus
+          />
+
+          {auth.otpError && (
+            <div style={{ background:'rgba(220,50,50,0.12)', border:'1px solid rgba(220,50,50,0.3)', borderRadius:10, padding:'12px 16px', marginTop:14, color:'#F5A5A0', fontSize:13, lineHeight:1.5, textAlign:'center' }}>
+              {auth.otpError}
+            </div>
+          )}
+
+          <button
+            onClick={handleVerify}
+            disabled={otpInput.length < 6 || auth.otpSending}
+            style={{
+              width:'100%', marginTop:16, padding:'16px',
+              background: otpInput.length===6 && !auth.otpSending ? MP.yellow : 'rgba(255,255,255,0.1)',
+              color: otpInput.length===6 && !auth.otpSending ? '#1a2540' : MP.textMutedDark,
+              border:'none', borderRadius:14, fontSize:16, fontWeight:800, cursor: otpInput.length===6 ? 'pointer' : 'default',
+              fontFamily: MP.font, transition:'all 0.2s',
+            }}>
+            {auth.otpSending ? 'Verifying…' : 'Activate →'}
+          </button>
+
+          <button
+            onClick={() => { setOtpInput(''); auth.requestOTP() }}
+            disabled={auth.otpSending}
+            style={{ width:'100%', marginTop:10, padding:'10px', background:'transparent', color:MP.textMutedDark, border:`1px solid rgba(255,255,255,0.1)`, borderRadius:10, fontSize:12, cursor:'pointer', fontFamily:MP.font }}>
+            Resend OTP
+          </button>
+        </div>
+      )}
+
+      <div style={{ fontSize:11, color:MP.textMutedDark, marginTop:36, textAlign:'center', lineHeight:1.7, maxWidth:280 }}>
+        This is a one-time setup. After activation, your QR will work automatically on this device.
+      </div>
+    </div>
+  )
+}
+
 // ── Loading spinner ────────────────────────────────────────────────────────────
 function LoadingScreen({ msg }) {
   return (
-    <div style={{ minHeight:'100vh', background:MP.charcoal, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', fontFamily:MP.font }}>
+    <div style={{ minHeight:'100dvh', background:MP.charcoal, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', fontFamily:MP.font }}>
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
       <div style={{ fontSize:13, fontWeight:700, color:MP.textMutedDark, letterSpacing:3, marginBottom:40, textTransform:'uppercase' }}>ACCSYS</div>
       <div style={{ width:48, height:48, border:`3px solid rgba(247,210,99,0.2)`, borderTop:`3px solid ${MP.yellow}`, borderRadius:'50%', animation:'spin 0.8s linear infinite', marginBottom:20 }} />
@@ -246,7 +341,7 @@ function NotificationsView({ notifications, isAr, onMarkAllRead, onBack }) {
   const getIcon = type => { const k = Object.keys(ICONS).find(k => (type||'').includes(k)); return ICONS[k] || '🔔' }
   const unread  = notifications.filter(n => !n.is_read)
   return (
-    <div style={{ minHeight:'100vh', background:MP.charcoal, fontFamily:MP.font, paddingBottom:90 }}>
+    <div style={{ minHeight:'100dvh', background:MP.charcoal, fontFamily:MP.font, paddingBottom:90 }}>
       <div style={{ background:MP.darkCard, padding:'16px 18px', display:'flex', alignItems:'center', gap:14, borderBottom:'1px solid #3A3D35' }}>
         <button onClick={onBack} style={{ background:'rgba(247,210,99,0.12)', border:`1px solid rgba(247,210,99,0.2)`, borderRadius:20, padding:'7px 16px', color:MP.yellow, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:MP.font }}>
           ← {isAr ? 'رجوع' : 'Back'}
@@ -288,7 +383,7 @@ function ConfirmationsView({ items, confirming, isAr, onConfirm, onBack }) {
   const typeIcon  = type => type==='FOOD' ? '🍽️' : '💳'
   const typeColor = type => type==='FOOD' ? '#E07A5F' : '#4CAF82'
   return (
-    <div style={{ minHeight:'100vh', background:MP.cream, fontFamily:MP.font, paddingBottom:90 }}>
+    <div style={{ minHeight:'100dvh', background:MP.cream, fontFamily:MP.font, paddingBottom:90 }}>
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
       <div style={{ background:MP.lightCard, padding:'16px 18px', display:'flex', alignItems:'center', gap:14, borderBottom:'1px solid #E4E0D3' }}>
         <button onClick={onBack} style={{ background:'transparent', border:'1.5px solid #D5D2C5', borderRadius:20, padding:'7px 16px', color:MP.textMutedLight, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:MP.font }}>
@@ -345,7 +440,7 @@ function ConfirmationsView({ items, confirming, isAr, onConfirm, onBack }) {
 function PaymentGateScreen({ items, confirming, onConfirm, onConfirmAll, empName, isAr, onSwitchUser }) {
   const total = items.length
   return (
-    <div style={{ position:'fixed', inset:0, background:MP.charcoal, display:'flex', flexDirection:'column', fontFamily:MP.font, maxWidth:480, margin:'0 auto' }}>
+    <div className="field-forms-root" style={{ position:'fixed', inset:0, background:MP.charcoal, display:'flex', flexDirection:'column', fontFamily:MP.font, width:'100%' }}>
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}`}</style>
       <div style={{ flexShrink:0, background:MP.darkCard, padding:'36px 24px 20px', borderBottom:'1px solid #3A3D35' }}>
         <div style={{ fontSize:12, fontWeight:700, color:MP.textMutedDark, letterSpacing:3, marginBottom:16, textTransform:'uppercase' }}>ACCSYS</div>
@@ -416,6 +511,54 @@ function PaymentGateScreen({ items, confirming, onConfirm, onConfirmAll, empName
 export default function FormLanding() {
   const navigate = useNavigate()
   const auth     = useFieldAuth()
+
+  // ── Force full-width, correct theme-color, lock zoom ───────────────────────
+  useEffect(() => {
+    // 1. Inject CSS overrides with !important
+    const styleId = 'field-forms-fullscreen'
+    let styleEl = document.getElementById(styleId)
+    if (!styleEl) {
+      styleEl = document.createElement('style')
+      styleEl.id = styleId
+      document.head.appendChild(styleEl)
+    }
+    styleEl.textContent = `
+      html, body {
+        background: #F0EEE3 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        overflow-x: hidden !important;
+      }
+      #root {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        border: none !important;
+        border-inline: none !important;
+        padding: 0 !important;
+        text-align: left !important;
+      }
+    `
+
+    // 2. Set theme-color to cream so browser chrome matches (not black)
+    const metaTheme = document.querySelector('meta[name="theme-color"]')
+    const prevTheme = metaTheme?.content
+    if (metaTheme) metaTheme.content = '#F0EEE3'
+
+    // 3. Lock viewport scale to 1 so browser zoom can't narrow the layout
+    const metaVP = document.querySelector('meta[name="viewport"]')
+    const prevVP = metaVP?.content
+    if (metaVP) metaVP.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, viewport-fit=cover'
+
+    return () => {
+      styleEl?.remove()
+      document.body.style.background = ''
+      document.documentElement.style.background = ''
+      if (metaTheme && prevTheme) metaTheme.content = prevTheme
+      if (metaVP && prevVP) metaVP.content = prevVP
+    }
+  }, [])
 
   const [lang,          setLang]          = useState('en')
   const [view,          setView]          = useState('home')
@@ -503,8 +646,9 @@ export default function FormLanding() {
   }
 
   // ── Gate / loading ────────────────────────────────────────────────────────
-  if (auth.loading)   return <LoadingScreen msg="Verifying your identity…" />
-  if (!auth.employee) return <ScanQRScreen error={auth.error} debugError={auth.debugError} />
+  if (auth.loading)          return <LoadingScreen msg="Verifying your identity…" />
+  if (auth.needsActivation)  return <OTPActivationScreen auth={auth} />
+  if (!auth.employee)        return <ScanQRScreen error={auth.error} debugError={auth.debugError} />
   if (!gateReady)     return <LoadingScreen msg="Checking pending confirmations…" />
   if (pendingGate.length > 0) {
     return <PaymentGateScreen items={pendingGate} confirming={gateConfirming} onConfirm={confirmGateItem} onConfirmAll={confirmAllGateItems} empName={auth.employee?.full_name_en||''} isAr={isAr} onSwitchUser={auth.logout} />
@@ -515,6 +659,7 @@ export default function FormLanding() {
   const role         = auth.role
   const roleLabel    = ROLE_LABELS[role] || role
   const roleColor    = ROLE_COLORS[role] || '#374151'
+
   const unreadNotifs = notifications.filter(n => !n.is_read).length
   const alertCount   = notifications.filter(n => !n.is_read && (n.type||'').includes('ALERT')).length
   const pendingConf  = confirmItems.length
@@ -544,7 +689,7 @@ export default function FormLanding() {
   // HOME — profile only
   // ════════════════════════════════════════════════════════════════════════════
   if (view === 'home') return (
-    <div style={{ minHeight:'100vh', background:MP.cream, fontFamily:MP.font, maxWidth:480, margin:'0 auto', paddingBottom:100 }} dir={isAr ? 'rtl' : 'ltr'}>
+    <div className="field-forms-root" style={{ position:'fixed', inset:0, overflowY:'auto', background:MP.cream, fontFamily:MP.font, paddingBottom:100, display:'flex', flexDirection:'column' }} dir={isAr ? 'rtl' : 'ltr'}>
 
       {/* Top bar */}
       <div style={{ background:MP.cream, padding:'18px 20px 12px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
@@ -594,8 +739,8 @@ export default function FormLanding() {
         </div>
       </div>
 
-      {/* Details card */}
-      <div style={{ margin:'0 16px 16px', background:MP.lightCard, borderRadius:20, border:'1px solid #E4E0D3', overflow:'hidden' }}>
+      {/* Details card — flex:1 so it fills remaining height between profile and date strip */}
+      <div style={{ margin:'0 16px 16px', background:MP.lightCard, borderRadius:20, border:'1px solid #E4E0D3', overflow:'hidden', flex:1 }}>
         {/* Section label */}
         <div style={{ padding:'12px 18px 8px', fontSize:10, fontWeight:700, color:MP.textMutedLight, textTransform:'uppercase', letterSpacing:1, fontFamily:MP.font }}>
           {isAr ? 'معلومات الموظف' : 'Employee Details'}
@@ -677,7 +822,7 @@ export default function FormLanding() {
     const alertNotifs   = notifications.filter(n => (n.type||'').includes('ALERT'))
 
     return (
-      <div style={{ minHeight:'100vh', background:MP.charcoal, fontFamily:MP.font, maxWidth:480, margin:'0 auto', paddingBottom:100 }} dir={isAr ? 'rtl' : 'ltr'}>
+      <div className="field-forms-root" style={{ minHeight:'100dvh', background:MP.charcoal, fontFamily:MP.font, width:'100%', paddingBottom:100 }} dir={isAr ? 'rtl' : 'ltr'}>
 
         {/* Header */}
         <div style={{ padding:'24px 20px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
@@ -764,7 +909,7 @@ export default function FormLanding() {
   // FORMS — pastel grid
   // ════════════════════════════════════════════════════════════════════════════
   return (
-    <div style={{ minHeight:'100vh', background:MP.charcoal, fontFamily:MP.font, maxWidth:480, margin:'0 auto', paddingBottom:100 }} dir={isAr ? 'rtl' : 'ltr'}>
+    <div className="field-forms-root" style={{ minHeight:'100dvh', background:MP.charcoal, fontFamily:MP.font, width:'100%', paddingBottom:100 }} dir={isAr ? 'rtl' : 'ltr'}>
 
       {/* Header */}
       <div style={{ padding:'24px 20px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>

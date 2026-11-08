@@ -307,8 +307,8 @@ export default function VATPayment({ entityId }) {
         title={editId ? ['Edit', 'VAT', 'Payment'] : ['Record', 'VAT', 'Payment']}
         steps={STEPS}
         currentStep={wizardStep}
-        onBack={() => setWizardStep(s => s - 1)}
-        backLabel="Back"
+        onBack={wizardStep === 1 ? closeModal : () => setWizardStep(s => s - 1)}
+        backLabel={wizardStep === 1 ? 'Cancel' : 'Back'}
         onNext={() => {
           if (wizardStep < STEPS.length) {
             if (!form.period_from || !form.period_to) { setErr('VAT period (from / to) is required'); return }
@@ -317,6 +317,7 @@ export default function VATPayment({ entityId }) {
         }}
         nextLabel={wizardStep < STEPS.length ? 'Next →' : (saving ? 'Saving…' : editId ? 'Save Changes' : 'Save VAT Payment')}
         nextDisabled={saving}
+        subjectLabel={form.period_from ? { line1: (() => { const m=parseInt((form.period_from||'').slice(5,7),10); return m<=3?'Q1':m<=6?'Q2':m<=9?'Q3':'Q4' })(), line2: form.net_vat_payable ? `SAR ${parseFloat(form.net_vat_payable).toLocaleString()}` : null } : null}
       >
         {err && <div style={S.err}>{err}</div>}
 

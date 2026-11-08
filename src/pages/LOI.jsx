@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useExpandable, ExpandableRow, DetailField, DetailRow, DetailSection, DetailActions } from '../components/ExpandableRow'
 import PageBanner from '../components/PageBanner'
 import FormShell from '../components/FormShell'
+import { useDriveUpload } from '../hooks/useDriveUpload'
 
 // LOI = Letter of Intent received from a client before a formal project is raised
 // Flow: LOI RECEIVED → RESPONDED → CONVERTED (→ Project) | REJECTED | EXPIRED
@@ -115,6 +116,7 @@ const EMPTY = {
   service_unit:'NISU', work_type:'', scope_description:'',
   estimated_value:'', received_date:TODAY, response_deadline:'',
   status:'RECEIVED', notes:'', internal_ref:'',
+  attachment_urls: [],
 }
 
 // Auto LOI number: LOI-YYMM-SEQ
@@ -144,6 +146,8 @@ export default function LOI({ entityId }) {
   const [filter,      setFilter]     = useState({ status:'', unit:'' })
   const [search,      setSearch]     = useState('')
   const [converting,  setConverting] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(null)   // e.g. "2/3"
+  const { upload, uploading } = useDriveUpload()
   const { toggle: toggleLoi, isOpen: loiOpen } = useExpandable()
 
   useEffect(() => { if (entityId) load() }, [entityId])
@@ -166,6 +170,7 @@ export default function LOI({ entityId }) {
     setForm({ ...EMPTY, loi_number: num })
     setLoiStep(1)
     setAttachments([])
+    setUploadProgress(null)
     setShowBanner(true)
   }
 
@@ -173,6 +178,7 @@ export default function LOI({ entityId }) {
     setEditing(loi)
     setLoiStep(1)
     setAttachments([])
+    setUploadProgress(null)
     setForm({
       loi_number:        loi.loi_number||'',
       client_name:       loi.client_name||'',
@@ -188,6 +194,7 @@ export default function LOI({ entityId }) {
       status:            loi.status||'RECEIVED',
       notes:             loi.notes||'',
       internal_ref:      loi.internal_ref||'',
+      attachment_urls:   loi.attachment_urls||[],
     })
     setShowForm(true)
   }
@@ -195,19 +202,41 @@ export default function LOI({ entityId }) {
   async function save() {
     if (!form.client_name && !form.contractor_id && !form.customer_id) { alert('Client is required'); return }
     setSaving(true)
+
+    // ── Upload any new attachments to Drive ──────────────────────
+    const newUrls = []
+    if (attachments.length > 0) {
+      for (let i = 0; i < attachments.length; i++) {
+        setUploadProgress(`${i + 1}/${attachments.length}`)
+        try {
+          const result = await upload(
+            attachments[i],
+            'invoices',
+            `LOI-${form.loi_number.replace(/[^a-zA-Z0-9-]/g,'')}`
+          )
+          if (result?.viewUrl) newUrls.push(result.viewUrl)
+        } catch {
+          // non-fatal: skip file on error, continue with save
+        }
+      }
+      setUploadProgress(null)
+    }
+
+    const existingUrls = Array.isArray(form.attachment_urls) ? form.attachment_urls : []
     const payload = {
       ...form,
       entity_id:       entityId,
       estimated_value: +form.estimated_value||0,
       contractor_id:   form.contractor_id||null,
       customer_id:     form.customer_id||null,
+      attachment_urls: [...existingUrls, ...newUrls],
     }
     const { error } = editing
       ? await supabase.from('loi_requests').update(payload).eq('id',editing.id)
       : await supabase.from('loi_requests').insert(payload)
     setSaving(false)
     if (error) { alert(error.message); return }
-    setShowForm(false); setEditing(null); load()
+    setShowForm(false); setEditing(null); setAttachments([]); load()
   }
 
   async function updateStatus(id, status) {
@@ -478,8 +507,9 @@ export default function LOI({ entityId }) {
         onBack={() => loiStep === 1 ? setShowForm(false) : setLoiStep(1)}
         onNext={loiStep === 1 ? () => setLoiStep(2) : save}
         backLabel={loiStep === 1 ? 'Cancel' : 'Back'}
-        nextLabel={saving ? '⏳ Saving…' : loiStep === 1 ? 'Save & Next' : (editing ? '✔ Update LOI' : '💾 Save LOI')}
-        nextDisabled={saving}
+        nextLabel={uploadProgress ? `⏳ Uploading ${uploadProgress}…` : saving ? '⏳ Saving…' : loiStep === 1 ? 'Save & Next' : (editing ? '✔ Update LOI' : '💾 Save LOI')}
+        nextDisabled={saving || uploading}
+        subjectLabel={form.client_name || contractors.find(c=>c.id===form.contractor_id)?.contractor_name || null}
       >
         {loiStep === 1 && (
           <div>
@@ -586,9 +616,28 @@ export default function LOI({ entityId }) {
               Attach any supporting documents — Quotations, Invoices, WhatsApp screenshots or email scans. <strong>Optional</strong> — you can submit without attachments.
             </div>
 
-            {/* File list */}
+            {/* Already-saved Drive URLs */}
+            {form.attachment_urls?.length > 0 && (
+              <div style={{ marginBottom:16 }}>
+                <div style={{ fontSize:11, color:'#6b7c93', fontWeight:700, marginBottom:6 }}>SAVED ATTACHMENTS</div>
+                {form.attachment_urls.map((url, i) => (
+                  <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 14px', background:'#e8f5e9', borderRadius:9, marginBottom:8, border:'1px solid #a5d6a7' }}>
+                    <span style={{ fontSize:16 }}>✅</span>
+                    <a href={url} target="_blank" rel="noreferrer"
+                      style={{ flex:1, fontSize:12, color:'#1b5e20', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', textDecoration:'none' }}>
+                      {`File ${i + 1} — View on Drive ↗`}
+                    </a>
+                    <button onClick={()=>f('attachment_urls', form.attachment_urls.filter((_,j)=>j!==i))}
+                      style={{ background:'#fee2e2', border:'none', borderRadius:6, color:'#c62828', padding:'3px 9px', cursor:'pointer', fontSize:11, fontWeight:700 }}>Remove</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* New files pending upload */}
             {attachments.length > 0 && (
               <div style={{ marginBottom:16 }}>
+                <div style={{ fontSize:11, color:'#6b7c93', fontWeight:700, marginBottom:6 }}>PENDING UPLOAD</div>
                 {attachments.map((file, i) => (
                   <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 14px', background:'#f8fafc', borderRadius:9, marginBottom:8, border:'1px solid #e0e8f0' }}>
                     <span style={{ fontSize:18 }}>📎</span>
@@ -600,17 +649,24 @@ export default function LOI({ entityId }) {
               </div>
             )}
 
+            {/* Upload progress */}
+            {uploadProgress && (
+              <div style={{ marginBottom:14, padding:'12px 14px', background:'#e3f2fd', borderRadius:9, border:'1px solid #90caf9', fontSize:13, fontWeight:700, color:'#0d47a1', display:'flex', alignItems:'center', gap:10 }}>
+                <span style={{ fontSize:16 }}>⏳</span> Uploading files to Drive… {uploadProgress}
+              </div>
+            )}
+
             {/* Add file button */}
-            <input ref={fileRef} type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+            <input ref={fileRef} type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.docx"
               style={{ display:'none' }}
               onChange={e=>setAttachments(a=>[...a,...Array.from(e.target.files)])} />
-            <button onClick={()=>fileRef.current?.click()}
-              style={{ width:'100%', padding:'18px', border:'2px dashed #b0cfe8', borderRadius:12, background:'#f0f7ff', color:'#0079BC', fontSize:14, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
+            <button onClick={()=>fileRef.current?.click()} disabled={uploading||saving}
+              style={{ width:'100%', padding:'18px', border:'2px dashed #b0cfe8', borderRadius:12, background:'#f0f7ff', color:'#0079BC', fontSize:14, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10, opacity:(uploading||saving)?0.6:1 }}>
               <span style={{ fontSize:20 }}>+</span> Add Attachment (Quotation, Invoice, WhatsApp scan…)
             </button>
 
             <div style={{ marginTop:14, padding:'12px 14px', background:'#fffde7', borderRadius:9, border:'1px solid #ffe082', fontSize:11, color:'#7a6000' }}>
-              ℹ Files are uploaded to Google Drive when you save. Supported: PDF, JPG, PNG, DOC, XLS (max 25 MB each).
+              ℹ Files are uploaded to Google Drive on save. Supported: PDF, JPG, PNG, DOCX (max 10 MB each).
             </div>
           </div>
         )}

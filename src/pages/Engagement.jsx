@@ -224,11 +224,12 @@ export default function Engagement({ entityId }) {
         title={editing ? ['Edit','Notice',''] : ['Post','Notice','Board']}
         steps={['Notice Details','Message & Settings']}
         currentStep={wizardStep}
-        onBack={()=>setWizardStep(s=>s-1)}
-        backLabel="Back"
+        onBack={wizardStep===1 ? ()=>{ setShowForm(false); setWizardStep(1) } : ()=>setWizardStep(s=>s-1)}
+        backLabel={wizardStep===1 ? 'Cancel' : 'Back'}
         onNext={wizardStep===1 ? ()=>{ if(!form.title.trim()){alert('Title is required');return}; setWizardStep(2) } : save}
         nextLabel={wizardStep===1 ? 'Next →' : (saving ? 'Saving…' : (editing ? 'Update Notice' : 'Post Notice'))}
         nextDisabled={saving}
+        subjectLabel={form.title || null}
       >
         {wizardStep===1 && (
           <div>

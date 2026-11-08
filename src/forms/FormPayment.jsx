@@ -80,7 +80,7 @@ export default function FormPayment() {
 
   // Fallback for unknown entity
   return (
-    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#eef2f7', padding:20 }}>
+    <div style={{ minHeight:'100dvh', display:'flex', alignItems:'center', justifyContent:'center', background:'#eef2f7', padding:20 }}>
       <div style={{ background:'#fff', borderRadius:20, padding:36, textAlign:'center', maxWidth:360, width:'100%' }}>
         <div style={{ fontSize:44, marginBottom:14 }}>⚠️</div>
         <div style={{ fontWeight:800, color:'#1a2540', fontSize:17, marginBottom:8 }}>Entity Not Recognised</div>
@@ -169,7 +169,7 @@ function TravelPaymentForm({ entityId, entityCode }) {
   const entityLabel = entityCode === 'RAT' ? 'Ratal Travel' : 'Gulf World Travel'
 
   return (
-    <div style={{ minHeight:'100vh', background:'#eef2f7', fontFamily:'system-ui,-apple-system,Arial,sans-serif' }}>
+    <div style={{ minHeight:'100dvh', background:'#eef2f7', fontFamily:'system-ui,-apple-system,Arial,sans-serif' }}>
 
       {/* Header */}
       <div style={{ background:'linear-gradient(145deg,#0a1628 0%,#1a237e 60%,#283593 100%)', paddingBottom:32 }}>
@@ -252,7 +252,7 @@ function TravelPaymentForm({ entityId, entityCode }) {
       </div>
 
       {/* Sticky submit */}
-      <div style={{ position:'fixed', bottom:0, left:0, right:0, padding:'10px 16px 16px', background:'rgba(255,255,255,0.96)', backdropFilter:'blur(12px)', boxShadow:'0 -4px 24px rgba(0,0,0,0.12)' }}>
+      <div style={{ position:'fixed', bottom:0, left:0, right:0, padding:`10px 16px calc(16px + env(safe-area-inset-bottom, 0px))`, background:'rgba(255,255,255,0.96)', backdropFilter:'blur(12px)', boxShadow:'0 -4px 24px rgba(0,0,0,0.12)' }}>
         <div style={{ maxWidth:520, margin:'0 auto' }}>
           <button onClick={handleSubmit} disabled={submitting || total <= 0}
             style={{ width:'100%', padding:16,
@@ -435,7 +435,7 @@ function FieldDistributionForm({ entityId }) {
   if (submitted) return <SuccessScreen total={total} account={fromAccount} type="field" onAnother={reset} />
 
   return (
-    <div style={{ minHeight:'100vh', background:'#eef2f7', fontFamily:'system-ui,-apple-system,Arial,sans-serif' }}>
+    <div style={{ minHeight:'100dvh', background:'#eef2f7', fontFamily:'system-ui,-apple-system,Arial,sans-serif' }}>
 
       {/* Header */}
       <div style={{ background:'linear-gradient(145deg,#0a1628 0%,#0d2b55 50%,#1565c0 100%)', paddingBottom:32 }}>
@@ -564,7 +564,7 @@ function FieldDistributionForm({ entityId }) {
       </div>
 
       {/* Sticky submit */}
-      <div style={{ position:'fixed', bottom:0, left:0, right:0, padding:'10px 16px 16px', background:'rgba(255,255,255,0.96)', backdropFilter:'blur(12px)', boxShadow:'0 -4px 24px rgba(0,0,0,0.12)' }}>
+      <div style={{ position:'fixed', bottom:0, left:0, right:0, padding:`10px 16px calc(16px + env(safe-area-inset-bottom, 0px))`, background:'rgba(255,255,255,0.96)', backdropFilter:'blur(12px)', boxShadow:'0 -4px 24px rgba(0,0,0,0.12)' }}>
         <div style={{ maxWidth:520, margin:'0 auto' }}>
           <button onClick={handleSubmit} disabled={submitting || total <= 0}
             style={{ width:'100%', padding:16,
@@ -700,7 +700,7 @@ function FieldRecipientCard({ row, employees, subcons, suppliers, projects, canR
 // ═══════════════════════════════════════════════════════════════
 function Splash({ msg }) {
   return (
-    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#eef2f7' }}>
+    <div style={{ minHeight:'100dvh', display:'flex', alignItems:'center', justifyContent:'center', background:'#eef2f7' }}>
       <div style={{ color:'#6b7c93', fontSize:14 }}>{msg}</div>
     </div>
   )
@@ -708,7 +708,7 @@ function Splash({ msg }) {
 
 function LoginWall() {
   return (
-    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(145deg,#0a1628,#1565c0)', padding:20 }}>
+    <div style={{ minHeight:'100dvh', display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(145deg,#0a1628,#1565c0)', padding:20 }}>
       <div style={{ background:'#fff', borderRadius:20, padding:36, textAlign:'center', maxWidth:320, width:'100%' }}>
         <div style={{ fontSize:44, marginBottom:14 }}>🔒</div>
         <div style={{ fontWeight:800, color:'#1a2540', fontSize:17, marginBottom:8 }}>Login Required</div>
@@ -721,7 +721,7 @@ function LoginWall() {
 function SuccessScreen({ total, account, type, onAnother }) {
   const isTravel = type === 'travel'
   return (
-    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:`linear-gradient(145deg,#0a1628,${isTravel?'#1a237e':'#1565c0'})`, padding:20 }}>
+    <div style={{ minHeight:'100dvh', display:'flex', alignItems:'center', justifyContent:'center', background:`linear-gradient(145deg,#0a1628,${isTravel?'#1a237e':'#1565c0'})`, padding:20 }}>
       <div style={{ background:'#fff', borderRadius:20, padding:36, textAlign:'center', maxWidth:360, width:'100%' }}>
         <div style={{ width:70, height:70, background:'#e8f5e9', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:34, margin:'0 auto 18px', boxShadow:'0 0 0 8px rgba(46,125,50,0.1)' }}>✅</div>
         <div style={{ fontWeight:900, color:'#1a2540', fontSize:22, marginBottom:6 }}>Payment Recorded</div>

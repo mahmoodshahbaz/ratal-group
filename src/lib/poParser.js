@@ -364,11 +364,17 @@ function parseSBMIBMItems(text, lines) {
   for (const ln of allLines) {
 
     // ── Top-level section marker: "1   1   Activ.", "2   1   Activ.", ... ──
-    if (/^\d\s+1\s+Activ\./i.test(ln)) {
+    // Also matches "1 Fire Fighting System 1 Activ. unit" when PDF.js puts
+    // the section description inline with the "Activ." unit marker.
+    if (/^\d+\s+.*\b1\s+Activ\b/i.test(ln) || /^\d\s+1\s+Activ\./i.test(ln)) {
       flushHeader()                        // flush any previous header (adjacent sections)
       flushSubItem(1, 0, 0)               // close any open sub-item
       inSection = true
-      inHeader = true; mainDescLines = [] // start collecting section header description
+      inHeader = true
+      // Try to extract inline description: "N [desc] 1 Activ."
+      const inlineM = ln.match(/^\d+\s+(.*?)\s+1\s+Activ\b/i)
+      const inlineDesc = inlineM ? inlineM[1].trim() : ''
+      mainDescLines = (inlineDesc.length >= 3) ? [inlineDesc] : []
       pendingQty = null; continue
     }
     if (!inSection) continue
@@ -877,9 +883,11 @@ function parseSTCBlanket(text) {
   ])
 
   // Total: "Total: 66,300.00  (SAR)" (release-level total at end of doc)
+  // NOTE: Amount Agreed is the blanket ceiling (e.g. SAR 2,000,000) — NOT the
+  // release total. We intentionally do NOT use it as a fallback; the line sum
+  // is always a more accurate source for the actual release amount.
   const rawTotal = firstMatch(text, [
     /Total:\s*([\d,]+\.\d{2})\s*\(SAR\)/i,
-    /Amount Agreed\s*\(SAR\)\s*([\d,]+\.\d{2})/i,
   ])
 
   // VAT numbers

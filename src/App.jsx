@@ -533,7 +533,7 @@ function AppShell() {
   const chapterNav = visibleNav.find(n => n.key === page)
 
   return (
-    <div style={{ display:'flex', height:'100vh', fontFamily:"'Segoe UI',system-ui,sans-serif", background:'#f4f7fb', overflow:'hidden', direction:isAr?'rtl':'ltr', position:'relative' }}>
+    <div style={{ display:'flex', height:'100vh', fontFamily:"'Segoe UI',system-ui,sans-serif", background:'#f4f7fb', overflow:'hidden', direction:isAr?'rtl':'ltr', position:'relative', width:'100%', maxWidth:1126, margin:'0 auto', boxSizing:'border-box', borderInline:'1px solid #e5e4e7' }}>
 
       {/* MOBILE OVERLAY SIDEBAR */}
       {isMobile && mobileSideOpen && (

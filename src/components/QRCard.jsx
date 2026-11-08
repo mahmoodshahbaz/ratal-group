@@ -5,7 +5,7 @@
  *   <QRCard token="EMP-AB12CD34" name="Sarzameen Khan" sub="NISU · EMP-042" type="employee" />
  *   <QRCard token="SUB-XY78EF90" name="Al Faris Civil" sub="Sub-Contractor · TISU" type="subcon" />
  *
- * QR encodes: {origin}/field?qr={token}
+ * QR encodes: {origin}/forms?t={token}  → FormLanding (full-screen modern portal)
  * Uses api.qrserver.com — no npm package needed.
  */
 
@@ -18,7 +18,7 @@ const TYPE_COLOR = {
 }
 
 function qrUrl(token, size = 200) {
-  const data = encodeURIComponent(`${window.location.origin}/field?qr=${token}`)
+  const data = encodeURIComponent(`${window.location.origin}/forms?t=${token}`)
   return `https://api.qrserver.com/v1/create-qr-code/?data=${data}&size=${size}x${size}&margin=8&color=1a2540`
 }
 
@@ -52,7 +52,7 @@ const PRINT_HTML = ({ token, name, sub, type, origin }) => `
     </span>
   </div>
   <div class="right">
-    <img class="qr" src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`${origin}/field?qr=${token}`)}&size=200x200&margin=4&color=1a2540" />
+    <img class="qr" src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`${origin}/forms?t=${token}`)}&size=200x200&margin=4&color=1a2540" />
     <div class="scan">Scan to check in</div>
     <div class="token">${token}</div>
   </div>
@@ -88,7 +88,7 @@ export function QRModal({ token, name, sub, type = 'employee', onClose }) {
     setTimeout(() => { win.print(); win.close() }, 600)
   }
 
-  const fieldUrl = `${window.location.origin}/field?qr=${token}`
+  const fieldUrl = `${window.location.origin}/forms?t=${token}`
 
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}

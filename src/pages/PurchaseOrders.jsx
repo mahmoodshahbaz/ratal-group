@@ -51,7 +51,8 @@ const OPO_STATUS = {
   ISSUED:     { bg:'#e8f5e9',color:'#2e7d32',label:'Issued' },
   REJECTED:   { bg:'#ffebee',color:'#c62828',label:'Rejected' },
 }
-const emptyItem = () => ({ id:crypto.randomUUID(), job_type:'', description:'', qty:'1', unit_price:'', newJobType:'' })
+const emptyItem = () => ({ id:crypto.randomUUID(), job_type:'', description:'', qty:'1', unit_price:'', newJobType:'', is_header:false })
+const emptyHeader = () => ({ id:crypto.randomUUID(), job_type:'', description:'', qty:'0', unit_price:'0', newJobType:'', is_header:true })
 const EMPTY_IPO = {
   po_date:TODAY, department_id:'', dept_head_id:'', project_id:'', site_id:'',
   contractor_id:'', contractor_po_number:'', job_type:'', description:'',
@@ -63,7 +64,7 @@ const EMPTY_IPO = {
 const EMPTY_OPO = {
   po_date:TODAY, department_id:'', dept_head_id:'', requested_by:'',
   project_id:'', site_id:'', supplier_id:'', category:'', job_type:'',
-  payment_terms:'CREDIT', notes:'', brief_description:'',
+  payment_terms:'CREDIT', payment_terms_days:'30', notes:'', brief_description:'',
 }
 const EMPTY_CO = {
   co_date:TODAY, job_type:'', description:'', qty:'1', unit_price:'',
@@ -86,62 +87,95 @@ function StatusPill({ map, val }){
   return <span style={{ background:s.bg,color:s.color,padding:'3px 10px',borderRadius:20,fontSize:10,fontWeight:800,fontFamily:PP }}>{s.label}</span>
 }
 
-function LineItemsEditor({ items, onChange, accentColor, jobTypes=[], onAddJobType }) {
+function LineItemsEditor({ items, onChange, accentColor, jobTypes=[], onAddJobType, showJobType=true, allowHeaders=false }) {
   function update(idx,field,val){ onChange(items.map((r,i)=>i===idx?{...r,[field]:val}:r)) }
   function addRow(){ onChange([...items, emptyItem()]) }
+  function addHeaderRow(){ onChange([...items, emptyHeader()]) }
   function removeRow(idx){ if(items.length>1) onChange(items.filter((_,i)=>i!==idx)) }
-  const total=items.reduce((s,r)=>s+(parseFloat(r.qty)||0)*(parseFloat(r.unit_price)||0),0)
+  const total=items.reduce((s,r)=>r.is_header?s:s+(parseFloat(r.qty)||0)*(parseFloat(r.unit_price)||0),0)
+  const colCount = showJobType ? 6 : 5
   return (
     <div style={{ fontFamily:PP }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
         <div style={{ fontSize:11, fontWeight:800, color:accentColor, textTransform:'uppercase', letterSpacing:0.8 }}>Line Items</div>
-        <button type="button" onClick={addRow}
-          style={{ padding:'5px 14px', borderRadius:8, border:`1.5px solid ${accentColor}`, background:'#fff', color:accentColor, fontWeight:700, fontSize:11, cursor:'pointer', fontFamily:PP }}>
-          + Add Line
-        </button>
+        {allowHeaders ? (
+          <div style={{ display:'flex', gap:6 }}>
+            <button type="button" onClick={addRow}
+              style={{ padding:'5px 14px', borderRadius:8, border:`1.5px solid ${accentColor}`, background:'#fff', color:accentColor, fontWeight:700, fontSize:11, cursor:'pointer', fontFamily:PP }}>
+              + Line
+            </button>
+            <button type="button" onClick={addHeaderRow}
+              style={{ padding:'5px 14px', borderRadius:8, border:`1.5px solid #7c3aed`, background:'#fff', color:'#7c3aed', fontWeight:700, fontSize:11, cursor:'pointer', fontFamily:PP }}>
+              + Heading
+            </button>
+          </div>
+        ) : (
+          <button type="button" onClick={addRow}
+            style={{ padding:'5px 14px', borderRadius:8, border:`1.5px solid ${accentColor}`, background:'#fff', color:accentColor, fontWeight:700, fontSize:11, cursor:'pointer', fontFamily:PP }}>
+            + Add Line
+          </button>
+        )}
       </div>
       <table style={{ width:'100%', borderCollapse:'collapse' }}>
         <thead>
           <tr style={{ background:'#f8faff' }}>
-            {['Job Type','Description *','Qty','Unit Price (SAR)','Total',''].map(h=>(
+            {[...(showJobType?['Job Type']:[]),'Description *','Qty','Unit Price (SAR)','Total',''].map(h=>(
               <th key={h} style={{ padding:'7px 8px', textAlign:'left', fontSize:10, fontWeight:800, color:'#6b7c93', textTransform:'uppercase', borderBottom:`2px solid ${accentColor}20`, whiteSpace:'nowrap' }}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {items.map((r,i)=>{
+            // ── Section header row ──
+            if (r.is_header) {
+              return (
+                <tr key={r.id} style={{ background:'#f0eeff' }}>
+                  <td colSpan={colCount-1} style={{ padding:'6px 8px' }}>
+                    <input style={{ ...S.inp, fontSize:12, fontWeight:700, padding:'5px 8px', background:'transparent', border:'1.5px dashed #7c3aed', color:'#5b21b6', letterSpacing:'0.3px' }}
+                      value={r.description} onChange={e=>update(i,'description',e.target.value)} placeholder="Section heading…" />
+                  </td>
+                  <td style={{ padding:'6px 0 6px 6px', width:28, textAlign:'center' }}>
+                    <button type="button" onClick={()=>removeRow(i)}
+                      style={{ background:'none', border:'none', color:'#e57373', cursor:'pointer', fontSize:15, padding:'0 2px' }}>x</button>
+                  </td>
+                </tr>
+              )
+            }
+            // ── Regular line item row ──
             const lineTotal=(parseFloat(r.qty)||0)*(parseFloat(r.unit_price)||0)
             const showAddNew=r.job_type==='__NEW__'
             return (
               <tr key={r.id} style={{ borderBottom:'1px solid #f0f4f8' }}>
-                <td style={{ padding:'6px 6px 6px 0', width:180 }}>
-                  {showAddNew ? (
-                    <div style={{ display:'flex', gap:4 }}>
-                      <input autoFocus style={{ ...S.inp, fontSize:11, padding:'5px 7px', flex:1, borderColor:'#6366f1' }}
-                        placeholder="New job type…" value={r.newJobType||''}
-                        onChange={e=>update(i,'newJobType',e.target.value)}
-                        onKeyDown={e=>{
-                          if(e.key==='Enter'&&r.newJobType?.trim()){ onAddJobType&&onAddJobType(r.newJobType.trim()); update(i,'job_type',r.newJobType.trim()) }
-                          else if(e.key==='Escape') update(i,'job_type','')
-                        }} />
-                      <button type="button"
-                        style={{ padding:'4px 8px', borderRadius:6, border:'1.5px solid #6366f1', background:'#6366f1', color:'#fff', fontWeight:700, fontSize:10, cursor:'pointer' }}
-                        onClick={()=>{ if(r.newJobType?.trim()){ onAddJobType&&onAddJobType(r.newJobType.trim()); update(i,'job_type',r.newJobType.trim()) } }}>
-                        V
-                      </button>
-                      <button type="button"
-                        style={{ padding:'4px 7px', borderRadius:6, border:'1px solid #dde3ec', background:'#fff', color:'#6b7c93', fontSize:12, cursor:'pointer' }}
-                        onClick={()=>update(i,'job_type','')}>x</button>
-                    </div>
-                  ) : (
-                    <select style={{ ...S.inp, fontSize:11, padding:'6px 8px' }}
-                      value={r.job_type} onChange={e=>update(i,'job_type',e.target.value)}>
-                      <option value="">— Select —</option>
-                      {jobTypes.map(j=><option key={j} value={j}>{j}</option>)}
-                      <option value="__NEW__">+ Add new job type…</option>
-                    </select>
-                  )}
-                </td>
+                {showJobType && (
+                  <td style={{ padding:'6px 6px 6px 0', width:180 }}>
+                    {showAddNew ? (
+                      <div style={{ display:'flex', gap:4 }}>
+                        <input autoFocus style={{ ...S.inp, fontSize:11, padding:'5px 7px', flex:1, borderColor:'#6366f1' }}
+                          placeholder="New job type…" value={r.newJobType||''}
+                          onChange={e=>update(i,'newJobType',e.target.value)}
+                          onKeyDown={e=>{
+                            if(e.key==='Enter'&&r.newJobType?.trim()){ onAddJobType&&onAddJobType(r.newJobType.trim()); update(i,'job_type',r.newJobType.trim()) }
+                            else if(e.key==='Escape') update(i,'job_type','')
+                          }} />
+                        <button type="button"
+                          style={{ padding:'4px 8px', borderRadius:6, border:'1.5px solid #6366f1', background:'#6366f1', color:'#fff', fontWeight:700, fontSize:10, cursor:'pointer' }}
+                          onClick={()=>{ if(r.newJobType?.trim()){ onAddJobType&&onAddJobType(r.newJobType.trim()); update(i,'job_type',r.newJobType.trim()) } }}>
+                          V
+                        </button>
+                        <button type="button"
+                          style={{ padding:'4px 7px', borderRadius:6, border:'1px solid #dde3ec', background:'#fff', color:'#6b7c93', fontSize:12, cursor:'pointer' }}
+                          onClick={()=>update(i,'job_type','')}>x</button>
+                      </div>
+                    ) : (
+                      <select style={{ ...S.inp, fontSize:11, padding:'6px 8px' }}
+                        value={r.job_type} onChange={e=>update(i,'job_type',e.target.value)}>
+                        <option value="">— Select —</option>
+                        {jobTypes.map(j=><option key={j} value={j}>{j}</option>)}
+                        <option value="__NEW__">+ Add new job type…</option>
+                      </select>
+                    )}
+                  </td>
+                )}
                 <td style={{ padding:'6px 6px' }}>
                   <input style={{ ...S.inp, fontSize:12, padding:'6px 8px' }}
                     value={r.description} onChange={e=>update(i,'description',e.target.value)} placeholder="Description…" />
@@ -357,7 +391,17 @@ export default function PurchaseOrders({ entityId, entityCode, isAr }) {
     if(ipoItems.some(r=>!r.description)){ alert('All line items must have a description.'); return }
     setSavingIpo(true)
     const subtotal=ipoItems.reduce((s,r)=>(s+(parseFloat(r.qty)||0)*(parseFloat(r.unit_price)||0)),0)
-    const payload={ entity_id:entityId,...ipoForm, subtotal, total_value:subtotal, retention_pct:parseFloat(ipoForm.retention_pct)||0, fx_rate:parseFloat(ipoForm.fx_rate)||1, payment_terms_days:parseInt(ipoForm.payment_terms_days)||30 }
+    const payload={ entity_id:entityId,...ipoForm,
+      department_id: ipoForm.department_id||null,
+      dept_head_id:  ipoForm.dept_head_id||null,
+      project_id:    ipoForm.project_id||null,
+      site_id:       ipoForm.site_id||null,
+      contractor_id: ipoForm.contractor_id||null,
+      subtotal, total_value:subtotal,
+      retention_pct:parseFloat(ipoForm.retention_pct)||0,
+      fx_rate:parseFloat(ipoForm.fx_rate)||1,
+      payment_terms_days:parseInt(ipoForm.payment_terms_days)||30,
+    }
     let ipoId=editIpo?.id
     if(editIpo){
       await supabase.from('incoming_pos').update({...payload,updated_at:new Date().toISOString()}).eq('id',ipoId)
@@ -367,7 +411,7 @@ export default function PurchaseOrders({ entityId, entityCode, isAr }) {
       ipoId=data?.id
     }
     if(ipoId){
-      const itemRows=ipoItems.map((r,i)=>({ incoming_po_id:ipoId, sort_order:i, job_type:r.job_type, description:r.description, qty:parseFloat(r.qty)||1, unit_price:parseFloat(r.unit_price)||0 }))
+      const itemRows=ipoItems.map((r,i)=>({ incoming_po_id:ipoId, sort_order:i, description:r.description, qty:r.is_header?0:(parseFloat(r.qty)||1), unit_price:r.is_header?0:(parseFloat(r.unit_price)||0), is_header:r.is_header||false }))
       await supabase.from('incoming_po_items').insert(itemRows)
     }
     setSavingIpo(false); setShowIpoForm(false); load()
@@ -459,18 +503,18 @@ export default function PurchaseOrders({ entityId, entityCode, isAr }) {
     if(!file) return
     setPdfFile(file); setPdfError(''); setPdfStage('reading')
     try {
-      const text=await extractPdfText(file)
-      const parsed=parsePO(text)
+      const { fullText } = await extractPdfText(file)
+      const parsed = parsePO(fullText)
       setPdfParsed(parsed)
-      if(parsed.contractor_po_number) setPdfContractorPoNum(parsed.contractor_po_number)
-      if(parsed.po_date) setPdfPoDate(parsed.po_date)
-      if(parsed.total_value) setPdfTotalValue(String(parsed.total_value))
-      if(parsed.notes) setPdfNotes(parsed.notes)
-      if(parsed.line_items?.length) setPdfLineItems(parsed.line_items.map(r=>({id:crypto.randomUUID(),job_type:r.job_type||'',description:r.description||'',qty:String(r.qty||1),unit_price:String(r.unit_price||0),newJobType:''})))
-      if(parsed.vat_number||parsed.contractor_name){
-        const vat=parsed.vat_number||''
-        const name=(parsed.contractor_name||'').toLowerCase()
-        const match=contractors.find(c=>(vat&&c.contact_email?.includes(vat))||(name&&c.contractor_name?.toLowerCase().includes(name)))
+      if(parsed.poNumber)   setPdfContractorPoNum(parsed.poNumber)
+      if(parsed.poDate)     setPdfPoDate(parsed.poDate)
+      if(parsed.totalValue) setPdfTotalValue(String(parsed.totalValue))
+      if(parsed.issuerName) setPdfNotes(`Issuer: ${parsed.issuerName}`)
+      if(parsed.lineItems?.length) setPdfLineItems(parsed.lineItems.map(r=>({id:crypto.randomUUID(),job_type:'',description:r.description||'',qty:String(r.quantity||1),unit_price:String(r.unitPrice||0),is_header:r.is_header||false,newJobType:''})))
+      if(parsed.vatNumber||parsed.issuerName){
+        const vat=parsed.vatNumber||''
+        const name=(parsed.issuerName||'').toLowerCase()
+        const match=contractors.find(c=>(vat&&(c.vat_number===vat||c.contact_email?.includes(vat)))||(name&&c.contractor_name?.toLowerCase().includes(name.slice(0,15))))
         if(match) setPdfContractorId(match.id)
       }
       setPdfStage('review')
@@ -488,7 +532,7 @@ export default function PurchaseOrders({ entityId, entityCode, isAr }) {
     const subtotal=pdfLineItems.reduce((s,r)=>(s+(parseFloat(r.qty)||0)*(parseFloat(r.unit_price)||0)),0)
     const {data:newPo}=await supabase.from('incoming_pos').insert({ entity_id:entityId, po_date:pdfPoDate, department_id:pdfDeptId, project_id:pdfProjectId||null, contractor_id:pdfContractorId, contractor_po_number:pdfContractorPoNum, payment_terms:'CREDIT', payment_terms_days:parseInt(pdfPaymentDays)||30, original_currency:pdfCurrency, fx_rate:parseFloat(pdfFxRate)||1, notes:pdfNotes, subtotal, total_value:subtotal, billing_mode:'QTY', retention_pct:0, status:'ACTIVE' }).select('id').single()
     if(!newPo?.id){ setPdfSaveError('Failed to save PO.'); setPdfStage('review'); return }
-    const itemRows=pdfLineItems.filter(r=>r.description&&r.description.length>=4).map((r,i)=>({ incoming_po_id:newPo.id, sort_order:i, job_type:r.job_type||'', description:r.description, qty:parseFloat(r.qty)||1, unit_price:parseFloat(r.unit_price)||0 }))
+    const itemRows=pdfLineItems.filter(r=>r.description&&r.description.length>=2).map((r,i)=>({ incoming_po_id:newPo.id, sort_order:i, description:r.description, qty:r.is_header?0:(parseFloat(r.qty)||1), unit_price:r.is_header?0:(parseFloat(r.unit_price)||0), is_header:r.is_header||false }))
     if(itemRows.length) await supabase.from('incoming_po_items').insert(itemRows)
     if(pdfFile&&driveUpload){
       try {
@@ -580,12 +624,6 @@ export default function PurchaseOrders({ entityId, entityCode, isAr }) {
           <div style={{ fontSize:12, color:'#6b7c93', marginTop:3 }}>Incoming (Receivable) · Outgoing (Payable)</div>
         </div>
         <div style={{ display:'flex', gap:8 }}>
-          {poTab==='incoming' && (
-            <button onClick={()=>{ resetPdfImport(); setShowPdfImport(true) }}
-              style={{ padding:'10px 18px', borderRadius:10, border:`1.5px solid ${INC_PRI}`, background:'#fff', color:INC_PRI, fontWeight:700, fontSize:12, cursor:'pointer', fontFamily:PP }}>
-              Import from PDF
-            </button>
-          )}
           <button onClick={poTab==='incoming'?openNewIpo:openNewOpo}
             style={{ ...S.btn(poTab==='incoming'?INC_PRI:OUT_PRI), padding:'10px 22px', fontSize:13, borderRadius:10 }}>
             {poTab==='incoming'?'+ New Incoming PO':'+ New Outgoing PO'}
@@ -917,29 +955,14 @@ export default function PurchaseOrders({ entityId, entityCode, isAr }) {
           onBack={ipoStep===1 ? ()=>setShowIpoForm(false) : ()=>setIpoStep(s=>s-1)}
           backLabel={ipoStep===1 ? 'Cancel' : 'Back'}
           onNext={ipoStep<STEPS.length ? ()=>setIpoStep(s=>s+1) : saveIpo}
-          nextLabel={ipoStep<STEPS.length ? 'Next' : (editIpo?'Update PO':'Save Incoming PO')}
+          nextLabel={ipoStep<STEPS.length ? `Next: ${STEPS[ipoStep]} →` : (editIpo?'✓ Update PO':'✓ Save Incoming PO')}
           nextDisabled={savingIpo && ipoStep===STEPS.length}
+          subjectLabel={contractors.find(c=>c.id===ipoForm.contractor_id)?.contractor_name || null}
         >
         <div style={{ fontFamily: PP }}>
                       {ipoStep===1&&(
                         <>
-                          {/* Row 1: Contractor + PO# — the primary identifiers */}
-                          <div style={S.row}>
-                            <div style={{ ...S.col, flex:1.4 }}>
-                              <label style={S.label}>Contractor *</label>
-                              <select style={{ ...S.inp, borderColor:`${PRI}55`, fontWeight:600 }} value={ipoForm.contractor_id} onChange={e=>setIpoForm(f=>({...f,contractor_id:e.target.value}))}>
-                                <option value="">— Select Contractor —</option>
-                                {contractors.map(c=><option key={c.id} value={c.id}>{c.contractor_code?`[${c.contractor_code}] `:''}{c.contractor_name}</option>)}
-                              </select>
-                            </div>
-                            <div style={S.col}>
-                              <label style={S.label}>Contractor PO Number *</label>
-                              <input style={{ ...S.inp, fontFamily:'monospace', fontWeight:700, color:PRI, borderColor:`${PRI}55` }}
-                                value={ipoForm.contractor_po_number} onChange={e=>setIpoForm(f=>({...f,contractor_po_number:e.target.value}))}
-                                placeholder="e.g. NOK-2026-00234" />
-                            </div>
-                          </div>
-                          {/* Row 2: Date + Department + Dept Head */}
+                          {/* Row 1: Date + Department + Dept Head — establish context first */}
                           <div style={S.row}>
                             <div style={S.col}>
                               <label style={S.label}>PO Date *</label>
@@ -958,6 +981,22 @@ export default function PurchaseOrders({ entityId, entityCode, isAr }) {
                                 <option value="">— Auto-filled —</option>
                                 {allEmployees.map(e=><option key={e.id} value={e.id}>{e.full_name_en}</option>)}
                               </select>
+                            </div>
+                          </div>
+                          {/* Row 2: Contractor + PO# — who issued it */}
+                          <div style={S.row}>
+                            <div style={{ ...S.col, flex:1.4 }}>
+                              <label style={S.label}>Contractor *</label>
+                              <select style={{ ...S.inp, borderColor:`${PRI}55`, fontWeight:600 }} value={ipoForm.contractor_id} onChange={e=>setIpoForm(f=>({...f,contractor_id:e.target.value}))}>
+                                <option value="">— Select Contractor —</option>
+                                {contractors.map(c=><option key={c.id} value={c.id}>{c.contractor_code?`[${c.contractor_code}] `:''}{c.contractor_name}</option>)}
+                              </select>
+                            </div>
+                            <div style={S.col}>
+                              <label style={S.label}>Contractor PO Number *</label>
+                              <input style={{ ...S.inp, fontFamily:'monospace', fontWeight:700, color:PRI, borderColor:`${PRI}55` }}
+                                value={ipoForm.contractor_po_number} onChange={e=>setIpoForm(f=>({...f,contractor_po_number:e.target.value}))}
+                                placeholder="e.g. NOK-2026-00234" />
                             </div>
                           </div>
                           {/* Row 3: Project + Site */}
@@ -1042,7 +1081,7 @@ export default function PurchaseOrders({ entityId, entityCode, isAr }) {
                       )}
                       {ipoStep===3&&(
                         <div style={{ ...S.section, borderColor:`${PRI}30` }}>
-                          <LineItemsEditor items={ipoItems} onChange={setIpoItems} accentColor={PRI} billingMode={ipoForm.billing_mode} />
+                          <LineItemsEditor items={ipoItems} onChange={setIpoItems} accentColor={PRI} billingMode={ipoForm.billing_mode} showJobType={false} allowHeaders={true} />
                         </div>
                       )}
         </div>
@@ -1065,8 +1104,9 @@ export default function PurchaseOrders({ entityId, entityCode, isAr }) {
           onBack={opoStep===1 ? ()=>setShowOpoForm(false) : ()=>setOpoStep(s=>s-1)}
           backLabel={opoStep===1 ? 'Cancel' : 'Back'}
           onNext={opoStep<STEPS.length ? ()=>setOpoStep(s=>s+1) : saveOpo}
-          nextLabel={opoStep<STEPS.length ? 'Next' : (editOpo?'Update PO':'Submit Outgoing PO')}
+          nextLabel={opoStep<STEPS.length ? `Next: ${STEPS[opoStep]} →` : (editOpo?'✓ Update PO':'✓ Submit Outgoing PO')}
           nextDisabled={savingOpo && opoStep===STEPS.length}
+          subjectLabel={{ line1: suppliers.find(s=>s.id===opoForm.supplier_id)?.contractor_name || null, line2: editOpo?.po_number || null }}
         >
         <div style={{ fontFamily: PP }}>
                       {opoStep===1&&(
@@ -1157,21 +1197,19 @@ export default function PurchaseOrders({ entityId, entityCode, isAr }) {
                                 {PAYMENT_TERMS.map(t=><option key={t.value} value={t.value}>{t.label}</option>)}
                               </select>
                             </div>
-                            <div style={{ ...S.col, flex:2 }}>
-                              <label style={S.label}>PO Number (auto)</label>
-                              <div style={{ ...S.inp, background:'#f8faff', color:'#6b7c93', fontSize:12, fontFamily:'monospace' }}>
-                                {editOpo?editOpo.po_number:`RAT-PO-${YEAR}-[CATEGORY CODE]-[SEQ]`}
-                              </div>
+                            <div style={S.col}>
+                              <label style={S.label}>Credit Days</label>
+                              <input type="number" min="0" max="365" style={S.inp} value={opoForm.payment_terms_days||30} onChange={e=>setOpoForm(f=>({...f,payment_terms_days:e.target.value}))} />
                             </div>
                           </div>
                         </>
                       )}
                       {opoStep===3&&(
                         <>
+                          {!opoForm.category&&<div style={{ fontSize:12, color:'#f57f17', fontWeight:700, marginBottom:10, padding:'8px 12px', background:'#fff8e1', border:'1.5px solid #ffe082', borderRadius:8 }}>⚠ No category selected — go back to Step 2 to pick a category so job types load correctly for line items.</div>}
                           <div style={{ ...S.section, borderColor:`${PRI}30` }}>
                             <LineItemsEditor items={opoItems} onChange={setOpoItems} accentColor={PRI} jobTypes={opoJobTypes} onAddJobType={addJobType} />
                           </div>
-                          {!opoForm.category&&<div style={{ fontSize:12, color:'#f57f17', fontWeight:700, marginBottom:10, padding:'6px 10px', background:'#fff8e1', borderRadius:6 }}>⚠ Select a Category in Step 2 to load job types for line items</div>}
                           <div>
                             <label style={S.label}>Notes / Terms</label>
                             <textarea style={{ ...S.inp, minHeight:70, resize:'vertical' }}
@@ -1351,7 +1389,7 @@ export default function PurchaseOrders({ entityId, entityCode, isAr }) {
                     <textarea style={{ ...S.inp, minHeight:50, resize:'vertical' }} value={pdfNotes} onChange={e=>setPdfNotes(e.target.value)} />
                   </div>
                   <div style={{ ...S.section, borderColor:`${INC_PRI}30` }}>
-                    <LineItemsEditor items={pdfLineItems} onChange={setPdfLineItems} accentColor={INC_PRI} />
+                    <LineItemsEditor items={pdfLineItems} onChange={setPdfLineItems} accentColor={INC_PRI} showJobType={false} allowHeaders={true} />
                   </div>
                   {pdfSaveError&&<div style={{ fontSize:12, color:'#c62828', background:'#ffebee', padding:'8px 12px', borderRadius:8, marginTop:8 }}>{pdfSaveError}</div>}
                 </>

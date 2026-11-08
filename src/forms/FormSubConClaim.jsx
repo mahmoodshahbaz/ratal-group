@@ -16,6 +16,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useFieldAuth }                      from '../lib/useFieldAuth'
+import OTPActivationScreen                   from '../components/OTPActivationScreen'
 import { supabase }                          from '../lib/supabase'
 import { uploadToDrive }                     from '../hooks/useDriveUpload'
 
@@ -113,8 +114,9 @@ const URGENCY_COLORS = { LOW:'#43a047', MEDIUM:'#fb8c00', HIGH:'#e53935', CRITIC
 
 const s = {
   root: {
-    minHeight:'100vh', background:'#eef2f7',
+    minHeight:'100dvh', background:'#eef2f7',
     fontFamily:'Arial, sans-serif', maxWidth:480, margin:'0 auto',
+    color:'#0f172a', colorScheme:'light',
   },
   header: {
     background:'linear-gradient(145deg, #1b5e20 0%, #2e7d32 60%, #388e3c 100%)',
@@ -196,7 +198,7 @@ const s = {
     display:'flex', alignItems:'center', gap:10,
   }),
   successCard: {
-    minHeight:'100vh', display:'flex', flexDirection:'column',
+    minHeight:'100dvh', display:'flex', flexDirection:'column',
     alignItems:'center', justifyContent:'center', padding:32,
     background:'linear-gradient(160deg,#1b5e20,#2e7d32)',
   },
@@ -205,8 +207,8 @@ const s = {
 // ── Component ────────────────────────────────────────────────────────────────
 
 export default function FormSubConClaim() {
-  const { state } = useFieldAuth()
-  const { loading, error, employee, role, assignments, allowedForms } = state
+  const auth = useFieldAuth()
+  const { loading, error, employee, role, assignments, allowedForms } = auth
 
   // Step: 0=site picker, 1=claim type, 2=details, 3=success
   const [step, setStep]       = useState(0)
@@ -361,6 +363,7 @@ export default function FormSubConClaim() {
   }
 
   // ── Guard: auth ────────────────────────────────────────────────────────────
+  if (auth.needsActivation) return <OTPActivationScreen auth={auth} />
   if (loading) return (
     <div style={s.root}>
       <div style={{ ...s.header }}>

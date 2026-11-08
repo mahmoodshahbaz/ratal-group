@@ -2,12 +2,12 @@ import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
 import FormShell from '../components/FormShell'
 import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
-const MC = GROUP_COLORS.Masters  // Masters chapter (Ch02)
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth'
 import { QRButton } from '../components/QRCard'
 import EntityDocs from '../components/EntityDocs'
+const MC = GROUP_COLORS.Masters  // Masters chapter (Ch02)
 
 const POPPINS = "'Poppins','Inter',system-ui,sans-serif"
 const S = {
@@ -22,6 +22,22 @@ const S = {
   toggle:  { display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:13, userSelect:'none', fontFamily:POPPINS },
   badge:   (bg,cl) => ({ background:bg, color:cl, borderRadius:5, padding:'2px 7px', fontSize:10, fontWeight:800 }),
 }
+// Field roles available when generating QR from Employee record
+const QR_FIELD_ROLES = [
+  { value:'STAFF_TECH',       label:'Staff Technician',   emp_type:'STAFF'   },
+  { value:'STAFF_SUPERVISOR', label:'Staff Supervisor',   emp_type:'STAFF'   },
+  { value:'STAFF_PM',         label:'Project Manager',    emp_type:'STAFF'   },
+  { value:'STAFF_DH',         label:'Department Head',    emp_type:'STAFF'   },
+  { value:'OUTSOURCED',       label:'Outsourced Staff',   emp_type:'OUTSOURCED' },
+  { value:'DRIVER',           label:'Driver',             emp_type:'STAFF'   },
+  { value:'FINANCE',          label:'Finance / Accounts', emp_type:'STAFF'   },
+]
+const QR_PROD_ORIGIN = import.meta.env.VITE_APP_URL || 'https://ratal-group.vercel.app'
+function qrFieldUrl(token) {
+  const origin = window.location.hostname === 'localhost' ? QR_PROD_ORIGIN : window.location.origin
+  return `${origin}/forms?t=${token}`
+}
+
 // WPS bank registry — code stored in DB, full name shown in UI
 const SAUDI_BANKS = [
   { code:'RJHI',  name:'Al Rajhi Bank' },
@@ -340,6 +356,62 @@ export default function Employees({ entityId, entityCode }) {
   const [showPrint,    setShowPrint]    = useState(false)
   const [photoUploading, setPhotoUploading] = useState(false)
   const photoRef = useRef()
+
+  // ── QR Access state ─────────────────────────────────────────
+  const [qrToken,      setQrToken]      = useState(null)   // token row from qr_tokens
+  const [qrRole,       setQrRole]       = useState('STAFF_TECH')
+  const [qrLoading,    setQrLoading]    = useState(false)
+  const [qrGenerating, setQrGenerating] = useState(false)
+
+  async function loadEmpQR(empId) {
+    setQrLoading(true)
+    const { data } = await supabase
+      .from('qr_tokens')
+      .select('*')
+      .eq('employee_id', empId)
+      .order('generated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    setQrToken(data || null)
+    if (data?.role) setQrRole(data.role)
+    setQrLoading(false)
+  }
+
+  async function generateEmpQR(emp) {
+    setQrGenerating(true)
+    try {
+      const arr = new Uint8Array(24)
+      crypto.getRandomValues(arr)
+      const token = Array.from(arr).map(b => b.toString(16).padStart(2,'0')).join('')
+      const roleObj = QR_FIELD_ROLES.find(r => r.value === qrRole)
+      const { data, error } = await supabase.from('qr_tokens').insert({
+        token,
+        employee_id:     emp.id,
+        entity_id:       emp.entity_id || entityId,
+        role:            qrRole,
+        employment_type: roleObj?.emp_type || 'STAFF',
+        is_active:       true,
+        notes:           null,
+        expires_at:      null,
+        generated_at:    new Date().toISOString(),
+      }).select('*').single()
+      if (error) throw error
+      setQrToken(data)
+      // Refresh employee list row
+      setEmps(prev => prev.map(e => e.id === emp.id ? { ...e, qr_token: token } : e))
+    } catch (e) {
+      alert('Failed to generate QR: ' + (e.message || e))
+    } finally {
+      setQrGenerating(false)
+    }
+  }
+
+  async function revokeEmpQR() {
+    if (!qrToken) return
+    if (!window.confirm('Revoke this QR token? The employee will lose field access immediately.')) return
+    await supabase.from('qr_tokens').update({ is_active: false, revoked_at: new Date().toISOString() }).eq('id', qrToken.id)
+    setQrToken(prev => ({ ...prev, is_active: false, revoked_at: new Date().toISOString() }))
+  }
 
   // ── Dependents state ────────────────────────────────────────
   const [deps,         setDeps]         = useState([])
@@ -1491,11 +1563,12 @@ export default function Employees({ entityId, entityCode }) {
 
               {/* ── TAB BAR ─────────────────────────────── */}
               <div style={{ display:'flex', background:'#fff', borderBottom:'2px solid #f3e5f5', flexShrink:0, paddingLeft:8 }}>
-                {[['details','📋 Details'],['docs','📎 Documents'],['dependents','👨‍👩‍👧 Dependents']].map(([k,l])=>(
+                {[['details','📋 Details'],['docs','📎 Documents'],['dependents','👨‍👩‍👧 Dependents'],['qr','🔑 QR Access']].map(([k,l])=>(
                   <button key={k}
                     onClick={()=>{
                       setViewEmpTab(k)
                       if (k==='dependents') loadDeps(viewEmp?.id)
+                      if (k==='qr') loadEmpQR(viewEmp?.id)
                     }}
                     style={{ background:'none', border:'none', padding:'11px 20px', fontSize:12, fontWeight:700, cursor:'pointer', color:viewEmpTab===k?'#6a1b9a':'#9e9e9e', borderBottom:viewEmpTab===k?'3px solid #6a1b9a':'3px solid transparent', marginBottom:-2, whiteSpace:'nowrap' }}>
                     {l}
@@ -1793,6 +1866,93 @@ export default function Employees({ entityId, entityCode }) {
                     )}
                   </div>
                 )}
+
+                {/* ── QR ACCESS TAB ────────────────────────── */}
+                {viewEmpTab === 'qr' && (
+                  <div style={{ padding:'4px 0' }}>
+                    {qrLoading ? (
+                      <div style={{ textAlign:'center', padding:40, color:'#9e9e9e', fontSize:13 }}>Loading QR status…</div>
+                    ) : (
+                      <>
+                        {/* Status banner */}
+                        <div style={{
+                          display:'flex', alignItems:'center', justifyContent:'space-between',
+                          background: qrToken?.is_active ? '#e8f5e9' : qrToken ? '#fff8e1' : '#f5f5f5',
+                          border: `1.5px solid ${qrToken?.is_active ? '#a5d6a7' : qrToken ? '#ffe082' : '#e0e0e0'}`,
+                          borderRadius:12, padding:'12px 16px', marginBottom:14,
+                        }}>
+                          <div>
+                            <div style={{ fontSize:12, fontWeight:800, color: qrToken?.is_active ? '#2e7d32' : qrToken ? '#e65100' : '#757575' }}>
+                              {qrToken?.is_active ? '🟢 QR Active' : qrToken ? '🟡 QR Revoked' : '⚪ No QR Issued'}
+                            </div>
+                            {qrToken && (
+                              <div style={{ fontSize:11, color:'#78909c', marginTop:3 }}>
+                                Role: <strong>{QR_FIELD_ROLES.find(r=>r.value===qrToken.role)?.label || qrToken.role}</strong>
+                                {qrToken.generated_at && <> · Issued: {new Date(qrToken.generated_at).toLocaleDateString()}</>}
+                                {qrToken.expires_at && <> · Expires: {new Date(qrToken.expires_at).toLocaleDateString()}</>}
+                              </div>
+                            )}
+                          </div>
+                          {qrToken?.is_active && (
+                            <button onClick={revokeEmpQR}
+                              style={{ background:'#ffebee', color:'#c62828', border:'none', borderRadius:7, padding:'6px 12px', fontSize:11, fontWeight:700, cursor:'pointer' }}>
+                              Revoke
+                            </button>
+                          )}
+                        </div>
+
+                        {/* QR Image + share (if active) */}
+                        {qrToken?.is_active && (
+                          <div style={{ background:'#fff', border:'1px solid #e0e0e0', borderRadius:12, padding:'16px', marginBottom:14, textAlign:'center' }}>
+                            <img
+                              src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrFieldUrl(qrToken.token))}&size=200x200&margin=10&color=1a2540`}
+                              alt="QR Code" style={{ width:160, height:160, display:'block', margin:'0 auto 10px' }}
+                            />
+                            <div style={{ fontFamily:'monospace', fontSize:11, color:'#90a4ae', background:'#f5f5f5', borderRadius:6, padding:'4px 10px', display:'inline-block', marginBottom:10, wordBreak:'break-all' }}>
+                              {qrFieldUrl(qrToken.token)}
+                            </div>
+                            <div style={{ display:'flex', gap:8, justifyContent:'center', flexWrap:'wrap' }}>
+                              <button onClick={() => navigator.clipboard?.writeText(qrFieldUrl(qrToken.token)).then(()=>alert('Link copied!'))}
+                                style={{ background:'#e3f2fd', color:'#1565c0', border:'none', borderRadius:8, padding:'8px 14px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                                📋 Copy Link
+                              </button>
+                              <button onClick={()=>{
+                                const msg = `Hi ${viewEmp.full_name_en || ''} 👋\n\nYour ACCSYS field access link:\n${qrFieldUrl(qrToken.token)}\n\nScan the QR or tap to access your forms.`
+                                window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank')
+                              }}
+                                style={{ background:'#e8f5e9', color:'#2e7d32', border:'none', borderRadius:8, padding:'8px 14px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                                💬 WhatsApp
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Generate / Regenerate section */}
+                        <div style={{ background:'#fafafa', border:'1px solid #e0e0e0', borderRadius:12, padding:'14px 16px' }}>
+                          <div style={{ fontSize:12, fontWeight:800, color:'#1a2540', marginBottom:10 }}>
+                            {qrToken ? '🔄 Generate New Token' : '🔑 Issue QR Access'}
+                          </div>
+                          <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
+                            <div style={{ flex:1, minWidth:160 }}>
+                              <label style={{ fontSize:10, color:'#546e7a', fontWeight:700, display:'block', marginBottom:3 }}>Field Role</label>
+                              <select value={qrRole} onChange={e=>setQrRole(e.target.value)}
+                                style={{ width:'100%', padding:'8px 10px', border:'1.5px solid #cfd8dc', borderRadius:8, fontSize:12, background:'#fff' }}>
+                                {QR_FIELD_ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                              </select>
+                            </div>
+                            <button
+                              onClick={() => generateEmpQR(viewEmp)}
+                              disabled={qrGenerating}
+                              style={{ background: qrGenerating ? '#e0e0e0' : 'linear-gradient(135deg,#1565c0,#1976d2)', color: qrGenerating ? '#9e9e9e' : '#fff', border:'none', borderRadius:8, padding:'10px 18px', fontSize:13, fontWeight:700, cursor: qrGenerating ? 'default' : 'pointer', marginTop:16 }}>
+                              {qrGenerating ? 'Generating…' : qrToken ? '🔄 Regenerate' : '✓ Generate QR'}
+                            </button>
+                          </div>
+                          {qrToken && <div style={{ fontSize:11, color:'#e65100', marginTop:8 }}>⚠️ Generating a new token will replace the existing one. The employee will need the new link.</div>}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* ── FOOTER ──────────────────────────────── */}
@@ -1865,6 +2025,7 @@ export default function Employees({ entityId, entityCode }) {
             onNext={step<8 ? () => setStep(s=>s+1) : save}
             nextLabel={step<8 ? 'Save & Next' : (saving ? 'Saving…' : editing ? '✓ Update Employee' : '✓ Add Employee')}
             nextDisabled={saving && step===8}
+            subjectLabel={nameEn || null}
           >
           <div style={{ fontFamily:"'Poppins','Inter',sans-serif" }}>
 

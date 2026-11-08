@@ -334,8 +334,8 @@ function CashBook({ entityId, accounts, reloadAccounts }) {
         title={['New', 'Cash', 'Entry']}
         steps={['Entry Details', 'Reference & Approval']}
         currentStep={wizardStep}
-        onBack={() => setWizardStep(s => s - 1)}
-        backLabel="Back"
+        onBack={wizardStep === 1 ? () => { setShowModal(false); setWizardStep(1) } : () => setWizardStep(s => s - 1)}
+        backLabel={wizardStep === 1 ? 'Cancel' : 'Back'}
         onNext={() => {
           if (wizardStep < 2) {
             if (!form.amount || !form.transaction_date) return
@@ -344,6 +344,7 @@ function CashBook({ entityId, accounts, reloadAccounts }) {
         }}
         nextLabel={wizardStep < 2 ? 'Next →' : (saving ? 'Saving…' : '✓ Add Entry')}
         nextDisabled={saving}
+        subjectLabel={form.transaction_date || null}
       >
         {wizardStep === 1 && (
           <div>
@@ -519,8 +520,8 @@ function AccountsTab({ entityId, accounts, reload }) {
         title={modal==='add' ? ['New', 'Cash', 'Box'] : ['Edit', 'Cash', 'Box']}
         steps={['Box Details', 'GL & Notes']}
         currentStep={wizardStep2}
-        onBack={() => setWizardStep2(s => s - 1)}
-        backLabel="Back"
+        onBack={wizardStep2 === 1 ? () => { setModal(null); setWizardStep2(1) } : () => setWizardStep2(s => s - 1)}
+        backLabel={wizardStep2 === 1 ? 'Cancel' : 'Back'}
         onNext={() => {
           if (wizardStep2 < 2) {
             if (!form.account_name) return
@@ -529,6 +530,7 @@ function AccountsTab({ entityId, accounts, reload }) {
         }}
         nextLabel={wizardStep2 < 2 ? 'Next →' : (saving ? 'Saving…' : '✓ Save')}
         nextDisabled={saving}
+        subjectLabel={form.account_name || null}
       >
         {wizardStep2 === 1 && (
           <div>

@@ -216,6 +216,23 @@ function AddDocModal({ entityId, linkedType, linkedId, linkedName, onClose, onSa
 
         {err && <div style={{ marginTop:12, padding:'8px 14px', background:'#ffebee', color:'#c62828', borderRadius:8, fontSize:12 }}>{err}</div>}
 
+        {/* Footer label — Document Type + Document Number */}
+        {(form.category || form.doc_number) && (
+          <div style={{ marginTop:14, borderTop:`1px solid ${SUB}30`, paddingTop:10, fontFamily:PP }}>
+            <div style={{ fontSize:9, fontWeight:700, color:SUB, letterSpacing:1.4, textTransform:'uppercase', marginBottom:3 }}>For</div>
+            {form.category && (
+              <div style={{ fontSize:12, fontWeight:800, color:MAIN, lineHeight:1.3, wordBreak:'break-word' }}>
+                {CAT_ICONS[form.category]} {CAT_LABELS[form.category] || form.category}
+              </div>
+            )}
+            {form.doc_number && (
+              <div style={{ fontSize:10, fontWeight:600, color:SUB, lineHeight:1.4, wordBreak:'break-word', marginTop:2, fontFamily:'monospace' }}>
+                {form.doc_number}
+              </div>
+            )}
+          </div>
+        )}
+
         <div style={{ display:'flex', justifyContent:'flex-end', gap:10, marginTop:18 }}>
           <button onClick={onClose} style={{ padding:'9px 18px', borderRadius:9, border:'1px solid #ddd', background:'#f5f5f5', color:'#666', fontFamily:PP, cursor:'pointer', fontSize:13 }}>Cancel</button>
           <button onClick={save} disabled={saving} style={{ padding:'9px 22px', borderRadius:9, border:'none', background:saving?'#ccc':`linear-gradient(135deg,${PRI},#b07828)`, color:'#fff', fontFamily:PP, cursor:saving?'default':'pointer', fontSize:13, fontWeight:700 }}>

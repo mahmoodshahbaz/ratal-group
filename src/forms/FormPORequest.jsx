@@ -13,6 +13,7 @@
 import { useState, useEffect } from 'react'
 import { supabase }            from '../lib/supabase'
 import { printDocument }       from '../lib/templatePrint'
+import { emailOutgoingPO }     from '../hooks/useEmailNotify'
 
 // ── Dev mode ─────────────────────────────────────────────────────────────────
 const devMode = new URLSearchParams(window.location.search).get('dev') === '1' ||
@@ -60,8 +61,9 @@ const emptyItem = () => ({ _id:Math.random().toString(36).slice(2), jobType:'', 
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const page = (bg='#f1f5f9') => ({
-  minHeight:'100vh', background:bg, display:'flex', flexDirection:'column',
+  minHeight:'100dvh', background:bg, display:'flex', flexDirection:'column',
   fontFamily:"'Segoe UI',Arial,sans-serif", maxWidth:480, margin:'0 auto',
+  color:'#0f172a', colorScheme:'light',
 })
 const headerStyle = {
   background: TH.emeraldDark,
@@ -356,6 +358,23 @@ export default function FormPORequest() {
           line_total:     (parseFloat(r.qty)||1)*(parseFloat(r.unitPrice)||0),
         }))
       )
+    }
+
+    // ── Send PO email notification ────────────────────────────────────────────
+    try {
+      const sup = allContractors.find(s => s.id === supplierId)
+      await emailOutgoingPO({
+        poNumber:    generatedPO,
+        issuedTo:    sup?.contractor_name || selectedSupplier?.contractor_name || '—',
+        poDate:      poDate,
+        totalAmount: subtotal,
+        currency:    'SAR',
+        scope:       validItems.map(r => r.description).filter(Boolean).join('; ') || '—',
+        authorisedBy:deptHeadName || '—',
+        entityCode:  formEntityId || 'RAT',
+      })
+    } catch (emailErr) {
+      console.warn('[PO Email] notification failed (non-fatal):', emailErr?.message)
     }
 
     try {
