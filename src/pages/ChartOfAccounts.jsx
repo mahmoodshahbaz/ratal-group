@@ -189,7 +189,6 @@ export default function ChartOfAccounts({ entityId }) {
     <div style={S.page}>
       {/* Top bar */}
       <div style={S.topBar}>
-        <div style={S.title}>📒 Chart of Accounts</div>
         <input
           placeholder="Search code or name…"
           value={search}

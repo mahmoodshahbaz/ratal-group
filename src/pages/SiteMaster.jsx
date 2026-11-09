@@ -827,7 +827,6 @@ export default function SiteMaster({ entityId }) {
               {headerCollapsed?'▼':'▲'}
             </button>
             <div>
-              <div style={{ fontSize:18, fontWeight:800, color:'#1a2e3d' }}>Site Master</div>
               <div style={{ fontSize:11, color:'#6b7c93' }}>Jobs · Activities · Budget · Margin</div>
             </div>
           </div>

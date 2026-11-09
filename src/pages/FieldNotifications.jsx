@@ -185,8 +185,7 @@ export default function FieldNotifications({ entityId, isAr }) {
       {/* Header */}
       <div style={s.head}>
         <div>
-          <h1 style={s.h1}>🔔 Field Notifications</h1>
-          <div style={{ fontSize:13, color:'#78909c', marginTop:4 }}>
+          <div style={{ fontSize:13, color:'#78909c' }}>
             All system alerts from field forms — Telegram delivery status
           </div>
         </div>

@@ -413,12 +413,7 @@ export default function QRManager({ entityId, entityCode, isAr }) {
 
       {/* Header */}
       <div style={t.head}>
-        <div>
-          <h1 style={t.h1}>🔑 QR Code Manager</h1>
-          <div style={{ fontSize:13, color:'#78909c', marginTop:4 }}>
-            Generate and manage employee field access QR tokens
-          </div>
-        </div>
+        <div />
         <button
           onClick={() => setShowBanner(true)}
           style={{ background:'#454D9B', color:'#fff', border:'none', borderRadius:10, padding:'10px 0', cursor:'pointer', fontSize:13, fontWeight:700, minWidth:160, textAlign:'center', boxShadow:'0 3px 8px rgba(69,77,155,0.35)', fontFamily:"'Poppins',sans-serif" }}

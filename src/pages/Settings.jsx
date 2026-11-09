@@ -105,7 +105,6 @@ export default function Settings({ entityId, entityCode, isSuperAdmin }) {
           <div style={{ position:'absolute', right:-20, top:-20, width:100, height:100, borderRadius:'50%', background:'rgba(255,255,255,0.07)' }} />
           <div style={{ position:'relative', zIndex:1 }}>
             <div style={{ fontSize:9, color:'rgba(255,255,255,0.65)', letterSpacing:1.5, textTransform:'uppercase', fontFamily:PP, marginBottom:2 }}>Administration · Ratal Advanced Technologies</div>
-            <div style={{ fontSize:15, fontWeight:900, color:'#fff', fontFamily:PP }}>⚙️ Settings</div>
           </div>
           <div style={{ display:'flex', gap:10, alignItems:'center', position:'relative', zIndex:1 }}>
             {saved && <span style={{ color:'#b9f6ca', fontWeight:700, fontSize:12, fontFamily:PP }}>✅ Saved!</span>}

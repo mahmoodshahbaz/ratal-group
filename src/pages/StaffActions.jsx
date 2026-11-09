@@ -269,8 +269,7 @@ export default function StaffActions({ entityId }) {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#1a2e3d' }}>📋 Staff Actions</div>
-          <div style={{ fontSize: 12, color: '#6b7c93', marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: '#6b7c93' }}>
             Dept Head Portal — Submit staff action requests and track their status
             {myDept && <span style={{ marginLeft: 10, background: '#ede7f6', color: '#6a1b9a', borderRadius: 5, padding: '2px 9px', fontSize: 10, fontWeight: 800 }}>{myDept.dept_code || myDept.dept_name}</span>}
           </div>

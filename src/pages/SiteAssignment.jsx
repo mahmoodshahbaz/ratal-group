@@ -547,7 +547,6 @@ export default function SiteAssignment({ entityId }) {
         <span style={{ fontSize: 22 }}>📋</span>
         <div>
           <div style={{ fontSize: 11, fontWeight: 700, color: PRI, textTransform: 'uppercase', letterSpacing: 1 }}>Masters · Ch02</div>
-          <div style={{ fontSize: 15, fontWeight: 800, color: '#3a2208' }}>Site Assignment</div>
         </div>
         <div style={{ marginLeft: 'auto', fontSize: 11, color: '#6b5c3e' }}>
           Assign employees & sub-contractors to projects and sites
