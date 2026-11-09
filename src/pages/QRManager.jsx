@@ -60,7 +60,7 @@ function qrUrl(data, size = 220) {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const t = {
-  page:   { padding:'24px 28px', fontFamily:'Arial,sans-serif', maxWidth:1100 },
+  page:   { padding:'24px 28px', fontFamily:"'Poppins',sans-serif", maxWidth:1100 },
   head:   { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 },
   h1:     { fontSize:22, fontWeight:900, color:'#1a2e3d', margin:0 },
   badge:  (color) => ({
@@ -93,7 +93,7 @@ const menuItem = {
   display:'block', width:'100%', textAlign:'left',
   padding:'11px 18px', background:'none', border:'none',
   fontSize:13, color:'#1a2e3d', cursor:'pointer',
-  fontFamily:'Arial,sans-serif',
+  fontFamily:"'Poppins',sans-serif",
   letterSpacing: 0.1,
 }
 
@@ -479,8 +479,12 @@ export default function QRManager({ entityId, entityCode, isAr }) {
           <table style={{ width:'100%', minWidth:780, borderCollapse:'collapse' }}>
             <thead>
               <tr>
-                {['Employee','Role','Status','Last Used','Generated','Expires','Actions'].map(h => (
-                  <th key={h} style={t.th}>{h}</th>
+                {['Employee','Role','Status','Last Used','Generated','Expires','Actions'].map((h,i,arr) => (
+                  <th key={h} style={{
+                    ...t.th,
+                    ...(i === 0 ? { position:'sticky', left:0, zIndex:2, background:'#3d4a8a' } : {}),
+                    ...(i === arr.length-1 ? { position:'sticky', right:0, zIndex:2, background:'#3d4a8a' } : {}),
+                  }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -495,8 +499,8 @@ export default function QRManager({ entityId, entityCode, isAr }) {
                     style={{ opacity: isActive ? 1 : 0.65 }}
                     onClick={() => menuOpen && setOpenMenu(null)}
                   >
-                    {/* Employee — single line with designation as sub-text */}
-                    <td style={{ ...t.td, whiteSpace:'nowrap' }}>
+                    {/* Employee — sticky left */}
+                    <td style={{ ...t.td, whiteSpace:'nowrap', position:'sticky', left:0, zIndex:1, background: isActive ? '#fff' : '#f9f9f9' }}>
                       <div style={{ fontWeight:700, fontSize:13 }}>{tk.employee_name || '—'}</div>
                       {tk.designation && <div style={{ fontSize:10, color:'#78909c', marginTop:1 }}>{tk.designation}</div>}
                     </td>
@@ -538,8 +542,8 @@ export default function QRManager({ entityId, entityCode, isAr }) {
                         : <span style={{ color:'#aab2bd' }}>—</span>}
                     </td>
 
-                    {/* Actions — inline icon buttons */}
-                    <td style={{ ...t.td, textAlign:'center', whiteSpace:'nowrap' }}>
+                    {/* Actions — sticky right */}
+                    <td style={{ ...t.td, textAlign:'center', whiteSpace:'nowrap', position:'sticky', right:0, zIndex:1, background: isActive ? '#fff' : '#f9f9f9', boxShadow:'-2px 0 4px rgba(0,0,0,0.06)' }}>
                       <div style={{ display:'flex', gap:4, justifyContent:'center', alignItems:'center' }}>
                         <button onClick={() => setShowQR(tk)} title="Show QR Code"
                           style={{ background:'#f0f1fa', border:'none', borderRadius:6, padding:'5px 7px', cursor:'pointer', fontSize:15 }}>📱</button>
