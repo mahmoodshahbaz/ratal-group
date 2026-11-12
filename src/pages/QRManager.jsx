@@ -162,6 +162,12 @@ export default function QRManager({ entityId, entityCode, isAr }) {
   // Action dropdown per row
   const [openMenu,    setOpenMenu]    = useState(null)   // token id with open menu
 
+  // Bulk generation state
+  const [showBulk,    setShowBulk]    = useState(false)
+  const [bulkPreview, setBulkPreview] = useState([])   // employees without active token
+  const [bulkRunning, setBulkRunning] = useState(false)
+  const [bulkResult,  setBulkResult]  = useState(null) // { created, failed[] }
+
   // Generate form state
   const [genEntity, setGenEntity] = useState('')   // entity UUID — resolved after allEnts loads
   const [genDept,   setGenDept]   = useState('')               // dept UUID
@@ -344,6 +350,127 @@ export default function QRManager({ entityId, entityCode, isAr }) {
     setRevoking(null)
   }
 
+  // ── Bulk generation ──────────────────────────────────────────────────────────
+
+  const openBulkGen = () => {
+    const activeEmpIds = new Set(tokens.filter(tk => tk.is_active).map(tk => tk.employee_id))
+    const without = allEmps.filter(e => !activeEmpIds.has(e.id))
+    setBulkPreview(without)
+    setBulkResult(null)
+    setShowBulk(true)
+  }
+
+  const autoRole = (designation = '') => {
+    const d = designation.toLowerCase()
+    if (d.includes('head') || d.includes('director'))        return 'STAFF_DH'
+    if (d.includes('manager') || d.includes(' pm'))          return 'STAFF_PM'
+    if (d.includes('supervisor'))                            return 'STAFF_SUPERVISOR'
+    if (d.includes('driver'))                                return 'DRIVER'
+    if (d.includes('finance') || d.includes('account'))     return 'FINANCE'
+    return 'STAFF_TECH'
+  }
+
+  const handleBulkGenerate = async () => {
+    setBulkRunning(true)
+    let created = 0
+    const failed = []
+    for (const emp of bulkPreview) {
+      try {
+        const token = generateToken()
+        const role  = autoRole(emp.designation)
+        const { error } = await supabase.from('qr_tokens').insert({
+          token,
+          employee_id:     emp.id,
+          entity_id:       emp.entity_id,
+          role,
+          employment_type: 'STAFF',
+          is_active:       true,
+          generated_at:    new Date().toISOString(),
+          notes:           'Bulk generated',
+        })
+        if (error) failed.push(emp.full_name_en || emp.full_name)
+        else created++
+      } catch {
+        failed.push(emp.full_name_en || emp.full_name)
+      }
+    }
+    setBulkResult({ created, failed })
+    setBulkRunning(false)
+    await loadTokens()
+  }
+
+  // ── Print QR Cards ────────────────────────────────────────────────────────────
+
+  const printCards = (tks) => {
+    const origin = window.location.hostname === 'localhost'
+      ? (import.meta.env.VITE_APP_URL || 'https://ratal-group.vercel.app')
+      : window.location.origin
+
+    const cards = tks.map(tk => {
+      const url = `${origin}/forms?t=${tk.token}`
+      const qr  = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(url)}&size=180x180&margin=6&color=1a2540`
+      const roleLabel = FIELD_ROLES.find(r => r.value === tk.role)?.label || tk.role
+      const roleColor = ROLE_COLORS[tk.role] || '#454D9B'
+      return `
+      <div class="card">
+        <div class="company">🏢 ACCSYS · Ratal Group</div>
+        <div class="name">${tk.employee_name || '—'}</div>
+        ${tk.designation ? `<div class="desig">${tk.designation}</div>` : ''}
+        <div class="role" style="color:${roleColor};border-color:${roleColor}">${roleLabel}</div>
+        <div class="qr"><img src="${qr}" alt="QR" /></div>
+        <div class="url">${url}</div>
+        <div class="hint">Scan or tap to open field forms</div>
+      </div>`
+    }).join('')
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>ACCSYS QR Access Cards</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap');
+  @page { size: A4 portrait; margin: 10mm; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:'Poppins',Arial,sans-serif; background:#fff; }
+  h1 { font-size:13px; color:#1a2540; margin:0 0 6px 0; font-weight:700; }
+  .meta { font-size:9px; color:#78909c; margin-bottom:10px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:7mm; }
+  .card {
+    border:1.5px solid #1a2540; border-radius:10px;
+    padding:10px 8px; text-align:center;
+    page-break-inside:avoid; background:#fff;
+    box-shadow:0 1px 4px rgba(0,0,0,0.08);
+  }
+  .company { font-size:7px; color:#78909c; margin-bottom:5px; letter-spacing:0.3px; }
+  .name    { font-size:11px; font-weight:900; color:#1a2540; margin-bottom:2px; line-height:1.3; }
+  .desig   { font-size:8px; color:#546e7a; margin-bottom:4px; }
+  .role    { display:inline-block; font-size:8px; font-weight:700; border:1.5px solid; border-radius:20px; padding:2px 8px; margin-bottom:7px; }
+  .qr img  { width:90px; height:90px; border-radius:6px; border:1px solid #e0e0e0; }
+  .url     { font-size:5.5px; color:#78909c; margin-top:5px; word-break:break-all; line-height:1.4; }
+  .hint    { font-size:7px; color:#aab2bd; margin-top:3px; }
+  @media print { .no-print { display:none; } }
+</style>
+</head>
+<body>
+<div class="no-print" style="padding:12px;background:#f0f4f8;border-radius:8px;margin-bottom:12px;display:flex;align-items:center;gap:14px;font-family:Poppins,sans-serif">
+  <div>
+    <strong style="font-size:14px;color:#1a2540">ACCSYS QR Access Cards</strong>
+    <div style="font-size:11px;color:#546e7a">${tks.length} card${tks.length!==1?'s':''} · Printed ${new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}</div>
+  </div>
+  <button onclick="window.print()" style="margin-left:auto;padding:8px 18px;background:#1a2540;color:#fff;border:none;border-radius:7px;font-family:Poppins,sans-serif;font-size:12px;font-weight:700;cursor:pointer">🖨️ Print</button>
+</div>
+<div class="grid">${cards}</div>
+</body>
+</html>`
+
+    const win = window.open('', '_blank', 'width=900,height=700')
+    if (!win) { alert('Pop-up blocked. Please allow pop-ups for this site.'); return }
+    win.document.write(html)
+    win.document.close()
+    win.onload = () => setTimeout(() => win.print(), 600)
+  }
+
   // ── Permissions helpers ───────────────────────────────────────────────────────
 
   const openPerms = async (tk) => {
@@ -413,8 +540,10 @@ export default function QRManager({ entityId, entityCode, isAr }) {
     return true
   })
 
-  const activeCount  = tokens.filter(t => t.is_active).length
-  const revokedCount = tokens.filter(t => !t.is_active).length
+  const activeCount   = tokens.filter(t => t.is_active).length
+  const revokedCount  = tokens.filter(t => !t.is_active).length
+  const activeEmpIds  = new Set(tokens.filter(t => t.is_active).map(t => t.employee_id))
+  const noTokenCount  = allEmps.filter(e => !activeEmpIds.has(e.id)).length
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -436,23 +565,37 @@ export default function QRManager({ entityId, entityCode, isAr }) {
               <div style={{ fontSize:15, fontWeight:700, color:MAIN, fontFamily:PP }}>🔑 QR Code Manager</div>
               <div style={{ fontSize:10, color:SUB, opacity:0.85, marginTop:1, fontFamily:PP }}>Administration · Employee field-access tokens</div>
             </div>
-            <button onClick={() => setShowBanner(true)}
-              style={{ padding:'7px 16px', borderRadius:7, border:'none', background:L3, color:'#fff',
-                fontFamily:PP, fontSize:12, fontWeight:700, cursor:'pointer' }}>
-              + Generate Token
-            </button>
+            <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+              <button onClick={() => printCards(tokens.filter(tk => tk.is_active))}
+                style={{ padding:'7px 14px', borderRadius:7, border:`1.5px solid ${L3}`, background:'#fff', color:L3,
+                  fontFamily:PP, fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                🖨️ Print Cards
+              </button>
+              <button onClick={openBulkGen}
+                style={{ padding:'7px 14px', borderRadius:7, border:'none', background:'#f0a500', color:'#fff',
+                  fontFamily:PP, fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                ⚡ Generate for All
+              </button>
+              <button onClick={() => setShowBanner(true)}
+                style={{ padding:'7px 14px', borderRadius:7, border:'none', background:L3, color:'#fff',
+                  fontFamily:PP, fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                + Generate Token
+              </button>
+            </div>
           </div>
         </div>
 
         {/* KPI cards */}
         <div style={{ padding:'10px 28px 12px', display:'flex', flexWrap:'wrap', gap:8 }}>
           {[
-            { label:'Total Tokens', value: tokens.length },
-            { label:'Active',       value: activeCount   },
-            { label:'Revoked',      value: revokedCount  },
+            { label:'Total Tokens', value: tokens.length  },
+            { label:'Active',       value: activeCount    },
+            { label:'Revoked',      value: revokedCount   },
+            { label:'No Token Yet', value: noTokenCount, alert: noTokenCount > 0 },
           ].map((k, i) => (
             <div key={i}
               style={{ ...kpiCardGradient(i, L1, L2, L3), width:160, height:62, borderRadius:10, padding:'0 14px',
+                outline: k.alert ? '2px solid #f0a500' : 'none',
                 flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.10)',
                 display:'flex', flexDirection:'column', justifyContent:'center' }}>
               <div style={{ fontSize:18, fontWeight:800, lineHeight:1 }}>{k.value}</div>
@@ -810,6 +953,86 @@ export default function QRManager({ entityId, entityCode, isAr }) {
                 ? `Last used: ${new Date(showQR.last_used_at).toLocaleString('en-GB')}`
                 : 'This token has not been used yet.'}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── BULK GENERATE MODAL ───────────────────────────────────────────── */}
+      {showBulk && (
+        <div style={t.modal} onClick={e => { if (e.target === e.currentTarget && !bulkRunning) setShowBulk(false) }}>
+          <div style={{ ...t.mbox, maxWidth:520 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16 }}>
+              <div>
+                <div style={t.mhead}>⚡ Generate for All Employees</div>
+                <div style={{ fontSize:12, color:'#546e7a' }}>
+                  Creates QR tokens for employees who don't have an active token yet.
+                  Role is auto-assigned from their designation.
+                </div>
+              </div>
+              {!bulkRunning && <button onClick={() => setShowBulk(false)} style={{ background:'none', border:'none', fontSize:22, cursor:'pointer', color:'#546e7a' }}>×</button>}
+            </div>
+
+            {bulkResult ? (
+              /* RESULT */
+              <div>
+                <div style={{ background:'#e8f5e9', borderRadius:10, padding:16, marginBottom:16, textAlign:'center' }}>
+                  <div style={{ fontSize:28, fontWeight:900, color:'#2e7d32' }}>{bulkResult.created}</div>
+                  <div style={{ fontSize:13, color:'#2e7d32', fontWeight:700 }}>Tokens Created Successfully</div>
+                </div>
+                {bulkResult.failed.length > 0 && (
+                  <div style={{ background:'#fff3e0', borderRadius:10, padding:12, marginBottom:16 }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:'#e65100', marginBottom:6 }}>⚠️ {bulkResult.failed.length} failed:</div>
+                    {bulkResult.failed.map((n,i) => <div key={i} style={{ fontSize:12, color:'#bf360c' }}>• {n}</div>)}
+                  </div>
+                )}
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                  <button onClick={() => { setShowBulk(false); setBulkResult(null) }} style={t.btn('#546e7a')}>Close</button>
+                  <button onClick={() => printCards(tokens.filter(tk => tk.is_active))} style={t.btn('#1a2540')}>🖨️ Print All Cards</button>
+                </div>
+              </div>
+            ) : bulkPreview.length === 0 ? (
+              /* ALL COVERED */
+              <div>
+                <div style={{ background:'#e8f5e9', borderRadius:10, padding:20, marginBottom:16, textAlign:'center' }}>
+                  <div style={{ fontSize:22 }}>✅</div>
+                  <div style={{ fontSize:14, fontWeight:700, color:'#2e7d32', marginTop:6 }}>All active employees already have QR tokens!</div>
+                  <div style={{ fontSize:12, color:'#546e7a', marginTop:4 }}>Nothing to generate.</div>
+                </div>
+                <button onClick={() => setShowBulk(false)} style={{ ...t.btn('#546e7a'), width:'100%' }}>Close</button>
+              </div>
+            ) : (
+              /* PREVIEW */
+              <div>
+                <div style={{ background:'#fff3e0', borderRadius:10, padding:12, marginBottom:14 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:'#e65100', marginBottom:4 }}>
+                    {bulkPreview.length} employees will get new QR tokens:
+                  </div>
+                  <div style={{ maxHeight:200, overflowY:'auto' }}>
+                    {bulkPreview.map(e => (
+                      <div key={e.id} style={{ display:'flex', justifyContent:'space-between', fontSize:12, padding:'3px 0', borderBottom:'1px solid #ffe0b2' }}>
+                        <span style={{ color:'#1a2e3d', fontWeight:600 }}>{e.full_name_en || e.full_name}</span>
+                        <span style={{ color: ROLE_COLORS[autoRole(e.designation)] || '#546e7a', fontSize:11, fontWeight:700 }}>
+                          {autoRole(e.designation)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ fontSize:11, color:'#78909c', marginBottom:14, lineHeight:1.5 }}>
+                  💡 Role is auto-detected from designation. You can change individual roles after generation using the Edit button on each token.
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                  <button onClick={() => setShowBulk(false)} style={t.btn('#e0e0e0', '#546e7a')}>Cancel</button>
+                  <button
+                    onClick={handleBulkGenerate}
+                    disabled={bulkRunning}
+                    style={{ ...t.btn('#f0a500'), opacity: bulkRunning ? 0.7 : 1 }}
+                  >
+                    {bulkRunning ? '⏳ Generating…' : `⚡ Generate ${bulkPreview.length} Tokens`}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
