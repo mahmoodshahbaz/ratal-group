@@ -389,6 +389,12 @@ export default function Employees({ entityId, entityCode }) {
       crypto.getRandomValues(arr)
       const token = Array.from(arr).map(b => b.toString(16).padStart(2,'0')).join('')
       const roleObj = QR_FIELD_ROLES.find(r => r.value === qrRole)
+      // Revoke any existing active tokens for this employee first
+      await supabase.from('qr_tokens')
+        .update({ is_active: false, revoked_at: new Date().toISOString() })
+        .eq('employee_id', emp.id)
+        .eq('is_active', true)
+
       const { data, error } = await supabase.from('qr_tokens').insert({
         token,
         employee_id:     emp.id,

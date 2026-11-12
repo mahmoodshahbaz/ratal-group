@@ -199,7 +199,15 @@ export default function QRManager({ entityId, entityCode, isAr }) {
     if (entityId) q = q.eq('entity_id', entityId)
 
     const { data } = await q
-    setTokens(data || [])
+    // Deduplicate: keep only the latest token per employee_id
+    const seen = new Set()
+    const deduped = (data || []).filter(tk => {
+      if (!tk.employee_id) return true  // non-employee tokens always shown
+      if (seen.has(tk.employee_id)) return false
+      seen.add(tk.employee_id)
+      return true
+    })
+    setTokens(deduped)
     setLoading(false)
   }, [entityId])
 
@@ -376,6 +384,12 @@ export default function QRManager({ entityId, entityCode, isAr }) {
     const failed = []
     for (const emp of bulkPreview) {
       try {
+        // Revoke any existing tokens for this employee first
+        await supabase.from('qr_tokens')
+          .update({ is_active: false, revoked_at: new Date().toISOString() })
+          .eq('employee_id', emp.id)
+          .eq('is_active', true)
+
         const token = generateToken()
         const role  = autoRole(emp.designation)
         const { error } = await supabase.from('qr_tokens').insert({
