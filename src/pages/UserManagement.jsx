@@ -603,7 +603,7 @@ export default function UserManagement({ entityId: propEntityId }) {
                                 )}
                                 <button onClick={() => sendPasswordReset(u)} style={{ ...S.btn('#e65100'), padding:'5px 12px', fontSize:11 }}>🔑 Reset Password</button>
                                 {isSuperAdmin && (
-                                  <button onClick={() => { setSetPwUser(u); setSetPwVal(''); setSetPwShow(false) }} style={{ ...S.btn('#6a1b9a'), padding:'5px 12px', fontSize:11 }}>🔐 Set Password</button>
+                                  <button onClick={() => { setSetPwUser(u); setSetPwVal(''); setSetPwShow(false); setTimeout(()=>{ const el=document.getElementById('set-pw-input'); if(el){el.value='';el.focus()} },100) }} style={{ ...S.btn('#6a1b9a'), padding:'5px 12px', fontSize:11 }}>🔐 Set Password</button>
                                 )}
                                 {isSuperAdmin && (
                                   <button onClick={() => setConfirmDel(u)} style={{ ...S.btn('#b71c1c'), padding:'5px 12px', fontSize:11 }}>🗑 Delete</button>
@@ -866,6 +866,9 @@ export default function UserManagement({ entityId: propEntityId }) {
                   value={setPwVal}
                   onChange={e => setSetPwVal(e.target.value)}
                   placeholder="Enter password to set…"
+                  id="set-pw-input"
+                  autoComplete="new-password"
+                  name="new-password-direct"
                   style={{ width:'100%', padding:'9px 36px 9px 10px', borderRadius:8, border:'1px solid #333', background:'#1e1e2e', color:'#e0e0e0', fontSize:13, boxSizing:'border-box' }}
                 />
                 <button
