@@ -1,7 +1,10 @@
+const L1 = '#B4BA95'
+const L2 = '#F5F6EB'
+const L3 = '#606D2C'
+const PP = "'Poppins', sans-serif"
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
 import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
-const MC = GROUP_COLORS.Accounting
 /**
  * BankRecon.jsx — Bank Reconciliation
  *
@@ -28,7 +31,7 @@ function fmt(n) {
 function sign(n) { return n < 0 ? '-' : '' }
 
 const S = {
-  th: { padding:'9px 12px', textAlign:'left', fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:0.4, background:MC, color:'#fff', whiteSpace:'nowrap' },
+  th: { padding:'9px 12px', textAlign:'left', fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:0.4, background:L3, color:'#fff', whiteSpace:'nowrap' },
   td: { padding:'9px 12px', fontSize:12, color:'#2d3a45', borderBottom:'1px solid #f0f4f8', verticalAlign:'middle' },
   inp: { padding:'8px 11px', borderRadius:7, border:'1px solid #dde3ec', fontSize:13, outline:'none', fontFamily:'inherit' },
 }
@@ -225,53 +228,58 @@ export default function BankRecon({ entityId }) {
   }
 
   return (
-    <div style={{ padding:24, maxWidth:1300, margin:'0 auto' }}>
-      {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20 }}>
-        <div>
-          <div style={{ fontSize:13, color:'#6b7c93' }}>Match journal entries to bank statement — tick cleared items</div>
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:PP }}>
+      {/* UPPER ZONE */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>🏦 Bank Reconciliation</div>
+              <div style={{ fontSize:10, color:'#fff', opacity:0.8 }}>Match journal entries to bank statement — tick cleared items</div>
+            </div>
+            <button onClick={handlePrint} disabled={!rows.length}
+              style={{ background:'rgba(255,255,255,0.18)', color:'#fff', border:'1.5px solid rgba(255,255,255,0.4)', borderRadius:8, padding:'7px 16px', cursor:'pointer', fontSize:12, fontWeight:700 }}>
+              🖨 Print
+            </button>
+          </div>
         </div>
-        <div style={{ display:'flex', gap:8 }}>
-          <button onClick={handlePrint} disabled={!rows.length}
-            style={{ background:'#1a2e3d', color:'#fff', border:'none', borderRadius:9, padding:'9px 18px', cursor:'pointer', fontSize:13, fontWeight:700 }}>
-            🖨 Print
-          </button>
+        {/* Filter Bar */}
+        <div style={{ padding:'6px 28px 8px' }}>
+          <div style={{ background:'#fff', borderRadius:8, border:'1.5px solid #e8edf5', padding:'10px 14px', display:'flex', gap:12, flexWrap:'wrap', alignItems:'flex-end' }}>
+            <div>
+              <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>Bank Account</div>
+              <select style={{ ...S.inp, minWidth:240 }} value={selBankId} onChange={e => onAccountChange(e.target.value)}>
+                <option value="">— Select Account —</option>
+                {bankAccounts.map(b => (
+                  <option key={b.id} value={b.id}>{b.account_name}{b.account_number?' — '+b.account_number:''}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>Period From</div>
+              <input style={S.inp} type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} />
+            </div>
+            <div>
+              <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>Period To</div>
+              <input style={S.inp} type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} />
+            </div>
+            <div>
+              <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>Opening Balance (SAR)</div>
+              <input style={{ ...S.inp, width:140 }} type="number" placeholder="0.00" value={openingBal} onChange={e=>setOpeningBal(e.target.value)} />
+            </div>
+            <div>
+              <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>Bank Statement Balance</div>
+              <input style={{ ...S.inp, width:160, fontWeight:800, color:'#1a7f4b', fontSize:14 }} type="number" placeholder="Enter from statement" value={stmtBalance} onChange={e=>setStmtBalance(e.target.value)} />
+            </div>
+            <div>
+              <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>Statement Date</div>
+              <input style={S.inp} type="date" value={stmtDate} onChange={e=>setStmtDate(e.target.value)} />
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Filters */}
-      <div style={{ background:'#fff', borderRadius:12, border:'1.5px solid #e8edf5', padding:16, marginBottom:16, display:'flex', gap:12, flexWrap:'wrap', alignItems:'flex-end' }}>
-        <div>
-          <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>Bank Account</div>
-          <select style={{ ...S.inp, minWidth:240 }} value={selBankId} onChange={e => onAccountChange(e.target.value)}>
-            <option value="">— Select Account —</option>
-            {bankAccounts.map(b => (
-              <option key={b.id} value={b.id}>{b.account_name}{b.account_number?' — '+b.account_number:''}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>Period From</div>
-          <input style={S.inp} type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} />
-        </div>
-        <div>
-          <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>Period To</div>
-          <input style={S.inp} type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} />
-        </div>
-        <div>
-          <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>Opening Balance (SAR)</div>
-          <input style={{ ...S.inp, width:140 }} type="number" placeholder="0.00" value={openingBal} onChange={e=>setOpeningBal(e.target.value)} />
-        </div>
-        <div>
-          <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>Bank Statement Balance</div>
-          <input style={{ ...S.inp, width:160, fontWeight:800, color:'#1a7f4b', fontSize:14 }} type="number" placeholder="Enter from statement" value={stmtBalance} onChange={e=>setStmtBalance(e.target.value)} />
-        </div>
-        <div>
-          <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>Statement Date</div>
-          <input style={S.inp} type="date" value={stmtDate} onChange={e=>setStmtDate(e.target.value)} />
-        </div>
-      </div>
-
+      {/* SCROLL ZONE */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
       {/* No COA warning */}
       {selBank && !selBank.coa_account_id && (
         <div style={{ padding:'12px 16px', background:'#fff3e0', border:'1.5px solid #ffcc80', borderRadius:10, marginBottom:16, fontSize:13, color:'#e65100', fontWeight:700 }}>
@@ -395,7 +403,7 @@ export default function BankRecon({ entityId }) {
                 })()}
               </tbody>
               <tfoot>
-                <tr style={{ background:'#1a2e3d', color:'#fff' }}>
+                <tr style={{ background:L3, color:'#fff' }}>
                   <td colSpan={6} style={{ padding:'10px 12px', fontWeight:800, fontSize:12 }}>CLOSING BOOK BALANCE</td>
                   <td style={{ padding:'10px 12px', textAlign:'right', fontFamily:'monospace', fontWeight:800, color:'#a8e6c3' }}>{fmt(rows.reduce((s,r)=>s+(parseFloat(r.debit_amount)||0),0))}</td>
                   <td style={{ padding:'10px 12px', textAlign:'right', fontFamily:'monospace', fontWeight:800, color:'#f5a0a0' }}>{fmt(rows.reduce((s,r)=>s+(parseFloat(r.credit_amount)||0),0))}</td>
@@ -415,6 +423,7 @@ export default function BankRecon({ entityId }) {
           <span style={{ marginLeft:'auto' }}>Tip: Reconciliation = Statement Balance − (Opening + Cleared Net Movement)</span>
         </div>
       )}
+            </div>{/* end scroll zone */}
     </div>
   )
 }

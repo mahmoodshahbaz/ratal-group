@@ -1,10 +1,14 @@
+const L1 = '#B8A5CF'
+const L2 = '#FFF1F5'
+const L3 = '#AF3564'
+const PP = "'Poppins', sans-serif"
+
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { kpiCardGradient } from '../styles/appStyles'
 import { useAuth } from '../lib/useAuth'
 import FormShell from '../components/FormShell'
 import PageBanner from '../components/PageBanner'
-
-const L3 = '#AF3564'  // Planning accent
 
 // ═══════════════════════════════════════════════════════════════════
 // Commission Tracker — Phase 18
@@ -88,15 +92,17 @@ function KPIStrip({ commissions }) {
     { label:'Staff Paid',      val: sum(paid.filter(c=>c.status==='PAID')),   color:'#795548', icon:'👤' },
   ]
   return (
-    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))', gap:8, marginBottom:14 }}>
-      {kpis.map(k=>(
-        <div key={k.label} style={{ background:'#fff', borderRadius:12, padding:'12px 14px',
-          boxShadow:'0 2px 8px rgba(0,0,0,0.07)', borderLeft:`4px solid ${k.color}` }}>
-          <div style={{ fontSize:18 }}>{k.icon}</div>
-          <div style={{ fontWeight:800, fontSize:17, color:k.color }}>{fmtN(k.val)}</div>
-          <div style={{ fontSize:10, color:'#6b7c93' }}>{k.label} (SAR)</div>
-        </div>
-      ))}
+    <div style={{ display:'flex', gap:8, marginBottom:10, flexWrap:'wrap', flexShrink:0 }}>
+      {kpis.map((k,i)=>{
+        const g = kpiCardGradient(i, L1, L2, L3)
+        return (
+          <div key={k.label} style={{ ...g, width:160, height:62, borderRadius:10, padding:'0 14px', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.10)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+            <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', opacity:0.75, marginBottom:2 }}>{k.label}</div>
+            <div style={{ fontSize:16, fontWeight:800, lineHeight:1 }}>{fmtN(k.val)}</div>
+            <div style={{ fontSize:9, opacity:0.7, marginTop:2 }}>SAR</div>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -545,7 +551,7 @@ function EarnedTab({ entityId, employees, rateCards, onRefresh }) {
           <thead>
             <tr style={{ background:'#f0f4f8' }}>
               {['Period','Type','Details','Booking Amt','Commission SAR','Status','Actions'].map(h=>(
-                <th key={h} style={{ padding:'10px 8px', textAlign:['Booking Amt','Commission SAR'].includes(h)?'right':'left', fontSize:11, fontWeight:700, color:'#6b7c93', whiteSpace:'nowrap' }}>{h}</th>
+                <th key={h} style={{ padding:'10px 8px', textAlign:['Booking Amt','Commission SAR'].includes(h)?'right':'left', fontSize:11, fontWeight:700, background:'#7444A3', color:'#fff', whiteSpace:'nowrap' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -688,7 +694,7 @@ function AgentTab({ entityId, employees, rateCards, onRefresh }) {
           <thead>
             <tr style={{ background:'#f0f4f8' }}>
               {['Period','Type','Agent / Details','Booking Amt','Commission SAR','Status','Actions'].map(h=>(
-                <th key={h} style={{ padding:'10px 8px', textAlign:['Booking Amt','Commission SAR'].includes(h)?'right':'left', fontSize:11, fontWeight:700, color:'#6b7c93' }}>{h}</th>
+                <th key={h} style={{ padding:'10px 8px', textAlign:['Booking Amt','Commission SAR'].includes(h)?'right':'left', fontSize:11, fontWeight:700, background:'#7444A3', color:'#fff' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -848,12 +854,12 @@ function SettlementTab({ entityId }) {
         <table style={{ width:'100%', borderCollapse:'collapse' }}>
           <thead>
             <tr style={{ background:'#f0f4f8' }}>
-              <th style={{ padding:'10px 8px' }}>
+              <th style={{ padding:"10px 8px", background:"#7444A3", color:"#fff" }}>
                 <input type="checkbox" onChange={e=>toggleAll(e.target.checked)}
                   checked={selected.size===rows.length && rows.length>0} />
               </th>
               {['Period','Type','Supplier','Ticket / Ref','Commission SAR','Status','Income Acct'].map(h=>(
-                <th key={h} style={{ padding:'10px 8px', textAlign:h==='Commission SAR'?'right':'left', fontSize:11, fontWeight:700, color:'#6b7c93' }}>{h}</th>
+                <th key={h} style={{ padding:'10px 8px', textAlign:h==='Commission SAR'?'right':'left', fontSize:11, fontWeight:700, background:'#7444A3', color:'#fff' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -975,7 +981,7 @@ function RateCardsTab({ entityId, employees }) {
           <thead>
             <tr style={{ background:'#f0f4f8' }}>
               {['Type','Supplier','For Agent','Rate','Min/Max','Validity','Active',''].map(h=>(
-                <th key={h} style={{ padding:'10px 8px', textAlign:'left', fontSize:11, fontWeight:700, color:'#6b7c93' }}>{h}</th>
+                <th key={h} style={{ padding:'10px 8px', textAlign:'left', fontSize:11, fontWeight:700, background:'#7444A3', color:'#fff' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -1167,7 +1173,7 @@ function ReportsTab({ entityId }) {
           <thead>
             <tr style={{ background:'#f0f4f8' }}>
               {['Month','Earned (SAR)','Staff Paid (SAR)','Net (SAR)','Records'].map(h=>(
-                <th key={h} style={{ padding:'10px 12px', textAlign:h==='Month'?'left':'right', fontSize:11, fontWeight:700, color:'#6b7c93' }}>{h}</th>
+                <th key={h} style={{ padding:'10px 12px', textAlign:h==='Month'?'left':'right', fontSize:11, fontWeight:700, background:'#7444A3', color:'#fff' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -1232,25 +1238,48 @@ export default function CommissionTracker({ entityId }) {
   ]
 
   return (
-    <div>
-      <div style={{ fontSize:12, color:'#6b7c93', marginBottom:16 }}>
-        Agency commissions from airlines & suppliers · Staff agent incentives · GL settlement
-      </div>
+    <div className="comm-root" style={{ fontFamily:PP, display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2 }}>
+      <style>{`.comm-root input,.comm-root select,.comm-root button{font-family:'Poppins',sans-serif!important}`}</style>
 
-      <KPIStrip commissions={allComm} />
+      {/* ── UPPER ZONE ── */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+        {/* L1 Heading Bar */}
+        <div style={{ background:L2, padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>💰 Commission Tracker</div>
+              <div style={{ fontSize:10, color:'#fff', opacity:0.8 }}>Agency &amp; Staff Commissions</div>
+            </div>
+          </div>
+        </div>
 
-      {/* Tabs */}
-      <div style={{ display:'flex', gap:4, background:'#f0f4f8', borderRadius:12, padding:4, marginBottom:14, flexWrap:'wrap' }}>
-        {TABS.map((t,i)=>(
-          <button key={i} style={S.tab(tab===i,'#1565C0')} onClick={()=>setTab(i)}>{t.label}</button>
-        ))}
-      </div>
+        {/* KPI Strip */}
+        <div style={{ padding:'10px 28px 4px', background:L2 }}>
+          <KPIStrip commissions={allComm} />
+        </div>
 
-      {tab===0 && <EarnedTab  entityId={entityId} employees={employees} rateCards={rateCards} onRefresh={()=>setKpiKey(k=>k+1)} />}
-      {tab===1 && <AgentTab   entityId={entityId} employees={employees} rateCards={rateCards} onRefresh={()=>setKpiKey(k=>k+1)} />}
-      {tab===2 && <SettlementTab entityId={entityId} />}
-      {tab===3 && <RateCardsTab  entityId={entityId} employees={employees} />}
-      {tab===4 && <ReportsTab    entityId={entityId} />}
+        {/* Tabs */}
+        <div style={{ padding:'0 28px 10px', background:L2 }}>
+          <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
+            {TABS.map((t,i)=>(
+              <button key={i} onClick={()=>setTab(i)}
+                style={{ background:tab===i?L3:'transparent', color:tab===i?'#fff':L3,
+                  border:`1.5px solid ${L3}`, borderRadius:7, padding:'7px 14px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>{/* end upper zone */}
+
+      {/* ── SCROLL ZONE ── */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'10px 28px 22px' }}>
+        {tab===0 && <EarnedTab  entityId={entityId} employees={employees} rateCards={rateCards} onRefresh={()=>setKpiKey(k=>k+1)} />}
+        {tab===1 && <AgentTab   entityId={entityId} employees={employees} rateCards={rateCards} onRefresh={()=>setKpiKey(k=>k+1)} />}
+        {tab===2 && <SettlementTab entityId={entityId} />}
+        {tab===3 && <RateCardsTab  entityId={entityId} employees={employees} />}
+        {tab===4 && <ReportsTab    entityId={entityId} />}
+      </div>{/* end scroll zone */}
     </div>
   )
 }

@@ -385,7 +385,7 @@ export default function FormFieldPayment() {
         mrAtmMap[l.money_request_id].atm_amount+=parseFloat(l.amount)||0
       }
       const mrIds=Object.keys(mrAtmMap)
-      const {data:mrs} = await sb.from('money_requests').select('id,request_number,request_date,department_name').in('id',mrIds).in('status',['OPEN','ACTIVE','APPROVED','ISSUED','FUNDS_SENT']).order('request_date',{ascending:true})
+      const {data:mrs} = await sb.from('money_requests').select('id,request_number,request_date,department_name').in('id',mrIds).in('status',['OPEN','ACTIVE','APPROVED','ISSUED','FUNDS_SENT','DH_ACKNOWLEDGED','DISTRIBUTING']).order('request_date',{ascending:true})
       if(!mrs?.length){ setPools({}); return }
 
       const {data:priorAllocs} = await sb.from('field_payment_mr_allocations').select('money_request_id,allocated_amount').in('money_request_id',mrIds).eq('is_over_distributed',false)

@@ -1,9 +1,15 @@
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
 import FormShell from '../components/FormShell'
-import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
+import { GROUP_COLORS, kpiCardGradient, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
 const MC = GROUP_COLORS.Finance
-import { useState, useEffect, useCallback } from 'react'
+const L1   = '#C1A1A9'
+const L2   = '#FAF0F2'
+const L3   = '#8C354B'
+const PP   = "'Poppins', sans-serif"
+const MAIN = '#172D37'
+const SUB  = '#53666F'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { postPaymentOutJE } from '../lib/autoPost'
 import { printDocument, openPrintWindow } from '../lib/templatePrint'
@@ -708,35 +714,63 @@ export default function Payments({ entityId, entityName, entityNameEn }) {
   const lineTotal = mrLines.reduce((s,l) => s + (parseFloat(l.amount)||0), 0)
   const groups    = groupLines(mrLines)
 
+  // Sticky header height measurement
+  const stickyRef = useRef(null)
+  const [stickyH, setStickyH] = useState(0)
+  useEffect(() => {
+    const el = stickyRef.current
+    if (!el) return
+    const ro = new ResizeObserver(entries => {
+      for (const e of entries) setStickyH(Math.round(e.contentRect.height))
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div>
+    <div className="pay-root" style={{ fontFamily:PP, display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2 }}>
+      <style>{`.pay-root input,.pay-root select,.pay-root button,.pay-root textarea{font-family:'Poppins',sans-serif!important}`}</style>
+
+      {/* ── UPPER ZONE — stationary (flexShrink:0) ── */}
+      <div ref={stickyRef} style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+      {/* L1 heading bar */}
+      <div style={{ padding:'6px 28px 0' }}>
+        <div style={{ background:L1, borderRadius:'6px 6px 0 0', padding:'7px 20px', display:'flex', alignItems:'center', gap:10 }}>
+          <span style={{ fontSize:15, fontWeight:800, color:'#fff', letterSpacing:0.3 }}>💳 Payments</span>
+          {entityName && <span style={{ fontSize:11, color:'rgba(255,255,255,0.75)' }}>{entityName}</span>}
+        </div>
+      </div>
 
       {/* ── KPI Strip ── */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:16 }}>
+      <div style={{ display:'flex', gap:10, padding:'10px 28px', flexWrap:'nowrap', overflowX:'auto' }}>
         {[
-          { label:'Total Awaiting',  val:`SAR ${fmt(totalAwaiting)}`,    icon:'💰', g1:'#1e40af', g2:'#3b82f6' },
-          { label:'Open Requests',   val:`${pendingMRs.length} MRs`,     icon:'📋', g1:'#065f46', g2:'#10b981' },
-          { label:'Paid This Period',val:`SAR ${fmt(totalPaidPeriod)}`,  icon:'✅', g1:'#6d28d9', g2:'#a78bfa' },
-          { label:'Payments Made',   val:`${history.length}`,            icon:'🏦', g1:'#92400e', g2:'#f59e0b' },
-        ].map(({ label, val, icon, g1, g2 }) => (
-          <div key={label} style={{ background:`linear-gradient(135deg,${g1},${g2})`, borderRadius:12, padding:'12px 16px', boxShadow:`0 4px 16px ${g1}55` }}>
-            <div style={{ fontSize:10, color:'rgba(255,255,255,0.8)', fontWeight:700, textTransform:'uppercase', letterSpacing:0.8, marginBottom:4 }}>{icon} {label}</div>
-            <div style={{ fontSize:17, fontWeight:800, color:'#fff' }}>{val}</div>
-          </div>
-        ))}
+          { label:'Total Awaiting',  val:`SAR ${fmt(totalAwaiting)}` },
+          { label:'Open Requests',   val:`${pendingMRs.length} MRs` },
+          { label:'Paid This Period',val:`SAR ${fmt(totalPaidPeriod)}` },
+          { label:'Payments Made',   val:`${history.length}` },
+        ].map(({ label, val }, i) => {
+          const kg = kpiCardGradient(i % 4, L1, L2, L3)
+          return (
+            <div key={label} style={{ ...kg, borderRadius:8, width:200, minWidth:200, height:62, padding:'8px 14px', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+              <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:0.8, marginBottom:3, opacity:0.85 }}>{label}</div>
+              <div style={{ fontSize:15, fontWeight:800 }}>{val}</div>
+            </div>
+          )
+        })}
       </div>
 
       {/* ── Tabs ── */}
-      <div style={{ display:'flex', gap:0, borderBottom:'2px solid #e2e8f0', marginBottom:0 }}>
+      <div style={{ display:'flex', gap:0, borderBottom:'2px solid #e2e8f0', marginBottom:0, padding:'0 28px' }}>
         {[
           { key:'awaiting', label:`💸 Awaiting Payment`, count: pendingMRs.length },
           { key:'history',  label:`📋 Payment History`,  count: null },
         ].map(t => (
           <button key={t.key} onClick={() => { setTab(t.key); setSearch('') }}
             style={{ border:'none', background:'none', padding:'10px 24px', cursor:'pointer', fontSize:13, fontWeight:700,
-              color: tab===t.key ? '#0f172a' : '#94a3b8',
-              borderBottom: tab===t.key ? '2px solid #0f172a' : '2px solid transparent',
+              color: tab===t.key ? L3 : '#94a3b8',
+              borderBottom: tab===t.key ? `2px solid ${L3}` : '2px solid transparent',
               marginBottom:-2 }}>
             {t.label}{t.count !== null ? ` (${t.count})` : ''}
           </button>
@@ -744,7 +778,7 @@ export default function Payments({ entityId, entityName, entityNameEn }) {
       </div>
 
       {/* ── Filter Bar ── */}
-      <div style={{ padding:'10px 16px', background:'#f8fafc', borderBottom:'1px solid #e2e8f0',
+      <div style={{ padding:'10px 28px', background:L2, borderBottom:'1px solid #e2e8f0',
         display:'flex', gap:10, flexWrap:'wrap', alignItems:'center' }}>
         <input placeholder="🔍 Search MR#, purpose, dept…" value={search} onChange={e => setSearch(e.target.value)}
           style={{ ...S.inp, maxWidth:240, padding:'7px 11px', fontSize:12 }} />
@@ -776,11 +810,12 @@ export default function Payments({ entityId, entityName, entityNameEn }) {
         </span>
       </div>
 
-      {/* ── Awaiting Tab ── */}
+
+      {/* ── Awaiting column header — inside sticky zone ── */}
       {tab === 'awaiting' && (
-        <div style={{ background:'#fff', borderRadius:14, boxShadow:'0 2px 8px rgba(0,0,0,0.06)', overflow:'hidden', marginTop:0 }}>
+        <>
           {batchMode && batchSelected.size > 0 && (
-            <div style={{ padding:'10px 16px', background:'#eff6ff', borderBottom:'2px solid #bfdbfe', display:'flex', gap:12, alignItems:'center', flexWrap:'wrap' }}>
+            <div style={{ padding:'10px 28px', background:'#eff6ff', borderBottom:'2px solid #bfdbfe', display:'flex', gap:12, alignItems:'center', flexWrap:'wrap' }}>
               <span style={{ fontSize:13, fontWeight:700, color:'#1e40af' }}>
                 {batchSelected.size} MR{batchSelected.size>1?'s':''} selected —
                 SAR {fmt(pendingMRs.filter(m=>batchSelected.has(m.id)).reduce((s,m)=>s+(m.amount||0),0))} total
@@ -793,14 +828,37 @@ export default function Payments({ entityId, entityName, entityNameEn }) {
                 style={{ ...S.btn('#fee2e2','#b91c1c'), padding:'7px 12px', fontSize:12 }}>Clear</button>
             </div>
           )}
-          {/* Column headers */}
-          <div style={{ display:'grid', gridTemplateColumns:`${batchMode?'40px ':''}140px 90px 80px 1fr 130px 110px 110px 100px`,
-            gap:8, padding:'9px 16px', background:MC, position:'sticky', top:0, zIndex:2,
-            fontSize:10, fontWeight:800, color:'#fff', textTransform:'uppercase', letterSpacing:0.5 }}>
-            {batchMode && <span>☑</span>}
-            <span>MR #</span><span>Date</span><span>Dept</span><span>Purpose</span>
-            <span>Requestor</span><span>Total (SAR)</span><span>Stage</span><span></span>
+          <div style={{ padding:'0 28px' }}>
+            <div style={{ display:'grid', gridTemplateColumns:`${batchMode?'40px ':''}140px 90px 80px 1fr 130px 110px 110px 100px`,
+              gap:8, padding:'9px 14px', background:L3,
+              fontSize:10, fontWeight:800, color:'#fff', textTransform:'uppercase', letterSpacing:0.5 }}>
+              {batchMode && <span>☑</span>}
+              <span>MR #</span><span>Date</span><span>Dept</span><span>Purpose</span>
+              <span>Requestor</span><span>Total (SAR)</span><span>Stage</span><span></span>
+            </div>
           </div>
+        </>
+      )}
+
+      {/* ── History column header — inside sticky zone ── */}
+      {tab === 'history' && (
+        <div style={{ padding:'0 28px' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'140px 100px 1fr 110px 130px 110px 120px',
+            gap:8, padding:'9px 14px', background:L3,
+            fontSize:10, fontWeight:800, color:'#fff', textTransform:'uppercase', letterSpacing:0.5 }}>
+            <span>MR #</span><span>Pay Date</span><span>Purpose</span><span>Amount</span><span>From</span><span>Method</span><span>Ref #</span>
+          </div>
+        </div>
+      )}
+
+      </div>{/* end upper zone */}
+
+      {/* ── SCROLL ZONE — only rows scroll ── */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
+
+      {/* ── Awaiting Tab ── */}
+      {tab === 'awaiting' && (
+        <div style={{ background:'#fff', borderRadius:'0 0 14px 14px', boxShadow:'0 2px 8px rgba(0,0,0,0.06)', overflow:'hidden', marginTop:0 }}>
 
           {loading ? (
             <div style={{ textAlign:'center', padding:50, color:'#cbd5e1' }}>Loading…</div>
@@ -862,12 +920,7 @@ export default function Payments({ entityId, entityName, entityNameEn }) {
 
       {/* ── History Tab ── */}
       {tab === 'history' && (
-        <div style={{ background:'#fff', borderRadius:14, boxShadow:'0 2px 8px rgba(0,0,0,0.06)', overflow:'hidden' }}>
-          <div style={{ display:'grid', gridTemplateColumns:'140px 100px 1fr 110px 130px 110px 120px',
-            gap:8, padding:'9px 16px', background:MC, position:'sticky', top:0, zIndex:2,
-            fontSize:10, fontWeight:800, color:'#fff', textTransform:'uppercase', letterSpacing:0.5 }}>
-            <span>MR #</span><span>Pay Date</span><span>Purpose</span><span>Amount</span><span>From</span><span>Method</span><span>Ref #</span>
-          </div>
+        <div style={{ background:'#fff', borderRadius:'0 0 14px 14px', boxShadow:'0 2px 8px rgba(0,0,0,0.06)', overflow:'hidden' }}>
           {loading ? (
             <div style={{ textAlign:'center', padding:50, color:'#cbd5e1' }}>Loading…</div>
           ) : filteredHistory.length === 0 ? (
@@ -895,6 +948,8 @@ export default function Payments({ entityId, entityName, entityNameEn }) {
           )}
         </div>
       )}
+
+      </div>{/* end scroll zone */}
 
       {/* ── PageBanner — Step 0 entry ── */}
       <PageBanner

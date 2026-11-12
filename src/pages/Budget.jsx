@@ -1,3 +1,8 @@
+const L1 = '#B8A5CF'
+const L2 = '#FFF1F5'
+const L3 = '#AF3564'
+const PP = "'Poppins', sans-serif"
+
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -178,9 +183,9 @@ function BudgetEntry({ entityId, year, month, dept }) {
       <div style={{ ...S.card, padding:0, overflow:'hidden' }}>
         <table style={{ width:'100%', borderCollapse:'collapse' }}>
           <thead>
-            <tr style={{ background:'#1a2e3d', color:'#fff' }}>
+            <tr style={{ background:'#7444A3', color:'#fff' }}>
               <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11, width:80 }}>Code</th>
-              <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11 }}>Account</th>
+              <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11, background:'#7444A3', color:'#fff' }}>Account</th>
               <th style={{ padding:'9px 14px', textAlign:'right', fontSize:11, width:160 }}>Budget (SAR)</th>
             </tr>
           </thead>
@@ -343,14 +348,14 @@ function BudgetVsActual({ entityId, year, month, dept }) {
     <style>body{font-family:Arial,sans-serif;padding:24px;font-size:11px;max-width:900px;margin:0 auto}
     h2{font-size:16px;margin:0}p{color:#666;margin:2px 0 16px}
     table{width:100%;border-collapse:collapse}
-    .sh{background:#1a2e3d;color:#fff}.sh td,.sh th{padding:7px 12px;text-align:left;font-size:10px}
+    .sh{background:#7444A3;color:#fff}.sh td,.sh th{padding:7px 12px;text-align:left;font-size:10px}
     .tot{background:#f0f4f8;font-weight:700}.tot td{padding:7px 12px}
     .tot td:not(:first-child){text-align:right;font-family:monospace}
     @media print{@page{size:A4 landscape;margin:1.2cm}}</style></head><body>
     <h2>Budget vs Actual</h2>
     <p>${year}${month?` — ${MONTHS[month-1]}`:'  (Full Year)'} ${dept&&dept!=='ALL'?` | Dept: ${dept}`:''} | All amounts in SAR</p>
     <table>
-      <tr class="sh"><th>Code</th><th>Account</th><th style="text-align:right">Budget</th><th style="text-align:right">Actual</th><th style="text-align:right">Variance</th><th style="text-align:right">Var %</th></tr>
+      <tr class="sh"><th>Code</th><th>Account</th><th style={{ background:"#7444A3", color:"#fff", textAlign:"right", padding:"8px 10px" }}>Budget</th><th style={{ background:"#7444A3", color:"#fff", textAlign:"right", padding:"8px 10px" }}>Actual</th><th style={{ background:"#7444A3", color:"#fff", textAlign:"right", padding:"8px 10px" }}>Variance</th><th style={{ background:"#7444A3", color:"#fff", textAlign:"right", padding:"8px 10px" }}>Var %</th></tr>
       <tr style="background:#1565C018"><td colspan="6" style="padding:7px 12px;font-weight:800;font-size:10px;color:#1565C0;letter-spacing:1px">INCOME</td></tr>
       ${rowsHTML(income,'#1565C0')}
       <tr class="tot"><td colspan="2">Total Income</td><td style="text-align:right;font-family:monospace">${fmt(totalBudgetIncome)}</td><td style="text-align:right;font-family:monospace">${fmt(totalActualIncome)}</td><td style="text-align:right;font-family:monospace;color:${varianceColor((totalActualIncome-totalBudgetIncome)/Math.abs(totalBudgetIncome||1)*100,true)}">${fmt(totalBudgetIncome-totalActualIncome)}</td><td></td></tr>
@@ -468,14 +473,14 @@ function BudgetVsActual({ entityId, year, month, dept }) {
         <div style={{ ...S.card, padding:0, overflow:'hidden' }}>
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
             <thead>
-              <tr style={{ background:'#1a2e3d', color:'#fff' }}>
+              <tr style={{ background:'#7444A3', color:'#fff' }}>
                 <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11, width:72 }}>Code</th>
-                <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11 }}>Account</th>
-                <th style={{ padding:'9px 14px', textAlign:'right', fontSize:11 }}>Budget</th>
-                <th style={{ padding:'9px 14px', textAlign:'right', fontSize:11 }}>Actual</th>
+                <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11, background:'#7444A3', color:'#fff' }}>Account</th>
+                <th style={{ padding:'9px 14px', textAlign:'right', fontSize:11, background:'#7444A3', color:'#fff' }}>Budget</th>
+                <th style={{ padding:'9px 14px', textAlign:'right', fontSize:11, background:'#7444A3', color:'#fff' }}>Actual</th>
                 <th style={{ padding:'9px 14px', textAlign:'center', fontSize:11, width:120 }}>Used</th>
-                <th style={{ padding:'9px 14px', textAlign:'right', fontSize:11 }}>Variance</th>
-                <th style={{ padding:'9px 14px', textAlign:'right', fontSize:11 }}>Var %</th>
+                <th style={{ padding:'9px 14px', textAlign:'right', fontSize:11, background:'#7444A3', color:'#fff' }}>Variance</th>
+                <th style={{ padding:'9px 14px', textAlign:'right', fontSize:11, background:'#7444A3', color:'#fff' }}>Var %</th>
               </tr>
             </thead>
             <tbody>
@@ -533,55 +538,74 @@ export default function Budget({ entityId }) {
   const years = Array.from({ length: 5 }, (_,i) => new Date().getFullYear() - 2 + i)
 
   return (
-    <div>
-      <div style={{ fontSize:12, color:'#6b7c93', marginBottom:18 }}>Set annual/monthly budgets and compare against actuals from the GL</div>
+    <div className="budget-root" style={{ fontFamily:PP, display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2 }}>
+      <style>{`.budget-root input,.budget-root select,.budget-root button{font-family:'Poppins',sans-serif!important}`}</style>
 
-      {/* Controls */}
-      <div style={{ ...S.card, display:'flex', gap:8, alignItems:'flex-end', flexWrap:'wrap' }}>
-        <div>
-          <label style={S.lbl}>Year</label>
-          <select value={year} onChange={e=>setYear(+e.target.value)} style={S.inp}>
-            {years.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
+      {/* ── UPPER ZONE ── */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+        {/* L1 Heading Bar */}
+        <div style={{ background:L2, padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>📊 Budget</div>
+              <div style={{ fontSize:10, color:'#fff', opacity:0.8 }}>Annual &amp; Monthly Budgets</div>
+            </div>
+          </div>
         </div>
-        <div>
-          <label style={S.lbl}>Period</label>
-          <select value={month} onChange={e=>setMonth(+e.target.value)} style={S.inp}>
-            <option value={0}>Full Year</option>
-            {MONTHS.map((m,i) => <option key={i+1} value={i+1}>{m}</option>)}
-          </select>
-        </div>
-        <div>
-          <label style={S.lbl}>Department</label>
-          <select value={dept} onChange={e=>setDept(e.target.value)} style={S.inp}>
-            <option value="ALL">All Departments</option>
-            {depts.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
-        </div>
-        <div style={{ marginLeft:'auto', display:'flex', gap:4 }}>
-          {[['entry','✏️ Budget Entry'],['actual','📊 vs Actual']].map(([k,l])=>(
-            <button key={k} onClick={()=>setTab(k)} style={tab===k ? S.btn('#1a2e3d') : S.btnO('#546e7a')}>
-              {l}
-            </button>
-          ))}
-        </div>
-      </div>
 
-      {/* Period label */}
-      <div style={{ marginBottom:10, fontSize:12, color:'#6b7c93', fontWeight:700 }}>
-        📅 {year}{month ? ` — ${MONTHS[month-1]}` : ' (Full Year)'}
-        {dept !== 'ALL' ? ` | Dept: ${dept}` : ''}
-      </div>
-
-      {tab === 'entry'  && <BudgetEntry    entityId={entityId} year={year} month={month||null} dept={dept} />}
-      {tab === 'actual' && <BudgetVsActual entityId={entityId} year={year} month={month||null} dept={dept} />}
-
-      {tab === 'entry' && (
-        <div style={{ marginTop:8, fontSize:11, color:'#aab2bd' }}>
-          Budgets are saved per account × period × department. Tab away from any field to auto-save.
-          Switch to "vs Actual" to compare against GL entries.
+        {/* Filter Bar */}
+        <div style={{ padding:'6px 28px 8px', background:L2 }}>
+          <div style={{ background:'#fff', padding:'10px 14px', borderRadius:8, boxShadow:'0 1px 4px rgba(0,0,0,0.07)', display:'flex', gap:10, alignItems:'flex-end', flexWrap:'wrap' }}>
+            <div>
+              <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:3 }}>Year</label>
+              <select value={year} onChange={e=>setYear(+e.target.value)} style={{ ...S.inp, width:90 }}>
+                {years.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:3 }}>Period</label>
+              <select value={month} onChange={e=>setMonth(+e.target.value)} style={{ ...S.inp, width:120 }}>
+                <option value={0}>Full Year</option>
+                {MONTHS.map((m,i) => <option key={i+1} value={i+1}>{m}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:3 }}>Department</label>
+              <select value={dept} onChange={e=>setDept(e.target.value)} style={{ ...S.inp, width:160 }}>
+                <option value="ALL">All Departments</option>
+                {depts.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+            <div style={{ marginLeft:'auto', display:'flex', gap:4, alignSelf:'flex-end' }}>
+              {[['entry','✏️ Budget Entry'],['actual','📊 vs Actual']].map(([k,l])=>(
+                <button key={k} onClick={()=>setTab(k)}
+                  style={{ background:tab===k?L3:'transparent', color:tab===k?'#fff':L3,
+                    border:`1.5px solid ${L3}`, borderRadius:7, padding:'7px 15px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-      )}
+      </div>{/* end upper zone */}
+
+      {/* ── SCROLL ZONE ── */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'10px 28px 22px' }}>
+        <div style={{ marginBottom:10, fontSize:12, color:'#6b7c93', fontWeight:700 }}>
+          📅 {year}{month ? ` — ${MONTHS[month-1]}` : ' (Full Year)'}
+          {dept !== 'ALL' ? ` | Dept: ${dept}` : ''}
+        </div>
+
+        {tab === 'entry'  && <BudgetEntry    entityId={entityId} year={year} month={month||null} dept={dept} />}
+        {tab === 'actual' && <BudgetVsActual entityId={entityId} year={year} month={month||null} dept={dept} />}
+
+        {tab === 'entry' && (
+          <div style={{ marginTop:8, fontSize:11, color:'#aab2bd' }}>
+            Budgets are saved per account × period × department. Tab away from any field to auto-save.
+            Switch to "vs Actual" to compare against GL entries.
+          </div>
+        )}
+      </div>{/* end scroll zone */}
     </div>
   )
 }

@@ -1,4 +1,5 @@
-import { GROUP_COLORS } from '../styles/appStyles'
+import { GROUP_COLORS, CHAPTER_PALETTES, kpiCardGradient } from '../styles/appStyles'
+import ChapterPage from '../components/ChapterPage'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useExpandable, ExpandableRow, DetailField, DetailRow, DetailSection, DetailActions } from '../components/ExpandableRow'
@@ -289,7 +290,7 @@ export default function LOI({ entityId }) {
   const pipelineValue = lois.filter(l=>['RECEIVED','RESPONDED'].includes(l.status)).reduce((s,l)=>s+(+l.estimated_value||0),0)
 
   return (
-    <div>
+    <>
       {/* ── Step 0 Opening Banner ── */}
       <PageBanner
         isOpen={showBanner}
@@ -305,116 +306,109 @@ export default function LOI({ entityId }) {
         steps={['Request Details', 'Attachments']}
       />
 
-      {/* Header — chapter H1 provided by AppShell; only action button here */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
-        <div style={{ fontSize:12, color:'#64748b' }}>Pre-project client commitments · Convert to Project when confirmed</div>
-        <button style={{ background:'#0079BC', color:'#fff', border:'none', borderRadius:9, padding:'10px 22px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:"'Poppins',sans-serif" }} onClick={openNew}>+ New LOI</button>
-      </div>
-
-      {/* KPI Cards */}
-      <div style={{ display:'flex', gap:12, marginBottom:18, overflowX:'auto', flexWrap:'nowrap', paddingBottom:2 }}>
-        {[
-          { label:'Total LOIs',       value:lois.length,         color:'#0079BC', bg:'linear-gradient(135deg,#0079BC,#005a8e)', icon:'📋' },
-          { label:'Active Pipeline',  value:SAR(pipelineValue),  color:'#0079BC', bg:'linear-gradient(135deg,#0079BC,#005a8e)', icon:'💰', sub:`${byStatus.RECEIVED||0} received · ${byStatus.RESPONDED||0} responded` },
-          { label:'Converted',        value:byStatus.CONVERTED||0, color:'#2e7d32', bg:'linear-gradient(135deg,#2e7d32,#1b5e20)', icon:'✅' },
-          { label:'Total Est. Value', value:SAR(totalValue),     color:'#0079BC', bg:'linear-gradient(135deg,#70A5A6,#0079BC)', icon:'📊' },
-        ].map(c=>(
-          <div key={c.label} style={{ flex:1, minWidth:160, borderRadius:12, padding:'14px 16px', background:c.bg, boxShadow:'0 2px 10px rgba(0,0,0,0.13)', display:'flex', alignItems:'center', gap:14 }}>
-            <div style={{ fontSize:26 }}>{c.icon}</div>
-            <div>
-              <div style={{ fontSize:16, fontWeight:800, color:'#fff', fontFamily:"'Poppins',sans-serif" }}>{c.value}</div>
-              <div style={{ fontSize:11, color:'rgba(255,255,255,0.8)', fontFamily:"'Poppins',sans-serif" }}>{c.label}</div>
-              {c.sub && <div style={{ fontSize:10, color:'rgba(255,255,255,0.65)', marginTop:1 }}>{c.sub}</div>}
-            </div>
+      <ChapterPage
+        chapterName="Operations"
+        chapterColor={MC}
+        sectionTitle="Letters of Intent"
+        onNew={openNew}
+        newLabel="+ New LOI"
+        kpis={[
+          { label: 'Total LOIs',       value: lois.length },
+          { label: 'Active Pipeline',  value: SAR(pipelineValue), sub: `${byStatus.RECEIVED||0} received · ${byStatus.RESPONDED||0} responded` },
+          { label: 'Converted',        value: byStatus.CONVERTED||0 },
+          { label: 'Total Est. Value', value: SAR(totalValue) },
+        ]}
+      >
+        {/* ── Filter bar — white card in scroll zone ── */}
+        <div style={{ background:'#fff', borderRadius:10, boxShadow:'0 2px 10px rgba(0,0,0,0.07)', padding:'12px 16px', marginBottom:14, display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
+          <input style={{ ...S.inp, maxWidth:220, flex:'0 0 auto' }} placeholder="Search LOI#, client, scope…" value={search} onChange={e=>setSearch(e.target.value)} />
+          <select style={{ ...S.inp, maxWidth:140, flex:'0 0 auto' }} value={filter.unit} onChange={e=>setFilter(f=>({...f,unit:e.target.value}))}>
+            <option value="">All Units</option>
+            {UNITS.filter(u=>u!=='ALL').map(u=><option key={u}>{u}</option>)}
+          </select>
+          <select style={{ ...S.inp, maxWidth:140, flex:'0 0 auto' }} value={filter.status} onChange={e=>setFilter(f=>({...f,status:e.target.value}))}>
+            <option value="">All Statuses</option>
+            {STATUSES.map(s=><option key={s}>{s}</option>)}
+          </select>
+          {(filter.status||filter.unit||search) && (
+            <button onClick={()=>{ setFilter({status:'',unit:''}); setSearch('') }} style={{ ...S.btn('#aab2bd'), padding:'5px 12px', fontSize:11, flex:'0 0 auto' }}>✕ Clear</button>
+          )}
+          <span style={{ fontSize:12, color:'#6b7c93' }}>{filtered.length} records</span>
+          <div style={{ marginLeft:'auto', display:'flex', gap:6, flexWrap:'wrap' }}>
+            {STATUSES.map(s => byStatus[s] > 0 ? (
+              <div key={s} onClick={()=>setFilter(f=>({...f,status:filter.status===s?'':s}))}
+                style={{ display:'inline-flex', alignItems:'center', gap:4, cursor:'pointer',
+                  padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:700,
+                  border:`1.5px solid ${filter.status===s ? STATUS_META[s].color : '#dde3ec'}`,
+                  background: filter.status===s ? STATUS_META[s].bg : '#f5f7fa',
+                  color: filter.status===s ? STATUS_META[s].color : '#6b7c93',
+                }}>
+                {STATUS_META[s].icon} {s} <strong>{byStatus[s]}</strong>
+              </div>
+            ) : null)}
           </div>
-        ))}
-        {/* Status mini-chips */}
-        {STATUSES.map(s => byStatus[s] > 0 ? (
-          <div key={s} onClick={()=>setFilter(f=>({...f,status:filter.status===s?'':s}))}
-            style={{ ...S.card, minWidth:90, marginBottom:0, textAlign:'center', padding:'12px 14px', cursor:'pointer',
-              border:`2px solid ${filter.status===s?STATUS_META[s].color:'transparent'}`,
-              background: filter.status===s ? STATUS_META[s].bg : '#fff' }}>
-            <div style={{ fontSize:20 }}>{STATUS_META[s].icon}</div>
-            <div style={{ fontSize:16, fontWeight:800, color:STATUS_META[s].color }}>{byStatus[s]}</div>
-            <div style={{ fontSize:10, color:'#6b7c93', fontWeight:700 }}>{s}</div>
-          </div>
-        ) : null)}
-      </div>
+        </div>
 
-      {/* Filters */}
-      <div style={{ ...S.card, padding:'12px 16px', display:'flex', gap:12, flexWrap:'wrap', marginBottom:14 }}>
-        <input style={{ ...S.inp, maxWidth:260 }} placeholder="Search LOI#, client, scope…" value={search} onChange={e=>setSearch(e.target.value)} />
-        <select style={{ ...S.inp, maxWidth:160 }} value={filter.unit} onChange={e=>setFilter(f=>({...f,unit:e.target.value}))}>
-          <option value="">All Units</option>
-          {UNITS.filter(u=>u!=='ALL').map(u=><option key={u}>{u}</option>)}
-        </select>
-        <select style={{ ...S.inp, maxWidth:160 }} value={filter.status} onChange={e=>setFilter(f=>({...f,status:e.target.value}))}>
-          <option value="">All Statuses</option>
-          {STATUSES.map(s=><option key={s}>{s}</option>)}
-        </select>
-        {(filter.status||filter.unit||search) && <button onClick={()=>{ setFilter({status:'',unit:''}); setSearch('') }} style={{ ...S.btn('#aab2bd'), padding:'7px 14px', fontSize:11 }}>✕ Clear</button>}
-        <div style={{ fontSize:12, color:'#6b7c93', alignSelf:'center' }}>{filtered.length} records</div>
-      </div>
-
-      {/* Table */}
-      <div style={S.card}>
-        {loading ? <div style={{ textAlign:'center', padding:40, color:'#6b7c93' }}>Loading…</div> : (
-          <table style={S.tbl}>
-            <thead><tr>
-              <th style={S.th}>LOI #</th>
-              <th style={S.th}>Client / Contractor</th>
-              <th style={S.th}>Unit</th>
-              <th style={S.th}>Est. Value</th>
-              <th style={S.th}>Deadline</th>
-              <th style={S.th}>Status</th>
-              <th style={{ ...S.th, width:32 }}></th>
-            </tr></thead>
-            <tbody>
-              {filtered.length===0 && <tr><td colSpan={7} style={{ ...S.td, textAlign:'center', color:'#aab2bd', padding:34 }}>No LOIs yet — click "+ New LOI" to add one</td></tr>}
-              {filtered.map((l,i)=>{
-                const sm = STATUS_META[l.status]||{}
-                const overdue = l.response_deadline && l.response_deadline < TODAY && !['CONVERTED','REJECTED'].includes(l.status)
-                return (
-                  <ExpandableRow
-                    key={l.id} id={l.id}
-                    isOpen={loiOpen(l.id)} onToggle={toggleLoi}
-                    colSpan={6} zebra={i%2!==0}
-                    summary={<>
-                      <td style={{ ...S.td, fontWeight:800, color:'#1a2e3d', fontFamily:'monospace' }}>{l.loi_number}</td>
-                      <td style={{ ...S.td, fontWeight:600 }}>{l.client_name||'—'}</td>
-                      <td style={S.td}><span style={{ background:'#e8eaf6', color:'#3949ab', padding:'2px 8px', borderRadius:6, fontSize:11, fontWeight:700 }}>{l.service_unit}</span></td>
-                      <td style={{ ...S.td, fontWeight:700, color:'#0079BC' }}>{l.estimated_value>0?SAR(l.estimated_value):'—'}</td>
-                      <td style={{ ...S.td, color:overdue?'#c62828':'#1a2e3d', fontWeight:overdue?700:400 }}>{fmt(l.response_deadline)}{overdue&&' ⚠️'}</td>
-                      <td style={S.td}><span style={{ background:sm.bg, color:sm.color, padding:'2px 10px', borderRadius:20, fontSize:10, fontWeight:800 }}>{sm.icon} {l.status}</span></td>
-                    </>}
-                    detail={
-                      <div style={{ padding:'14px 20px' }}>
-                        <DetailRow>
-                          <DetailField label="LOI Number"  value={l.loi_number} mono />
-                          <DetailField label="Received"    value={fmt(l.received_date)} />
-                          <DetailField label="Deadline"    value={fmt(l.response_deadline)} color={overdue?'#c62828':undefined} />
-                          <DetailField label="Est. Value"  value={l.estimated_value>0?SAR(l.estimated_value):null} />
-                        </DetailRow>
-                        {l.scope_description && (
-                          <DetailSection label="Scope of Work">
-                            <div style={{ fontSize:12, color:'#455a64', lineHeight:1.6 }}>{l.scope_description}</div>
-                          </DetailSection>
-                        )}
-                        {l.notes && <DetailSection label="Notes"><div style={{ fontSize:12, color:'#6b7c93' }}>{l.notes}</div></DetailSection>}
-                        <DetailActions>
-                          <button onClick={(e)=>{e.stopPropagation();openEdit(l)}}  style={{ ...S.btn('#0079BC'), padding:'5px 14px', fontSize:11 }}>✏️ Edit</button>
-                          <button onClick={(e)=>{e.stopPropagation();setDetail(l)}} style={{ ...S.btn('#5A32D4'), padding:'5px 14px', fontSize:11 }}>📋 Full View</button>
-                          {l.status==='RESPONDED' && <button onClick={(e)=>{e.stopPropagation();convertToProject(l)}} disabled={converting} style={{ ...S.btn('#2e7d32'), padding:'5px 14px', fontSize:11 }}>🚀 Convert to Project</button>}
-                        </DetailActions>
-                      </div>
-                    }
-                  />
-                )
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
+        {/* ── Table — white card in scroll zone ── */}
+        <div style={{ borderRadius:10, boxShadow:'0 2px 10px rgba(0,0,0,0.07)', background:'#fff', overflowX:'auto' }}>
+          {loading ? <div style={{ textAlign:'center', padding:40, color:'#6b7c93' }}>Loading…</div> : (
+            <table style={S.tbl}>
+              <thead><tr>
+                <th style={S.th}>LOI #</th>
+                <th style={S.th}>Client / Contractor</th>
+                <th style={S.th}>Unit</th>
+                <th style={S.th}>Est. Value</th>
+                <th style={S.th}>Deadline</th>
+                <th style={S.th}>Status</th>
+                <th style={{ ...S.th, width:32 }}></th>
+              </tr></thead>
+              <tbody>
+                {filtered.length===0 && <tr><td colSpan={7} style={{ ...S.td, textAlign:'center', color:'#aab2bd', padding:34 }}>No LOIs yet — click "+ New LOI" to add one</td></tr>}
+                {filtered.map((l,i)=>{
+                  const sm = STATUS_META[l.status]||{}
+                  const overdue = l.response_deadline && l.response_deadline < TODAY && !['CONVERTED','REJECTED'].includes(l.status)
+                  return (
+                    <ExpandableRow
+                      key={l.id} id={l.id}
+                      isOpen={loiOpen(l.id)} onToggle={toggleLoi}
+                      colSpan={6} zebra={i%2!==0}
+                      summary={<>
+                        <td style={{ ...S.td, fontWeight:800, color:'#1a2e3d', fontFamily:'monospace' }}>{l.loi_number}</td>
+                        <td style={{ ...S.td, fontWeight:600 }}>{l.client_name||'—'}</td>
+                        <td style={S.td}><span style={{ background:'#e8eaf6', color:'#3949ab', padding:'2px 8px', borderRadius:6, fontSize:11, fontWeight:700 }}>{l.service_unit}</span></td>
+                        <td style={{ ...S.td, fontWeight:700, color:'#0079BC' }}>{l.estimated_value>0?SAR(l.estimated_value):'—'}</td>
+                        <td style={{ ...S.td, color:overdue?'#c62828':'#1a2e3d', fontWeight:overdue?700:400 }}>{fmt(l.response_deadline)}{overdue&&' ⚠️'}</td>
+                        <td style={S.td}><span style={{ background:sm.bg, color:sm.color, padding:'2px 10px', borderRadius:20, fontSize:10, fontWeight:800 }}>{sm.icon} {l.status}</span></td>
+                      </>}
+                      detail={
+                        <div style={{ padding:'14px 20px' }}>
+                          <DetailRow>
+                            <DetailField label="LOI Number"  value={l.loi_number} mono />
+                            <DetailField label="Received"    value={fmt(l.received_date)} />
+                            <DetailField label="Deadline"    value={fmt(l.response_deadline)} color={overdue?'#c62828':undefined} />
+                            <DetailField label="Est. Value"  value={l.estimated_value>0?SAR(l.estimated_value):null} />
+                          </DetailRow>
+                          {l.scope_description && (
+                            <DetailSection label="Scope of Work">
+                              <div style={{ fontSize:12, color:'#455a64', lineHeight:1.6 }}>{l.scope_description}</div>
+                            </DetailSection>
+                          )}
+                          {l.notes && <DetailSection label="Notes"><div style={{ fontSize:12, color:'#6b7c93' }}>{l.notes}</div></DetailSection>}
+                          <DetailActions>
+                            <button onClick={(e)=>{e.stopPropagation();openEdit(l)}}  style={{ ...S.btn('#0079BC'), padding:'5px 14px', fontSize:11 }}>✏️ Edit</button>
+                            <button onClick={(e)=>{e.stopPropagation();setDetail(l)}} style={{ ...S.btn('#5A32D4'), padding:'5px 14px', fontSize:11 }}>📋 Full View</button>
+                            {l.status==='RESPONDED' && <button onClick={(e)=>{e.stopPropagation();convertToProject(l)}} disabled={converting} style={{ ...S.btn('#2e7d32'), padding:'5px 14px', fontSize:11 }}>🚀 Convert to Project</button>}
+                          </DetailActions>
+                        </div>
+                      }
+                    />
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </ChapterPage>
 
       {/* DETAIL MODAL */}
       {detail && (
@@ -671,6 +665,6 @@ export default function LOI({ entityId }) {
           </div>
         )}
       </FormShell>
-    </div>
+    </>
   )
 }

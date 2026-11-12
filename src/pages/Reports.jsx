@@ -1,3 +1,8 @@
+import { GROUP_COLORS } from '../styles/appStyles'
+const L1 = '#B8A5CF'
+const L2 = '#F5EFFA'
+const L3 = '#7444A3'
+const PP = "'Poppins', sans-serif"
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -239,45 +244,64 @@ export default function Reports({ entityId }) {
   }
 
   return (
-    <div>
-      <div style={{ background:'#fff', borderRadius:14, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', padding:'16px 18px', marginBottom:16 }}>
-        <div style={{ display:'flex', gap:10, flexWrap:'wrap', alignItems:'flex-end' }}>
-          <div><div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4 }}>Report Type</div>
-            <select style={{ ...S.inp, minWidth:180 }} value={reportType} onChange={e=>setReportType(e.target.value)}>
-              {REPORTS.map(r=><option key={r.id} value={r.id}>{r.label}</option>)}
-            </select>
+    <div className="rpt-root" style={{ fontFamily:PP, display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2 }}>
+      <style>{`.rpt-root input,.rpt-root select,.rpt-root button{font-family:'Poppins',sans-serif!important}`}</style>
+
+      {/* ══ UPPER ZONE ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+        {/* L1 Heading Bar */}
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, borderRadius:'6px 6px 0 0', padding:'8px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <span style={{ fontSize:15, fontWeight:700, color:'#fff', letterSpacing:0.3 }}>📋 Travel Reports</span>
+            {rows.length > 0 && <button onClick={exportCSV} style={{ background:'transparent', color:'#fff', border:'1px solid rgba(255,255,255,0.5)', borderRadius:7, padding:'5px 12px', fontSize:11, fontWeight:700, cursor:'pointer' }}>⬇ Export CSV</button>}
           </div>
-          <div><div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4 }}>From</div><input type="date" style={S.inp} value={dateFrom} onChange={e=>setDateFrom(e.target.value)} /></div>
-          <div><div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4 }}>To</div><input type="date" style={S.inp} value={dateTo} onChange={e=>setDateTo(e.target.value)} /></div>
-          {(reportType==='ticket_sales'||reportType==='commission') && <>
-            <div><div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4 }}>Pay Type</div>
-              <select style={S.inp} value={ticketType} onChange={e=>setTicketType(e.target.value)}>
-                <option value="ALL">All</option><option value="CASH">CASH</option><option value="CREDIT">CREDIT</option>
+        </div>
+
+        {/* Filter Bar */}
+        <div style={{ padding:'6px 28px 8px' }}>
+          <div style={{ background:'#fff', padding:'10px 14px', borderRadius:8, boxShadow:'0 1px 4px rgba(0,0,0,0.08)', display:'flex', gap:10, alignItems:'flex-end', flexWrap:'wrap' }}>
+            <div>
+              <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4 }}>Report Type</div>
+              <select style={{ ...S.inp, minWidth:180 }} value={reportType} onChange={e=>setReportType(e.target.value)}>
+                {REPORTS.map(r=><option key={r.id} value={r.id}>{r.label}</option>)}
               </select>
             </div>
-            <div><div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4 }}>Route</div>
-              <select style={S.inp} value={valueType} onChange={e=>setValueType(e.target.value)}>
-                <option value="ALL">All</option><option value="INT">INT</option><option value="DOM">DOM</option>
-              </select>
-            </div>
-          </>}
-          <button onClick={runReport} disabled={loading} style={{ background:'linear-gradient(135deg,#1565c0,#1976d2)', color:'#fff', border:'none', borderRadius:10, padding:'10px 24px', cursor:'pointer', fontSize:14, fontWeight:700 }}>{loading?'Loading...':'▶ Run Report'}</button>
-          {rows.length > 0 && <button onClick={exportCSV} style={{ background:'#e8f5e9', color:'#2e7d32', border:'none', borderRadius:10, padding:'10px 18px', cursor:'pointer', fontSize:13, fontWeight:700 }}>⬇ Export CSV</button>}
-        </div>
-      </div>
-
-      {rows.length > 0 && (
-        <div style={{ background:'#fff', borderRadius:14, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', overflow:'hidden' }}>
-          <div style={{ padding:'10px 14px', borderBottom:'1px solid #f0f4f8', fontSize:13, fontWeight:700 }}>
-            {REPORTS.find(r=>r.id===reportType)?.label} — {dateFrom} to {dateTo} — {rows.length} records
+            <div><div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4 }}>From</div><input type="date" style={S.inp} value={dateFrom} onChange={e=>setDateFrom(e.target.value)} /></div>
+            <div><div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4 }}>To</div><input type="date" style={S.inp} value={dateTo} onChange={e=>setDateTo(e.target.value)} /></div>
+            {(reportType==='ticket_sales'||reportType==='commission') && <>
+              <div><div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4 }}>Pay Type</div>
+                <select style={S.inp} value={ticketType} onChange={e=>setTicketType(e.target.value)}>
+                  <option value="ALL">All</option><option value="CASH">CASH</option><option value="CREDIT">CREDIT</option>
+                </select>
+              </div>
+              <div><div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4 }}>Route</div>
+                <select style={S.inp} value={valueType} onChange={e=>setValueType(e.target.value)}>
+                  <option value="ALL">All</option><option value="INT">INT</option><option value="DOM">DOM</option>
+                </select>
+              </div>
+            </>}
+            <button onClick={runReport} disabled={loading} style={{ background:L3, color:'#fff', border:'none', borderRadius:8, padding:'9px 20px', cursor:'pointer', fontSize:13, fontWeight:700, marginLeft:'auto' }}>{loading?'Loading…':'▶ Run Report'}</button>
           </div>
-          <div style={{ overflowX:'auto' }}>{renderTable()}</div>
         </div>
-      )}
+      </div>{/* end upper zone */}
 
-      {!loading && rows.length === 0 && (
-        <div style={{ textAlign:'center', padding:60, color:'#aab2bd', fontSize:14 }}>Run a report to see results</div>
-      )}
+      {/* ══ SCROLL ZONE ══ */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'10px 28px 22px' }}>
+
+        {rows.length > 0 && (
+          <div style={{ background:'#fff', borderRadius:12, boxShadow:'0 2px 8px rgba(0,0,0,0.08)', overflow:'hidden' }}>
+            <div style={{ padding:'10px 14px', borderBottom:'1px solid #f0f4f8', fontSize:13, fontWeight:700 }}>
+              {REPORTS.find(r=>r.id===reportType)?.label} — {dateFrom} to {dateTo} — {rows.length} records
+            </div>
+            <div style={{ overflowX:'auto' }}>{renderTable()}</div>
+          </div>
+        )}
+
+        {!loading && rows.length === 0 && (
+          <div style={{ textAlign:'center', padding:60, color:'#aab2bd', fontSize:14 }}>Run a report to see results</div>
+        )}
+      </div>{/* end scroll zone */}
     </div>
   )
 }

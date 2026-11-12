@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import PageBanner from '../components/PageBanner'
+import FormShell from '../components/FormShell'
 
 const PP = "'Poppins','Inter',sans-serif"
 const PRI = '#8C601B'   // Masters L3 accent
@@ -14,6 +15,96 @@ const S = {
   row:     { display:'flex', gap:12, marginBottom:14, flexWrap:'wrap' },
   col:     { flex:1, minWidth:140 },
   sec:     { fontSize:9, fontWeight:800, color:PRI, marginBottom:8, marginTop:12, paddingBottom:4, borderBottom:`1.5px solid ${PRI}33`, letterSpacing:1.5, textTransform:'uppercase' },
+}
+
+const STEPS = ['Department Identity', 'Approval Hierarchy']
+
+function DeptModal({ editing, code, setCode, name, setName, description, setDescription,
+  headId, setHeadId, pmId, setPmId, supId, setSupId, isActive, setIsActive,
+  employees, empLabel, hasEmployees, saving, onSave, onClose }) {
+
+  const [step, setStep] = useState(1)
+
+  function handleBack() { step > 1 ? setStep(s => s - 1) : onClose() }
+  function handleNext() {
+    if (step < STEPS.length) { setStep(s => s + 1) }
+    else { onSave() }
+  }
+
+  return (
+    <FormShell
+      isOpen
+      onClose={onClose}
+      chapterName="Masters"
+      title={[editing ? 'Edit' : 'New', 'Department', 'Creation']}
+      description="Create a department, assign its code, name and optional approval hierarchy."
+      steps={STEPS}
+      currentStep={step}
+      onBack={handleBack}
+      onNext={handleNext}
+      backLabel={step === 1 ? 'Cancel' : '← Back'}
+      nextLabel={step < STEPS.length ? 'Save & Next' : (saving ? 'Saving…' : editing ? 'Update Department' : 'Add Department')}
+      nextDisabled={saving}
+    >
+
+      {step === 1 && (<>
+        <div style={S.row}>
+          <div style={S.col}>
+            <label style={S.label}>Department Code</label>
+            <input style={S.inp} value={code} onChange={e => setCode(e.target.value)} placeholder="IT / FIN / OPS / HR..." />
+          </div>
+          <div style={S.col}>
+            <label style={S.label}>Status</label>
+            <select style={S.inp} value={isActive} onChange={e => setIsActive(e.target.value === 'true')}>
+              <option value="true">Active</option>
+              <option value="false">Inactive</option>
+            </select>
+          </div>
+        </div>
+        <div style={{ marginBottom:14 }}>
+          <label style={S.label}>Department Name *</label>
+          <input style={S.inp} value={name} onChange={e => setName(e.target.value)} placeholder="Information Technology, Finance, Field Operations..." />
+        </div>
+        <div style={{ marginBottom:6 }}>
+          <label style={S.label}>Description / Activity</label>
+          <textarea style={{ ...S.inp, height:90, resize:'vertical', lineHeight:1.6 }}
+            value={description} onChange={e => setDescription(e.target.value)}
+            placeholder="Briefly describe what this department does, its responsibilities and activities..." />
+          <div style={{ fontSize:11, color:'#9A8070', marginTop:3 }}>For reference only — does not affect operations</div>
+        </div>
+      </>)}
+
+      {step === 2 && (<>
+        {!hasEmployees && (
+          <div style={{ background:'#fff8e1', borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:12, color:'#f57c00', lineHeight:1.5 }}>
+            No employees in this entity yet. Add employees first, then come back to assign Dept Head, PM and Supervisor.
+          </div>
+        )}
+        <div style={{ marginBottom:14 }}>
+          <label style={S.label}>Dept Head</label>
+          <select style={S.inp} value={headId} onChange={e => setHeadId(e.target.value)} disabled={!hasEmployees}>
+            <option value="">-- Not assigned --</option>
+            {employees.map(e => <option key={e.id} value={e.id}>{empLabel(e.id)}</option>)}
+          </select>
+        </div>
+        <div style={{ marginBottom:14 }}>
+          <label style={S.label}>Primary PM <span style={{ fontWeight:400, color:'#9A8070' }}>(default — overridden per project)</span></label>
+          <select style={S.inp} value={pmId} onChange={e => setPmId(e.target.value)} disabled={!hasEmployees}>
+            <option value="">-- Not assigned --</option>
+            {employees.map(e => <option key={e.id} value={e.id}>{empLabel(e.id)}</option>)}
+          </select>
+        </div>
+        <div style={{ marginBottom:6 }}>
+          <label style={S.label}>Primary Supervisor <span style={{ fontWeight:400, color:'#9A8070' }}>(default — overridden per project)</span></label>
+          <select style={S.inp} value={supId} onChange={e => setSupId(e.target.value)} disabled={!hasEmployees}>
+            <option value="">-- Not assigned --</option>
+            {employees.map(e => <option key={e.id} value={e.id}>{empLabel(e.id)}</option>)}
+          </select>
+        </div>
+      </>)}
+
+    </FormShell>
+  )
 }
 
 export default function Departments({ entityId }) {
@@ -147,8 +238,8 @@ export default function Departments({ entityId }) {
             <div key={d.id} style={{ background:'#fff', borderRadius:14, boxShadow:'0 2px 10px rgba(0,0,0,0.07)', overflow:'hidden', opacity:d.is_active ? 1 : 0.65 }}>
               <div style={{ background:PRI, padding:'14px 18px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                 <div>
-                  {d.dept_code && <div style={{ fontSize:10, color:'rgba(255,255,255,0.7)', fontWeight:700, letterSpacing:1, marginBottom:2 }}>{d.dept_code}</div>}
-                  <div style={{ color:'#fff', fontWeight:800, fontSize:16 }}>{d.dept_name}</div>
+                  {d.dept_code && <div style={{ fontSize:20, color:'#fff', fontWeight:800, letterSpacing:1, lineHeight:1.1 }}>{d.dept_code}</div>}
+                  <div style={{ color:'rgba(255,255,255,0.75)', fontWeight:400, fontSize:12, marginTop:2 }}>{d.dept_name}</div>
                 </div>
                 <div style={{ display:'flex', gap:6, alignItems:'center' }}>
                   {!d.is_active && <span style={{ background:'rgba(0,0,0,0.2)', color:'rgba(255,255,255,0.7)', borderRadius:6, padding:'2px 8px', fontSize:10, fontWeight:700 }}>INACTIVE</span>}
@@ -222,115 +313,21 @@ export default function Departments({ entityId }) {
       />
 
       {open && (
-        <div style={S.overlay} onClick={e => e.target === e.currentTarget && (setOpen(false), resetForm(), setEditing(null))}>
-          <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap');`}</style>
-          {/* L1 outer frame */}
-          <div style={{ width:620, maxWidth:'calc(100vw - 24px)', borderRadius:18, overflow:'hidden', boxShadow:'0 28px 64px rgba(0,0,0,0.32)', background:L1, padding:8, fontFamily:PP }}>
-            {/* L2 inner */}
-            <div style={{ background:L2, borderRadius:12, position:'relative', overflow:'hidden' }}>
-              {/* L3 accent corner */}
-              <div style={{ position:'absolute', top:0, right:0, width:'50%', height:'30%', background:PRI, borderRadius:'0 12px 0 90px', zIndex:1 }} />
-
-              {/* Header */}
-              <div style={{ position:'relative', zIndex:2, padding:'20px 24px 14px', display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
-                <div>
-                  <div style={{ fontSize:9, fontWeight:800, color:'#53666F', letterSpacing:1.8, textTransform:'uppercase', marginBottom:2 }}>Ratal Advanced Technologies</div>
-                  <div style={{ fontSize:9, fontWeight:800, color:PRI, letterSpacing:1.8, textTransform:'uppercase', marginBottom:8 }}><strong>Masters</strong></div>
-                  <div style={{ fontSize:20, fontWeight:900, color:'#172D37', lineHeight:1.1 }}>{editing ? 'Edit' : 'New'} Department</div>
-                </div>
-                <button onClick={() => { setOpen(false); resetForm(); setEditing(null) }}
-                  style={{ background:`${PRI}18`, border:'none', color:PRI, borderRadius:8, width:28, height:28, cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:4 }}>✕</button>
-              </div>
-
-              {/* L4 white form card */}
-              <div style={{ margin:'0 12px 12px', background:'#fff', borderRadius:12, boxShadow:`0 4px 18px ${PRI}18`, position:'relative', zIndex:2, overflow:'hidden' }}>
-                <div style={{ padding:'18px 22px', maxHeight:'60vh', overflowY:'auto' }}>
-
-                  <div style={S.sec}>Department Identity</div>
-                  <div style={S.row}>
-                    <div style={S.col}>
-                      <label style={S.label}>Department Code</label>
-                      <input style={S.inp} value={code} onChange={e => setCode(e.target.value)} placeholder="IT / FIN / OPS / HR..." />
-                    </div>
-                    <div style={S.col}>
-                      <label style={S.label}>Status</label>
-                      <select style={S.inp} value={isActive} onChange={e => setIsActive(e.target.value === 'true')}>
-                        <option value="true">Active</option>
-                        <option value="false">Inactive</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom:14 }}>
-                    <label style={S.label}>Department Name *</label>
-                    <input style={S.inp} value={name} onChange={e => setName(e.target.value)} placeholder="Information Technology, Finance, Field Operations..." />
-                  </div>
-
-                  <div style={{ marginBottom:14 }}>
-                    <label style={S.label}>Description / Activity</label>
-                    <textarea
-                      style={{ ...S.inp, height:76, resize:'vertical', lineHeight:1.5 }}
-                      value={description}
-                      onChange={e => setDescription(e.target.value)}
-                      placeholder="Briefly describe what this department does, its responsibilities and activities..."
-                    />
-                    <div style={{ fontSize:11, color:'#53666F', marginTop:3 }}>For reference only — does not affect operations</div>
-                  </div>
-
-                  <div style={S.sec}>
-                    Approval Hierarchy
-                    <span style={{ fontSize:10, color:'#53666F', fontWeight:400, textTransform:'none', letterSpacing:0, marginLeft:6 }}>
-                      (optional — assign after employees are added)
-                    </span>
-                  </div>
-
-                  {!hasEmployees && (
-                    <div style={{ background:'#fff8e1', borderRadius:8, padding:'8px 14px', marginBottom:14, fontSize:12, color:'#f57c00' }}>
-                      No employees in this entity yet. Add employees first, then come back to assign Dept Head, PM and Supervisor.
-                    </div>
-                  )}
-
-                  <div style={{ marginBottom:14 }}>
-                    <label style={S.label}>Dept Head</label>
-                    <select style={S.inp} value={headId} onChange={e => setHeadId(e.target.value)} disabled={!hasEmployees}>
-                      <option value="">-- Not assigned --</option>
-                      {employees.map(e => <option key={e.id} value={e.id}>{empLabel(e.id)}</option>)}
-                    </select>
-                  </div>
-
-                  <div style={{ marginBottom:14 }}>
-                    <label style={S.label}>Primary PM (default — overridden per project)</label>
-                    <select style={S.inp} value={pmId} onChange={e => setPmId(e.target.value)} disabled={!hasEmployees}>
-                      <option value="">-- Not assigned --</option>
-                      {employees.map(e => <option key={e.id} value={e.id}>{empLabel(e.id)}</option>)}
-                    </select>
-                  </div>
-
-                  <div style={{ marginBottom:6 }}>
-                    <label style={S.label}>Primary Supervisor (default — overridden per project)</label>
-                    <select style={S.inp} value={supId} onChange={e => setSupId(e.target.value)} disabled={!hasEmployees}>
-                      <option value="">-- Not assigned --</option>
-                      {employees.map(e => <option key={e.id} value={e.id}>{empLabel(e.id)}</option>)}
-                    </select>
-                  </div>
-
-                </div>
-
-                {/* Footer */}
-                <div style={{ padding:'11px 22px 14px', borderTop:`1px solid ${PRI}22`, display:'flex', justifyContent:'flex-end', gap:10 }}>
-                  <button onClick={() => { setOpen(false); resetForm(); setEditing(null) }}
-                    style={{ background:'#747474', color:'#fff', border:'none', borderRadius:24, padding:'9px 24px', cursor:'pointer', fontSize:13, fontWeight:600 }}>
-                    Cancel
-                  </button>
-                  <button onClick={save} disabled={saving}
-                    style={{ background:saving?'#c7c7c7':PRI, color:'#fff', border:'none', borderRadius:24, padding:'9px 28px', cursor:saving?'not-allowed':'pointer', fontSize:13, fontWeight:700, boxShadow:saving?'none':`0 4px 14px ${PRI}44` }}>
-                    {saving ? 'Saving...' : editing ? 'Update Department' : 'Add Department'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <DeptModal
+          editing={editing}
+          code={code} setCode={setCode}
+          name={name} setName={setName}
+          description={description} setDescription={setDescription}
+          headId={headId} setHeadId={setHeadId}
+          pmId={pmId} setPmId={setPmId}
+          supId={supId} setSupId={setSupId}
+          isActive={isActive} setIsActive={setIsActive}
+          employees={employees} empLabel={empLabel}
+          hasEmployees={hasEmployees}
+          saving={saving}
+          onSave={save}
+          onClose={() => { setOpen(false); resetForm(); setEditing(null) }}
+        />
       )}
     </div>
   )

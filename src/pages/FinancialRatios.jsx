@@ -1,5 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { GROUP_COLORS } from '../styles/appStyles'
+const MC = GROUP_COLORS.Reports
+const L1 = '#B8A5CF'
+const L2 = '#F5EFFA'
+const L3 = '#7444A3'
+const PP = "'Poppins', sans-serif"
 
 // ═══════════════════════════════════════════════════════════════════
 // Financial Ratios Dashboard — Phase 17
@@ -405,47 +411,61 @@ export default function FinancialRatios({ entityId }) {
   const S = { card: { background:'#fff', borderRadius:14, padding:'14px 18px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)', marginBottom:10 } }
 
   return (
-    <div>
-      <div style={{ fontSize:12, color:'#6b7c93', marginBottom:18 }}>
-        Auto-calculated KPIs from the GL — liquidity, profitability, efficiency, and leverage
-      </div>
+    <div className="fr-root" style={{ fontFamily:PP, display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2 }}>
+      <style>{`.fr-root input,.fr-root select,.fr-root button,.fr-root textarea{font-family:'Poppins',sans-serif!important}`}</style>
 
-      {/* Controls */}
-      <div style={{ ...S.card, display:'flex', gap:8, alignItems:'flex-end', flexWrap:'wrap' }}>
-        <div>
-          <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4 }}>From</label>
-          <input type="date" style={{ padding:'7px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:12, outline:'none', background:'#fff', width:150 }}
-            value={from} onChange={e=>setFrom(e.target.value)} />
+      {/* ══ UPPER ZONE ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+        {/* L1 Heading Bar */}
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, borderRadius:'6px 6px 0 0', padding:'8px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <span style={{ fontSize:15, fontWeight:700, color:'#fff', letterSpacing:0.3 }}>📐 Financial Ratios</span>
+          </div>
         </div>
-        <div>
-          <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4 }}>To</label>
-          <input type="date" style={{ padding:'7px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:12, outline:'none', background:'#fff', width:150 }}
-            value={to} onChange={e=>setTo(e.target.value)} />
+
+        {/* Filter Bar */}
+        <div style={{ padding:'6px 28px 8px' }}>
+          <div style={{ background:'#fff', padding:'10px 14px', borderRadius:8, boxShadow:'0 1px 4px rgba(0,0,0,0.08)', display:'flex', gap:8, alignItems:'flex-end', flexWrap:'wrap' }}>
+            <div>
+              <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4 }}>From</label>
+              <input type="date" style={{ padding:'7px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:12, outline:'none', background:'#fff', width:150 }}
+                value={from} onChange={e=>setFrom(e.target.value)} />
+            </div>
+            <div>
+              <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4 }}>To</label>
+              <input type="date" style={{ padding:'7px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:12, outline:'none', background:'#fff', width:150 }}
+                value={to} onChange={e=>setTo(e.target.value)} />
+            </div>
+            <div style={{ display:'flex', gap:4, flexWrap:'wrap', alignSelf:'flex-end' }}>
+              {PRESETS.map(p=>(
+                <button key={p.label} onClick={()=>{ setFrom(p.from()); setTo(p.to()) }}
+                  style={{ background:'transparent', color:L3, border:`1.5px solid ${L3}`, borderRadius:8,
+                    padding:'6px 10px', fontSize:10, fontWeight:700, cursor:'pointer' }}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, cursor:'pointer', alignSelf:'flex-end', paddingBottom:2 }}>
+              <input type="checkbox" checked={compare} onChange={e=>setCompare(e.target.checked)} />
+              Compare vs prior period
+            </label>
+            <div style={{ marginLeft:'auto', display:'flex', gap:6 }}>
+              <button onClick={()=>setShowSnap(s=>!s)}
+                style={{ background:'transparent', color:L3, border:`1.5px solid ${L1}`, borderRadius:8, padding:'7px 14px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                {showSnap?'Hide':'Show'} GL snapshot
+              </button>
+              <button onClick={load}
+                style={{ background:L3, color:'#fff', border:'none', borderRadius:8, padding:'8px 16px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                ↻ Refresh
+              </button>
+            </div>
+          </div>
         </div>
-        <div style={{ display:'flex', gap:4, flexWrap:'wrap', alignSelf:'flex-end' }}>
-          {PRESETS.map(p=>(
-            <button key={p.label} onClick={()=>{ setFrom(p.from()); setTo(p.to()) }}
-              style={{ background:'transparent', color:'#546e7a', border:'1.5px solid #546e7a', borderRadius:8,
-                padding:'6px 10px', fontSize:10, fontWeight:700, cursor:'pointer' }}>
-              {p.label}
-            </button>
-          ))}
-        </div>
-        <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, cursor:'pointer', alignSelf:'flex-end', paddingBottom:2 }}>
-          <input type="checkbox" checked={compare} onChange={e=>setCompare(e.target.checked)} />
-          Compare vs prior period
-        </label>
-        <div style={{ marginLeft:'auto', display:'flex', gap:6 }}>
-          <button onClick={()=>setShowSnap(s=>!s)}
-            style={{ background:'transparent', color:'#546e7a', border:'1.5px solid #dde3ec', borderRadius:8, padding:'7px 14px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
-            {showSnap?'Hide':'Show'} GL snapshot
-          </button>
-          <button onClick={load}
-            style={{ background:'#1a2e3d', color:'#fff', border:'none', borderRadius:8, padding:'8px 16px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
-            ↻ Refresh
-          </button>
-        </div>
-      </div>
+      </div>{/* end upper zone */}
+
+      {/* ══ SCROLL ZONE ══ */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'10px 28px 22px' }}>
 
       {loading ? (
         <div style={{ textAlign:'center', padding:80, color:'#6b7c93', fontSize:14 }}>
@@ -630,6 +650,7 @@ export default function FinancialRatios({ entityId }) {
           </div>
         </>
       )}
+      </div>{/* end scroll zone */}
     </div>
   )
 }

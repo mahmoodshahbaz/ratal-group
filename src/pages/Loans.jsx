@@ -1,4 +1,4 @@
-import { GROUP_COLORS, CHAPTER_PALETTES } from '../styles/appStyles'
+import { GROUP_COLORS, CHAPTER_PALETTES, kpiCardGradient } from '../styles/appStyles'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import FormShell from '../components/FormShell'
@@ -302,112 +302,124 @@ export default function Loans({ entityId }) {
   const totalPenalties  = penalties.filter(p=>p.status==='PENDING').reduce((s,p)=>s+(+p.amount||0),0)
 
   return (
-    <div>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
-        <div>
-          <div style={{ fontSize:12, color:'#6b7c93', marginTop:2 }}>Employee salary advances, EMI schedules, and penalties register</div>
-        </div>
-        <div style={{ display:'flex', gap:8 }}>
-          {tab==='loans'     && <button style={S.btn()} onClick={()=>setShowLoanBanner(true)}>+ New Loan</button>}
-          {tab==='penalties' && <button style={S.btn(L3)} onClick={()=>setShowPenBanner(true)}>+ New Penalty</button>}
-          {tab==='eos'       && <button style={S.btn(L3)} onClick={()=>setShowEosBanner(true)}>+ Process EOS Settlement</button>}
-        </div>
-      </div>
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:'Poppins,sans-serif', fontSize:13 }}>
 
-      {/* KPIs — tab-specific colorful cards */}
-      <div style={{ display:'flex', gap:14, marginBottom:18, overflowX:'auto', flexWrap:'nowrap', paddingBottom:2 }}>
-        {tab === 'loans' && [
-          { label:'Active Loans',      value: loans.filter(l=>l.status==='ACTIVE').length,                    bg:'linear-gradient(135deg,#1565c0,#1e88e5)', icon:'💳' },
-          { label:'Total Outstanding', value: SAR(totalLoans),                                                 bg:'linear-gradient(135deg,#b71c1c,#e53935)', icon:'💰' },
-          { label:'Settled Loans',     value: loans.filter(l=>l.status==='COMPLETED').length,                  bg:'linear-gradient(135deg,#2e7d32,#43a047)', icon:'✅' },
-          { label:'Total Disbursed',   value: SAR(loans.reduce((s,l)=>s+(+l.loan_amount||0),0)),               bg:'linear-gradient(135deg,#4527a0,#7b1fa2)', icon:'📊' },
-        ].map(c=>(
-          <div key={c.label} style={{ flex:1, minWidth:155, borderRadius:12, padding:'16px 18px', background:c.bg, boxShadow:'0 4px 16px rgba(0,0,0,0.15)', display:'flex', alignItems:'center', gap:14 }}>
-            <div style={{ fontSize:28, filter:'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}>{c.icon}</div>
-            <div><div style={{ fontSize:18, fontWeight:900, color:'#fff', lineHeight:1 }}>{c.value}</div><div style={{ fontSize:11, color:'rgba(255,255,255,0.8)', marginTop:4, fontWeight:600 }}>{c.label}</div></div>
+      {/* ══ UPPER ZONE ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+        {/* L1 Heading Bar */}
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>💳 Loans, EOS & Penalties</div>
+              <div style={{ fontSize:10, color:'#fff', opacity:0.85 }}>Employee salary advances, EMI schedules, and penalties register</div>
+            </div>
+            <div style={{ display:'flex', gap:8 }}>
+              {tab==='loans'     && <button style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'7px 16px', fontSize:12, fontWeight:700, cursor:'pointer' }} onClick={()=>setShowLoanBanner(true)}>+ New Loan</button>}
+              {tab==='penalties' && <button style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'7px 16px', fontSize:12, fontWeight:700, cursor:'pointer' }} onClick={()=>setShowPenBanner(true)}>+ New Penalty</button>}
+              {tab==='eos'       && <button style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'7px 16px', fontSize:12, fontWeight:700, cursor:'pointer' }} onClick={()=>setShowEosBanner(true)}>+ Process EOS Settlement</button>}
+            </div>
           </div>
-        ))}
-        {tab === 'penalties' && [
-          { label:'Pending Penalties', value: penalties.filter(p=>p.status==='PENDING').length,                bg:'linear-gradient(135deg,#e65100,#f57c00)', icon:'⚠️' },
-          { label:'Total Fines',       value: SAR(totalPenalties),                                             bg:'linear-gradient(135deg,#b71c1c,#d32f2f)', icon:'💸' },
-          { label:'Driver-Borne',      value: penalties.filter(p=>p.penalty_type==='EMPLOYEE_BORNE').length,   bg:'linear-gradient(135deg,#880e4f,#c2185b)', icon:'👤' },
-          { label:'Company-Borne',     value: penalties.filter(p=>p.penalty_type==='COMPANY_BORNE').length,    bg:'linear-gradient(135deg,#4527a0,#512da8)', icon:'🏢' },
-        ].map(c=>(
-          <div key={c.label} style={{ flex:1, minWidth:155, borderRadius:12, padding:'16px 18px', background:c.bg, boxShadow:'0 4px 16px rgba(0,0,0,0.15)', display:'flex', alignItems:'center', gap:14 }}>
-            <div style={{ fontSize:28, filter:'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}>{c.icon}</div>
-            <div><div style={{ fontSize:18, fontWeight:900, color:'#fff', lineHeight:1 }}>{c.value}</div><div style={{ fontSize:11, color:'rgba(255,255,255,0.8)', marginTop:4, fontWeight:600 }}>{c.label}</div></div>
-          </div>
-        ))}
-        {tab === 'eos' && (() => {
+        </div>
+
+        {/* KPIs — tab-specific cards */}
+        <div style={{ display:'flex', gap:8, padding:'10px 28px 12px', flexWrap:'wrap', background:L2 }}>
+        {(tab === 'loans' ? [
+          { label:'Active Loans',      val: loans.filter(l=>l.status==='ACTIVE').length },
+          { label:'Total Outstanding', val: SAR(totalLoans) },
+          { label:'Settled Loans',     val: loans.filter(l=>l.status==='COMPLETED').length },
+          { label:'Total Disbursed',   val: SAR(loans.reduce((s,l)=>s+(+l.loan_amount||0),0)) },
+        ] : tab === 'penalties' ? [
+          { label:'Pending Penalties', val: penalties.filter(p=>p.status==='PENDING').length },
+          { label:'Total Fines',       val: SAR(totalPenalties) },
+          { label:'Driver-Borne',      val: penalties.filter(p=>p.penalty_type==='EMPLOYEE_BORNE').length },
+          { label:'Company-Borne',     val: penalties.filter(p=>p.penalty_type==='COMPANY_BORNE').length },
+        ] : (()=>{
           const eosCalcs = eosEmps.map(e => calcEOS(empPkg(e), e.hire_date, null, 'TERMINATION'))
           const totalLiability = eosCalcs.reduce((s,r)=>s+(r.amount||0),0)
           const over5 = eosEmps.filter((_,i)=>eosCalcs[i].years>=5).length
           const avgEos = eosEmps.length ? totalLiability / eosEmps.length : 0
           return [
-            { label:'Total EOS Liability',  value: SAR(totalLiability),  bg:'linear-gradient(135deg,#1a237e,#283593)', icon:'🏦' },
-            { label:'Eligible Employees',   value: eosEmps.length,       bg:'linear-gradient(135deg,#004d40,#00796b)', icon:'👥' },
-            { label:'Average EOS / Person', value: SAR(avgEos),          bg:'linear-gradient(135deg,#bf360c,#e64a19)', icon:'📈' },
-            { label:'Employees ≥ 5 Yrs',    value: over5,                bg:'linear-gradient(135deg,#4a148c,#7b1fa2)', icon:'⭐' },
-          ].map(c=>(
-            <div key={c.label} style={{ flex:1, minWidth:155, borderRadius:12, padding:'16px 18px', background:c.bg, boxShadow:'0 4px 16px rgba(0,0,0,0.15)', display:'flex', alignItems:'center', gap:14 }}>
-              <div style={{ fontSize:28, filter:'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}>{c.icon}</div>
-              <div><div style={{ fontSize:18, fontWeight:900, color:'#fff', lineHeight:1 }}>{c.value}</div><div style={{ fontSize:11, color:'rgba(255,255,255,0.8)', marginTop:4, fontWeight:600 }}>{c.label}</div></div>
+            { label:'Total EOS Liability',  val: SAR(totalLiability) },
+            { label:'Eligible Employees',   val: eosEmps.length },
+            { label:'Average EOS / Person', val: SAR(avgEos) },
+            { label:'Employees ≥ 5 Yrs',    val: over5 },
+          ]
+        })()).map((c,i)=>{
+          const cardStyle = kpiCardGradient(i, L1, L2, L3)
+          return (
+            <div key={c.label} style={{ ...cardStyle, width:200, height:62, borderRadius:10, padding:'0 14px', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.10)', display:'flex', flexDirection:'column', justifyContent:'center', boxSizing:'border-box' }}>
+              <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, fontFamily:'Poppins,sans-serif', marginBottom:2, opacity:0.75 }}>{c.label}</div>
+              <div style={{ fontSize:18, fontWeight:800, fontFamily:'Poppins,sans-serif', lineHeight:1.1 }}>{c.val}</div>
             </div>
-          ))
-        })()}
-      </div>
+          )
+        })}
+        </div>{/* end KPI strip */}
 
-      {/* Tabs */}
-      <div style={{ marginBottom:14 }}>
-        {[['loans','Loans Register'],['penalties','Penalties Register'],['eos','EOS Register']].map(([k,l])=>(
-          <button key={k} onClick={()=>{ setTab(k); setSearch(''); setFDept(''); setFStatus(''); setFPenType('') }} style={{ padding:'7px 18px', border:'none', borderRadius:4, cursor:'pointer', fontSize:12, fontWeight:700, marginRight:6, background:tab===k?L3:'#f0f4f8', color:tab===k?'#fff':'#6b7c93', fontFamily:'Poppins, sans-serif' }}>{l}</button>
-        ))}
-      </div>
-
-      {/* Section heading bar */}
-      <div style={{ background:L3, borderRadius:'6px 6px 0 0', padding:'10px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:0 }}>
-        <div style={{ color:'#fff', fontWeight:800, fontSize:13, letterSpacing:0.5 }}>
-          {tab==='loans'     && '💳  Loans Register'}
-          {tab==='penalties' && '⚠️  Penalties Register'}
-          {tab==='eos'       && '🏦  EOS — Running Liability (ACCSYS-LOCAL & ACCSYS-EXPAT)'}
+        {/* Tab bar */}
+        <div style={{ padding:'0 28px', borderBottom:'2px solid #e8edf2' }}>
+          <div style={{ display:'flex', gap:0, background:'transparent', paddingTop:4 }}>
+            {[['loans','💳 Loans Register'],['penalties','⚠️ Penalties Register'],['eos','🏦 EOS Register']].map(([k,l])=>(
+              <button key={k} onClick={()=>{ setTab(k); setSearch(''); setFDept(''); setFStatus(''); setFPenType('') }} style={{
+                background:'transparent', color: tab === k ? L3 : '#6b7c93',
+                border:'none', borderBottom: tab === k ? `2px solid ${L3}` : '2px solid transparent',
+                padding:'7px 20px', fontSize:12, fontWeight:700, cursor:'pointer',
+                fontFamily:'Poppins,sans-serif', marginBottom:-2,
+              }}>{l}</button>
+            ))}
+          </div>
         </div>
-        <div style={{ color:'rgba(255,255,255,0.7)', fontSize:11 }}>
-          {tab==='loans'     && `${filtLoans.length} of ${loans.length} record${loans.length!==1?'s':''}`}
-          {tab==='penalties' && `${filtPen.length} of ${penalties.length} record${penalties.length!==1?'s':''}`}
-          {tab==='eos'       && `${filtEos.length} of ${eosEmps.length} employee${eosEmps.length!==1?'s':''}`}
-        </div>
-      </div>
 
-      {/* Filter bar */}
-      <div style={{ background:'#fff', padding:'10px 16px', marginBottom:14, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', borderTop:'1px solid #e8ecf2', display:'flex', gap:10, flexWrap:'wrap', alignItems:'center' }}>
-        <input style={{ ...S.inp, maxWidth:210, flex:'0 0 210px' }} placeholder="🔍  Search employee…" value={search} onChange={e=>setSearch(e.target.value)} />
-        <select style={{ ...S.inp, width:160, flex:'0 0 160px' }} value={fDept} onChange={e=>setFDept(e.target.value)}>
-          <option value="">All Departments</option>
-          {depts.map(d=><option key={d.id} value={d.id}>{deptLabel(d)}</option>)}
-        </select>
-        {tab==='loans' && (
-          <select style={{ ...S.inp, width:140, flex:'0 0 140px' }} value={fStatus} onChange={e=>setFStatus(e.target.value)}>
-            <option value="">All Status</option>
-            <option value="ACTIVE">Active</option>
-            <option value="COMPLETED">Completed</option>
-          </select>
-        )}
-        {tab==='penalties' && (<>
-          <select style={{ ...S.inp, width:160, flex:'0 0 160px' }} value={fStatus} onChange={e=>setFStatus(e.target.value)}>
-            <option value="">All Status</option>
-            <option value="PENDING">Pending</option>
-            <option value="SETTLED">Settled</option>
-          </select>
-          <select style={{ ...S.inp, width:170, flex:'0 0 170px' }} value={fPenType} onChange={e=>setFPenType(e.target.value)}>
-            <option value="">All Types</option>
-            <option value="EMPLOYEE_BORNE">👤 Driver / Employee</option>
-            <option value="COMPANY_BORNE">🏢 Company</option>
-          </select>
-        </>)}
-        {(search||fDept||fStatus||fPenType) && (
-          <button style={{ ...S.btn('#90a4ae'), padding:'7px 14px', fontSize:11 }} onClick={()=>{ setSearch(''); setFDept(''); setFStatus(''); setFPenType('') }}>✕ Clear</button>
-        )}
-      </div>
+        {/* Section heading + filter bar — pinned */}
+        <div style={{ padding:'6px 28px 6px' }}>
+          <div style={{ background:L3, padding:'8px 14px', borderRadius:'6px 6px 0 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <div style={{ color:'#fff', fontWeight:800, fontSize:13, letterSpacing:0.5 }}>
+              {tab==='loans'     && '💳  Loans Register'}
+              {tab==='penalties' && '⚠️  Penalties Register'}
+              {tab==='eos'       && '🏦  EOS — Running Liability (ACCSYS-LOCAL & ACCSYS-EXPAT)'}
+            </div>
+            <div style={{ color:'rgba(255,255,255,0.7)', fontSize:11 }}>
+              {tab==='loans'     && `${filtLoans.length} of ${loans.length} record${loans.length!==1?'s':''}`}
+              {tab==='penalties' && `${filtPen.length} of ${penalties.length} record${penalties.length!==1?'s':''}`}
+              {tab==='eos'       && `${filtEos.length} of ${eosEmps.length} employee${eosEmps.length!==1?'s':''}`}
+            </div>
+          </div>
+          <div style={{ background:'#fff', padding:'10px 14px', boxShadow:'0 2px 8px rgba(0,0,0,0.07)', borderTop:'1px solid #e8ecf2', display:'flex', gap:10, flexWrap:'wrap', alignItems:'center' }}>
+            <input style={{ ...S.inp, maxWidth:210, flex:'0 0 210px' }} placeholder="🔍  Search employee…" value={search} onChange={e=>setSearch(e.target.value)} />
+            <select style={{ ...S.inp, width:160, flex:'0 0 160px' }} value={fDept} onChange={e=>setFDept(e.target.value)}>
+              <option value="">All Departments</option>
+              {depts.map(d=><option key={d.id} value={d.id}>{deptLabel(d)}</option>)}
+            </select>
+            {tab==='loans' && (
+              <select style={{ ...S.inp, width:140, flex:'0 0 140px' }} value={fStatus} onChange={e=>setFStatus(e.target.value)}>
+                <option value="">All Status</option>
+                <option value="ACTIVE">Active</option>
+                <option value="COMPLETED">Completed</option>
+              </select>
+            )}
+            {tab==='penalties' && (<>
+              <select style={{ ...S.inp, width:160, flex:'0 0 160px' }} value={fStatus} onChange={e=>setFStatus(e.target.value)}>
+                <option value="">All Status</option>
+                <option value="PENDING">Pending</option>
+                <option value="SETTLED">Settled</option>
+              </select>
+              <select style={{ ...S.inp, width:170, flex:'0 0 170px' }} value={fPenType} onChange={e=>setFPenType(e.target.value)}>
+                <option value="">All Types</option>
+                <option value="EMPLOYEE_BORNE">👤 Driver / Employee</option>
+                <option value="COMPANY_BORNE">🏢 Company</option>
+              </select>
+            </>)}
+            {(search||fDept||fStatus||fPenType) && (
+              <button style={{ ...S.btn('#90a4ae'), padding:'7px 14px', fontSize:11 }} onClick={()=>{ setSearch(''); setFDept(''); setFStatus(''); setFPenType('') }}>✕ Clear</button>
+            )}
+          </div>
+        </div>
+
+      </div>{/* end upper zone */}
+
+      {/* ══ SCROLL ZONE ══ */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
+      <div style={{ background:'#fff', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 8px rgba(0,0,0,0.08)', padding:'0' }}>
 
       {/* LOANS TABLE */}
       {tab==='loans' && (
@@ -1577,6 +1589,8 @@ export default function Loans({ entityId }) {
           )
         })()}
       </FormShell>
+      </div>{/* end white box */}
+      </div>{/* end scroll zone */}
     </div>
   )
 }

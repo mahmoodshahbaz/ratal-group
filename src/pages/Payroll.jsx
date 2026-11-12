@@ -1,7 +1,10 @@
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
-import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
+import { GROUP_COLORS, kpiCardGradient, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
 const MC = GROUP_COLORS.HR
+const L1 = '#BCA99A'
+const L2 = '#F7F2ED'
+const L3 = '#795338'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { printDocument, openPrintWindow } from '../lib/templatePrint'
@@ -895,14 +898,65 @@ export default function Payroll({ entityId }) {
   const extItems  = displayItems.filter(it => ['03','04'].includes(it._category||it.employee_category||''))
   const mainItems = displayItems.filter(it => !['03','04'].includes(it._category||it.employee_category||''))
 
+  const payKpis = [
+    { label: 'Employees in Run', val: displayItems.length || 0, unit: 'people' },
+    { label: 'Total Net Salary', val: `SAR ${((displayTotals?.total_net)||0).toLocaleString('en',{maximumFractionDigits:0})}`, unit: null },
+    { label: 'WPS Eligible', val: wpsCount, unit: 'employees' },
+  ]
+
   return (
-    <div>
-      {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
-        <div>
-          <div style={{ fontSize:12, color:'#6b7c93', marginTop:2 }}>Salary runs · GOSI · WPS export · Loan, Penalty & Unpaid Leave deductions</div>
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:'Poppins,sans-serif', fontSize:13 }}>
+
+      {/* ══ UPPER ZONE ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+        {/* L1 Heading Bar */}
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>💰 Payroll</div>
+              <div style={{ fontSize:10, color:'#fff', opacity:0.85 }}>Salary runs · GOSI · WPS export · Loan, Penalty & Unpaid Leave deductions</div>
+            </div>
+          </div>
         </div>
-      </div>
+
+        {/* KPI strip */}
+        <div style={{ display:'flex', gap:12, padding:'10px 28px 12px', background:L2, flexWrap:'wrap' }}>
+          {payKpis.map((k, i) => {
+            const g = kpiCardGradient(i, L1, L2, L3)
+            return (
+              <div key={k.label} style={{ ...g, width:160, height:62, borderRadius:10, padding:'0 14px', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.12)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+                <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', opacity:0.75, marginBottom:2 }}>{k.label}</div>
+                <div style={{ fontSize:17, fontWeight:800, lineHeight:1 }}>{k.val}</div>
+                {k.unit && <div style={{ fontSize:9, opacity:0.7, marginTop:2 }}>{k.unit}</div>}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Tab bar */}
+        <div style={{ padding:'0 28px', borderBottom:'2px solid #e8edf2' }}>
+          <div style={{ display:'flex', gap:0, background:'transparent', paddingTop:4 }}>
+            {[
+              { key:'generate', label:'⚙️ Generate & Preview' },
+              { key:'history',  label:'📋 History' },
+              { key:'mudad',    label:'🏛 Mudad / GOSI' },
+            ].map(t => (
+              <button key={t.key} onClick={() => setTab(t.key)} style={{
+                background:'transparent', color: tab === t.key ? L3 : '#6b7c93',
+                border:'none', borderBottom: tab === t.key ? `2px solid ${L3}` : '2px solid transparent',
+                padding:'7px 20px', fontSize:12, fontWeight:700, cursor:'pointer',
+                fontFamily:'Poppins,sans-serif', marginBottom:-2,
+              }}>{t.label}</button>
+            ))}
+          </div>
+        </div>
+
+      </div>{/* end upper zone */}
+
+      {/* ══ SCROLL ZONE ══ */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
+      <div style={{ background:'#fff', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 8px rgba(0,0,0,0.08)', padding:'16px 20px' }}>
 
       {/* ── SAR Alert Panel ─────────────────────────────────────────── */}
       {pendingSars.length > 0 && (
@@ -958,13 +1012,6 @@ export default function Payroll({ entityId }) {
           </div>
         </div>
       )}
-
-      {/* Tabs */}
-      <div style={{ marginBottom:16 }}>
-        <button style={S.tab(tab==='generate')} onClick={()=>setTab('generate')}>⚙️ Generate & Preview</button>
-        <button style={S.tab(tab==='history')}  onClick={()=>setTab('history')}>📋 History</button>
-        <button style={S.tab(tab==='mudad')}    onClick={()=>setTab('mudad')}>🏛 Mudad / GOSI</button>
-      </div>
 
       {/* ── GENERATE TAB ── */}
       {tab==='generate' && (
@@ -1403,6 +1450,8 @@ export default function Payroll({ entityId }) {
           </div>
         </div>
       )}
+      </div>{/* end white box */}
+      </div>{/* end scroll zone */}
     </div>
   )
 }

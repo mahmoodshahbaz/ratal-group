@@ -1,4 +1,4 @@
-import { GROUP_COLORS } from '../styles/appStyles'
+import { GROUP_COLORS, kpiCardGradient } from '../styles/appStyles'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth'
@@ -31,7 +31,13 @@ const ENTITIES = [
   { code:'ACCSYS', name:'Ratal Advanced Technologies', color:'#5A32D4' },
 ]
 
-const MC = GROUP_COLORS.Administration
+const MC   = GROUP_COLORS.Administration
+const L1   = '#AAAED0'
+const L2   = '#F0F1FA'
+const L3   = '#454D9B'
+const PP   = "'Poppins', sans-serif"
+const MAIN = '#172D37'
+const SUB  = '#53666F'
 
 const S = {
   card:   { background:'#fff', borderRadius:14, padding:'18px 22px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)', marginBottom:16 },
@@ -335,108 +341,142 @@ export default function UserManagement({ entityId: propEntityId }) {
   const inactiveCount = scopedUsers.filter(u => !u.is_active).length
 
   return (
-    <div>
-      {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
-        <div>
-          <div style={{ fontSize:12, color:'#6b7c93', marginTop:2 }}>
-            {isSuperAdmin
-              ? 'SUPERADMIN — Manage all users, all entities, all roles, including delete'
-              : `ADMIN — Manage users in ${myEntityCode} · Cannot assign ADMIN or higher`}
+    <div className="um-root" style={{ fontFamily: PP, display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background: L2 }}>
+      <style>{`.um-root input,.um-root select,.um-root button,.um-root textarea{font-family:'Poppins',sans-serif!important}`}</style>
+
+      {/* ── UPPER ZONE ── */}
+      <div style={{ flexShrink:0, background: L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+        {/* L1 heading bar */}
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background: L1, borderRadius:'6px 6px 0 0', padding:'10px 16px 10px 20px', display:'flex', justifyContent:'space-between', alignItems:'center', gap:12 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <span style={{ fontSize:16 }}>👤</span>
+              <div>
+                <div style={{ fontWeight:800, color:'#fff', fontSize:14 }}>User Management</div>
+                <div style={{ fontSize:10, color:'rgba(255,255,255,0.75)', marginTop:1 }}>
+                  {isSuperAdmin
+                    ? 'SUPERADMIN — Manage all users, all entities, all roles, including delete'
+                    : `ADMIN — Manage users in ${myEntityCode} · Cannot assign ADMIN or higher`}
+                </div>
+              </div>
+            </div>
+            <button
+              style={{ background:'rgba(255,255,255,0.18)', color:'#fff', border:'1px solid rgba(255,255,255,0.4)', borderRadius:8, padding:'7px 16px', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}
+              onClick={()=>setShowBanner(true)}
+            >+ Add New User</button>
           </div>
         </div>
-        <button style={{ background:'#454D9B', color:'#fff', border:'none', borderRadius:10, padding:'10px 0', cursor:'pointer', fontSize:13, fontWeight:700, minWidth:160, textAlign:'center', boxShadow:'0 3px 8px rgba(69,77,155,0.35)', fontFamily:"'Poppins',sans-serif" }} onClick={()=>setShowBanner(true)}>Add New User</button>
-      </div>
 
-      {/* Flash */}
-      {msg && (
-        <div style={{ background: msg.type==='success'?'#e8f5e9':'#ffebee', border:`1px solid ${msg.type==='success'?'#a5d6a7':'#ef9a9a'}`, borderRadius:10, padding:'12px 16px', marginBottom:14, fontSize:13, fontWeight:700, color: msg.type==='success'?'#2e7d32':'#c62828' }}>
-          {msg.text}
-        </div>
-      )}
-
-      {/* KPI cards */}
-      <div style={{ display:'flex', gap:10, marginBottom:16, flexWrap:'wrap', alignItems:'stretch' }}>
-        {[
-          { label:'Total Users', value: scopedUsers.length, color:'#3949ab', icon:'👥' },
-          { label:'Active',      value: activeCount,         color:'#2e7d32', icon:'✅' },
-          { label:'Inactive',    value: inactiveCount,       color:'#78909c', icon:'🚫' },
-          ...(isSuperAdmin ? ENTITIES.map(e => ({
-            label: e.code, value: users.filter(u => u.entity_code === e.code).length, color: e.color, icon:'🏢'
-          })) : []),
-        ].map(c => (
-          <div key={c.label} style={{ background:`linear-gradient(135deg,${c.color}cc 0%,${c.color} 100%)`, borderRadius:10, padding:'10px 16px', flexShrink:0, minWidth:110, boxShadow:`0 3px 10px ${c.color}44`, position:'relative', overflow:'hidden' }}>
-            <div style={{ position:'absolute', right:8, top:6, fontSize:16, opacity:0.25 }}>{c.icon}</div>
-            <div style={{ fontSize:9, color:'rgba(255,255,255,0.85)', fontWeight:700, textTransform:'uppercase', letterSpacing:0.8, fontFamily:"'Poppins',sans-serif" }}>{c.label}</div>
-            <div style={{ fontSize:22, fontWeight:900, color:'#fff', lineHeight:1.2, marginTop:2 }}>{c.value}</div>
+        {/* Flash */}
+        {msg && (
+          <div style={{ padding:'8px 28px 0' }}>
+            <div style={{ background: msg.type==='success'?'#e8f5e9':'#ffebee', border:`1px solid ${msg.type==='success'?'#a5d6a7':'#ef9a9a'}`, borderRadius:8, padding:'10px 14px', fontSize:13, fontWeight:700, color: msg.type==='success'?'#2e7d32':'#c62828' }}>
+              {msg.text}
+            </div>
           </div>
-        ))}
-      </div>
+        )}
 
-      {/* ADMIN privilege banner */}
-      {!isSuperAdmin && (
-        <div style={{ background:'#fff3e0', border:'1px solid #ffcc80', borderRadius:10, padding:'10px 16px', marginBottom:14, fontSize:12, color:'#e65100' }}>
-          🔒 <strong>Your admin scope:</strong> You can see and manage users in <strong>{myEntityCode}</strong> only. Roles you can assign: {ADMIN_ROLES.join(', ')}. SUPERADMIN or ADMIN accounts are not visible.
-        </div>
-      )}
-
-      {/* Role distribution bar */}
-      <div style={{ ...S.card, padding:'14px 18px', marginBottom:14 }}>
-        <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:8 }}>ROLE BREAKDOWN</div>
-        <div style={{ display:'flex', gap:2, height:8, borderRadius:6, overflow:'hidden', marginBottom:8 }}>
-          {ALL_ROLES.map(r => {
-            const cnt = scopedUsers.filter(u => u.role === r).length
-            const pct = scopedUsers.length ? (cnt / scopedUsers.length) * 100 : 0
-            return pct > 0 ? <div key={r} title={`${r}: ${cnt}`} style={{ width:`${pct}%`, background: ROLE_META[r].color }} /> : null
-          })}
-        </div>
-        <div style={{ display:'flex', flexWrap:'wrap', gap:10 }}>
-          {ALL_ROLES.filter(r => scopedUsers.some(u => u.role === r)).map(r => {
-            const cnt = scopedUsers.filter(u => u.role === r).length
-            const m   = ROLE_META[r]
+        {/* KPI cards */}
+        <div style={{ display:'flex', gap:10, padding:'10px 28px', flexWrap:'nowrap', overflowX:'auto' }}>
+          {[
+            { label:'Total Users', value: scopedUsers.length, icon:'👥' },
+            { label:'Active',      value: activeCount,         icon:'✅' },
+            { label:'Inactive',    value: inactiveCount,       icon:'🚫' },
+            ...(isSuperAdmin ? ENTITIES.map(e => ({ label: e.code, value: users.filter(u => u.entity_code === e.code).length, icon:'🏢' })) : []),
+          ].map((c, i) => {
+            const g = kpiCardGradient(i % 4, L1, L2, L3)
             return (
-              <div key={r} style={{ display:'flex', alignItems:'center', gap:5, fontSize:11 }}>
-                <div style={{ width:8, height:8, borderRadius:'50%', background: m.color }} />
-                <span style={{ color:'#546e7a' }}>{m.icon} {r}</span>
-                <span style={{ fontWeight:800, color:'#1a2e3d' }}>{cnt}</span>
+              <div key={c.label} style={{ ...g, width:160, minWidth:160, height:62, borderRadius:10, padding:'10px 14px', flexShrink:0, position:'relative', overflow:'hidden', boxSizing:'border-box' }}>
+                <div style={{ position:'absolute', right:8, top:6, fontSize:16, opacity:0.25 }}>{c.icon}</div>
+                <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:0.8, opacity:0.8, marginBottom:2 }}>{c.label}</div>
+                <div style={{ fontSize:22, fontWeight:900, lineHeight:1.2 }}>{c.value}</div>
               </div>
             )
           })}
         </div>
-      </div>
 
-      {/* Entity tabs (SUPERADMIN only) */}
-      {isSuperAdmin && (
-        <div style={{ marginBottom:12 }}>
-          {['ALL', ...ENTITIES.map(e => e.code)].map(code => (
-            <button key={code} style={S.etab(entityTab === code)} onClick={() => setEntityTab(code)}>
-              {code === 'ALL' ? '🌐 All Entities' : `${ENTITIES.find(e => e.code === code)?.name || code}`}
-              <span style={{ marginLeft:6, fontSize:10, opacity:0.7 }}>
-                ({code === 'ALL' ? users.length : users.filter(u => u.entity_code === code).length})
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Filters */}
-      <div style={{ ...S.card, padding:'10px 14px', display:'flex', gap:10, flexWrap:'wrap', marginBottom:14 }}>
-        <input style={{ ...S.inp, maxWidth:240 }} placeholder="Search name, email, department…" value={filter.search} onChange={e => setFilter(f => ({ ...f, search: e.target.value }))} />
-        <select style={{ ...S.inp, maxWidth:200 }} value={filter.role} onChange={e => setFilter(f => ({ ...f, role: e.target.value }))}>
-          <option value="">All Roles</option>
-          {(isSuperAdmin ? ALL_ROLES : ADMIN_ROLES).map(r => <option key={r}>{r}</option>)}
-        </select>
-        {(filter.role || filter.search) && (
-          <button style={{ ...S.btn('#aab2bd'), padding:'7px 14px', fontSize:11 }} onClick={() => setFilter({ role:'', search:'' })}>✕ Clear</button>
+        {/* ADMIN privilege banner */}
+        {!isSuperAdmin && (
+          <div style={{ padding:'0 28px 8px' }}>
+            <div style={{ background:'#fff3e0', border:'1px solid #ffcc80', borderRadius:8, padding:'10px 14px', fontSize:12, color:'#e65100' }}>
+              🔒 <strong>Your admin scope:</strong> You can see and manage users in <strong>{myEntityCode}</strong> only. Roles you can assign: {ADMIN_ROLES.join(', ')}. SUPERADMIN or ADMIN accounts are not visible.
+            </div>
+          </div>
         )}
-        <div style={{ fontSize:12, color:'#6b7c93', alignSelf:'center' }}>{filtered.length} users shown</div>
-      </div>
 
-      {/* Users table */}
-      <div style={{ ...S.card, padding:0, overflow:'hidden' }}>
-        {loading
-          ? <div style={{ textAlign:'center', padding:40, color:'#6b7c93' }}>Loading…</div>
-          : (
+        {/* Role distribution bar */}
+        <div style={{ padding:'0 28px 10px' }}>
+          <div style={{ background:'#fff', borderRadius:8, padding:'12px 16px', boxShadow:'0 1px 4px rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize:10, fontWeight:700, color: SUB, marginBottom:7, textTransform:'uppercase', letterSpacing:0.8 }}>Role Breakdown</div>
+            <div style={{ display:'flex', gap:2, height:7, borderRadius:6, overflow:'hidden', marginBottom:7 }}>
+              {ALL_ROLES.map(r => {
+                const cnt = scopedUsers.filter(u => u.role === r).length
+                const pct = scopedUsers.length ? (cnt / scopedUsers.length) * 100 : 0
+                return pct > 0 ? <div key={r} title={`${r}: ${cnt}`} style={{ width:`${pct}%`, background: ROLE_META[r].color }} /> : null
+              })}
+            </div>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:10 }}>
+              {ALL_ROLES.filter(r => scopedUsers.some(u => u.role === r)).map(r => {
+                const cnt = scopedUsers.filter(u => u.role === r).length
+                const m   = ROLE_META[r]
+                return (
+                  <div key={r} style={{ display:'flex', alignItems:'center', gap:5, fontSize:11 }}>
+                    <div style={{ width:7, height:7, borderRadius:'50%', background: m.color }} />
+                    <span style={{ color: SUB }}>{m.icon} {r}</span>
+                    <span style={{ fontWeight:800, color: MAIN }}>{cnt}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Entity tabs (SUPERADMIN only) */}
+        {isSuperAdmin && (
+          <div style={{ padding:'0 28px 8px', display:'flex', gap:4, flexWrap:'wrap' }}>
+            {['ALL', ...ENTITIES.map(e => e.code)].map(code => (
+              <button key={code} style={{
+                padding:'5px 14px', border:'none', borderRadius:7, cursor:'pointer', fontSize:11, fontWeight:700,
+                background: entityTab === code ? L3 : '#e8eaf2',
+                color: entityTab === code ? '#fff' : SUB
+              }} onClick={() => setEntityTab(code)}>
+                {code === 'ALL' ? '🌐 All Entities' : `${ENTITIES.find(e => e.code === code)?.name || code}`}
+                <span style={{ marginLeft:5, fontSize:10, opacity:0.7 }}>
+                  ({code === 'ALL' ? users.length : users.filter(u => u.entity_code === code).length})
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Filter bar */}
+        <div style={{ padding:'0 28px 10px', display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>
+          <input
+            style={{ padding:'7px 10px', border:'1px solid #dde3ec', borderRadius:7, fontSize:12, outline:'none', width:220 }}
+            placeholder="Search name, email, department…"
+            value={filter.search}
+            onChange={e => setFilter(f => ({ ...f, search: e.target.value }))}
+          />
+          <select
+            style={{ padding:'7px 10px', border:'1px solid #dde3ec', borderRadius:7, fontSize:12, outline:'none' }}
+            value={filter.role}
+            onChange={e => setFilter(f => ({ ...f, role: e.target.value }))}
+          >
+            <option value="">All Roles</option>
+            {(isSuperAdmin ? ALL_ROLES : ADMIN_ROLES).map(r => <option key={r}>{r}</option>)}
+          </select>
+          {(filter.role || filter.search) && (
+            <button style={{ background:'#aab2bd', color:'#fff', border:'none', borderRadius:7, padding:'7px 12px', fontSize:11, fontWeight:700, cursor:'pointer' }}
+              onClick={() => setFilter({ role:'', search:'' })}>✕ Clear</button>
+          )}
+          <div style={{ marginLeft:'auto', fontSize:11, color: SUB, fontWeight:700, background:'#fff', border:`1px solid ${L1}`, borderRadius:20, padding:'3px 12px' }}>
+            {filtered.length} users
+          </div>
+        </div>
+
+        {/* Column headers */}
+        <div style={{ padding:'0 28px' }}>
           <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed' }}>
             <colgroup>
               <col style={{ width:'18%' }} />
@@ -449,104 +489,120 @@ export default function UserManagement({ entityId: propEntityId }) {
             </colgroup>
             <thead>
               <tr>
-                <th style={S.th}>User</th>
-                <th style={S.th}>Email</th>
-                <th style={S.th}>Role</th>
-                <th style={S.th}>Entity</th>
-                <th style={S.th}>Department</th>
-                <th style={S.th}>Status</th>
-                <th style={{ ...S.th, textAlign:'center' }}>Details</th>
+                {['User','Email','Role','Entity','Department','Status','Details'].map((h, hi) => (
+                  <th key={h} style={{ background: L3, color:'#fff', padding:'9px 14px', fontWeight:700, textAlign: hi===6?'center':'left', fontSize:11, textTransform:'uppercase', letterSpacing:0.5 }}>{h}</th>
+                ))}
               </tr>
             </thead>
-            <tbody>
-              {filtered.length === 0 && (
-                <tr><td colSpan={7} style={{ ...S.td, textAlign:'center', color:'#aab2bd', padding:32 }}>No users found</td></tr>
-              )}
-              {filtered.map((u, i) => {
-                const rm       = ROLE_META[u.role] || ROLE_META.VIEWER
-                const ent      = ENTITIES.find(e => e.code === u.entity_code)
-                const canEdit  = isSuperAdmin || (!['SUPERADMIN','ADMIN'].includes(u.role))
-                const expanded = expandedRows.has(u.id)
-                const toggleRow = () => setExpandedRows(prev => {
-                  const next = new Set(prev)
-                  expanded ? next.delete(u.id) : next.add(u.id)
-                  return next
-                })
-                const rowBg = !u.is_active ? '#fafafa' : i % 2 === 0 ? '#fff' : '#fafbfc'
-                return (
-                  <>
-                    {/* ── Main row ── */}
-                    <tr key={u.id} style={{ background: rowBg, opacity: u.is_active ? 1 : 0.7 }}>
-                      <td style={S.td}>
-                        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                          <div style={{ width:34, height:34, borderRadius:'50%', background:`${rm.color}22`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>
-                            {u.avatar_url ? <img src={u.avatar_url} style={{ width:'100%', height:'100%', borderRadius:'50%', objectFit:'cover' }} alt="" /> : rm.icon}
-                          </div>
-                          <div style={{ minWidth:0 }}>
-                            <div style={{ fontWeight:700, color:'#1a2e3d', fontSize:12, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{u.full_name || '—'}</div>
-                            {u.phone && <div style={{ fontSize:10, color:'#6b7c93' }}>{u.phone}</div>}
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{ ...S.td, fontSize:11, color:'#546e7a', wordBreak:'break-all' }}>{u.email || '—'}</td>
-                      <td style={S.td}>
-                        <span style={{ background: rm.bg, color: rm.color, padding:'3px 8px', borderRadius:20, fontSize:10, fontWeight:800, whiteSpace:'nowrap' }}>
-                          {rm.icon} {u.role}
-                        </span>
-                      </td>
-                      <td style={S.td}>
-                        {ent
-                          ? <span style={{ background:`${ent.color}22`, color: ent.color, padding:'3px 8px', borderRadius:20, fontSize:10, fontWeight:800 }}>{ent.code}</span>
-                          : <span style={{ color:'#aab2bd' }}>—</span>}
-                      </td>
-                      <td style={{ ...S.td, fontSize:11, color:'#6b7c93', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{u.department || '—'}</td>
-                      <td style={S.td}>
-                        <span style={{ background: u.is_active ? '#e8f5e9' : '#f5f7fa', color: u.is_active ? '#2e7d32' : '#aab2bd', padding:'3px 8px', borderRadius:20, fontSize:10, fontWeight:800, whiteSpace:'nowrap' }}>
-                          {u.is_active ? '● Active' : '○ Inactive'}
-                        </span>
-                      </td>
-                      <td style={{ ...S.td, textAlign:'center' }}>
-                        <button
-                          onClick={toggleRow}
-                          style={{ background:'none', border:'1px solid #dde3ec', borderRadius:6, width:28, height:28, cursor:'pointer', fontSize:13, color:'#454D9B', display:'inline-flex', alignItems:'center', justifyContent:'center', transition:'transform 0.2s', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                          title="Show details & actions"
-                        >▾</button>
-                      </td>
-                    </tr>
+          </table>
+        </div>
 
-                    {/* ── Collapsible detail row ── */}
-                    {expanded && (
-                      <tr key={`${u.id}-detail`} style={{ background:'#F0F1FA' }}>
-                        <td colSpan={7} style={{ padding:'10px 18px', borderBottom:'2px solid #AAAED0' }}>
-                          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10 }}>
-                            <div style={{ fontSize:11, color:'#546e7a' }}>
-                              <span style={{ fontWeight:700, color:'#454D9B', marginRight:6 }}>Last Sign In:</span>
-                              {u.last_sign_in ? new Date(u.last_sign_in).toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : 'Never'}
+      </div>
+
+      {/* ── SCROLL ZONE ── */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
+        <div style={{ background:'#fff', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 8px rgba(0,0,0,0.08)', overflow:'hidden' }}>
+          {loading
+            ? <div style={{ textAlign:'center', padding:40, color: SUB }}>Loading…</div>
+            : (
+            <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed' }}>
+              <colgroup>
+                <col style={{ width:'18%' }} />
+                <col style={{ width:'20%' }} />
+                <col style={{ width:'16%' }} />
+                <col style={{ width:'10%' }} />
+                <col style={{ width:'16%' }} />
+                <col style={{ width:'10%' }} />
+                <col style={{ width:'10%' }} />
+              </colgroup>
+              <tbody>
+                {filtered.length === 0 && (
+                  <tr><td colSpan={7} style={{ ...S.td, textAlign:'center', color:'#aab2bd', padding:32 }}>No users found</td></tr>
+                )}
+                {filtered.map((u, i) => {
+                  const rm       = ROLE_META[u.role] || ROLE_META.VIEWER
+                  const ent      = ENTITIES.find(e => e.code === u.entity_code)
+                  const canEdit  = isSuperAdmin || (!['SUPERADMIN','ADMIN'].includes(u.role))
+                  const expanded = expandedRows.has(u.id)
+                  const toggleRow = () => setExpandedRows(prev => {
+                    const next = new Set(prev)
+                    expanded ? next.delete(u.id) : next.add(u.id)
+                    return next
+                  })
+                  const rowBg = !u.is_active ? '#fafafa' : i % 2 === 0 ? '#fff' : '#fafbfc'
+                  return (
+                    <>
+                      <tr key={u.id} style={{ background: rowBg, opacity: u.is_active ? 1 : 0.7 }}>
+                        <td style={S.td}>
+                          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                            <div style={{ width:34, height:34, borderRadius:'50%', background:`${rm.color}22`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>
+                              {u.avatar_url ? <img src={u.avatar_url} style={{ width:'100%', height:'100%', borderRadius:'50%', objectFit:'cover' }} alt="" /> : rm.icon}
                             </div>
-                            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-                              {canEdit && (
-                                <button onClick={() => openEdit(u)} style={{ ...S.btn('#1565C0'), padding:'5px 12px', fontSize:11 }}>✏️ Edit</button>
-                              )}
-                              {canEdit && (
-                                <button onClick={() => toggleActive(u)} style={{ ...S.btn(u.is_active ? '#c62828' : '#2e7d32'), padding:'5px 12px', fontSize:11 }}>
-                                  {u.is_active ? '⊘ Deactivate' : '✓ Reactivate'}
-                                </button>
-                              )}
-                              <button onClick={() => sendPasswordReset(u)} style={{ ...S.btn('#e65100'), padding:'5px 12px', fontSize:11 }}>🔑 Reset Password</button>
-                              {isSuperAdmin && (
-                                <button onClick={() => setConfirmDel(u)} style={{ ...S.btn('#b71c1c'), padding:'5px 12px', fontSize:11 }}>🗑 Delete</button>
-                              )}
+                            <div style={{ minWidth:0 }}>
+                              <div style={{ fontWeight:700, color: MAIN, fontSize:12, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{u.full_name || '—'}</div>
+                              {u.phone && <div style={{ fontSize:10, color: SUB }}>{u.phone}</div>}
                             </div>
                           </div>
                         </td>
+                        <td style={{ ...S.td, fontSize:11, color: SUB, wordBreak:'break-all' }}>{u.email || '—'}</td>
+                        <td style={S.td}>
+                          <span style={{ background: rm.bg, color: rm.color, padding:'3px 8px', borderRadius:20, fontSize:10, fontWeight:800, whiteSpace:'nowrap' }}>
+                            {rm.icon} {u.role}
+                          </span>
+                        </td>
+                        <td style={S.td}>
+                          {ent
+                            ? <span style={{ background:`${ent.color}22`, color: ent.color, padding:'3px 8px', borderRadius:20, fontSize:10, fontWeight:800 }}>{ent.code}</span>
+                            : <span style={{ color:'#aab2bd' }}>—</span>}
+                        </td>
+                        <td style={{ ...S.td, fontSize:11, color: SUB, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{u.department || '—'}</td>
+                        <td style={S.td}>
+                          <span style={{ background: u.is_active ? '#e8f5e9' : '#f5f7fa', color: u.is_active ? '#2e7d32' : '#aab2bd', padding:'3px 8px', borderRadius:20, fontSize:10, fontWeight:800, whiteSpace:'nowrap' }}>
+                            {u.is_active ? '● Active' : '○ Inactive'}
+                          </span>
+                        </td>
+                        <td style={{ ...S.td, textAlign:'center' }}>
+                          <button
+                            onClick={toggleRow}
+                            style={{ background:'none', border:'1px solid #dde3ec', borderRadius:6, width:28, height:28, cursor:'pointer', fontSize:13, color: L3, display:'inline-flex', alignItems:'center', justifyContent:'center', transition:'transform 0.2s', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                            title="Show details & actions"
+                          >▾</button>
+                        </td>
                       </tr>
-                    )}
-                  </>
-                )
-              })}
-            </tbody>
-          </table>
-        )}
+
+                      {expanded && (
+                        <tr key={`${u.id}-detail`} style={{ background: L2 }}>
+                          <td colSpan={7} style={{ padding:'10px 18px', borderBottom:`2px solid ${L1}` }}>
+                            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10 }}>
+                              <div style={{ fontSize:11, color: SUB }}>
+                                <span style={{ fontWeight:700, color: L3, marginRight:6 }}>Last Sign In:</span>
+                                {u.last_sign_in ? new Date(u.last_sign_in).toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : 'Never'}
+                              </div>
+                              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                                {canEdit && (
+                                  <button onClick={() => openEdit(u)} style={{ ...S.btn('#1565C0'), padding:'5px 12px', fontSize:11 }}>✏️ Edit</button>
+                                )}
+                                {canEdit && (
+                                  <button onClick={() => toggleActive(u)} style={{ ...S.btn(u.is_active ? '#c62828' : '#2e7d32'), padding:'5px 12px', fontSize:11 }}>
+                                    {u.is_active ? '⊘ Deactivate' : '✓ Reactivate'}
+                                  </button>
+                                )}
+                                <button onClick={() => sendPasswordReset(u)} style={{ ...S.btn('#e65100'), padding:'5px 12px', fontSize:11 }}>🔑 Reset Password</button>
+                                {isSuperAdmin && (
+                                  <button onClick={() => setConfirmDel(u)} style={{ ...S.btn('#b71c1c'), padding:'5px 12px', fontSize:11 }}>🗑 Delete</button>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
 
       {/* ── User Banner ── */}
@@ -802,16 +858,6 @@ export default function UserManagement({ entityId: propEntityId }) {
         </div>
       )}
 
-      {/* Edge Function setup reminder */}
-      <div style={{ ...S.card, background:'#f5f7fa', border:'1px solid #e8edf2', marginTop:8 }}>
-        <div style={{ fontWeight:800, fontSize:12, color:'#1a2e3d', marginBottom:6 }}>⚡ Edge Function Setup (one-time, if not done)</div>
-        <div style={{ fontSize:11, color:'#546e7a', lineHeight:1.9 }}>
-          Inviting users requires the <code>invite-user</code> Edge Function deployed to Supabase.<br/>
-          <strong>Dashboard:</strong> Supabase → Edge Functions → New Function → paste <code>supabase/functions/invite-user/index.ts</code><br/>
-          <strong>CLI:</strong> <code style={{ background:'#e8edf2', padding:'1px 6px', borderRadius:4 }}>supabase functions deploy invite-user --no-verify-jwt</code><br/>
-          Set secret in Edge Functions → Secrets: <code style={{ background:'#e8edf2', padding:'1px 6px', borderRadius:4 }}>SUPABASE_SERVICE_ROLE_KEY</code>
-        </div>
-      </div>
     </div>
   )
 }

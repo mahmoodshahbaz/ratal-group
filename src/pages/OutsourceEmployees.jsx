@@ -1,7 +1,7 @@
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
 import FormShell from '../components/FormShell'
-import { GROUP_COLORS } from '../styles/appStyles'
+import { GROUP_COLORS, kpiCardGradient } from '../styles/appStyles'
 
 /**
  * OutsourceEmployees.jsx  v2
@@ -27,6 +27,8 @@ import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { QRButton } from '../components/QRCard'
 const MC = GROUP_COLORS.HR
+const L1 = '#BCA99A'
+const L2 = '#F7F2ED'
 const L3 = '#795338'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -387,15 +389,40 @@ export default function OutsourceEmployees({ entityId, entityCode }) {
   ]
 
   // ── Grid for list ─────────────────────────────────────────────────────────
-  const GRID = '100px 1fr 80px 110px 120px 110px 130px 52px'
+  const GRID = '90px 1fr 72px 100px 100px 105px 120px 68px'
 
   return (
-    <div>
-      {/* ── Sticky header ── */}
-      <div style={{ position:'sticky', top:0, zIndex:10, background:'#f0f4f8', paddingTop:16, paddingBottom:4 }}>
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:'Poppins,sans-serif' }}>
+      {/* ══ UPPER ZONE ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
 
-        {/* Toolbar */}
-        <div style={{ display:'flex', gap:10, alignItems:'center', marginBottom:14, flexWrap:'wrap' }}>
+        {/* L1 Heading bar */}
+        <div style={{ background:L2, padding:'6px 28px 0' }}>
+        <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <div>
+            <div style={{ fontSize:16, fontWeight:800, color:'#fff', fontFamily:'Poppins,sans-serif' }}>👷 Contract & Outsource Persons</div>
+            <div style={{ fontSize:11, color:'rgba(255,255,255,0.8)', fontFamily:'Poppins,sans-serif' }}>CON = short-term daily · OUT = long-term monthly</div>
+          </div>
+          <button style={{ background:L3, color:'#fff', border:'none', borderRadius:4, padding:'7px 16px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'Poppins,sans-serif' }} onClick={()=>setShowBanner(true)}>＋ Add Person</button>
+        </div>
+        </div>
+
+        {/* KPI cards strip */}
+        <div style={{ display:'flex', gap:8, padding:'10px 28px 12px', flexWrap:'wrap', background:L2 }}>
+          {kpiCards.map((c,i)=>{
+            const cardStyle = kpiCardGradient(i, L1, L2, L3)
+            return (
+              <div key={c.label} style={{ ...cardStyle, width:160, height:62, borderRadius:10, padding:'0 14px', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.10)', display:'flex', flexDirection:'column', justifyContent:'center', boxSizing:'border-box' }}>
+                <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, fontFamily:'Poppins,sans-serif', marginBottom:2, opacity:0.75 }}>{c.label}</div>
+                <div style={{ fontSize:18, fontWeight:800, fontFamily:'Poppins,sans-serif', lineHeight:1.1 }}>{c.value}</div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Filters row */}
+        <div style={{ padding:'0 28px 10px', background:L2 }}>
+        <div style={{ background:'#fff', borderRadius:8, padding:'10px 14px', display:'flex', gap:10, flexWrap:'wrap', alignItems:'center', boxShadow:'0 1px 4px rgba(0,0,0,0.08)' }}>
           <input style={{ ...S.inp, maxWidth:260, padding:'8px 12px' }} placeholder="🔍 Search name, code, trade…" value={search} onChange={e=>setSearch(e.target.value)} />
           {['ALL','ACTIVE','INACTIVE'].map(s=>(
             <button key={s} onClick={()=>setFilterStatus(s)} style={{ background:filterStatus===s?L3:'#fff', color:filterStatus===s?'#fff':'#6b7c93', border:filterStatus===s?'none':'1px solid #dde3ec', borderRadius:7, padding:'7px 14px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'Poppins,sans-serif' }}>{s}</button>
@@ -404,29 +431,19 @@ export default function OutsourceEmployees({ entityId, entityCode }) {
           {['ALL','CON','OUT'].map(t=>(
             <button key={t} onClick={()=>setFilterType(t)} style={{ background:filterType===t?(t==='CON'?'#f57f17':t==='OUT'?'#2e7d32':L3):'#fff', color:filterType===t?'#fff':'#6b7c93', border:filterType===t?'none':'1px solid #dde3ec', borderRadius:7, padding:'7px 14px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'Poppins,sans-serif' }}>{t==='ALL'?'All Types':t}</button>
           ))}
-          <div style={{ marginLeft:'auto' }}>
-            <button style={S.btn()} onClick={()=>setShowBanner(true)}>＋ Add Person</button>
-          </div>
         </div>
-
-        {/* KPI cards */}
-        <div style={{ display:'flex', gap:12, marginBottom:14, flexWrap:'nowrap', overflowX:'auto', paddingBottom:2 }}>
-          {kpiCards.map(c=>(
-            <div key={c.label} style={{ flex:1, minWidth:140, borderRadius:12, padding:'14px 16px', background:c.bg, boxShadow:'0 4px 14px rgba(0,0,0,0.14)', display:'flex', alignItems:'center', gap:12 }}>
-              <div style={{ fontSize:26, filter:'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}>{c.icon}</div>
-              <div>
-                <div style={{ fontSize:20, fontWeight:900, color:'#fff', lineHeight:1 }}>{c.value}</div>
-                <div style={{ fontSize:10, color:'rgba(255,255,255,0.8)', marginTop:3, fontWeight:600 }}>{c.label}</div>
-              </div>
-            </div>
-          ))}
         </div>
 
         {/* Column headers */}
-        <div style={{ display:'grid', gridTemplateColumns:GRID, gap:'0 10px', background:L3, padding:'9px 14px', fontSize:11, fontWeight:700, color:'#fff', textTransform:'uppercase', letterSpacing:0.5, borderRadius:'6px 6px 0 0' }}>
-          {['Code','Full Name','Type','Trade','Department','Status','Project','QR'].map(h=><div key={h}>{h}</div>)}
+        <div style={{ padding:'0 28px', overflowX:'auto' }}>
+          <div style={{ display:'grid', gridTemplateColumns:GRID, gap:'0 10px', background:L3, padding:'9px 14px', fontSize:11, fontWeight:700, color:'#fff', textTransform:'uppercase', letterSpacing:0.5, borderRadius:'6px 6px 0 0', minWidth:760 }}>
+            {['Code','Full Name','Type','Trade','Department','Status','Project','QR'].map(h=><div key={h}>{h}</div>)}
+          </div>
         </div>
-      </div>
+      </div>{/* end upper zone */}
+
+      {/* ══ SCROLL ZONE ══ */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, paddingBottom:22 }}>
 
       {/* ── List ── */}
       {loading ? (
@@ -434,7 +451,7 @@ export default function OutsourceEmployees({ entityId, entityCode }) {
       ) : filtered.length === 0 ? (
         <div style={{ textAlign:'center', padding:60, color:'#aab2bd' }}>{persons.length===0?'No persons yet — click Add Person to start':'No results'}</div>
       ) : (
-        <div style={{ background:'#fff' }}>
+        <div style={{ background:'#fff', overflowX:'auto', margin:'0 28px', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 8px rgba(0,0,0,0.08)' }}>
           {filtered.map((p,i)=>{
             const pEngs  = engMap[p.id]||[]
             const active = pEngs.find(e=>e.status==='ACTIVE')
@@ -443,7 +460,7 @@ export default function OutsourceEmployees({ entityId, entityCode }) {
             const isPending = p.conversion_status==='PENDING'
             return (
               <div key={p.id} onClick={()=>openPerson(p)}
-                style={{ display:'grid', gridTemplateColumns:GRID, gap:'0 10px', padding:'10px 14px', borderBottom:'1px solid #f0f4f8', alignItems:'center', cursor:'pointer', background: isPending?'#fffde7':i%2===0?'#fff':'#fafbfc' }}
+                style={{ display:'grid', gridTemplateColumns:GRID, gap:'0 10px', padding:'10px 14px', borderBottom:'1px solid #f0f4f8', alignItems:'center', cursor:'pointer', minWidth:760, background: isPending?'#fffde7':i%2===0?'#fff':'#fafbfc' }}
                 onMouseEnter={e=>e.currentTarget.style.background='#f8fafd'}
                 onMouseLeave={e=>e.currentTarget.style.background=isPending?'#fffde7':i%2===0?'#fff':'#fafbfc'}
               >
@@ -470,6 +487,8 @@ export default function OutsourceEmployees({ entityId, entityCode }) {
           })}
         </div>
       )}
+
+      </div>{/* end scroll zone */}
 
       {/* ── Page Banner ── */}
       <PageBanner

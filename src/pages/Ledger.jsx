@@ -1,7 +1,10 @@
+const L1 = '#B4BA95'
+const L2 = '#F5F6EB'
+const L3 = '#606D2C'
+const PP = "'Poppins', sans-serif"
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
-import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
-const MC = GROUP_COLORS.Accounting
+import { GROUP_COLORS, kpiCardGradient, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
 /**
  * Ledger.jsx — General Ledger
  * Shows every posted journal entry line, filterable by account, date range, and source type.
@@ -12,7 +15,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
 const S = {
-  th:  { padding:'9px 12px', textAlign:'left', fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:0.4, background:MC, color:'#fff', whiteSpace:'nowrap' },
+  th:  { padding:'9px 12px', textAlign:'left', fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:0.4, background:L3, color:'#fff', whiteSpace:'nowrap' },
   td:  { padding:'9px 12px', fontSize:12, color:'#2d3a45', borderBottom:'1px solid #f0f4f8', verticalAlign:'middle' },
   inp: { padding:'8px 11px', borderRadius:7, border:'1px solid #dde3ec', fontSize:13, outline:'none', fontFamily:'inherit' },
 }
@@ -155,130 +158,145 @@ export default function Ledger({ entityId }) {
   }
 
   return (
-    <div style={{ padding:24, maxWidth:1300, margin:'0 auto' }}>
-      {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20 }}>
-        <div>
-          <div style={{ fontSize:12, color:'#64748b' }}>All posted journal entry lines · {filtered.length} entries</div>
-        </div>
-        <button onClick={handlePrint} disabled={!rows.length} style={{ background:'#1a2e3d', color:'#fff', border:'none', borderRadius:9, padding:'9px 20px', cursor:'pointer', fontSize:13, fontWeight:700 }}>
-          🖨 Print
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div style={{ background:'#fff', borderRadius:12, border:'1.5px solid #e8edf5', padding:16, marginBottom:16, display:'flex', gap:12, flexWrap:'wrap', alignItems:'flex-end' }}>
-        <div>
-          <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>Account</div>
-          <select style={{ ...S.inp, minWidth:260 }} value={selAccount} onChange={e=>setSelAccount(e.target.value)}>
-            <option value="ALL">— All Accounts —</option>
-            {Object.entries(coaGroups).map(([type, accounts]) => (
-              <optgroup key={type} label={type}>
-                {accounts.map(a => (
-                  <option key={a.id} value={a.id}>{a.account_code} — {a.account_name}</option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-        </div>
-        <div>
-          <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>Source Type</div>
-          <select style={S.inp} value={selType} onChange={e=>setSelType(e.target.value)}>
-            <option value="ALL">All Types</option>
-            {Object.entries(SOURCE_LABELS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
-          </select>
-        </div>
-        <div>
-          <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>From</div>
-          <input style={S.inp} type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} />
-        </div>
-        <div>
-          <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>To</div>
-          <input style={S.inp} type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} />
-        </div>
-        <div style={{ flex:1, minWidth:200 }}>
-          <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>Search</div>
-          <input style={{ ...S.inp, width:'100%', boxSizing:'border-box' }} placeholder="Entry #, account, narration…" value={search} onChange={e=>setSearch(e.target.value)} />
-        </div>
-      </div>
-
-      {/* Totals bar */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:16 }}>
-        {[
-          { label:'Total Debits',   value: totals.dr,              color:'#1a7f4b' },
-          { label:'Total Credits',  value: totals.cr,              color:'#c0392b' },
-          { label:'Net (DR − CR)', value: totals.dr - totals.cr,  color: (totals.dr-totals.cr)>=0?'#1a2e3d':'#c0392b' },
-        ].map(c=>(
-          <div key={c.label} style={{ background:'#fff', borderRadius:10, border:'1.5px solid #e8edf5', padding:'12px 16px' }}>
-            <div style={{ fontSize:11, color:'#6b7c93', fontWeight:700, textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>{c.label}</div>
-            <div style={{ fontSize:16, fontWeight:800, color:c.color, fontFamily:'monospace' }}>SAR {fmt(c.value)}</div>
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:PP }}>
+      {/* UPPER ZONE */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>📒 General Ledger</div>
+              <div style={{ fontSize:10, color:'#fff', opacity:0.8 }}>All posted journal entry lines · {filtered.length} entries</div>
+            </div>
+            <button onClick={handlePrint} disabled={!rows.length} style={{ background:'rgba(255,255,255,0.18)', color:'#fff', border:'1.5px solid rgba(255,255,255,0.4)', borderRadius:8, padding:'7px 16px', cursor:'pointer', fontSize:12, fontWeight:700 }}>
+              🖨 Print
+            </button>
           </div>
-        ))}
+        </div>
+        {/* KPI Cards */}
+        <div style={{ display:'flex', gap:10, padding:'10px 28px 12px' }}>
+          {[
+            { label:'Total Debits',   value:`SAR ${fmt(totals.dr)}`,           sub:'Debit entries' },
+            { label:'Total Credits',  value:`SAR ${fmt(totals.cr)}`,           sub:'Credit entries' },
+            { label:'Net (DR − CR)', value:`SAR ${fmt(totals.dr-totals.cr)}`, sub:'Balance' },
+          ].map((k,i)=>{
+            const g = kpiCardGradient(i,L1,L2,L3)
+            return (
+              <div key={k.label} style={{ ...g, width:160, height:62, borderRadius:10, padding:'0 14px', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.10)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+                <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', opacity:0.75, marginBottom:2 }}>{k.label}</div>
+                <div style={{ fontSize:13, fontWeight:800, lineHeight:1 }}>{k.value}</div>
+                <div style={{ fontSize:9, opacity:0.7, marginTop:2 }}>{k.sub}</div>
+              </div>
+            )
+          })}
+        </div>
+        {/* Filter Bar */}
+        <div style={{ padding:'6px 28px 8px', background:L2 }}>
+          <div style={{ background:'#fff', borderRadius:8, border:'1.5px solid #e8edf5', padding:'10px 14px', display:'flex', gap:12, flexWrap:'wrap', alignItems:'flex-end' }}>
+            <div>
+              <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>Account</div>
+              <select style={{ ...S.inp, minWidth:260 }} value={selAccount} onChange={e=>setSelAccount(e.target.value)}>
+                <option value="ALL">— All Accounts —</option>
+                {Object.entries(coaGroups).map(([type, accounts]) => (
+                  <optgroup key={type} label={type}>
+                    {accounts.map(a => (
+                      <option key={a.id} value={a.id}>{a.account_code} — {a.account_name}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>Source Type</div>
+              <select style={S.inp} value={selType} onChange={e=>setSelType(e.target.value)}>
+                <option value="ALL">All Types</option>
+                {Object.entries(SOURCE_LABELS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>From</div>
+              <input style={S.inp} type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} />
+            </div>
+            <div>
+              <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>To</div>
+              <input style={S.inp} type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} />
+            </div>
+            <div style={{ flex:1, minWidth:200 }}>
+              <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>Search</div>
+              <input style={{ ...S.inp, width:'100%', boxSizing:'border-box' }} placeholder="Entry #, account, narration…" value={search} onChange={e=>setSearch(e.target.value)} />
+            </div>
+          </div>
+        </div>
+        {/* Column Header Row */}
+        <div style={{ padding:'0 28px' }}>
+          <table style={{ width:'100%', borderCollapse:'collapse' }}>
+            <thead>
+              <tr>
+                {['Date','Entry No.','Type','Account','Narration / Description','Ref.','Debit (DR)','Credit (CR)'].map(h=>(
+                  <th key={h} style={{ ...S.th, background:L3, textAlign:['Debit (DR)','Credit (CR)'].includes(h)?'right':'left' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+          </table>
+        </div>
       </div>
-
-      {/* Table */}
-      <div style={{ background:'#fff', borderRadius:12, border:'1.5px solid #e8edf5', overflow:'hidden' }}>
-        {loading ? (
-          <div style={{ padding:60, textAlign:'center', color:'#aab2bd' }}>Loading ledger…</div>
-        ) : (
-          <div style={{ overflowX:'auto' }}>
-            <table style={{ width:'100%', borderCollapse:'collapse' }}>
-              <thead>
-                <tr>
-                  {['Date','Entry No.','Type','Account','Narration / Description','Ref.','Debit (DR)','Credit (CR)'].map(h=>(
-                    <th key={h} style={{ ...S.th, textAlign:['Debit (DR)','Credit (CR)'].includes(h)?'right':'left' }}>{h}</th>
+      {/* SCROLL ZONE */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
+        <div style={{ background:'#fff', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 8px rgba(0,0,0,0.08)' }}>
+          {loading ? (
+            <div style={{ padding:60, textAlign:'center', color:'#aab2bd' }}>Loading ledger…</div>
+          ) : (
+            <div style={{ overflowX:'auto' }}>
+              <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                <tbody>
+                  {filtered.length === 0 && (
+                    <tr><td colSpan={8} style={{ textAlign:'center', padding:40, color:'#aab2bd' }}>
+                      No journal entries in this period{selAccount!=='ALL'?' for the selected account':''}
+                    </td></tr>
+                  )}
+                  {filtered.map((r, i) => (
+                    <tr key={r.id} style={{ background: i%2===0?'#fff':'#fafbfc' }}>
+                      <td style={S.td}>{r.entry_date}</td>
+                      <td style={S.td}>
+                        <span style={{ background:'#e8edf5', borderRadius:5, padding:'2px 7px', fontSize:11, fontFamily:'monospace', fontWeight:700 }}>{r.entry_number}</span>
+                      </td>
+                      <td style={S.td}>
+                        <span style={{ fontSize:11, background:'#f0f4f8', borderRadius:10, padding:'2px 8px', fontWeight:700, color:'#4a5568', whiteSpace:'nowrap' }}>
+                          {SOURCE_LABELS[r.source_type]||r.source_type||'Manual'}
+                        </span>
+                      </td>
+                      <td style={S.td}>
+                        <span style={{ fontSize:11, color:'#aab2bd', fontFamily:'monospace', marginRight:6 }}>{r.account_code}</span>
+                        <span style={{ fontWeight:600 }}>{r.account_name}</span>
+                      </td>
+                      <td style={{ ...S.td, maxWidth:260 }}>
+                        <div>{r.narration||'—'}</div>
+                        {r.description && r.description !== r.narration && (
+                          <div style={{ fontSize:11, color:'#6b7c93', marginTop:2 }}>{r.description}</div>
+                        )}
+                      </td>
+                      <td style={{ ...S.td, fontSize:11, color:'#6b7c93', whiteSpace:'nowrap' }}>{r.reference||'—'}</td>
+                      <td style={{ ...S.td, textAlign:'right', fontFamily:'monospace', color:'#1a7f4b', fontWeight:+r.debit_amount>0?700:400 }}>
+                        {+r.debit_amount  > 0 ? fmt(r.debit_amount)  : ''}
+                      </td>
+                      <td style={{ ...S.td, textAlign:'right', fontFamily:'monospace', color:'#c0392b', fontWeight:+r.credit_amount>0?700:400 }}>
+                        {+r.credit_amount > 0 ? fmt(r.credit_amount) : ''}
+                      </td>
+                    </tr>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 && (
-                  <tr><td colSpan={8} style={{ textAlign:'center', padding:40, color:'#aab2bd' }}>
-                    No journal entries in this period{selAccount!=='ALL'?' for the selected account':''}
-                  </td></tr>
+                </tbody>
+                {filtered.length > 0 && (
+                  <tfoot>
+                    <tr style={{ background:L3, color:'#fff' }}>
+                      <td colSpan={6} style={{ padding:'10px 12px', fontWeight:800, fontSize:12 }}>TOTAL ({filtered.length} entries)</td>
+                      <td style={{ padding:'10px 12px', textAlign:'right', fontFamily:'monospace', fontWeight:800, color:'#a8e6c3' }}>{fmt(filtered.reduce((s,r)=>s+(+r.debit_amount||0),0))}</td>
+                      <td style={{ padding:'10px 12px', textAlign:'right', fontFamily:'monospace', fontWeight:800, color:'#f5a0a0' }}>{fmt(filtered.reduce((s,r)=>s+(+r.credit_amount||0),0))}</td>
+                    </tr>
+                  </tfoot>
                 )}
-                {filtered.map((r, i) => (
-                  <tr key={r.id} style={{ background: i%2===0?'#fff':'#fafbfc' }}>
-                    <td style={S.td}>{r.entry_date}</td>
-                    <td style={S.td}>
-                      <span style={{ background:'#e8edf5', borderRadius:5, padding:'2px 7px', fontSize:11, fontFamily:'monospace', fontWeight:700 }}>{r.entry_number}</span>
-                    </td>
-                    <td style={S.td}>
-                      <span style={{ fontSize:11, background:'#f0f4f8', borderRadius:10, padding:'2px 8px', fontWeight:700, color:'#4a5568', whiteSpace:'nowrap' }}>
-                        {SOURCE_LABELS[r.source_type]||r.source_type||'Manual'}
-                      </span>
-                    </td>
-                    <td style={S.td}>
-                      <span style={{ fontSize:11, color:'#aab2bd', fontFamily:'monospace', marginRight:6 }}>{r.account_code}</span>
-                      <span style={{ fontWeight:600 }}>{r.account_name}</span>
-                    </td>
-                    <td style={{ ...S.td, maxWidth:260 }}>
-                      <div>{r.narration||'—'}</div>
-                      {r.description && r.description !== r.narration && (
-                        <div style={{ fontSize:11, color:'#6b7c93', marginTop:2 }}>{r.description}</div>
-                      )}
-                    </td>
-                    <td style={{ ...S.td, fontSize:11, color:'#6b7c93', whiteSpace:'nowrap' }}>{r.reference||'—'}</td>
-                    <td style={{ ...S.td, textAlign:'right', fontFamily:'monospace', color:'#1a7f4b', fontWeight:+r.debit_amount>0?700:400 }}>
-                      {+r.debit_amount  > 0 ? fmt(r.debit_amount)  : ''}
-                    </td>
-                    <td style={{ ...S.td, textAlign:'right', fontFamily:'monospace', color:'#c0392b', fontWeight:+r.credit_amount>0?700:400 }}>
-                      {+r.credit_amount > 0 ? fmt(r.credit_amount) : ''}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              {filtered.length > 0 && (
-                <tfoot>
-                  <tr style={{ background:'#1a2e3d', color:'#fff' }}>
-                    <td colSpan={6} style={{ padding:'10px 12px', fontWeight:800, fontSize:12 }}>TOTAL ({filtered.length} entries)</td>
-                    <td style={{ padding:'10px 12px', textAlign:'right', fontFamily:'monospace', fontWeight:800, color:'#a8e6c3' }}>{fmt(filtered.reduce((s,r)=>s+(+r.debit_amount||0),0))}</td>
-                    <td style={{ padding:'10px 12px', textAlign:'right', fontFamily:'monospace', fontWeight:800, color:'#f5a0a0' }}>{fmt(filtered.reduce((s,r)=>s+(+r.credit_amount||0),0))}</td>
-                  </tr>
-                </tfoot>
-              )}
-            </table>
-          </div>
-        )}
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import FormShell from '../components/FormShell'
 import PageBanner from '../components/PageBanner'
+import { kpiCardGradient } from '../styles/appStyles'
 
+const L1 = '#BCA99A'
+const L2 = '#F7F2ED'
 const L3 = '#795338'
 
 // Employee Engagement — Notice Board, Announcements, Birthdays, Work Anniversaries, Quick Links
@@ -105,103 +108,131 @@ export default function Engagement({ entityId }) {
   const highPriority      = notices.filter(n=>n.priority==='HIGH').length
 
   return (
-    <div>
-      {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
-        <div>
-          <div style={{ fontSize:12, color:'#64748b' }}>Notice board · Announcements · Celebrations · Company updates</div>
-        </div>
-        <button style={S.btn(L3)} onClick={openNew}>+ Post Notice</button>
-      </div>
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:'Poppins,sans-serif' }}>
 
-      {/* Celebrations & Anniversaries */}
-      {anniversaries.length > 0 && (
-        <div style={{ ...S.card, background:'linear-gradient(135deg,#e8f5e9,#f3e5f5)', marginBottom:16 }}>
-          <div style={{ fontWeight:800, color:'#2e7d32', fontSize:14, marginBottom:10 }}>🎉 Work Anniversaries This Week</div>
-          <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
-            {anniversaries.map(e=>{
-              const hd = new Date(e.hire_date)
-              const yrs = todayDate.getFullYear() - hd.getFullYear()
-              return (
-                <div key={e.id} style={{ background:'#fff', borderRadius:10, padding:'10px 16px', display:'flex', alignItems:'center', gap:10, boxShadow:'0 1px 6px rgba(0,0,0,0.08)' }}>
-                  <span style={{ fontSize:28 }}>🏅</span>
-                  <div>
-                    <div style={{ fontWeight:800, fontSize:13, color:'#1a2e3d' }}>{e.full_name||e.full_name_en}</div>
-                    <div style={{ fontSize:11, color:'#2e7d32', fontWeight:700 }}>{yrs} Year{yrs>1?'s':''} Anniversary 🎊</div>
+      {/* ══ UPPER ZONE ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+        {/* L1 Heading Bar */}
+        <div style={{ background:L2, padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff', fontFamily:'Poppins,sans-serif' }}>Notice Board</div>
+              <div style={{ fontSize:10, color:'rgba(255,255,255,0.8)', fontFamily:'Poppins,sans-serif' }}>Announcements · Celebrations · Company updates</div>
+            </div>
+            <button style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'7px 16px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'Poppins,sans-serif' }} onClick={openNew}>+ Post Notice</button>
+          </div>
+        </div>
+
+        {/* KPI strip */}
+        <div style={{ display:'flex', gap:8, padding:'10px 28px 12px', flexWrap:'wrap', background:L2 }}>
+          {[
+            { label:'Total Notices', value:notices.length },
+            { label:'Announcements', value:announcementCount },
+            { label:'Policies',      value:policyCount },
+            { label:'High Priority', value:highPriority },
+            { label:'Pinned',        value:pinned.length },
+          ].map((c,i)=>{
+            const cardStyle = kpiCardGradient(i, L1, L2, L3)
+            return (
+              <div key={c.label} style={{ ...cardStyle, width:160, height:62, borderRadius:10, padding:'0 14px', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.10)', display:'flex', flexDirection:'column', justifyContent:'center', boxSizing:'border-box' }}>
+                <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, opacity:0.75, marginBottom:2, fontFamily:'Poppins,sans-serif' }}>{c.label}</div>
+                <div style={{ fontSize:18, fontWeight:800, lineHeight:1.1, fontFamily:'Poppins,sans-serif' }}>{c.value}</div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Category filter tabs */}
+        <div style={{ padding:'0 28px', borderBottom:'2px solid #e8edf2', display:'flex', gap:0, overflowX:'auto' }}>
+          {['', ...CATEGORIES].map(c=>{
+            const active = catFilter === c
+            const label  = c === '' ? 'All' : c
+            return (
+              <button key={label} onClick={()=>setCat(c)}
+                style={{ background:'transparent', border:'none', borderBottom: active ? `2px solid ${L3}` : '2px solid transparent',
+                  color: active ? L3 : '#6b7c93', fontWeight: active ? 700 : 500, fontSize:11,
+                  padding:'8px 14px', cursor:'pointer', fontFamily:'Poppins,sans-serif', whiteSpace:'nowrap', marginBottom:-2 }}>
+                {label}
+              </button>
+            )
+          })}
+        </div>
+
+      </div>{/* end upper zone */}
+
+      {/* ══ SCROLL ZONE ══ */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
+
+        {/* Anniversaries */}
+        {anniversaries.length > 0 && (
+          <div style={{ background:'linear-gradient(135deg,#e8f5e9,#f3e5f5)', borderRadius:10, padding:'14px 18px', marginTop:16, marginBottom:16, boxShadow:'0 2px 8px rgba(0,0,0,0.07)' }}>
+            <div style={{ fontWeight:800, color:'#2e7d32', fontSize:13, marginBottom:10 }}>🎉 Work Anniversaries This Week</div>
+            <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+              {anniversaries.map(e=>{
+                const hd = new Date(e.hire_date)
+                const yrs = todayDate.getFullYear() - hd.getFullYear()
+                return (
+                  <div key={e.id} style={{ background:'#fff', borderRadius:10, padding:'10px 16px', display:'flex', alignItems:'center', gap:10, boxShadow:'0 1px 6px rgba(0,0,0,0.08)' }}>
+                    <span style={{ fontSize:28 }}>🏅</span>
+                    <div>
+                      <div style={{ fontWeight:800, fontSize:13, color:'#1a2e3d' }}>{e.full_name||e.full_name_en}</div>
+                      <div style={{ fontSize:11, color:'#2e7d32', fontWeight:700 }}>{yrs} Year{yrs>1?'s':''} Anniversary 🎊</div>
+                    </div>
                   </div>
-                </div>
-              )
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Pinned notices */}
+        {pinned.length > 0 && (
+          <div style={{ marginTop:16, marginBottom:16 }}>
+            <div style={{ fontSize:11, color:'#2e7d32', fontWeight:800, marginBottom:8 }}>📌 PINNED</div>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(340px,1fr))', gap:12 }}>
+              {pinned.map(n=><NoticeCard key={n.id} notice={n} onEdit={openEdit} onDelete={deleteNotice} onPin={togglePin} />)}
+            </div>
+          </div>
+        )}
+
+        {/* Regular notices */}
+        {loading ? <div style={{ textAlign:'center', padding:40, color:'#aab2bd', fontFamily:'Poppins,sans-serif' }}>Loading…</div> : (
+          <>
+            {normal.length===0 && pinned.length===0 && (
+              <div style={{ background:'#fff', borderRadius:10, padding:50, textAlign:'center', color:'#aab2bd', marginTop:16, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', fontFamily:'Poppins,sans-serif' }}>
+                <div style={{ fontSize:40, marginBottom:12 }}>📋</div>
+                No notices posted yet. Click "Post Notice" to add the first announcement.
+              </div>
+            )}
+            {normal.length > 0 && (
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(340px,1fr))', gap:12, marginTop:pinned.length>0?0:16 }}>
+                {normal.map(n=><NoticeCard key={n.id} notice={n} onEdit={openEdit} onDelete={deleteNotice} onPin={togglePin} />)}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Employee count footer */}
+        <div style={{ background:'#fff', borderRadius:10, padding:'16px 18px', marginTop:20, display:'flex', gap:20, alignItems:'center', boxShadow:'0 2px 8px rgba(0,0,0,0.07)' }}>
+          <div style={{ fontSize:24 }}>👥</div>
+          <div>
+            <div style={{ fontWeight:800, fontSize:15, color:'#1a2e3d', fontFamily:'Poppins,sans-serif' }}>{employees.length} Active Employees</div>
+            <div style={{ fontSize:11, color:'#6b7c93', fontFamily:'Poppins,sans-serif' }}>All entities combined in this view</div>
+          </div>
+          <div style={{ marginLeft:'auto', display:'flex', gap:10 }}>
+            {['SAUDI','EXPAT'].map(nat => {
+              const cnt = employees.filter(e=>(e.nationality||'EXPAT').toUpperCase()===nat).length
+              return cnt > 0 ? (
+                <span key={nat} style={{ background:nat==='SAUDI'?'#e8f5e9':'#e3f2fd', color:nat==='SAUDI'?'#2e7d32':'#1565C0', padding:'4px 12px', borderRadius:8, fontWeight:700, fontSize:12, fontFamily:'Poppins,sans-serif' }}>
+                  {nat==='SAUDI'?'🇸🇦':'🌍'} {nat}: {cnt}
+                </span>
+              ) : null
             })}
           </div>
         </div>
-      )}
 
-      {/* KPI row */}
-      <div style={{ display:'flex', gap:12, marginBottom:18, overflowX:'auto', flexWrap:'nowrap', paddingBottom:2 }}>
-        {[
-          { label:'Total Notices', value:notices.length,      color:'#5A32D4', icon:'📋' },
-          { label:'Announcements', value:announcementCount,   color:'#1565C0', icon:'📢' },
-          { label:'Policies',      value:policyCount,         color:'#6a1b9a', icon:'📘' },
-          { label:'High Priority', value:highPriority,        color:'#c62828', icon:'🔴' },
-          { label:'Pinned',        value:pinned.length,       color:'#2e7d32', icon:'📌' },
-        ].map(c=>(
-          <div key={c.label} style={{ ...S.card, flex:1, minWidth:120, marginBottom:0, display:'flex', alignItems:'center', gap:12, padding:'14px 16px' }}>
-            <div style={{ fontSize:24 }}>{c.icon}</div>
-            <div><div style={{ fontSize:18, fontWeight:800, color:c.color }}>{c.value}</div><div style={{ fontSize:11, color:'#6b7c93' }}>{c.label}</div></div>
-          </div>
-        ))}
-      </div>
-
-      {/* Category filter */}
-      <div style={{ display:'flex', gap:8, marginBottom:16, overflowX:'auto', flexWrap:'nowrap', paddingBottom:2 }}>
-        <button onClick={()=>setCat('')} style={{ ...S.btn(catFilter===''?L3:'#f0f4f8'), color:catFilter===''?'#fff':'#6b7c93', padding:'6px 14px', fontSize:11 }}>All</button>
-        {CATEGORIES.map(c=>(
-          <button key={c} onClick={()=>setCat(c==='all'?'':c)} style={{ ...S.btn(catFilter===c?CAT_COLORS[c]:'#f0f4f8'), color:catFilter===c?'#fff':'#6b7c93', padding:'6px 14px', fontSize:11 }}>{c}</button>
-        ))}
-      </div>
-
-      {/* Pinned notices */}
-      {pinned.length > 0 && (
-        <div style={{ marginBottom:16 }}>
-          <div style={{ fontSize:12, color:'#2e7d32', fontWeight:800, marginBottom:8 }}>📌 PINNED</div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(340px,1fr))', gap:12 }}>
-            {pinned.map(n=><NoticeCard key={n.id} notice={n} onEdit={openEdit} onDelete={deleteNotice} onPin={togglePin} />)}
-          </div>
-        </div>
-      )}
-
-      {/* Regular notices */}
-      {loading ? <div style={{ textAlign:'center', padding:40, color:'#aab2bd' }}>Loading…</div> : (
-        <>
-          {normal.length===0 && pinned.length===0 && (
-            <div style={{ ...S.card, textAlign:'center', padding:50, color:'#aab2bd' }}>
-              <div style={{ fontSize:40, marginBottom:12 }}>📋</div>
-              No notices posted yet. Click "Post Notice" to add the first announcement.
-            </div>
-          )}
-          {normal.length > 0 && (
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(340px,1fr))', gap:12 }}>
-              {normal.map(n=><NoticeCard key={n.id} notice={n} onEdit={openEdit} onDelete={deleteNotice} onPin={togglePin} />)}
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Employee count footer */}
-      <div style={{ ...S.card, marginTop:20, display:'flex', gap:20, alignItems:'center', background:'#f8fafd' }}>
-        <div style={{ fontSize:24 }}>👥</div>
-        <div><div style={{ fontWeight:800, fontSize:16, color:'#1a2e3d' }}>{employees.length} Active Employees</div><div style={{ fontSize:12, color:'#6b7c93' }}>All entities combined in this view</div></div>
-        <div style={{ marginLeft:'auto', display:'flex', gap:10 }}>
-          {['SAUDI','EXPAT'].map(nat => {
-            const cnt = employees.filter(e=>(e.nationality||'EXPAT').toUpperCase()===nat).length
-            return cnt > 0 ? (
-              <span key={nat} style={{ background:nat==='SAUDI'?'#e8f5e9':'#e3f2fd', color:nat==='SAUDI'?'#2e7d32':'#1565C0', padding:'4px 12px', borderRadius:8, fontWeight:700, fontSize:12 }}>
-                {nat==='SAUDI'?'🇸🇦':'🌍'} {nat}: {cnt}
-              </span>
-            ) : null
-          })}
-        </div>
-      </div>
+      </div>{/* end scroll zone */}
 
       {/* PAGE BANNER — new notice only */}
       <PageBanner

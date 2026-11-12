@@ -46,7 +46,7 @@
  */
 
 import React, { useState } from 'react'
-import { GROUP_COLORS, TYPE, TABLE, PAGE, btn, filterChip, searchInput } from '../styles/appStyles'
+import { GROUP_COLORS, TYPE, TABLE, PAGE, btn, filterChip, searchInput, CHAPTER_PALETTES, kpiCardGradient } from '../styles/appStyles'
 
 export default function ChapterPage({
   // Chapter identity
@@ -75,77 +75,106 @@ export default function ChapterPage({
   emptyMessage    = 'No records found',
   // KPI bar (optional)
   kpis            = [],   // [{ label, value, sub }]
-  // Extra sticky content rendered below section header (e.g. custom filter bar)
+  // Extra content rendered below section header (e.g. custom filter bar)
   filterBar,
   // Custom table / content override
   children,
 }) {
   const [expandedRow, setExpandedRow] = useState(null)
 
+  // Derive chapter palette — L2 = page bg, L1 = section heading bar, L3 = table headers + buttons
+  const pal = CHAPTER_PALETTES[chapterName] || CHAPTER_PALETTES.Main
+  const L1  = pal.L1
+  const L2  = pal.L2
+  const L3  = chapterColor || pal.L3
+
   const primaryCols   = columns.filter(c => c.primary !== false)
   const hasExpandable = !!renderExpand
 
   return (
     <div style={{
-      background: PAGE.BG,
+      display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden',
+      background: L2,
       fontFamily: TYPE.FONT,
-      minHeight: 0,
     }}>
 
       {/* H1 is now provided globally by AppShell — ChapterPage starts at H2 */}
 
       {/* ══════════════════════════════════════════════════════════
-          STICKY HEADER ZONE — KPI cards + section heading + filterBar
-          position:sticky keeps this pinned while content below scrolls
+          UPPER ZONE — naturally stationary (flexShrink:0)
+          KPI cards + section heading + action button + filters + filterBar
       ══════════════════════════════════════════════════════════ */}
       <div style={{
-        position: 'sticky', top: 0, zIndex: 30,
-        background: PAGE.BG,
+        flexShrink: 0,
+        background: L2,
         boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
+        zIndex: 10,
       }}>
 
-        {/* ── KPI bar (optional) ── */}
+        {/* ── Section H2 + action button — L1 bar inset to match table width ── */}
+        {(sectionTitle || onNew) && (
+          <div style={{ background: L2, padding: '6px 28px 0' }}>
+            <div style={{
+              background: L1,
+              padding: '8px 16px',
+              display: 'flex', alignItems: 'center',
+              justifyContent: 'space-between',
+            }}>
+              {sectionTitle && (
+                <h2 style={{
+                  fontSize: '15px', fontWeight: 700,
+                  color: '#fff', margin: 0,
+                  fontFamily: TYPE.FONT,
+                }}>
+                  {sectionTitle}
+                </h2>
+              )}
+              {onNew && (
+                <button onClick={onNew} style={{ ...btn.L1(L3), marginLeft: 'auto' }}>
+                  {newLabel}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── KPI bar (optional) — 160×62px fixed, dark-to-light chapter gradient ── */}
         {kpis.length > 0 && (
           <div style={{
-            display: 'flex', gap: 14, padding: '14px 28px',
-            background: '#fff', borderBottom: '1px solid #e8ecf4',
-            overflowX: 'auto',
+            display: 'flex', flexWrap: 'wrap', gap: 8,
+            padding: '14px 28px 10px',
+            background: L2,
+            borderBottom: `1px solid ${L1}44`,
           }}>
             {kpis.map((k, i) => {
-              const VIVID = [
-                ['#1565c0','#1976d2'],
-                ['#2e7d32','#388e3c'],
-                ['#b45309','#d97706'],
-                ['#7c3aed','#8b5cf6'],
-                ['#0369a1','#0284c7'],
-                ['#b91c1c','#dc2626'],
-              ]
-              const [c1, c2] = VIVID[i % VIVID.length]
+              const cardStyle = kpiCardGradient(i, L1, L2, L3)
+              const isLight   = i >= 2
               return (
                 <div key={i} style={{
-                  background: `linear-gradient(135deg, ${c1} 0%, ${c2} 100%)`,
-                  borderRadius: 10, padding: '11px 16px',
-                  boxShadow: `0 3px 12px ${c1}55`,
-                  minWidth: 120, flex: 1, position: 'relative', overflow: 'hidden',
+                  ...cardStyle,
+                  width: 200, height: 62,
+                  borderRadius: 8,
+                  padding: '0 14px',
+                  display: 'flex', flexDirection: 'column',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  boxShadow: i < 2 ? '0 3px 10px rgba(0,0,0,0.20)' : '0 2px 6px rgba(0,0,0,0.08)',
+                  boxSizing: 'border-box',
                 }}>
                   <div style={{
-                    position: 'absolute', right: 8, top: 5,
-                    fontSize: 26, opacity: 0.12, color: '#fff',
-                    fontFamily: TYPE.FONT,
-                  }}>{k.icon || '◈'}</div>
-                  <div style={{
                     fontSize: 9, fontWeight: 800, letterSpacing: 0.9,
-                    textTransform: 'uppercase', color: 'rgba(255,255,255,0.72)',
-                    marginBottom: 3, fontFamily: TYPE.FONT,
+                    textTransform: 'uppercase', fontFamily: TYPE.FONT,
+                    opacity: isLight ? 0.6 : 0.75,
+                    marginBottom: 2,
                   }}>{k.label}</div>
                   <div style={{
-                    fontSize: 19, fontWeight: 900, color: '#fff',
+                    fontSize: 19, fontWeight: 900,
                     lineHeight: 1.1, fontFamily: TYPE.FONT,
                   }}>{k.value}</div>
                   {k.sub && (
                     <div style={{
-                      fontSize: 10, color: 'rgba(255,255,255,0.68)', marginTop: 3,
-                      fontFamily: TYPE.FONT,
+                      fontSize: 9, opacity: isLight ? 0.55 : 0.65,
+                      marginTop: 1, fontFamily: TYPE.FONT,
                     }}>{k.sub}</div>
                   )}
                 </div>
@@ -154,66 +183,49 @@ export default function ChapterPage({
           </div>
         )}
 
-        {/* ── Section H2 + L1 action ── */}
-        {(sectionTitle || onNew) && (
-          <div style={{ padding: '12px 28px 8px', background: PAGE.BG }}>
-            <div style={{
-              display: 'flex', alignItems: 'center',
-              justifyContent: 'space-between',
-            }}>
-              {sectionTitle && (
-                <h2 style={{
-                  fontSize: TYPE.H2_SIZE, fontWeight: TYPE.H2_WEIGHT,
-                  color: TYPE.H2_COLOR, margin: 0,
-                  fontFamily: TYPE.FONT,
-                }}>
-                  {sectionTitle}
-                </h2>
-              )}
-              {onNew && (
-                <button onClick={onNew} style={{ ...btn.L1(chapterColor), marginLeft:'auto' }}>
-                  {newLabel}
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ── Built-in filter strip (for pages using filters/onSearch props) ── */}
+        {/* ── Built-in filter strip — white bar inset to match table width ── */}
         {(filters.length > 0 || onSearch !== undefined) && (
-          <div style={{ padding: '0 28px 10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ background: L2, padding: '0 28px' }}>
+            <div style={{ background: '#fff', padding: '8px 16px 10px', borderBottom: '1px solid #e8ecf4' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflowX: 'auto', flexWrap: 'nowrap', paddingBottom: 2 }}>
               {filters.map(f => (
-                <button key={f} onClick={() => onFilter?.(f)} style={filterChip(f === activeFilter, chapterColor)}>{f}</button>
+                <button key={f} onClick={() => onFilter?.(f)}
+                  style={{ ...filterChip(f === activeFilter, L3), flexShrink: 0 }}>
+                  {f}
+                </button>
               ))}
               {onSearch !== undefined && (
-                <div style={{ position: 'relative', marginLeft: 'auto' }}>
+                <div style={{ position: 'relative', marginLeft: 'auto', flexShrink: 0 }}>
                   <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: '#94a3b8', pointerEvents: 'none' }}>🔍</span>
                   <input value={searchValue} onChange={e => onSearch(e.target.value)} placeholder={searchPlaceholder} style={searchInput} />
                 </div>
               )}
             </div>
+            </div>
           </div>
         )}
 
-        {/* ── Custom filter bar (e.g. Vacations) ── */}
+        {/* ── Custom filter bar — white bar inset to match table width ── */}
         {filterBar && (
-          <div style={{ padding: '0 28px 10px' }}>
-            {filterBar}
+          <div style={{ background: L2, padding: '0 28px' }}>
+            <div style={{ background: '#fff', padding: '8px 16px 10px', borderBottom: '1px solid #e8ecf4' }}>
+              {filterBar}
+            </div>
           </div>
         )}
 
-      </div>{/* end sticky header zone */}
+      </div>{/* end upper zone */}
 
-      {/* ── Scrollable content area ── */}
-      {/* ── Table OR custom children ── */}
+      {/* ══════════════════════════════════════════════════════════
+          SCROLL ZONE — only data rows scroll here
+      ══════════════════════════════════════════════════════════ */}
       {children ? (
-        <div style={{ padding: '0 28px 24px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '14px 28px 24px' }}>
           {children}
         </div>
       ) : null}
 
-      {!children && <div style={{ padding: '0 28px 24px' }}>
+      {!children && <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '14px 28px 24px' }}>
         <div style={{
           borderRadius: TABLE.RADIUS,
           boxShadow: PAGE.CARD_SHADOW,
@@ -229,7 +241,7 @@ export default function ChapterPage({
               <tr>
                 {primaryCols.map(col => (
                   <th key={col.key} style={{
-                    background: chapterColor,
+                    background: L3,
                     color: '#fff',
                     fontSize: TABLE.HEADER_SIZE,
                     fontWeight: TABLE.HEADER_WEIGHT,
@@ -249,7 +261,7 @@ export default function ChapterPage({
                 {/* expand column */}
                 {hasExpandable && (
                   <th style={{
-                    background: chapterColor,
+                    background: L3,
                     color: '#fff',
                     fontSize: TABLE.HEADER_SIZE,
                     fontWeight: TABLE.HEADER_WEIGHT,
@@ -285,11 +297,11 @@ export default function ChapterPage({
                     <tr
                       style={{
                         background: isExpanded
-                          ? `${chapterColor}08`
-                          : ri % 2 === 0 ? '#fff' : TABLE.ROW_ALT,
+                          ? `${L3}08`
+                          : '#fff',
                         transition: 'background 0.1s',
                         cursor: hasExpandable ? 'pointer' : 'default',
-                        borderLeft: isExpanded ? `3px solid ${chapterColor}` : '3px solid transparent',
+                        borderLeft: isExpanded ? `3px solid ${L3}` : '3px solid transparent',
                       }}
                       onClick={() => hasExpandable &&
                         setExpandedRow(isExpanded ? null : (row.id ?? ri))
@@ -317,7 +329,7 @@ export default function ChapterPage({
                         }}>
                           <div style={{
                             width: 24, height: 24, borderRadius: '50%',
-                            background: isExpanded ? chapterColor : '#f1f5f9',
+                            background: isExpanded ? L3 : '#f1f5f9',
                             color: isExpanded ? '#fff' : '#94a3b8',
                             display: 'inline-flex', alignItems: 'center',
                             justifyContent: 'center', fontSize: 11,
@@ -337,9 +349,9 @@ export default function ChapterPage({
                           colSpan={primaryCols.length + 1}
                           style={{
                             padding: '12px 16px 16px 28px',
-                            background: `${chapterColor}06`,
-                            borderBottom: `1px solid ${chapterColor}22`,
-                            borderLeft: `3px solid ${chapterColor}`,
+                            background: `${L3}06`,
+                            borderBottom: `1px solid ${L3}22`,
+                            borderLeft: `3px solid ${L3}`,
                           }}
                         >
                           {renderExpand(row)}

@@ -4,6 +4,7 @@ import { exportToExcel } from '../lib/exportExcel'
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
 import FormShell from '../components/FormShell'
+import BackdatedEntryModal from '../components/BackdatedEntryModal'
 import { CHAPTER_PALETTES, GROUP_COLORS } from '../styles/appStyles'
 
 // ── HR chapter palette ─────────────────────────────────────────────────────
@@ -129,8 +130,9 @@ export default function Overtime({ entityId, role }) {
   const [employees,   setEmployees]   = useState([])
   const [depts,       setDepts]       = useState([])
   const [loading,     setLoading]     = useState(true)
-  const [showBanner,  setShowBanner]  = useState(false)
-  const [open,        setOpen]        = useState(false)
+  const [showBanner,      setShowBanner]      = useState(false)
+  const [open,            setOpen]            = useState(false)
+  const [showAdminEntry,  setShowAdminEntry]  = useState(false)
   const [wizardStep,  setWizardStep]  = useState(0)
   const [saving,      setSaving]      = useState(false)
   const [filterSt,    setFilterSt]    = useState('ALL')
@@ -396,36 +398,41 @@ export default function Overtime({ entityId, role }) {
         onNew={() => setShowBanner(true)}
         newLabel="+ New OT Request"
         kpis={kpis}
-      >
-        {/* ── Filter bar ── */}
-        <div style={{ display:'flex', gap:8, marginBottom:12, flexWrap:'wrap', alignItems:'center' }}>
-          <input type="month" value={filterMon} onChange={e=>setFilterMon(e.target.value)} style={inp2} />
-          <select value={filterSt} onChange={e=>setFilterSt(e.target.value)} style={inp2}>
-            <option value="ALL">All Status</option>
-            {['SUBMITTED','PENDING','APPROVED','REJECTED'].map(s=><option key={s} value={s}>{s}</option>)}
-          </select>
-          <select value={filterDept} onChange={e=>setFilterDept(e.target.value)} style={inp2}>
-            <option value="">All Depts</option>
-            {deptOptions.map(d=><option key={d.id} value={d.id}>{d.dept_code||'—'}</option>)}
-          </select>
-          <input
-            placeholder="🔍 Search employee / req #"
-            value={filterSearch}
-            onChange={e=>setFilterSearch(e.target.value)}
-            style={{ ...inp2, minWidth:200, flex:1 }}
-          />
-          {(filterMon!==thisMonth || filterSt!=='ALL' || filterDept || filterSearch) && (
+        filterBar={
+          <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>
+            <input type="month" value={filterMon} onChange={e=>setFilterMon(e.target.value)} style={inp2} />
+            <select value={filterSt} onChange={e=>setFilterSt(e.target.value)} style={inp2}>
+              <option value="ALL">All Status</option>
+              {['SUBMITTED','PENDING','APPROVED','REJECTED'].map(s=><option key={s} value={s}>{s}</option>)}
+            </select>
+            <select value={filterDept} onChange={e=>setFilterDept(e.target.value)} style={inp2}>
+              <option value="">All Depts</option>
+              {deptOptions.map(d=><option key={d.id} value={d.id}>{d.dept_code||'—'}</option>)}
+            </select>
+            <input
+              placeholder="🔍 Search employee / req #"
+              value={filterSearch}
+              onChange={e=>setFilterSearch(e.target.value)}
+              style={{ ...inp2, minWidth:200, flex:1 }}
+            />
+            {(filterMon!==thisMonth || filterSt!=='ALL' || filterDept || filterSearch) && (
+              <button
+                onClick={()=>{ setFilterMon(thisMonth); setFilterSt('ALL'); setFilterDept(''); setFilterSearch('') }}
+                style={{ ...inp2, background:'#ffebee', color:'#c62828', border:'1px solid #ffcdd2', cursor:'pointer', fontWeight:700 }}
+              >✕ Clear</button>
+            )}
             <button
-              onClick={()=>{ setFilterMon(thisMonth); setFilterSt('ALL'); setFilterDept(''); setFilterSearch('') }}
-              style={{ ...inp2, background:'#ffebee', color:'#c62828', border:'1px solid #ffcdd2', cursor:'pointer', fontWeight:700 }}
-            >✕ Clear</button>
-          )}
-          <button
-            onClick={doExport}
-            style={{ background:'#2e7d32', color:'#fff', border:'none', borderRadius:8, padding:'8px 16px', cursor:'pointer', fontSize:12, fontWeight:700, whiteSpace:'nowrap' }}
-          >📥 Export Excel</button>
-          <span style={{ fontSize:12, color:'#6b7c93' }}>{filtered.length} record{filtered.length!==1?'s':''}</span>
-        </div>
+              onClick={() => setShowAdminEntry(true)}
+              style={{ background:MC, color:'#fff', border:'none', borderRadius:8, padding:'8px 16px', cursor:'pointer', fontSize:12, fontWeight:700, whiteSpace:'nowrap' }}
+            >📋 Admin Entry</button>
+            <button
+              onClick={doExport}
+              style={{ background:'#2e7d32', color:'#fff', border:'none', borderRadius:8, padding:'8px 16px', cursor:'pointer', fontSize:12, fontWeight:700, whiteSpace:'nowrap' }}
+            >📥 Export Excel</button>
+            <span style={{ fontSize:12, color:'#6b7c93' }}>{filtered.length} record{filtered.length!==1?'s':''}</span>
+          </div>
+        }
+      >
 
         {/* ── Table ── */}
         <div style={{ background:'#fff', borderRadius:12, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', overflow:'hidden', flex:1 }}>
@@ -433,6 +440,7 @@ export default function Overtime({ entityId, role }) {
           <div style={{
             display:'grid', gridTemplateColumns:GRID, gap:0,
             background:MC, padding:'9px 12px',
+            position:'sticky', top:'var(--ch-offset,0px)', zIndex:2,
           }}>
             {['Req #','Date','Employee','Dept','Project #','OT Type','Hours','Amount','Status',''].map(h=>(
               <div key={h} style={{
@@ -687,6 +695,17 @@ export default function Overtime({ entityId, role }) {
           </div>
         )}
       </FormShell>
+
+      {/* ── ADMIN BACKDATED ENTRY ── */}
+      {showAdminEntry && (
+        <BackdatedEntryModal
+          type="overtime"
+          entityId={entityId}
+          employees={employees}
+          onClose={() => setShowAdminEntry(false)}
+          onSaved={() => { setShowAdminEntry(false); load() }}
+        />
+      )}
     </>
   )
 }

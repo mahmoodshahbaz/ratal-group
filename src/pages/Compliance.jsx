@@ -1,8 +1,10 @@
-import { GROUP_COLORS } from '../styles/appStyles'
+import { GROUP_COLORS, kpiCardGradient, CHAPTER_PALETTES } from '../styles/appStyles'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
 const MC = GROUP_COLORS.HR  // '#795338'
+const L1 = '#BCA99A'
+const L2 = '#F7F2ED'
 const TODAY = new Date().toISOString().slice(0, 10)
 const DAY_MS = 86400000
 
@@ -214,16 +216,21 @@ export default function Compliance({ entityId, onNavigate }) {
 
   // ──────────────────────────────────────────────────────────────────────────
   return (
-    <div style={{ fontFamily: 'Poppins,sans-serif', fontSize: 13 }}>
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:'Poppins,sans-serif', fontSize:13 }}>
+      {/* ══ UPPER ZONE (always visible) ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
 
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <div style={{ fontSize: 12, color: '#64748b' }}>
-          All documents — expiry tracking &amp; renewal history. Source: Document Valet.
+      {/* L1 Heading Bar */}
+      <div style={{ padding:'6px 28px 0' }}>
+        <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <div>
+            <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>🛡️ Compliance Alerts</div>
+            <div style={{ fontSize:10, color:'#fff', opacity:0.85 }}>All documents — expiry tracking &amp; renewal history. Source: Document Valet.</div>
+          </div>
+          <button style={{ background:MC, color:'#fff', border:'none', borderRadius:7, padding:'7px 16px', fontSize:12, fontWeight:700, cursor:'pointer' }} onClick={() => onNavigate?.('document_valet')}>
+            → Document Valet
+          </button>
         </div>
-        <button style={btn('#1565C0')} onClick={() => onNavigate?.('document_valet')}>
-          → Go to Document Valet
-        </button>
       </div>
 
       {/* Alert Banners */}
@@ -255,31 +262,32 @@ export default function Compliance({ entityId, onNavigate }) {
         </div>
       )}
 
-      {/* ── Sticky zone: KPI strip + filter bar ─────────────────────────────── */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 50, background: '#f4f6fa', paddingBottom: 10, paddingTop: 4 }}>
+      {/* ── KPI strip + filter bar ─────────────────────────────── */}
+      <div style={{ background: L2, paddingBottom: 10, paddingTop: 4 }}>
         {/* KPI strip */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 10, marginBottom: 10 }}>
-          {KPI_DEFS.map(k => {
+        <div style={{ display:'flex', gap:8, padding:'10px 28px 12px', flexWrap:'wrap', background:L2 }}>
+          {KPI_DEFS.map((k, i) => {
             const val = counts[k.key] || 0
             const active = urgFilter === k.key
+            const cardStyle = kpiCardGradient(i, L1, L2, MC)
             return (
               <div key={k.key}
                 onClick={() => setUrgFilter(active ? '' : k.key)}
                 style={{
-                  background: `linear-gradient(135deg, ${k.g[0]}, ${k.g[1]})`,
-                  borderRadius: 8, padding: '10px 14px', color: '#fff', cursor: 'pointer',
-                  boxShadow: active ? `0 0 0 3px #fff, 0 0 0 5px ${k.g[1]}` : '0 2px 8px rgba(0,0,0,0.18)',
-                  transform: active ? 'scale(1.04)' : 'scale(1)',
-                  transition: 'all 0.15s',
+                  ...cardStyle, width:160, height:62, borderRadius:10, padding:'0 14px',
+                  flexShrink:0, boxShadow: active ? `0 0 0 3px #fff, 0 0 0 5px ${MC}` : '0 2px 8px rgba(0,0,0,0.10)',
+                  display:'flex', flexDirection:'column', justifyContent:'center', boxSizing:'border-box',
+                  cursor:'pointer', transform: active ? 'scale(1.04)' : 'scale(1)', transition:'all 0.15s',
                 }}>
-                <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1 }}>{val}</div>
-                <div style={{ fontSize: 10, opacity: 0.85, marginTop: 3 }}>{k.label}</div>
+                <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, opacity:0.75, marginBottom:2 }}>{k.label}</div>
+                <div style={{ fontSize:18, fontWeight:800, lineHeight:1.1 }}>{val}</div>
               </div>
             )
           })}
         </div>
 
         {/* Filter bar */}
+        <div style={{ padding:'0 28px 8px', background:L2 }}>
         <div style={{ background: '#fff', borderRadius: 8, padding: '10px 14px', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
           <input style={{ ...inp, flex: 1, minWidth: 180 }}
             placeholder="Search name, doc type, number…"
@@ -303,7 +311,13 @@ export default function Compliance({ entityId, onNavigate }) {
           )}
           <span style={{ fontSize: 11, color: '#6b7c93', marginLeft: 'auto' }}>{filtered.length} docs</span>
         </div>
+        </div>
       </div>
+
+      </div>{/* end upper zone */}
+
+      {/* ── SCROLL ZONE ── */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
 
       {/* ── Main content ─────────────────────────────────────────────────────── */}
       {loading ? (
@@ -472,6 +486,8 @@ export default function Compliance({ entityId, onNavigate }) {
             )
           })
       )}
+
+      </div>{/* end scroll zone */}
 
       {/* ── Renewal Modal ─────────────────────────────────────────────────────── */}
       {renewDoc && (

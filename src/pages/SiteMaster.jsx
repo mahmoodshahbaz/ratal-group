@@ -1,4 +1,4 @@
-import { GROUP_COLORS } from '../styles/appStyles'
+import { GROUP_COLORS, CHAPTER_PALETTES, kpiCardGradient } from '../styles/appStyles'
 import PageBanner from '../components/PageBanner'
 import FormShell from '../components/FormShell'
 import { useState, useEffect, useMemo } from 'react'
@@ -198,23 +198,30 @@ function marginHealth(totalCostPct) {
   return { color:'#fff', bg:'#b71c1c', label:`LOSS ${Math.abs(margin).toFixed(1)}%  🚨` }
 }
 
+// ── Masters palette ───────────────────────────────────────────────
+const PAL = CHAPTER_PALETTES.Masters
+const L1  = PAL.L1   // '#C8B48F'
+const L2  = PAL.L2   // '#FAF5E9'
+const L3  = PAL.L3   // '#8C601B'
+const PP  = "'Poppins',sans-serif"
+
 // ── Styles ────────────────────────────────────────────────────────
 const S = {
   card:    { background:'#fff', borderRadius:12, padding:'18px 20px', boxShadow:'0 2px 8px rgba(0,0,0,0.06)', marginBottom:16 },
-  inp:     { width:'100%', padding:'8px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:13, outline:'none', boxSizing:'border-box', fontFamily:'inherit' },
-  btn:     (c='#8C601B', outline=false) => ({ background:outline?'transparent':c, color:outline?c:'#fff', border:outline?`2px solid ${c}`:'none', borderRadius:8, padding:'8px 16px', fontSize:13, fontWeight:700, cursor:'pointer' }),
-  label:   { display:'block', fontSize:11, color:'#6b7c93', fontWeight:700, marginBottom:4, textTransform:'uppercase', letterSpacing:0.5 },
+  inp:     { width:'100%', padding:'8px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:13, outline:'none', boxSizing:'border-box', fontFamily:PP },
+  btn:     (c='#8C601B', outline=false) => ({ background:outline?'transparent':c, color:outline?c:'#fff', border:outline?`2px solid ${c}`:'none', borderRadius:8, padding:'8px 16px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:PP }),
+  label:   { display:'block', fontSize:11, color:'#6b7c93', fontWeight:700, marginBottom:4, textTransform:'uppercase', letterSpacing:0.5, fontFamily:PP },
   row:     { display:'flex', gap:12, marginBottom:14 },
   col:     { flex:1 },
-  tbl:     { width:'100%', borderCollapse:'collapse', fontSize:12 },
-  th:      { background:'#8C601B', color:'#fff', padding:'8px 10px', fontWeight:700, textAlign:'left', fontSize:11, textTransform:'uppercase', letterSpacing:0.5, borderBottom:'2px solid #7a5217' },
-  td:      { padding:'9px 10px', borderBottom:'1px solid #f0f4f8', color:'#1a2e3d', verticalAlign:'middle' },
+  tbl:     { width:'100%', borderCollapse:'collapse', fontSize:12, fontFamily:PP },
+  th:      { background:'#8C601B', color:'#fff', padding:'8px 10px', fontWeight:700, textAlign:'left', fontSize:11, textTransform:'uppercase', letterSpacing:0.5, borderBottom:'2px solid #7a5217', fontFamily:PP },
+  td:      { padding:'9px 10px', borderBottom:'1px solid #f0f4f8', color:'#1a2e3d', verticalAlign:'middle', fontFamily:PP },
   overlay: { position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' },
-  modal:   { background:'#fff', borderRadius:16, padding:28, width:840, maxWidth:'96vw', maxHeight:'93vh', overflowY:'auto', boxShadow:'0 8px 40px rgba(0,0,0,0.18)' },
-  tab:     a => ({ padding:'7px 16px', border:'none', borderRadius:8, cursor:'pointer', fontSize:12, fontWeight:700, background:a?'#5A32D4':'#f0f4f8', color:a?'#fff':'#6b7c93', marginRight:6 }),
-  badge:   (c='#5A32D4') => ({ background:c+'18', color:c, padding:'2px 10px', borderRadius:20, fontSize:11, fontWeight:700, display:'inline-block' }),
+  modal:   { background:'#fff', borderRadius:16, padding:28, width:840, maxWidth:'96vw', maxHeight:'93vh', overflowY:'auto', boxShadow:'0 8px 40px rgba(0,0,0,0.18)', fontFamily:PP },
+  tab:     a => ({ padding:'7px 16px', border:'none', borderRadius:8, cursor:'pointer', fontSize:12, fontWeight:700, background:a?'#5A32D4':'#f0f4f8', color:a?'#fff':'#6b7c93', marginRight:6, fontFamily:PP }),
+  badge:   (c='#5A32D4') => ({ background:c+'18', color:c, padding:'2px 10px', borderRadius:20, fontSize:11, fontWeight:700, display:'inline-block', fontFamily:PP }),
   section: { background:'#f8f9fc', borderRadius:10, padding:'14px 16px', marginBottom:14 },
-  secTitle:{ fontSize:11, fontWeight:800, color:'#6b7c93', textTransform:'uppercase', letterSpacing:1, marginBottom:12 },
+  secTitle:{ fontSize:11, fontWeight:800, color:'#6b7c93', textTransform:'uppercase', letterSpacing:1, marginBottom:12, fontFamily:PP },
   kv:      { display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:8, borderBottom:'1px solid #f0f4f8', paddingBottom:6 },
 }
 
@@ -818,122 +825,163 @@ export default function SiteMaster({ entityId }) {
 
   // ── Render ────────────────────────────────────────────────────
   return (
-    <div>
-      {/* ══ STICKY HEADER ══ */}
-      <div style={{ position:'sticky', top:0, zIndex:20, background:'#f4f7fb', boxShadow:'0 2px 6px rgba(0,0,0,0.06)', paddingBottom:8, marginBottom:4 }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0 6px' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-            <button onClick={()=>setHeaderCollapsed(c=>!c)} style={{ background:'none', border:'1px solid #dde3ec', borderRadius:6, padding:'3px 8px', cursor:'pointer', fontSize:13, color:'#6b7c93' }}>
-              {headerCollapsed?'▼':'▲'}
-            </button>
+    <div className="sm-root" style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:PP }}>
+      {/* Force Poppins on all form controls — browsers don't inherit font-family to button/input/select */}
+      <style>{`
+        .sm-root button, .sm-root input, .sm-root select, .sm-root textarea {
+          font-family: 'Poppins', sans-serif !important;
+        }
+      `}</style>
+
+      {/* ══ UPPER ZONE — flexShrink:0 ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+        {/* L1 bar */}
+        <div style={{ background:L2, padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', borderRadius:'6px 6px 0 0' }}>
             <div>
-              <div style={{ fontSize:11, color:'#6b7c93' }}>Jobs · Activities · Budget · Margin</div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff', fontFamily:PP }}>Site Master</div>
+              <div style={{ fontSize:10, color:'rgba(255,255,255,0.8)', marginTop:2 }}>Masters · Jobs · Activities · Budget · Margin</div>
             </div>
+            <button style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'7px 16px', cursor:'pointer', fontSize:12, fontWeight:700, fontFamily:PP }}
+              onClick={()=>{ setEditing(null); setForm(EMPTY); setSmStep(1); setShowBanner(true) }}>
+              + New Site
+            </button>
           </div>
         </div>
 
-        {!headerCollapsed && <>
-          <div style={{ display:'flex', gap:8, flexWrap:'wrap', paddingBottom:6 }}>
-            {[
-              { label:'Total',        val:sites.length,                                                              color:'#5A32D4', bg:'#ede7f6' },
-              { label:'In Progress',  val:sites.filter(s=>s.status==='IN_PROGRESS').length,                          color:'#e65100', bg:'#fff3e0' },
-              { label:'Completed',    val:sites.filter(s=>['COMPLETED','SNAGGING','HANDED_OVER'].includes(s.status)).length, color:'#2e7d32', bg:'#e8f5e9' },
-              { label:'Invoiced',     val:sites.filter(s=>s.status==='INVOICED').length,                              color:'#1a237e', bg:'#e8eaf6' },
-              { label:'Contract',     val:SAR(totalContract),                                                         color:'#00695c', bg:'#e0f2f1' },
-              { label:'Budget Cost',  val:SAR(totalBudget),                                                           color:'#1565c0', bg:'#e3f2fd' },
-              { label:'Actual',       val:SAR(totalActual),                                                           color:totalActual>totalBudget?'#c62828':'#2e7d32', bg:totalActual>totalBudget?'#ffebee':'#e8f5e9' },
-            ].map(k=>(
-              <div key={k.label} style={{ background:`linear-gradient(135deg,${k.color}cc 0%,${k.color} 100%)`, borderRadius:10, padding:'10px 14px', flexShrink:0, minWidth:90, boxShadow:`0 3px 10px ${k.color}44` }}>
-                <div style={{ fontSize:9, color:'rgba(255,255,255,0.85)', fontWeight:700, whiteSpace:'nowrap', textTransform:'uppercase', letterSpacing:0.8 }}>{k.label}</div>
-                <div style={{ fontSize:20, fontWeight:900, color:'#fff', lineHeight:1.2, marginTop:2 }}>{k.val}</div>
+        {/* KPI cards — single row, no wrap */}
+        <div style={{ display:'flex', flexWrap:'nowrap', gap:8, padding:'10px 28px 12px', background:L2, overflowX:'auto', scrollbarWidth:'none' }}>
+          {[
+            { label:'Total Sites',  val:sites.length,                                                                        w:80 },
+            { label:'In Progress',  val:sites.filter(s=>s.status==='IN_PROGRESS').length,                                    w:80 },
+            { label:'Completed',    val:sites.filter(s=>['COMPLETED','SNAGGING','HANDED_OVER'].includes(s.status)).length,   w:80 },
+            { label:'Contract',     val:SAR(totalContract),                                                                  w:200 },
+            { label:'Budget Cost',  val:SAR(totalBudget),                                                                    w:200 },
+            { label:'Actual',       val:SAR(totalActual),                                                                    w:200 },
+            { label:'Invoiced',     val:sites.filter(s=>s.status==='INVOICED').length,                                       w:80 },
+          ].map((k,i) => {
+            const gs = kpiCardGradient(i, L1, L2, L3)
+            const textColor = gs.color || '#fff'
+            const isWide = k.w >= 200
+            return (
+              <div key={k.label} style={{ width:k.w, height:58, borderRadius:10, padding: isWide ? '0 14px' : '0 8px', display:'flex', flexDirection:'column', justifyContent:'center', flexShrink:0, ...gs }}>
+                <div style={{ fontSize:8, fontWeight:700, whiteSpace:'nowrap', textTransform:'uppercase', letterSpacing:0.6, color: textColor, opacity:0.8 }}>{k.label}</div>
+                <div style={{ fontSize: isWide ? 16 : 20, fontWeight:800, lineHeight:1.1, marginTop:2, color: textColor }}>{k.val}</div>
               </div>
-            ))}
-            {UNITS.map(u=>(
-              <div key={u} style={{ background:'linear-gradient(135deg,#7e57c2cc 0%,#5A32D4 100%)', borderRadius:10, padding:'10px 14px', flexShrink:0, minWidth:70, boxShadow:'0 3px 10px #5A32D444', textAlign:'center' }}>
-                <div style={{ fontSize:9, fontWeight:700, color:'rgba(255,255,255,0.85)', textTransform:'uppercase', letterSpacing:0.8 }}>{u}</div>
-                <div style={{ fontSize:20, fontWeight:900, color:'#fff', lineHeight:1.2, marginTop:2 }}>{unitCounts[u]||0}</div>
-              </div>
+            )
+          })}
+          {/* Unit cards — distinct vibrant gradients */}
+          {[
+            { u:'NISU', grad:'linear-gradient(135deg,#2563EB,#1E40AF)' },
+            { u:'TISU', grad:'linear-gradient(135deg,#059669,#065F46)' },
+            { u:'CISU', grad:'linear-gradient(135deg,#C2410C,#9A3412)' },
+            { u:'ITSU', grad:'linear-gradient(135deg,#7C3AED,#4C1D95)' },
+          ].map(({ u, grad }) => (
+            <div key={u} style={{ width:80, height:58, borderRadius:10, padding:'0 8px', display:'flex', flexDirection:'column', justifyContent:'center', flexShrink:0, background:grad, border:'1px solid rgba(255,255,255,0.15)', boxShadow:'0 2px 6px rgba(0,0,0,0.18)' }}>
+              <div style={{ fontSize:8, fontWeight:700, textTransform:'uppercase', letterSpacing:0.6, color:'rgba(255,255,255,0.85)' }}>{u}</div>
+              <div style={{ fontSize:20, fontWeight:800, lineHeight:1.1, marginTop:1, color:'#fff' }}>{unitCounts[u]||0}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Tab bar */}
+        <div style={{ padding:'0 28px', background:L2, borderBottom:'2px solid #e8edf2' }}>
+          <div style={{ display:'flex', gap:0 }}>
+            {[['sites','📋 Sites'],['workflows','⚙️ Workflows']].map(([key,label])=>(
+              <button key={key} onClick={()=>setMainTab(key)}
+                style={{ padding:'8px 20px', border:'none', cursor:'pointer', fontSize:13, fontWeight:700, background:'transparent', fontFamily:PP,
+                  color: mainTab===key ? L3 : '#6b7c93',
+                  borderBottom: mainTab===key ? `2px solid ${L3}` : '2px solid transparent',
+                  marginBottom: -2 }}>
+                {label}{key==='sites'?` (${sites.length})`:` (${wfTemplates.length})`}
+              </button>
             ))}
           </div>
+        </div>
 
-          <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center', paddingBottom:6 }}>
-            <input style={{ ...S.inp, maxWidth:200 }} placeholder="Search SM#, Site#, Job#, Name…" value={search} onChange={e=>setSearch(e.target.value)} />
-            <select style={{ ...S.inp, maxWidth:230 }} value={filterProject} onChange={e=>setFilterProject(e.target.value)}>
-              <option value="">All Projects</option>
-              {projects.map(p=><option key={p.id} value={p.id}>[{p.project_number}] {p.project_name}</option>)}
-            </select>
-            <select style={{ ...S.inp, maxWidth:120 }} value={filterUnit} onChange={e=>setFilterUnit(e.target.value)}>
-              <option value="">All Units</option>
-              {UNITS.map(u=><option key={u}>{u}</option>)}
-            </select>
-            <select style={{ ...S.inp, maxWidth:160 }} value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}>
-              <option value="">All Statuses</option>
-              {STATUSES.map(s=><option key={s} value={s}>{s.replace(/_/g,' ')}</option>)}
-            </select>
-            <span style={{ fontSize:11, color:'#6b7c93' }}>{filtered.length} sites</span>
-            {/* Columns toggle */}
-            <div style={{ position:'relative', marginLeft:4 }}>
-              <button onClick={()=>setShowColMenu(v=>!v)}
-                style={{ background:'#f0f4f8', border:'1px solid #dde3ec', borderRadius:7, padding:'6px 12px', fontSize:12, fontWeight:700, cursor:'pointer', color:'#6b7c93' }}>
-                Columns ▾
-              </button>
-              {showColMenu && (
-                <div style={{ position:'absolute', top:'110%', left:0, background:'#fff', border:'1px solid #e0e7ef', borderRadius:10, boxShadow:'0 6px 20px rgba(0,0,0,0.12)', zIndex:50, minWidth:160, padding:'8px 0' }}
-                  onClick={e=>e.stopPropagation()}>
-                  {[
-                    { key:'wf_code',   label:'WF Code'  },
-                    { key:'contract',  label:'Contract' },
-                    { key:'actual',    label:'Actual'   },
-                  ].map(c=>(
-                    <label key={c.key} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 14px', cursor:'pointer', fontSize:13, color:'#1a2e3d' }}>
-                      <input type="checkbox" checked={!!colVis[c.key]} onChange={()=>toggleCol(c.key)} style={{ cursor:'pointer' }} />
-                      {c.label}
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div style={{ display:'flex', gap:8, marginLeft:'auto', alignItems:'center' }}>
-              {selectedIds.size > 0 && (
-                <button style={{ ...S.btn('#c62828'), padding:'10px 16px', boxShadow:'0 3px 8px rgba(198,40,40,0.30)', animation:'none' }}
-                  onClick={()=>{ setBeFields({}); setBeMsg(''); setBeStep(1); setShowBulkEdit(true) }}>
-                  ✏️ Bulk Edit ({selectedIds.size})
+        {/* Filter bar — Sites tab only */}
+        {mainTab === 'sites' && (
+          <div style={{ padding:'6px 28px 8px', background:L2 }}>
+            <div style={{ display:'flex', gap:8, background:'#fff', padding:'10px 14px', borderRadius:8, boxShadow:'0 1px 4px rgba(0,0,0,0.08)', flexWrap:'wrap', alignItems:'center' }}>
+              <input style={{ ...S.inp, flex:1, minWidth:160 }} placeholder="Search SM#, Site#, Job#, Name…" value={search} onChange={e=>setSearch(e.target.value)} />
+              <select style={{ ...S.inp, width:'auto', minWidth:200 }} value={filterProject} onChange={e=>setFilterProject(e.target.value)}>
+                <option value="">All Projects</option>
+                {projects.map(p=><option key={p.id} value={p.id}>[{p.project_number}] {p.project_name}</option>)}
+              </select>
+              <select style={{ ...S.inp, width:'auto', minWidth:110 }} value={filterUnit} onChange={e=>setFilterUnit(e.target.value)}>
+                <option value="">All Units</option>
+                {UNITS.map(u=><option key={u}>{u}</option>)}
+              </select>
+              <select style={{ ...S.inp, width:'auto', minWidth:140 }} value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}>
+                <option value="">All Statuses</option>
+                {STATUSES.map(s=><option key={s} value={s}>{s.replace(/_/g,' ')}</option>)}
+              </select>
+              <span style={{ fontSize:11, color:'#6b7c93', whiteSpace:'nowrap' }}>{filtered.length} sites</span>
+              {/* Columns toggle */}
+              <div style={{ position:'relative' }}>
+                <button onClick={()=>setShowColMenu(v=>!v)}
+                  style={{ background:'#f0f4f8', border:'1px solid #dde3ec', borderRadius:7, padding:'6px 12px', fontSize:12, fontWeight:700, cursor:'pointer', color:'#6b7c93' }}>
+                  Columns ▾
                 </button>
-              )}
-              <button style={{ ...S.btn('#5A32D4'), padding:'10px 16px', boxShadow:'0 3px 8px rgba(90,50,212,0.30)' }}
-                onClick={()=>{ setBulkRows([]); setBulkMsg(''); setShowBulk(true) }}>
-                ⬆ Bulk Upload
-              </button>
-              <button style={{ ...S.btn(), padding:'10px 0', minWidth:160, textAlign:'center', boxShadow:'0 3px 8px rgba(140,96,27,0.35)' }}
-                onClick={()=>{ setEditing(null); setForm(EMPTY); setSmStep(1); setShowBanner(true) }}>
-                + New Site
-              </button>
+                {showColMenu && (
+                  <div style={{ position:'absolute', top:'110%', left:0, background:'#fff', border:'1px solid #e0e7ef', borderRadius:10, boxShadow:'0 6px 20px rgba(0,0,0,0.12)', zIndex:50, minWidth:160, padding:'8px 0' }}
+                    onClick={e=>e.stopPropagation()}>
+                    {[{ key:'wf_code', label:'WF Code' },{ key:'contract', label:'Contract' },{ key:'actual', label:'Actual' }].map(c=>(
+                      <label key={c.key} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 14px', cursor:'pointer', fontSize:13, color:'#1a2e3d' }}>
+                        <input type="checkbox" checked={!!colVis[c.key]} onChange={()=>toggleCol(c.key)} style={{ cursor:'pointer' }} />
+                        {c.label}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div style={{ display:'flex', gap:8, marginLeft:'auto', alignItems:'center' }}>
+                {selectedIds.size > 0 && (
+                  <button style={{ ...S.btn('#c62828'), padding:'7px 14px' }}
+                    onClick={()=>{ setBeFields({}); setBeMsg(''); setBeStep(1); setShowBulkEdit(true) }}>
+                    ✏️ Bulk Edit ({selectedIds.size})
+                  </button>
+                )}
+                <button style={{ ...S.btn('#5A32D4'), padding:'7px 14px' }}
+                  onClick={()=>{ setBulkRows([]); setBulkMsg(''); setShowBulk(true) }}>
+                  ⬆ Bulk Upload
+                </button>
+              </div>
             </div>
           </div>
-        </>}
+        )}
+
+        {/* Column header — Sites tab only */}
+        {mainTab === 'sites' && (
+          <div style={{ padding:'0 28px' }}>
+            <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed' }}>
+              <thead><tr>
+                <th style={{ width:36, background:L3, color:'#fff', padding:'9px 6px', fontSize:10, fontWeight:700, textTransform:'uppercase', textAlign:'center' }}>
+                  <input type="checkbox"
+                    checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                    onChange={toggleSelectAll}
+                    style={{ cursor:'pointer', width:14, height:14, accentColor:'#fff' }} />
+                </th>
+                <th style={{ width:80, background:L3, color:'#fff', padding:'9px 10px', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5 }}>SM ID</th>
+                <th style={{ width:80, background:L3, color:'#fff', padding:'9px 10px', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5 }}>Dept</th>
+                <th style={{ width:70, background:L3, color:'#fff', padding:'9px 10px', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5 }}>Site#</th>
+                <th style={{ background:L3, color:'#fff', padding:'9px 10px', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5 }}>Site Name</th>
+                <th style={{ width:70, background:L3, color:'#fff', padding:'9px 10px', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5 }}>Job#</th>
+                {colVis.wf_code   && <th style={{ width:110, background:L3, color:'#fff', padding:'9px 10px', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5 }}>WF Code</th>}
+                <th style={{ width:110, background:L3, color:'#fff', padding:'9px 10px', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5 }}>Status</th>
+                {colVis.contract  && <th style={{ width:100, background:L3, color:'#fff', padding:'9px 10px', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, textAlign:'right' }}>Contract</th>}
+                {colVis.actual    && <th style={{ width:90,  background:L3, color:'#fff', padding:'9px 10px', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, textAlign:'right' }}>Actual</th>}
+                <th style={{ width:85, background:L3, color:'#fff', padding:'9px 10px', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5 }}>Health</th>
+                <th style={{ width:40, background:L3, color:'#fff', padding:'9px 10px', fontSize:10, fontWeight:700 }}></th>
+              </tr></thead>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* ══ MAIN TAB BAR ══ */}
-      <div style={{ display:'flex', borderBottom:'3px solid #e0e7ef', marginBottom:14, background:'#fff', borderRadius:'10px 10px 0 0', overflow:'hidden', boxShadow:'0 2px 8px rgba(90,50,212,0.08)' }}>
-        <button
-          onClick={()=>setMainTab('sites')}
-          style={{ flex:1, padding:'14px 20px', border:'none', cursor:'pointer', fontSize:14, fontWeight:700, transition:'all 0.18s',
-            background: mainTab==='sites' ? 'linear-gradient(135deg,#5A32D4,#7c4dff)' : '#f8f9fc',
-            color: mainTab==='sites' ? '#fff' : '#6b7c93',
-            borderBottom: mainTab==='sites' ? '3px solid #5A32D4' : '3px solid transparent',
-            marginBottom: -3 }}>
-          📋 Sites&nbsp;&nbsp;<span style={{ fontSize:12, opacity:0.85, fontWeight:600 }}>({sites.length})</span>
-        </button>
-        <button
-          onClick={()=>setMainTab('workflows')}
-          style={{ flex:1, padding:'14px 20px', border:'none', cursor:'pointer', fontSize:14, fontWeight:700, transition:'all 0.18s',
-            background: mainTab==='workflows' ? 'linear-gradient(135deg,#5A32D4,#7c4dff)' : '#f8f9fc',
-            color: mainTab==='workflows' ? '#fff' : '#6b7c93',
-            borderBottom: mainTab==='workflows' ? '3px solid #5A32D4' : '3px solid transparent',
-            marginBottom: -3 }}>
-          ⚙️ Workflow Designer&nbsp;&nbsp;<span style={{ fontSize:12, opacity:0.85, fontWeight:600 }}>({wfTemplates.length} templates)</span>
-        </button>
-      </div>
+      {/* ══ SCROLL ZONE ══ */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
 
       {/* ══ WORKFLOWS TAB ══ */}
       {mainTab === 'workflows' && (
@@ -947,28 +995,9 @@ export default function SiteMaster({ entityId }) {
       )}
 
       {/* ── Table ── (Sites tab only) */}
-      {mainTab === 'sites' && <div style={{ ...S.card, padding:0, overflow:'hidden' }} onClick={()=>{ setOpenMenu(null); setShowColMenu(false) }}>
+      {mainTab === 'sites' && <div style={{ background:'#fff', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 8px rgba(0,0,0,0.08)', overflow:'hidden' }} onClick={()=>{ setOpenMenu(null); setShowColMenu(false) }}>
         {loading ? <div style={{ textAlign:'center', padding:40, color:'#6b7c93' }}>Loading…</div> : (
-        <table style={S.tbl}>
-          <thead><tr>
-            <th style={{ ...S.th, width:36, textAlign:'center' }}>
-              <input type="checkbox"
-                checked={filtered.length > 0 && selectedIds.size === filtered.length}
-                onChange={toggleSelectAll}
-                style={{ cursor:'pointer', width:14, height:14, accentColor:'#fff' }} />
-            </th>
-            <th style={{ ...S.th, whiteSpace:'nowrap' }}>SM ID</th>
-            <th style={{ ...S.th, whiteSpace:'nowrap' }}>Department</th>
-            <th style={{ ...S.th, whiteSpace:'nowrap' }}>Site#</th>
-            <th style={S.th}>Site Name</th>
-            <th style={{ ...S.th, whiteSpace:'nowrap' }}>Job#</th>
-            {colVis.wf_code   && <th style={{ ...S.th, whiteSpace:'nowrap' }}>WF Code</th>}
-            <th style={{ ...S.th, whiteSpace:'nowrap' }}>Status</th>
-            {colVis.contract  && <th style={{ ...S.th, textAlign:'right', whiteSpace:'nowrap' }}>Contract</th>}
-            {colVis.actual    && <th style={{ ...S.th, textAlign:'right', whiteSpace:'nowrap' }}>Actual</th>}
-            <th style={{ ...S.th, whiteSpace:'nowrap' }}>Health</th>
-            <th style={{ ...S.th, width:40 }}></th>
-          </tr></thead>
+        <table style={{ ...S.tbl, tableLayout:'fixed' }}>
           <tbody>
             {filtered.length===0 && (
               <tr><td colSpan={11} style={{ ...S.td, textAlign:'center', color:'#aab2bd', padding:40 }}>
@@ -1025,6 +1054,8 @@ export default function SiteMaster({ entityId }) {
         </table>
         )}
       </div>}
+
+      </div>{/* end scroll zone */}
 
       {/* ── PageBanner ── */}
       <PageBanner

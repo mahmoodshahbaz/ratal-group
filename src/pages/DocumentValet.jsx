@@ -16,13 +16,15 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { kpiCardGradient } from '../styles/appStyles'
 
-// ── Palette (Masters = golden brown) ────────────────────────────────────
-const PRI  = '#8C601B'
-const L1   = '#C8B48F'
-const L2   = '#FAF5E9'
+// ── Palette — Chapter 03 Administration ─────────────────────────────────
+const L1   = '#AAAED0'   // outer background (lavender)
+const L2   = '#F0F1FA'   // inner background (light lavender)
+const L3   = '#454D9B'   // accent / primary button (indigo)
+const PRI  = L3          // alias for components that still reference PRI
 const PP   = "'Poppins', sans-serif"
-const MAIN = '#1a2332'
+const MAIN = '#172D37'
 const SUB  = '#53666F'
 
 // ── Document taxonomy ────────────────────────────────────────────────────
@@ -411,64 +413,93 @@ export default function DocumentValet({ entityId }) {
 
   // ── Styles ──────────────────────────────────────────────────────────────
   const S = {
-    page:   { fontFamily:PP, background:L2, minHeight:'100vh', display:'flex', flexDirection:'column' },
-    header: { background:`linear-gradient(135deg,${PRI},#a07830)`, padding:'14px 24px', display:'flex', justifyContent:'space-between', alignItems:'center' },
-    tabs:   { background:'#fff', borderBottom:`2px solid ${L1}`, display:'flex', gap:0, paddingLeft:24 },
-    tab:    (active) => ({ padding:'11px 22px', fontFamily:PP, fontSize:13, fontWeight:active?700:500, color:active?PRI:'#999', borderBottom:active?`3px solid ${PRI}`:'3px solid transparent', background:'none', border:'none', borderBottom:active?`3px solid ${PRI}`:'3px solid transparent', cursor:'pointer', transition:'all .15s' }),
+    page:   { fontFamily:PP, background:L2, flex:1, minHeight:0, overflow:'hidden', display:'flex', flexDirection:'column' },
     body:   { display:'flex', flex:1, overflow:'hidden', minHeight:0 },
-    sidebar:{ width:220, background:'#fff', borderRight:`1px solid ${L1}66`, display:'flex', flexDirection:'column', flexShrink:0, overflowY:'auto' },
+    sidebar:{ width:220, background:'#fff', borderRight:`1px solid ${L1}88`, display:'flex', flexDirection:'column', flexShrink:0, overflowY:'auto' },
     sbSec:  { fontSize:10, fontWeight:700, color:SUB, letterSpacing:1.2, textTransform:'uppercase', padding:'12px 14px 4px' },
     sbItem: (active,color) => ({ display:'flex', alignItems:'center', gap:9, padding:'8px 14px', cursor:'pointer', background:active?(color+'18'):'none', borderLeft:active?`3px solid ${color}`:'3px solid transparent', transition:'all .12s', borderRadius:'0 8px 8px 0', margin:'1px 6px 1px 0' }),
-    main:   { flex:1, overflowY:'auto', padding:20 },
-    secHead:{ fontSize:10, fontWeight:800, color:PRI, letterSpacing:1.4, textTransform:'uppercase', marginBottom:10, marginTop:4, paddingBottom:5, borderBottom:`1px solid ${PRI}22`, display:'flex', alignItems:'center', gap:6 },
+    main:   { flex:1, overflowY:'auto', padding:'0 28px 22px' },
+    secHead:{ fontSize:10, fontWeight:800, color:L3, letterSpacing:1.4, textTransform:'uppercase', marginBottom:10, marginTop:4, paddingBottom:5, borderBottom:`1px solid ${L3}22`, display:'flex', alignItems:'center', gap:6 },
     kpiRow: { display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 },
     kpiCard:(color) => ({ background:'#fff', border:`1px solid ${color}44`, borderRadius:12, padding:'14px 16px', textAlign:'center' }),
   }
 
   const selEntityName = selEntityId === 'ALL' ? 'All' : (entities.find(e=>e.id===selEntityId)?.name || selEntityId)
 
+  // derived KPI values from current docs view
+  const kpiExpired  = docs.filter(d => getStatus(d) === 'EXPIRED').length
+  const kpiExpiring = docs.filter(d => getStatus(d) === 'EXPIRING_SOON').length
+  const kpiValid    = docs.filter(d => getStatus(d) === 'ACTIVE').length
+
   return (
-    <div style={S.page}>
-      {/* Header */}
-      <div style={S.header}>
-        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <span style={{ fontSize:22 }}>🗂️</span>
-          <div>
-            <div style={{ color:'#fff', fontWeight:800, fontSize:17, letterSpacing:.5 }}>Document Valet</div>
-            <div style={{ color:'rgba(255,255,255,0.75)', fontSize:11 }}>Central document repository — all entities</div>
+    <div className="dv-root" style={S.page}>
+      <style>{`
+        .dv-root button, .dv-root input, .dv-root select, .dv-root textarea {
+          font-family: 'Poppins', sans-serif !important;
+        }
+      `}</style>
+
+      {/* ══ UPPER ZONE ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+        {/* L1 bar */}
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:MAIN, fontFamily:PP }}>🗂️ Document Valet</div>
+              <div style={{ fontSize:10, color:SUB, opacity:0.85, marginTop:1, fontFamily:PP }}>Administration · Central document repository — all entities</div>
+            </div>
+            <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+              {expiredCount > 0 && (
+                <div style={{ background:'#c62828', color:'#fff', borderRadius:20, padding:'4px 12px', fontSize:12, fontWeight:700, cursor:'pointer' }}
+                  onClick={()=>setTab('expiry')}>
+                  🚨 {expiredCount} expired
+                </div>
+              )}
+              <button
+                onClick={() => {
+                  if (selEntityId !== 'ALL') {
+                    setAddModal({ linkedId: selEntityId, linkedName: selEntityName })
+                  } else if (selCategory === 'COMPANY') {
+                    setAddModal({ linkedId: entityId, linkedName: 'Company Documents' })
+                  } else {
+                    alert('Select a specific entity from the sidebar first, then click + to add a document.')
+                  }
+                }}
+                style={{ padding:'7px 16px', borderRadius:7, border:'none', background:L3, color:'#fff', fontFamily:PP, fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                + Add Document
+              </button>
+            </div>
           </div>
         </div>
-        <div style={{ display:'flex', gap:8 }}>
-          {expiredCount > 0 && (
-            <div style={{ background:'#c62828', color:'#fff', borderRadius:20, padding:'4px 12px', fontSize:12, fontWeight:700, cursor:'pointer' }} onClick={()=>setTab('expiry')}>
-              🚨 {expiredCount} expired
+
+        {/* KPI cards */}
+        <div style={{ padding:'10px 28px 12px', background:L2, display:'flex', flexWrap:'wrap', gap:8 }}>
+          {[
+            { label:'Total Docs',    value: docs.length    },
+            { label:'Expired',       value: kpiExpired     },
+            { label:'Expiring Soon', value: kpiExpiring    },
+            { label:'Valid',         value: kpiValid       },
+          ].map((k, i) => (
+            <div key={i} style={{ ...kpiCardGradient(i, L1, L2, L3), width:160, height:62, borderRadius:10, padding:'0 14px', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.10)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+              <div style={{ fontSize:18, fontWeight:800, lineHeight:1 }}>{k.value}</div>
+              <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, opacity:0.75, marginTop:4 }}>{k.label}</div>
             </div>
-          )}
-          <button
-            onClick={() => {
-              // If specific entity selected, open add modal for that entity
-              if (selEntityId !== 'ALL') {
-                setAddModal({ linkedId: selEntityId, linkedName: selEntityName })
-              } else if (selCategory === 'COMPANY') {
-                setAddModal({ linkedId: entityId, linkedName: 'Company Documents' })
-              } else {
-                alert('Select a specific entity from the sidebar first, then click + to add a document.')
-              }
-            }}
-            style={{ padding:'8px 18px', borderRadius:20, border:'2px solid rgba(255,255,255,0.6)', background:'rgba(255,255,255,0.15)', color:'#fff', fontFamily:PP, fontSize:13, fontWeight:700, cursor:'pointer' }}>
-            + Add Document
+          ))}
+        </div>
+
+        {/* Tab bar */}
+        <div style={{ padding:'0 28px', borderBottom:'2px solid #e8edf2', display:'flex', gap:0 }}>
+          <button onClick={()=>setTab('documents')} style={{ padding:'9px 20px', border:'none', background:'none', cursor:'pointer', fontSize:13, fontWeight:tab==='documents'?700:500, color:tab==='documents'?L3:'#999', borderBottom:tab==='documents'?`2px solid ${L3}`:'2px solid transparent', fontFamily:PP, transition:'all .15s' }}>
+            📁 Documents
+          </button>
+          <button onClick={()=>setTab('expiry')} style={{ padding:'9px 20px', border:'none', background:'none', cursor:'pointer', fontSize:13, fontWeight:tab==='expiry'?700:500, color:tab==='expiry'?L3:'#999', borderBottom:tab==='expiry'?`2px solid ${L3}`:'2px solid transparent', fontFamily:PP, transition:'all .15s' }}>
+            ⏰ Expiry Dashboard
+            {expiredCount > 0 && <span style={{ marginLeft:6, background:'#e53935', color:'#fff', borderRadius:10, padding:'1px 7px', fontSize:10, fontWeight:700 }}>{expiredCount}</span>}
           </button>
         </div>
-      </div>
 
-      {/* Tabs */}
-      <div style={S.tabs}>
-        <button style={S.tab(tab==='documents')} onClick={()=>setTab('documents')}>📁 Documents</button>
-        <button style={S.tab(tab==='expiry')}    onClick={()=>setTab('expiry')}>
-          ⏰ Expiry Dashboard
-          {expiredCount > 0 && <span style={{ marginLeft:6, background:'#e53935', color:'#fff', borderRadius:10, padding:'1px 7px', fontSize:10, fontWeight:700 }}>{expiredCount}</span>}
-        </button>
-      </div>
+      </div>{/* end upper zone */}
 
       <div style={S.body}>
         {/* Sidebar */}
@@ -490,7 +521,7 @@ export default function DocumentValet({ entityId }) {
                   value={entitySearch}
                   onChange={e=>setEntitySearch(e.target.value)}
                   placeholder={`Search ${catMeta.label.toLowerCase()}…`}
-                  style={{ width:'100%', padding:'6px 10px', borderRadius:14, border:`1px solid ${PRI}44`, fontSize:12, fontFamily:PP, outline:'none', color:MAIN }}
+                  style={{ width:'100%', padding:'6px 10px', borderRadius:14, border:`1px solid ${L3}44`, fontSize:12, fontFamily:PP, outline:'none', color:MAIN }}
                 />
               </div>
               <div style={S.sbItem(selEntityId==='ALL', catMeta.color)} onClick={()=>setSelEntityId('ALL')}>
@@ -587,9 +618,9 @@ export default function DocumentValet({ entityId }) {
               </div>
 
               {/* Expiry table */}
-              <div style={{ background:'#fff', borderRadius:14, border:`1px solid ${L1}88`, overflow:'hidden' }}>
+              <div style={{ background:'#fff', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 8px rgba(0,0,0,0.08)', overflow:'hidden' }}>
                 {/* Table header */}
-                <div style={{ display:'grid', gridTemplateColumns:'2fr 1.5fr 1fr 1fr 90px', padding:'9px 16px', background:L2, borderBottom:`1px solid ${L1}88`, fontSize:10, fontWeight:700, color:SUB, letterSpacing:.8, textTransform:'uppercase' }}>
+                <div style={{ display:'grid', gridTemplateColumns:'2fr 1.5fr 1fr 1fr 90px', padding:'9px 16px', background:L3, fontSize:10, fontWeight:700, color:'#fff', letterSpacing:.8, textTransform:'uppercase' }}>
                   <span>Entity</span>
                   <span>Document type</span>
                   <span>Category</span>

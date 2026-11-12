@@ -1,3 +1,7 @@
+const L1 = '#B4BA95'
+const L2 = '#F5F6EB'
+const L3 = '#606D2C'
+const PP = "'Poppins', sans-serif"
 import { GROUP_COLORS } from '../styles/appStyles'
 import FormShell from '../components/FormShell'
 import PageBanner from '../components/PageBanner'
@@ -36,12 +40,10 @@ const BLANK = {
 }
 
 // ── Styles ──────────────────────────────────────────────────────────────────
-const MC = GROUP_COLORS.Accounting
-const L3 = '#606D2C'
 
 const S = {
-  page:     { padding:'24px', fontFamily:"'Poppins',sans-serif" },
-  topBar:   { display:'flex', alignItems:'center', gap:12, marginBottom:20, flexWrap:'wrap' },
+  page:     { display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', fontFamily:"'Poppins',sans-serif" },
+  topBar:   { display:'flex', alignItems:'center', gap:12, marginBottom:16, flexWrap:'wrap', padding:'16px 24px 0', flexShrink:0 },
   title:    { fontSize:22, fontWeight:800, color:'#1a2540', flex:1 },
   searchBox:{ padding:'10px 14px', borderRadius:4, border:'1.5px solid #dde3ec', fontSize:14, outline:'none', width:240, fontFamily:"'Poppins',sans-serif" },
   addBtn:   { background:L3, color:'#fff', border:'none', borderRadius:4, padding:'10px 20px', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:"'Poppins',sans-serif" },
@@ -51,7 +53,7 @@ const S = {
   sBadge:   (color) => ({ background:color, color:'#fff', fontSize:11, fontWeight:700, borderRadius:20, padding:'2px 10px' }),
   sTotal:   (color) => ({ fontSize:13, fontWeight:700, color }),
   table:    { width:'100%', borderCollapse:'collapse', background:'#fff', borderRadius:'0 0 12px 12px', overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' },
-  th:       { padding:'7px 12px', fontSize:11, fontWeight:700, color:'#fff', textAlign:'left', borderBottom:'2px solid #f0f2f5', textTransform:'uppercase', letterSpacing:'0.5px', background:MC, whiteSpace:'nowrap' },
+  th:       { padding:'7px 12px', fontSize:11, fontWeight:700, color:'#fff', textAlign:'left', borderBottom:'2px solid #f0f2f5', textTransform:'uppercase', letterSpacing:'0.5px', background:L3, whiteSpace:'nowrap' },
   td:       { padding:'7px 12px', fontSize:13, color:'#1a2540', borderBottom:'1px solid #f5f6f8', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:200 },
   codeTd:   { padding:'7px 12px', fontSize:12, fontWeight:700, color:'#1565c0', borderBottom:'1px solid #f5f6f8', fontFamily:'monospace', whiteSpace:'nowrap' },
   amtTd:    (pos) => ({ padding:'7px 12px', fontSize:13, fontWeight:700, textAlign:'right', borderBottom:'1px solid #f5f6f8', color: pos>=0?'#2e7d32':'#c62828', whiteSpace:'nowrap' }),
@@ -186,38 +188,43 @@ export default function ChartOfAccounts({ entityId }) {
 
   // ── Render ─────────────────────────────────────────────────
   return (
-    <div style={S.page}>
-      {/* Top bar */}
-      <div style={S.topBar}>
-        <input
-          placeholder="Search code or name…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={S.searchBox}
-        />
-        <label style={S.toggle(showInactive)} onClick={() => setShowInactive(v => !v)}>
-          <span style={{ fontSize:16 }}>{showInactive ? '👁️' : '🙈'}</span>
-          {showInactive ? 'Showing all' : 'Active only'}
-        </label>
-        <button onClick={openAdd} style={S.addBtn}>+ Add Account</button>
-      </div>
-
-      {/* Summary chips */}
-      <div style={{ display:'flex', gap:10, marginBottom:20, flexWrap:'wrap' }}>
-        {TYPE_ORDER.map(t => {
-          const m = TYPE_META[t]
-          return (
-            <div key={t} style={{ padding:'8px 16px', background:m.bg, borderRadius:10, display:'flex', alignItems:'center', gap:8 }}>
-              <span>{m.icon}</span>
-              <span style={{ fontWeight:700, fontSize:13, color:m.color }}>{m.label}</span>
-              <span style={S.sBadge(m.color)}>{totalByType[t]}</span>
-            </div>
-          )
-        })}
-        <div style={{ padding:'8px 16px', background:'#f0f2f5', borderRadius:10, fontSize:13, fontWeight:700, color:'#1a2540' }}>
-          Total: {accounts.filter(a=>a.is_active).length} accounts
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:PP }}>
+      {/* UPPER ZONE */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>🏦 Chart of Accounts</div>
+            <button onClick={openAdd} style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'7px 16px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:PP }}>+ Add Account</button>
+          </div>
+        </div>
+        <div style={{ padding:'6px 28px 8px' }}>
+          <div style={{ background:'#fff', borderRadius:8, padding:'10px 14px', display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+            <input placeholder="Search code or name…" value={search} onChange={e=>setSearch(e.target.value)} style={{ padding:'8px 12px', border:'1px solid #dde3ec', borderRadius:6, fontSize:13, outline:'none', fontFamily:PP, width:240 }}/>
+            <label style={{ display:'flex', alignItems:'center', gap:6, cursor:'pointer', fontSize:13, fontWeight:600, color: showInactive?L3:'#aab2bd' }} onClick={()=>setShowInactive(v=>!v)}>
+              <span style={{ fontSize:16 }}>{showInactive ? '👁️' : '🙈'}</span>
+              {showInactive ? 'Showing all' : 'Active only'}
+            </label>
+          </div>
+        </div>
+        {/* Summary chips — pinned */}
+        <div style={{ padding:'6px 28px 8px', display:'flex', gap:10, flexWrap:'wrap' }}>
+          {TYPE_ORDER.map(t => {
+            const m = TYPE_META[t]
+            return (
+              <div key={t} style={{ padding:'8px 16px', background:m.bg, borderRadius:10, display:'flex', alignItems:'center', gap:8 }}>
+                <span>{m.icon}</span>
+                <span style={{ fontWeight:700, fontSize:13, color:m.color }}>{m.label}</span>
+                <span style={S.sBadge(m.color)}>{totalByType[t]}</span>
+              </div>
+            )
+          })}
+          <div style={{ padding:'8px 16px', background:'#f0f2f5', borderRadius:10, fontSize:13, fontWeight:700, color:'#1a2540' }}>
+            Total: {accounts.filter(a=>a.is_active).length} accounts
+          </div>
         </div>
       </div>
+      {/* SCROLL ZONE */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
 
       {loading && <div style={{ color:'#6b7c93', padding:24 }}>Loading…</div>}
 
@@ -298,6 +305,8 @@ export default function ChartOfAccounts({ entityId }) {
           </div>
         )
       })}
+
+      </div>{/* end scroll zone */}
 
       {/* ── Page Banner — Add Account ── */}
       <PageBanner

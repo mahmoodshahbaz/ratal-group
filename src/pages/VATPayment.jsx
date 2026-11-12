@@ -1,9 +1,11 @@
+const L1 = '#B4BA95'
+const L2 = '#F5F6EB'
+const L3 = '#606D2C'
+const PP = "'Poppins', sans-serif"
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
 import FormShell from '../components/FormShell'
-import { GROUP_COLORS } from '../styles/appStyles'
-const MC = GROUP_COLORS.Accounting
-const L3 = '#606D2C'
+import { GROUP_COLORS, kpiCardGradient } from '../styles/appStyles'
 /**
  * VATPayment.jsx — ZATCA VAT Payment Recording
  * Records VAT payments made to ZATCA and auto-posts the journal entry:
@@ -21,7 +23,7 @@ const S = {
   row2:  { display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 },
   row3:  { display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 },
   addBtn:{ background:L3, color:'#fff', border:'none', borderRadius:4, padding:'10px 22px', cursor:'pointer', fontSize:14, fontWeight:700, fontFamily:"'Poppins',sans-serif" },
-  th:    { padding:'9px 12px', textAlign:'left', fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:0.4, background:MC, color:'#fff', whiteSpace:'nowrap' },
+  th:    { padding:'9px 12px', textAlign:'left', fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:0.4, background:L3, color:'#fff', whiteSpace:'nowrap' },
   td:    { padding:'9px 12px', fontSize:12, color:'#2d3a45', borderBottom:'1px solid #f0f4f8', verticalAlign:'middle' },
   err:   { background:'#ffebee', color:'#c62828', borderRadius:4, padding:'10px 13px', fontSize:13, marginBottom:12 },
   secHead:{ fontSize:11, fontWeight:800, textTransform:'uppercase', letterSpacing:0.8, color:'#6b7c93', marginBottom:10 },
@@ -212,32 +214,44 @@ export default function VATPayment({ entityId }) {
   const totalPaid = payments.reduce((s,p) => s + (+p.amount_paid||0), 0)
   const STEPS = ['VAT Period & Amounts', 'Payment Details']
 
+  const kpiData = [
+    { label:'Output VAT Charged',  value: `SAR ${fmt(vatPos?.outputVAT||0)}`,  sub:'From issued invoices' },
+    { label:'VAT Paid to ZATCA',   value: `SAR ${fmt(vatPos?.paidToDate||0)}`, sub:'Total payments made' },
+    { label:'VAT Balance Due',     value: `SAR ${fmt(vatPos?.balance||0)}`,    sub:'Output minus paid' },
+    { label:'Total Payments',      value: `SAR ${fmt(totalPaid)}`,             sub:`${payments.length} filing${payments.length!==1?'s':''}` },
+  ]
+
   return (
-    <div style={{ padding:24, maxWidth:1100, margin:'0 auto', fontFamily:"'Poppins',sans-serif" }}>
-      {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20 }}>
-        <div style={{ fontSize:13, color:'#6b7c93' }}>ZATCA VAT filing and payment records — auto-posts Dr VAT Payable / Cr Bank</div>
-        <button style={S.addBtn} onClick={openNew}>+ Record VAT Payment</button>
-      </div>
-
-      {/* VAT Position summary */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
-        {[
-          { label:'Output VAT Charged',  value: vatPos?.outputVAT || 0,  color:'#c0392b', note:'From issued invoices' },
-          { label:'VAT Paid to ZATCA',   value: vatPos?.paidToDate|| 0,  color:L3,        note:'Total payments made' },
-          { label:'VAT Balance Due',      value: vatPos?.balance   || 0,  color: (vatPos?.balance||0)>0?'#c0392b':L3, note:'Output minus paid' },
-          { label:'Total Payments (SAR)', value: totalPaid,               color:'#1a2e3d', note:`${payments.length} filing${payments.length!==1?'s':''}` },
-        ].map(c=>(
-          <div key={c.label} style={{ background:'#fff', borderRadius:4, border:'1.5px solid #e8edf5', padding:'14px 18px' }}>
-            <div style={{ fontSize:11, color:'#6b7c93', fontWeight:700, textTransform:'uppercase', letterSpacing:0.4, marginBottom:6 }}>{c.label}</div>
-            <div style={{ fontSize:16, fontWeight:800, color:c.color, fontFamily:'monospace' }}>SAR {fmt(c.value)}</div>
-            <div style={{ fontSize:11, color:'#aab2bd', marginTop:3 }}>{c.note}</div>
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:PP }}>
+      {/* UPPER ZONE */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>🧾 VAT Payments</div>
+              <div style={{ fontSize:10, color:'#fff', opacity:0.8 }}>ZATCA VAT filing — auto-posts Dr VAT Payable / Cr Bank</div>
+            </div>
+            <button style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'7px 16px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:PP }} onClick={openNew}>+ Record VAT Payment</button>
           </div>
-        ))}
+        </div>
+        {/* KPI Cards */}
+        <div style={{ padding:'10px 28px 12px', display:'flex', gap:10, flexWrap:'wrap' }}>
+          {kpiData.map((k,i)=>{
+            const g = kpiCardGradient(i,L1,L2,L3)
+            return (
+              <div key={k.label} style={{ ...g, width:160, height:62, borderRadius:10, padding:'0 14px', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.10)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+                <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', opacity:0.75, marginBottom:2 }}>{k.label}</div>
+                <div style={{ fontSize:14, fontWeight:800, lineHeight:1 }}>{k.value}</div>
+                <div style={{ fontSize:9, opacity:0.7, marginTop:2 }}>{k.sub}</div>
+              </div>
+            )
+          })}
+        </div>
       </div>
-
+      {/* SCROLL ZONE */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
       {/* Payments table */}
-      <div style={{ background:'#fff', borderRadius:4, border:'1.5px solid #e8edf5', overflow:'hidden' }}>
+      <div style={{ background:'#fff', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 8px rgba(0,0,0,0.08)', overflow:'hidden', marginTop:0 }}>
         {loading ? (
           <div style={{ padding:40, textAlign:'center', color:'#aab2bd' }}>Loading…</div>
         ) : (
@@ -275,7 +289,7 @@ export default function VATPayment({ entityId }) {
               </tbody>
               {payments.length > 0 && (
                 <tfoot>
-                  <tr style={{ background:'#1a2e3d', color:'#fff' }}>
+                  <tr style={{ background:L3, color:'#fff' }}>
                     <td colSpan={6} style={{ padding:'10px 12px', fontWeight:800 }}>TOTAL PAID TO ZATCA</td>
                     <td style={{ padding:'10px 12px', textAlign:'right', fontFamily:'monospace', fontWeight:900, color:'#a8e6c3' }}>SAR {fmt(totalPaid)}</td>
                     <td colSpan={5}></td>
@@ -417,6 +431,7 @@ export default function VATPayment({ entityId }) {
           </div>
         )}
       </FormShell>
+      </div>{/* end scroll zone */}
     </div>
   )
 }

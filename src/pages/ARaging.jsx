@@ -1,7 +1,9 @@
-import ChapterPage from '../components/ChapterPage'
-import PageBanner from '../components/PageBanner'
-import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
-const MC = GROUP_COLORS.Accounting
+import { GROUP_COLORS, kpiCardGradient } from '../styles/appStyles'
+const MC = GROUP_COLORS.Reports
+const L1 = '#B8A5CF'
+const L2 = '#F5EFFA'
+const L3 = '#7444A3'
+const PP = "'Poppins', sans-serif"
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -253,52 +255,64 @@ export default function ARaging({ entityId }) {
   }
 
   return (
-    <div>
-      <div style={{ fontSize:12, color:'#6b7c93', marginBottom:18 }}>Outstanding invoice balances by age — debtors analysis</div>
+    <div className="ar-root" style={{ fontFamily:PP, display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2 }}>
+      <style>{`.ar-root input,.ar-root select,.ar-root button,.ar-root textarea{font-family:'Poppins',sans-serif!important}`}</style>
 
-      {/* ── Controls ── */}
-      <div style={{ ...S.card, display:'flex', gap:10, alignItems:'flex-end', flexWrap:'wrap' }}>
-        <div>
-          <label style={S.lbl}>As of Date</label>
-          <input type="date" value={asOf} onChange={e => setAsOf(e.target.value)} style={S.inp} />
-        </div>
-        <div>
-          <label style={S.lbl}>Sort By</label>
-          <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={S.inp}>
-            <option value="total">Highest Balance</option>
-            <option value="name">Customer Name</option>
-            <option value="oldest">Oldest First</option>
-          </select>
-        </div>
-        <input placeholder="Search customer…" value={search} onChange={e => setSearch(e.target.value)} style={{ ...S.inp, width:200 }} />
-        <div style={{ display:'flex', alignItems:'center', gap:6, paddingBottom:2 }}>
-          <input type="checkbox" id="showZero" checked={showZero} onChange={e => setShowZero(e.target.checked)} />
-          <label htmlFor="showZero" style={{ fontSize:11, cursor:'pointer', fontWeight:600 }}>Show zero balances</label>
-        </div>
-        <div style={{ marginLeft:'auto', display:'flex', gap:8 }}>
-          <button style={S.btnO()} onClick={exportCSV}>⬇ CSV</button>
-          <button style={S.btnO('#2e7d32')} onClick={printReport}>🖨 Print</button>
-          <button style={S.btn()} onClick={load} disabled={loading}>↻ Refresh</button>
-        </div>
-      </div>
+      {/* ══ UPPER ZONE ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
 
-      {/* ── Bucket KPI strip ── */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:8, marginBottom:14 }}>
-        {BUCKETS.map(b => (
-          <div key={b.key} style={{ background:b.bg, border:`1.5px solid ${b.color}44`, borderRadius:12, padding:'10px 12px', textAlign:'center' }}>
-            <div style={{ fontSize:9, fontWeight:700, color:b.color, marginBottom:3 }}>{b.label}</div>
-            <div style={{ fontSize:13, fontWeight:800, color:b.color }}>{fmt(totals[b.key])}</div>
-            <div style={{ fontSize:9, color:'#aab2bd', marginTop:2 }}>
-              {totals.total ? `${Math.round(totals[b.key] / totals.total * 100)}%` : '0%'}
+        {/* L1 Heading Bar */}
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, borderRadius:'6px 6px 0 0', padding:'8px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <span style={{ fontSize:15, fontWeight:700, color:'#fff', letterSpacing:0.3 }}>📊 AR Aging</span>
+            <div style={{ display:'flex', gap:8 }}>
+              <button style={{ background:'transparent', color:'#fff', border:'1px solid rgba(255,255,255,0.5)', borderRadius:7, padding:'5px 12px', fontSize:11, fontWeight:700, cursor:'pointer' }} onClick={exportCSV}>⬇ CSV</button>
+              <button style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'7px 16px', fontSize:12, fontWeight:700, cursor:'pointer' }} onClick={printReport}>🖨 Print</button>
             </div>
           </div>
-        ))}
-        <div style={{ background:'#f0f4f8', border:'1.5px solid #455a6444', borderRadius:12, padding:'10px 12px', textAlign:'center' }}>
-          <div style={{ fontSize:9, fontWeight:700, color:'#455a64', marginBottom:3 }}>TOTAL</div>
-          <div style={{ fontSize:14, fontWeight:800, color:'#1a2e3d' }}>{fmt(totals.total)}</div>
-          <div style={{ fontSize:9, color:'#c62828', marginTop:2 }}>Overdue: {fmt(overdueTotal)}</div>
         </div>
-      </div>
+
+        {/* KPI Strip */}
+        <div style={{ padding:'10px 28px 12px', background:L2, display:'flex', flexWrap:'wrap', gap:8 }}>
+          {[...BUCKETS.map(b => ({ label:b.label, value:fmt(totals[b.key]) })), { label:'TOTAL', value:fmt(totals.total) }].map((k, i) => {
+            const g = kpiCardGradient(i, L1, L2, L3)
+            return (
+              <div key={k.label} style={{ ...g, width:160, height:62, borderRadius:10, padding:'0 14px', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.10)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+                <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', opacity:0.75, marginBottom:2 }}>{k.label}</div>
+                <div style={{ fontSize:16, fontWeight:800, lineHeight:1 }}>{k.value}</div>
+                <div style={{ fontSize:9, opacity:0.7, marginTop:2 }}>SAR</div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Filter Bar */}
+        <div style={{ padding:'6px 28px 8px' }}>
+          <div style={{ background:'#fff', padding:'10px 14px', borderRadius:8, boxShadow:'0 1px 4px rgba(0,0,0,0.08)', display:'flex', gap:10, alignItems:'flex-end', flexWrap:'wrap' }}>
+            <div>
+              <label style={S.lbl}>As of Date</label>
+              <input type="date" value={asOf} onChange={e => setAsOf(e.target.value)} style={S.inp} />
+            </div>
+            <div>
+              <label style={S.lbl}>Sort By</label>
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={S.inp}>
+                <option value="total">Highest Balance</option>
+                <option value="name">Customer Name</option>
+                <option value="oldest">Oldest First</option>
+              </select>
+            </div>
+            <input placeholder="🔍 Search customer…" value={search} onChange={e => setSearch(e.target.value)} style={{ ...S.inp, minWidth:180 }} />
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <input type="checkbox" id="showZero" checked={showZero} onChange={e => setShowZero(e.target.checked)} />
+              <label htmlFor="showZero" style={{ fontSize:11, cursor:'pointer', fontWeight:600 }}>Show zero balances</label>
+            </div>
+            <button style={{ ...S.btn(L3), marginLeft:'auto' }} onClick={load} disabled={loading}>↻ Refresh</button>
+          </div>
+        </div>
+      </div>{/* end upper zone */}
+
+      {/* ══ SCROLL ZONE ══ */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'10px 28px 22px' }}>
 
       {/* ── Overdue alert ── */}
       {overdueTotal > 0 && (
@@ -430,6 +444,7 @@ export default function ARaging({ entityId }) {
         Due date: uses invoice <em>due_date</em> if set, otherwise <em>invoice_date + 30 days</em>.
         Paid amounts sourced from payment allocations. Click any customer row to expand invoices.
       </div>
+      </div>{/* end scroll zone */}
     </div>
   )
 }

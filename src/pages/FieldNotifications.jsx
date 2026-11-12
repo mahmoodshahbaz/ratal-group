@@ -16,6 +16,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { kpiCardGradient } from '../styles/appStyles'
 
 // ── Type config ───────────────────────────────────────────────────────────────
 
@@ -43,48 +44,35 @@ const ALL_TYPES = Object.keys(TYPE_META)
 
 function tm(type) { return TYPE_META[type] || { icon:'🔔', label: type, color:'#546e7a' } }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
+// ── Administration Ch.03 Palette ─────────────────────────────────────────────
+const L1   = '#AAAED0'
+const L2   = '#F0F1FA'
+const L3   = '#454D9B'
+const PP   = "'Poppins', sans-serif"
+const MAIN = '#172D37'
+const SUB  = '#53666F'
 
+// ── Shared styles ─────────────────────────────────────────────────────────────
 const s = {
-  page:   { padding:'24px 28px', fontFamily:'Arial,sans-serif', maxWidth:1100 },
-  head:   { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24, flexWrap:'wrap', gap:12 },
-  h1:     { fontSize:22, fontWeight:900, color:'#1a2e3d', margin:0 },
-  kpi:    { display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:14, marginBottom:24 },
-  kcard:  (c) => ({ background:`linear-gradient(135deg,${c}cc 0%,${c} 100%)`, borderRadius:10, padding:'10px 16px', boxShadow:`0 3px 10px ${c}44`, minWidth:110, flexShrink:0, position:'relative', overflow:'hidden' }),
-  kval:   (c) => ({ fontSize:24, fontWeight:900, color:'#fff', lineHeight:1.2, marginTop:2 }),
-  klbl:   { fontSize:9, color:'rgba(255,255,255,0.85)', fontWeight:700, textTransform:'uppercase', letterSpacing:0.8, fontFamily:"'Poppins',sans-serif" },
-  filters:{ display:'flex', gap:10, marginBottom:16, flexWrap:'wrap', alignItems:'center' },
-  chip:   (active, color='#1a2540') => ({
-    padding:'5px 14px', borderRadius:20, fontSize:12, fontWeight:700,
-    border:`2px solid ${active ? color : '#e0e0e0'}`,
-    background: active ? color : '#fff',
-    color: active ? '#fff' : '#546e7a', cursor:'pointer',
-  }),
-  input:  { padding:'7px 12px', border:'1.5px solid #cfd8dc', borderRadius:8, fontSize:13, background:'#f8fafc', color:'#1a2e3d' },
-  card:   { background:'#fff', borderRadius:14, boxShadow:'0 2px 10px rgba(0,0,0,0.07)', overflow:'hidden', marginBottom:16 },
-  row:    (unread) => ({
-    display:'flex', gap:14, padding:'14px 18px', alignItems:'flex-start',
-    background: unread ? '#f3f7ff' : '#fff',
-    borderBottom:'1px solid #f0f0f0',
-  }),
-  icon:   (color) => ({
-    width:40, height:40, borderRadius:10, flexShrink:0,
-    background: color + '18', display:'flex', alignItems:'center',
-    justifyContent:'center', fontSize:20,
-  }),
-  title:  { fontSize:14, fontWeight:700, color:'#1a2e3d', marginBottom:2 },
-  body:   { fontSize:13, color:'#546e7a', marginBottom:4 },
-  meta:   { fontSize:11, color:'#aab2bd' },
-  badge:  (color) => ({
+  badge: (color) => ({
     display:'inline-block', padding:'1px 8px', borderRadius:10,
     background: color + '18', color, fontSize:11, fontWeight:700,
     marginRight:6,
   }),
-  btn:    (bg, fg='#fff') => ({
+  btn: (bg, fg='#fff') => ({
     padding:'6px 12px', background:bg, color:fg, border:'none',
-    borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer',
+    borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:PP,
   }),
-  emptyState: { padding:40, textAlign:'center', color:'#aab2bd' },
+  row: (unread) => ({
+    display:'flex', gap:14, padding:'12px 16px', alignItems:'flex-start',
+    background: unread ? '#eef0fb' : '#fff',
+    borderBottom:'1px solid #f0f0f0',
+  }),
+  icon: (color) => ({
+    width:38, height:38, borderRadius:9, flexShrink:0,
+    background: color + '18', display:'flex', alignItems:'center',
+    justifyContent:'center', fontSize:18,
+  }),
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -179,153 +167,210 @@ export default function FieldNotifications({ entityId, isAr }) {
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
+  // ── KPI data ───────────────────────────────────────────────────────────────
+  const KPI_ITEMS = [
+    { label:'Today',         value: todayCount     },
+    { label:'Unread',        value: unreadCount    },
+    { label:'TG Delivered',  value: deliveredCount },
+    { label:'TG Pending',    value: pendingCount   },
+    { label:'Total',         value: notifs.length  },
+  ]
+
+  const IN = { padding:'7px 12px', border:'1.5px solid #cfd8dc', borderRadius:8,
+               fontSize:13, background:'#fff', color:MAIN, fontFamily:PP }
+
   return (
-    <div style={s.page}>
+    <div className="fn-root" style={{ fontFamily:PP, display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2 }}>
+      <style>{`.fn-root input,.fn-root select,.fn-root button,.fn-root textarea{font-family:'Poppins',sans-serif!important}`}</style>
 
-      {/* Header */}
-      <div style={s.head}>
-        <div>
-          <div style={{ fontSize:13, color:'#78909c' }}>
-            All system alerts from field forms — Telegram delivery status
+      {/* ══ UPPER ZONE ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+        {/* 1. L1 Heading Bar */}
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0',
+                        display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>Field Notifications</div>
+              <div style={{ fontSize:10, color:'#fff', opacity:0.8 }}>System alerts from all field forms — Telegram delivery status</div>
+            </div>
+            <div style={{ display:'flex', gap:8 }}>
+              {unreadVisible > 0 && (
+                <button
+                  onClick={markAllRead}
+                  disabled={markingAll}
+                  style={{ background:L3, color:'#fff', border:'none', borderRadius:7,
+                           padding:'7px 16px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:PP }}
+                >
+                  {markingAll ? '⏳' : `✓ Mark All Read (${unreadVisible})`}
+                </button>
+              )}
+              <button onClick={load}
+                style={{ background:'rgba(255,255,255,0.25)', color:'#fff', border:'1px solid rgba(255,255,255,0.4)',
+                         borderRadius:7, padding:'7px 14px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:PP }}>
+                ↺ Refresh
+              </button>
+            </div>
           </div>
         </div>
-        <div style={{ display:'flex', gap:10 }}>
-          {unreadVisible > 0 && (
-            <button
-              onClick={markAllRead}
-              disabled={markingAll}
-              style={s.btn('#1a2540')}
-            >
-              {markingAll ? '⏳' : `✓ Mark All Read (${unreadVisible})`}
-            </button>
-          )}
-          <button onClick={load} style={s.btn('#f0f4f8','#546e7a')}>
-            ↺ Refresh
-          </button>
-        </div>
-      </div>
 
-      {/* KPI strip */}
-      <div style={s.kpi}>
-        {[
-          { label:'Today',       value:todayCount,     color:'#1a2540' },
-          { label:'Unread',      value:unreadCount,    color:'#6a1b9a' },
-          { label:'TG Delivered',value:deliveredCount, color:'#2e7d32' },
-          { label:'TG Pending',  value:pendingCount,   color:'#f57f17' },
-          { label:'Total',       value:notifs.length,  color:'#546e7a' },
-        ].map(k => (
-          <div key={k.label} style={s.kcard(k.color)}>
-            <div style={s.klbl}>{k.label}</div>
-            <div style={s.kval(k.color)}>{k.value}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Filters */}
-      <div style={s.filters}>
-        {/* Status filter */}
-        {['ALL','UNREAD','DELIVERED','PENDING'].map(f => (
-          <button key={f} onClick={() => setStatusFilter(f)} style={s.chip(statusFilter === f)}>
-            {f === 'ALL' ? `All (${notifs.length})` :
-             f === 'UNREAD' ? `Unread (${unreadCount})` :
-             f === 'DELIVERED' ? `✅ Delivered (${deliveredCount})` :
-             `⏳ TG Pending (${pendingCount})`}
-          </button>
-        ))}
-
-        {/* Type filter */}
-        <select
-          style={{ ...s.input, marginLeft:8 }}
-          value={typeFilter}
-          onChange={e => setTypeFilter(e.target.value)}
-        >
-          <option value="ALL">All Types</option>
-          {ALL_TYPES.map(t => (
-            <option key={t} value={t}>{tm(t).icon} {tm(t).label}</option>
+        {/* 2. KPI Cards */}
+        <div style={{ padding:'10px 28px 12px', background:L2, display:'flex', flexWrap:'wrap', gap:8 }}>
+          {KPI_ITEMS.map((k, i) => (
+            <div key={k.label}
+              style={{ width:160, height:62, borderRadius:10, padding:'0 14px',
+                       flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.10)',
+                       display:'flex', flexDirection:'column', justifyContent:'center',
+                       ...kpiCardGradient(i % 4, L1, L2, L3) }}>
+              <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', opacity:0.75, letterSpacing:0.6 }}>{k.label}</div>
+              <div style={{ fontSize:18, fontWeight:800, lineHeight:1.2 }}>{k.value}</div>
+            </div>
           ))}
-        </select>
-
-        {/* Search */}
-        <input
-          style={{ ...s.input, marginLeft:'auto', minWidth:200 }}
-          placeholder="🔍 Employee or keyword…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-      </div>
-
-      {/* Notification list */}
-      {loading ? (
-        <div style={s.emptyState}>Loading notifications…</div>
-      ) : visible.length === 0 ? (
-        <div style={s.emptyState}>
-          {notifs.length === 0
-            ? 'No notifications yet. They appear here when field forms submit.'
-            : 'No notifications match the current filter.'}
         </div>
-      ) : (
-        <div style={s.card}>
-          {visible.map(n => {
-            const meta  = tm(n.type)
-            const empName = employees[n.employee_id] || 'Unknown Employee'
-            const dateStr = n.created_at
-              ? new Date(n.created_at).toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })
-              : ''
 
-            return (
-              <div key={n.id} style={s.row(!n.is_read)}>
-                {/* Icon */}
-                <div style={s.icon(meta.color)}>{meta.icon}</div>
+        {/* 4. Filter Bar */}
+        <div style={{ padding:'6px 28px 8px', background:L2 }}>
+          <div style={{ background:'#fff', padding:'10px 14px', borderRadius:8,
+                        boxShadow:'0 1px 4px rgba(0,0,0,0.08)', display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>
+            {/* Status pills */}
+            {[
+              { key:'ALL',       label:`All (${notifs.length})` },
+              { key:'UNREAD',    label:`Unread (${unreadCount})` },
+              { key:'DELIVERED', label:`✅ Delivered (${deliveredCount})` },
+              { key:'PENDING',   label:`⏳ TG Pending (${pendingCount})` },
+            ].map(f => (
+              <button key={f.key} onClick={() => setStatusFilter(f.key)}
+                style={{ padding:'5px 14px', borderRadius:20, fontSize:12, fontWeight:700,
+                         border:`2px solid ${statusFilter === f.key ? L3 : '#e0e0e0'}`,
+                         background: statusFilter === f.key ? L3 : '#fff',
+                         color: statusFilter === f.key ? '#fff' : SUB, cursor:'pointer', fontFamily:PP }}>
+                {f.label}
+              </button>
+            ))}
 
-                {/* Content */}
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:2 }}>
-                    <span style={s.badge(meta.color)}>{meta.label}</span>
-                    {!n.is_read && (
-                      <span style={{ ...s.badge('#6a1b9a'), background:'#ede7f6' }}>UNREAD</span>
-                    )}
-                    {n.delivered_at ? (
-                      <span style={{ fontSize:11, color:'#2e7d32' }}>✅ Telegram sent</span>
-                    ) : (
-                      <span style={{ fontSize:11, color:'#f57f17' }}>⏳ TG not sent</span>
-                    )}
-                  </div>
-                  <div style={s.title}>{n.title}</div>
-                  {n.body && <div style={s.body}>{n.body}</div>}
-                  <div style={s.meta}>
-                    👤 {empName} · {dateStr}
-                    {n.delivered_at && (
-                      <span style={{ marginLeft:8, color:'#2e7d32' }}>
-                        · Delivered {new Date(n.delivered_at).toLocaleString('en-GB', { hour:'2-digit', minute:'2-digit' })}
-                      </span>
-                    )}
-                  </div>
-                </div>
+            {/* Type dropdown */}
+            <select style={{ ...IN, marginLeft:4 }} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+              <option value="ALL">All Types</option>
+              {ALL_TYPES.map(t => (
+                <option key={t} value={t}>{tm(t).icon} {tm(t).label}</option>
+              ))}
+            </select>
 
-                {/* Actions */}
-                {!n.is_read && (
-                  <button
-                    onClick={() => markRead(n.id)}
-                    style={{ ...s.btn('#f0f4f8','#546e7a'), flexShrink:0, alignSelf:'center' }}
-                  >Mark Read</button>
-                )}
-              </div>
-            )
-          })}
+            {/* Search */}
+            <input
+              style={{ ...IN, marginLeft:'auto', minWidth:200 }}
+              placeholder="🔍 Employee or keyword…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+
+            {/* Count badge */}
+            <div style={{ background:L3, color:'#fff', borderRadius:20, padding:'4px 12px',
+                          fontSize:12, fontWeight:700, flexShrink:0 }}>
+              {visible.length} shown
+            </div>
+          </div>
         </div>
-      )}
 
-      {/* Telegram setup hint */}
-      <div style={{ background:'#fff3e0', borderRadius:12, padding:16, marginTop:8, border:'1px solid #ffcc80' }}>
-        <div style={{ fontWeight:700, fontSize:13, color:'#e65100', marginBottom:6 }}>
-          ⚠️ TG Pending = employee has no Telegram Chat ID set
+        {/* 5. Column Header Row */}
+        <div style={{ padding:'0 28px' }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed' }}>
+            <thead>
+              <tr>
+                {['Type','Employee','Title / Message','Date','Telegram',''].map((h, i) => (
+                  <th key={i} style={{ background:L3, color:'#fff', padding:'9px 13px',
+                                       fontSize:10, fontWeight:700, textTransform:'uppercase',
+                                       textAlign:'left', width: i===5?80:undefined }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+          </table>
         </div>
-        <div style={{ fontSize:12, color:'#795548', lineHeight:1.6 }}>
-          Go to <strong>Administration → Employees</strong>, open the employee record, and paste their Telegram Chat ID.
-          Each employee gets their ID by sending <code>/start</code> to your bot.
-          Once set, all future notifications will deliver automatically.
+
+      </div>{/* end upper zone */}
+
+      {/* ══ SCROLL ZONE ══ */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
+        <div style={{ background:'#fff', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 8px rgba(0,0,0,0.08)', overflow:'hidden' }}>
+
+          {loading ? (
+            <div style={{ padding:40, textAlign:'center', color:'#aab2bd', fontFamily:PP }}>Loading notifications…</div>
+          ) : visible.length === 0 ? (
+            <div style={{ padding:40, textAlign:'center', color:'#aab2bd', fontFamily:PP }}>
+              {notifs.length === 0
+                ? 'No notifications yet. They appear here when field forms submit.'
+                : 'No notifications match the current filter.'}
+            </div>
+          ) : (
+            <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed' }}>
+              <tbody>
+                {visible.map(n => {
+                  const meta    = tm(n.type)
+                  const empName = employees[n.employee_id] || 'Unknown Employee'
+                  const dateStr = n.created_at
+                    ? new Date(n.created_at).toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })
+                    : ''
+                  const TD = { padding:'11px 13px', fontSize:13, color:MAIN,
+                               borderBottom:'1px solid #f0f0f0', verticalAlign:'middle',
+                               fontFamily:PP, background: n.is_read ? '#fff' : '#eef0fb' }
+                  return (
+                    <tr key={n.id}>
+                      {/* Type */}
+                      <td style={TD}>
+                        <span style={s.badge(meta.color)}>{meta.icon} {meta.label}</span>
+                        {!n.is_read && (
+                          <span style={{ display:'inline-block', padding:'1px 7px', borderRadius:10,
+                                         background:'#ede7f6', color:'#6a1b9a', fontSize:10, fontWeight:700 }}>NEW</span>
+                        )}
+                      </td>
+                      {/* Employee */}
+                      <td style={{ ...TD, fontSize:12, color:SUB }}>👤 {empName}</td>
+                      {/* Title / Message */}
+                      <td style={TD}>
+                        <div style={{ fontWeight:700, fontSize:13, color:MAIN, marginBottom:2 }}>{n.title}</div>
+                        {n.body && <div style={{ fontSize:12, color:SUB }}>{n.body}</div>}
+                      </td>
+                      {/* Date */}
+                      <td style={{ ...TD, fontSize:11, color:SUB, whiteSpace:'nowrap' }}>{dateStr}</td>
+                      {/* Telegram */}
+                      <td style={TD}>
+                        {n.delivered_at ? (
+                          <span style={{ fontSize:12, color:'#2e7d32' }}>
+                            ✅ {new Date(n.delivered_at).toLocaleString('en-GB', { hour:'2-digit', minute:'2-digit' })}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize:12, color:'#f57f17' }}>⏳ Not sent</span>
+                        )}
+                      </td>
+                      {/* Actions */}
+                      <td style={{ ...TD, textAlign:'center' }}>
+                        {!n.is_read && (
+                          <button onClick={() => markRead(n.id)}
+                            style={{ ...s.btn('#f0f4f8', SUB), fontSize:11, padding:'5px 10px' }}>
+                            Mark Read
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+
+          {/* Telegram setup hint */}
+          <div style={{ background:'#fff8f0', borderTop:'1px solid #ffe0b2', padding:'12px 16px' }}>
+            <span style={{ fontWeight:700, fontSize:12, color:'#e65100' }}>⚠️ TG Pending</span>
+            <span style={{ fontSize:12, color:'#795548', marginLeft:8 }}>
+              = employee has no Telegram Chat ID. Go to <strong>Administration → Employees</strong>,
+              open the record, and paste their Chat ID (they get it by sending <code>/start</code> to your bot).
+            </span>
+          </div>
+
         </div>
-      </div>
+      </div>{/* end scroll zone */}
 
     </div>
   )

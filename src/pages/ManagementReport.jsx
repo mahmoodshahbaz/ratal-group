@@ -1,5 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { GROUP_COLORS, kpiCardGradient } from '../styles/appStyles'
+const MC = GROUP_COLORS.Reports
+const L1 = '#B8A5CF'
+const L2 = '#F5EFFA'
+const L3 = '#7444A3'
+const PP = "'Poppins', sans-serif"
 
 // ═══════════════════════════════════════════════════════════════════
 // Management Report / Board Pack — Phase 21
@@ -236,31 +242,62 @@ export default function ManagementReport({ entityId }) {
   }
 
   return (
-    <div>
-      {/* Header */}
-      <div style={{ ...S.card, background:'#1a2e3d', color:'#fff', marginBottom:14 }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12 }}>
-          <div>
-            <div style={{ fontSize:12, color:'#90a4ae', marginTop:4 }}>
-              Ratal Group — Board Pack · {reportDate}
-            </div>
-          </div>
-          <div style={{ display:'flex', gap:8, alignItems:'flex-end', flexWrap:'wrap' }}>
+    <div className="mr-root" style={{ fontFamily:PP, display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2 }}>
+      <style>{`.mr-root input,.mr-root select,.mr-root button,.mr-root textarea{font-family:'Poppins',sans-serif!important}`}</style>
+
+      {/* ══ UPPER ZONE ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+        {/* L1 Heading Bar */}
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, borderRadius:'6px 6px 0 0', padding:'8px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
             <div>
-              <label style={{ ...S.label, color:'#90a4ae' }}>From</label>
-              <input type="date" style={{ ...S.input, background:'#2a3f50', color:'#fff', border:'1px solid #546e7a', width:150 }}
-                value={from} onChange={e=>setFrom(e.target.value)} />
+              <span style={{ fontSize:15, fontWeight:700, color:'#fff', letterSpacing:0.3 }}>📋 Management Report</span>
+              <span style={{ fontSize:10, color:'rgba(255,255,255,0.75)', marginLeft:10 }}>Ratal Group · Board Pack · {reportDate}</span>
             </div>
-            <div>
-              <label style={{ ...S.label, color:'#90a4ae' }}>To</label>
-              <input type="date" style={{ ...S.input, background:'#2a3f50', color:'#fff', border:'1px solid #546e7a', width:150 }}
-                value={to} onChange={e=>setTo(e.target.value)} />
-            </div>
-            <button onClick={load} style={{ background:'#1565C0', color:'#fff', border:'none', borderRadius:8, padding:'8px 14px', fontWeight:700, fontSize:12, cursor:'pointer' }}>↻ Refresh</button>
-            <button onClick={printReport} style={{ background:'#2e7d32', color:'#fff', border:'none', borderRadius:8, padding:'8px 14px', fontWeight:700, fontSize:12, cursor:'pointer' }}>🖨 Print</button>
+            <button onClick={printReport} style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'7px 16px', fontSize:12, fontWeight:700, cursor:'pointer' }}>🖨 Print</button>
           </div>
         </div>
-      </div>
+
+        {/* KPI Strip */}
+        <div style={{ padding:'10px 28px 12px', background:L2, display:'flex', flexWrap:'wrap', gap:8 }}>
+          {[
+            { label:'Group Revenue',    value: loading ? '—' : fmtN(totalRevenue),  sub:'SAR' },
+            { label:'Group Net Profit', value: loading ? '—' : fmtN(totalProfit),   sub:'SAR' },
+            { label:'Net Margin',       value: loading ? '—' : `${groupMargin.toFixed(1)}%`, sub:'' },
+            { label:'Total Expenses',   value: loading ? '—' : fmtN(totalExpenses), sub:'SAR' },
+            { label:'Total Cash',       value: loading ? '—' : fmtN(totalCash),     sub:'SAR' },
+            { label:'Total Headcount',  value: loading ? '—' : String(totalHead),   sub:'people' },
+          ].map((k, i) => {
+            const g = kpiCardGradient(i, L1, L2, L3)
+            return (
+              <div key={k.label} style={{ ...g, width:160, height:62, borderRadius:10, padding:'0 14px', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.10)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+                <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', opacity:0.75, marginBottom:2 }}>{k.label}</div>
+                <div style={{ fontSize:16, fontWeight:800, lineHeight:1 }}>{k.value}</div>
+                {k.sub && <div style={{ fontSize:9, opacity:0.7, marginTop:2 }}>{k.sub}</div>}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Filter Bar */}
+        <div style={{ padding:'6px 28px 8px' }}>
+          <div style={{ background:'#fff', padding:'10px 14px', borderRadius:8, boxShadow:'0 1px 4px rgba(0,0,0,0.08)', display:'flex', gap:8, alignItems:'flex-end', flexWrap:'wrap' }}>
+            <div>
+              <label style={{ ...S.label }}>From</label>
+              <input type="date" style={{ ...S.input, width:150 }} value={from} onChange={e=>setFrom(e.target.value)} />
+            </div>
+            <div>
+              <label style={{ ...S.label }}>To</label>
+              <input type="date" style={{ ...S.input, width:150 }} value={to} onChange={e=>setTo(e.target.value)} />
+            </div>
+            <button onClick={load} style={{ background:L3, color:'#fff', border:'none', borderRadius:8, padding:'8px 16px', fontWeight:700, fontSize:12, cursor:'pointer', marginLeft:'auto' }}>↻ Refresh</button>
+          </div>
+        </div>
+      </div>{/* end upper zone */}
+
+      {/* ══ SCROLL ZONE ══ */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'10px 28px 22px' }}>
 
       {loading ? (
         <div style={{ textAlign:'center', padding:80, color:'#6b7c93' }}>
@@ -269,17 +306,6 @@ export default function ManagementReport({ entityId }) {
         </div>
       ) : (
         <>
-          {/* ── 1. Group Overview ──────────────────────────────────── */}
-          <div style={{ fontSize:11, fontWeight:800, color:'#6b7c93', letterSpacing:1, marginBottom:8 }}>GROUP OVERVIEW</div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))', gap:8, marginBottom:14 }}>
-            <KPITile label="Group Revenue"    value={totalRevenue}  prev={prevRevenue}  unit="SAR" icon="💰" color="#1565C0" large goodUp />
-            <KPITile label="Group Net Profit" value={totalProfit}   prev={prevProfit}   unit="SAR" icon={totalProfit>=0?'📈':'📉'} color={totalProfit>=0?'#2e7d32':'#c62828'} large goodUp />
-            <KPITile label="Net Margin"       value={groupMargin}   unit="%"  icon="%" color="#5A32D4" goodUp />
-            <KPITile label="Total Expenses"   value={totalExpenses} unit="SAR" icon="📤" color="#c62828" goodUp={false} />
-            <KPITile label="Total Cash"       value={totalCash}     unit="SAR" icon="🏦" color="#00695c" goodUp />
-            <KPITile label="Total Headcount"  value={totalHead}     prev={prevHead} unit="#" icon="👥" color="#546e7a" goodUp />
-          </div>
-
           {/* Revenue contribution pie-style bar */}
           <div style={{ ...S.card }}>
             <div style={{ fontSize:11, fontWeight:800, color:'#6b7c93', letterSpacing:1, marginBottom:10 }}>REVENUE MIX BY ENTITY</div>
@@ -417,6 +443,7 @@ export default function ManagementReport({ entityId }) {
           </div>
         </>
       )}
+      </div>{/* end scroll zone */}
     </div>
   )
 }

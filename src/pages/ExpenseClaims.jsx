@@ -13,12 +13,16 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase }     from '../lib/supabase'
-import { GROUP_COLORS } from '../styles/appStyles'
+import { GROUP_COLORS, kpiCardGradient } from '../styles/appStyles'
 import { printDocument, openPrintWindow } from '../lib/templatePrint'
 import FormShell from '../components/FormShell'
 
 const MC  = GROUP_COLORS.Finance   // #8C354B maroon
 const MC2 = '#FAF0F2'              // light pink
+const L1   = '#C1A1A9'
+const L2   = '#FAF0F2'
+const L3   = '#8C354B'
+const PP   = "'Poppins', sans-serif"
 
 // ── Status config ──────────────────────────────────────────────
 const STATUS = {
@@ -57,7 +61,7 @@ function timeRemaining(deadline) {
 
 // ── Styles ─────────────────────────────────────────────────────
 const S = {
-  page:   { padding:'20px 24px', fontFamily:"'Poppins',sans-serif", maxWidth:1280, margin:'0 auto' },
+  page:   { display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden' },
   kpiRow: { display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:12, marginBottom:20 },
   kpi:    (g1,g2) => ({ background:`linear-gradient(135deg,${g1},${g2})`, borderRadius:14, padding:'16px 20px', boxShadow:`0 4px 16px ${g1}55`, color:'#fff', position:'relative', overflow:'hidden' }),
   kpiNum: { fontSize:32, fontWeight:900, lineHeight:1, color:'#fff' },
@@ -67,7 +71,7 @@ const S = {
   sel:    { padding:'8px 10px', borderRadius:8, border:'1px solid #dde3ec', fontSize:12, fontFamily:'inherit', outline:'none', background:'#fff' },
   srch:   { padding:'8px 12px', borderRadius:8, border:'1px solid #dde3ec', fontSize:12, fontFamily:'inherit', outline:'none', flex:1, minWidth:180 },
   tbl:    { width:'100%', borderCollapse:'collapse', fontSize:12, background:'#fff', borderRadius:10, overflow:'hidden', boxShadow:'0 2px 10px rgba(0,0,0,0.07)' },
-  th:     { padding:'10px 12px', background:MC, color:'#fff', fontWeight:700, textAlign:'left', fontSize:11, whiteSpace:'nowrap' },
+  th:     { padding:'10px 12px', background:L3, color:'#fff', fontWeight:700, textAlign:'left', fontSize:11, whiteSpace:'nowrap' },
   td:     { padding:'9px 12px', borderBottom:'1px solid #f0f4f8', verticalAlign:'middle' },
   tr:     i => ({ background: i%2===0?'#fff':'#fafbfc', cursor:'pointer' }),
   badge:  s => {
@@ -765,13 +769,25 @@ export default function ExpenseClaims({ entityId, entityName, role, profile }) {
 
   // ─────────────────────────────────────────────────────────────
   return (
-    <div style={S.page}>
+    <div className="ec-root" style={{ fontFamily:PP, display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2 }}>
+      <style>{`.ec-root input,.ec-root select,.ec-root button,.ec-root textarea{font-family:'Poppins',sans-serif!important}`}</style>
+
+      {/* ══ UPPER ZONE (always visible) ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+      {/* ── L1 Heading Bar ── */}
+      <div style={{ padding:'6px 28px 0' }}>
+        <div style={{ background:L1, borderRadius:'6px 6px 0 0', padding:'7px 20px', display:'flex', alignItems:'center', gap:10 }}>
+          <span style={{ fontSize:15, fontWeight:800, color:'#fff', letterSpacing:0.3 }}>📄 Expense Claims</span>
+          {entityName && <span style={{ fontSize:11, color:'rgba(255,255,255,0.75)' }}>{entityName}</span>}
+        </div>
+      </div>
 
       {/* ── Pending corrections banner (DH only) ── */}
       {isDH && pendingCorrections.length > 0 && pendingCorrections.map(c => {
         const timer = timeRemaining(c.dh_escalation_deadline)
         return (
-          <div key={c.id} style={{ background:'#fff3e0', border:'1px solid #ffb300', borderRadius:10, padding:'12px 18px', marginBottom:12, display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
+          <div key={c.id} style={{ background:'#fff3e0', border:'1px solid #ffb300', borderRadius:10, padding:'12px 18px', marginBottom:0, marginTop:8, marginLeft:28, marginRight:28, display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
             <div style={{display:'flex',alignItems:'center',gap:10}}>
               <span style={{fontSize:20}}>⚠️</span>
               <div>
@@ -788,49 +804,61 @@ export default function ExpenseClaims({ entityId, entityName, role, profile }) {
       })}
 
       {/* ── KPI cards ── */}
-      <div style={S.kpiRow}>
-        <div style={S.kpi('#1565c0','#1976d2')}><div style={S.kpiIco}>📋</div><div style={S.kpiNum}>{kpi.total}</div><div style={S.kpiLbl}>Total Claims</div></div>
-        <div style={S.kpi('#e65100','#f57f17')}><div style={S.kpiIco}>🕐</div><div style={S.kpiNum}>{kpi.pendingDH}</div><div style={S.kpiLbl}>Pending DH Review</div></div>
-        <div style={S.kpi('#00695c','#00897b')}><div style={S.kpiIco}>📊</div><div style={S.kpiNum}>{kpi.pendingAC}</div><div style={S.kpiLbl}>Pending Accounts</div></div>
-        <div style={S.kpi('#b71c1c','#e53935')}><div style={S.kpiIco}>⛔</div><div style={S.kpiNum}>{kpi.rejected}</div><div style={S.kpiLbl}>Rejected</div></div>
-        <div style={S.kpi('#4527a0','#6a1b9a')}><div style={S.kpiIco}>✅</div><div style={S.kpiNum}>{kpi.posted}</div><div style={S.kpiLbl}>Posted</div></div>
+      <div style={{ display:'flex', gap:8, padding:'10px 28px 12px', flexWrap:'wrap' }}>
+        {[
+          { label:'Total Claims',      val:kpi.total },
+          { label:'Pending DH Review', val:kpi.pendingDH },
+          { label:'Pending Accounts',  val:kpi.pendingAC },
+          { label:'Rejected',          val:kpi.rejected },
+          { label:'Posted',            val:kpi.posted },
+        ].map(({ label, val }, i) => {
+          const kg = kpiCardGradient(i % 4, L1, L2, L3)
+          return (
+            <div key={label} style={{ ...kg, borderRadius:8, width:200, minWidth:200, height:62, padding:'8px 14px', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+              <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:0.8, marginBottom:3, opacity:0.85 }}>{label}</div>
+              <div style={{ fontSize:15, fontWeight:800 }}>{val}</div>
+            </div>
+          )
+        })}
       </div>
 
       {/* ── Load error ── */}
       {loadError && (
-        <div style={{...S.alert(loadError.startsWith('❌')?'#c62828':'#e65100', loadError.startsWith('❌')?'#fce4ec':'#fff3e0'), marginBottom:16}}>
+        <div style={{...S.alert(loadError.startsWith('❌')?'#c62828':'#e65100', loadError.startsWith('❌')?'#fce4ec':'#fff3e0'), margin:'0 28px 8px'}}>
           {loadError}
         </div>
       )}
 
       {/* ── Filters ── */}
-      <div style={S.filters}>
-        <select style={S.sel} value={filterPeriod} onChange={e=>setFilterPeriod(e.target.value)}>
-          {periodOptions.map(p=><option key={p} value={p}>{periodLabel(p)}</option>)}
-        </select>
-        <select style={S.sel} value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}>
-          <option value="ALL">All Statuses</option>
-          {Object.entries(STATUS).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
-        </select>
-        {isAdmin && (
-          <select style={S.sel} value={filterDept} onChange={e=>setFilterDept(e.target.value)}>
-            <option value="">All Departments</option>
-            {depts.map(d=><option key={d.id} value={d.dept_code||d.dept_name}>
-              {d.dept_code ? `${d.dept_code} — ${d.dept_name}` : d.dept_name}
-            </option>)}
+      <div style={{ padding:'6px 28px 8px' }}>
+        <div style={{ background:'#fff', padding:'10px 14px', borderRadius:8, boxShadow:'0 1px 4px rgba(0,0,0,0.07)', display:'flex', gap:10, flexWrap:'wrap', alignItems:'center' }}>
+          <select style={S.sel} value={filterPeriod} onChange={e=>setFilterPeriod(e.target.value)}>
+            {periodOptions.map(p=><option key={p} value={p}>{periodLabel(p)}</option>)}
           </select>
-        )}
-        <input style={S.srch} placeholder="Search employee, claim #…" value={search} onChange={e=>setSearch(e.target.value)} />
-        <button style={S.btn('#6b7c93','#fff')} onClick={load}>↻ Refresh</button>
-        {isAdmin && (
-          <button style={{...S.btn('#1a3a6b','#fff'), display:'flex', alignItems:'center', gap:6}} onClick={openGenerateModal}>
-            ⚡ Generate Claims
-          </button>
-        )}
+          <select style={S.sel} value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}>
+            <option value="ALL">All Statuses</option>
+            {Object.entries(STATUS).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
+          </select>
+          {isAdmin && (
+            <select style={S.sel} value={filterDept} onChange={e=>setFilterDept(e.target.value)}>
+              <option value="">All Departments</option>
+              {depts.map(d=><option key={d.id} value={d.dept_code||d.dept_name}>
+                {d.dept_code ? `${d.dept_code} — ${d.dept_name}` : d.dept_name}
+              </option>)}
+            </select>
+          )}
+          <input style={S.srch} placeholder="Search employee, claim #…" value={search} onChange={e=>setSearch(e.target.value)} />
+          <button style={S.btn('#6b7c93','#fff')} onClick={load}>↻ Refresh</button>
+          {isAdmin && (
+            <button style={{...S.btn(L3,'#fff'), display:'flex', alignItems:'center', gap:6}} onClick={openGenerateModal}>
+              ⚡ Generate Claims
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ── Page-level tab bar ── */}
-      <div style={{display:'flex', gap:0, marginBottom:16, borderBottom:`2px solid ${MC}`, flexWrap:'wrap'}}>
+      <div style={{ padding:'0 28px', borderBottom:`2px solid #e8edf2`, display:'flex', flexWrap:'wrap' }}>
         {[
           { key:'claims',        label:'📋 Claims',           count: null },
           { key:'live-expenses', label:'🧾 Live Expenses',    count: liveExp.length },
@@ -839,21 +867,27 @@ export default function ExpenseClaims({ entityId, entityName, role, profile }) {
           ...(isAdmin ? [{ key:'grace-unblocks', label:'🔓 Grace Unblocks', count: graceList.length || null }] : []),
         ].map(t => (
           <button key={t.key} onClick={()=>setPageTab(t.key)} style={{
-            padding:'8px 18px', fontFamily:"'Poppins',sans-serif", fontWeight:700, fontSize:12,
-            background: pageTab===t.key ? MC : 'transparent',
-            color:      pageTab===t.key ? '#fff' : MC,
-            border:'none', borderRadius:'8px 8px 0 0', cursor:'pointer',
+            padding:'8px 18px', fontFamily:PP, fontWeight:700, fontSize:12,
+            background: 'transparent',
+            color:      pageTab===t.key ? L3 : '#94a3b8',
+            border:'none', borderBottom: pageTab===t.key ? `2px solid ${L3}` : '2px solid transparent',
+            marginBottom:'-2px', cursor:'pointer',
             display:'flex', alignItems:'center', gap:6,
           }}>
             {t.label}
             {t.count !== null && (
-              <span style={{background: pageTab===t.key?'rgba(255,255,255,0.25)':'#f0e8ea', color: pageTab===t.key?'#fff':MC, borderRadius:20, padding:'1px 7px', fontSize:10, fontWeight:800}}>
+              <span style={{ background: pageTab===t.key ? '#f0e8ea' : '#f1f5f9', color: pageTab===t.key ? L3 : '#94a3b8', borderRadius:20, padding:'1px 7px', fontSize:10, fontWeight:800 }}>
                 {t.count}
               </span>
             )}
           </button>
         ))}
       </div>
+
+      </div>{/* end upper zone */}
+
+      {/* ── SCROLL ZONE ── */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
 
       {/* ── Live tab search filter helper ── */}
       {pageTab !== 'claims' && (() => {
@@ -1668,6 +1702,8 @@ export default function ExpenseClaims({ entityId, entityName, role, profile }) {
           </div>
         </div>
       )}
+
+      </div>{/* end scroll zone */}
 
       {/* ══ Generate Claims modal ══════════════════════════════ */}
       <FormShell

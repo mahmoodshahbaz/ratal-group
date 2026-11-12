@@ -18,6 +18,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import PageBanner from '../components/PageBanner'
 import FormShell from '../components/FormShell'
+import { kpiCardGradient } from '../styles/appStyles'
 
 // ── Role options ──────────────────────────────────────────────────────────────
 
@@ -87,6 +88,15 @@ const t = {
   },
   mhead:  { fontSize:18, fontWeight:900, color:'#1a2e3d', marginBottom:20 },
 }
+
+// ── Administration palette ────────────────────────────────────────────────────
+const L1   = '#AAAED0'
+const L2   = '#F0F1FA'
+const L3   = '#454D9B'
+const PP   = "'Poppins', sans-serif"
+const MAIN = '#172D37'
+const SUB  = '#53666F'
+const TD   = { padding:'11px 13px', fontSize:13, color:MAIN, borderBottom:'1px solid #f0f0f0', verticalAlign:'middle', fontFamily:PP }
 
 // ── Dropdown menu item style ─────────────────────────────────────────────────
 const menuItem = {
@@ -409,164 +419,169 @@ export default function QRManager({ entityId, entityCode, isAr }) {
   // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
-    <div style={t.page}>
+    <div className="qr-mgr-root" style={{ fontFamily:PP, display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2 }}>
+      <style>{`
+        .qr-mgr-root button, .qr-mgr-root input, .qr-mgr-root select, .qr-mgr-root textarea {
+          font-family: 'Poppins', sans-serif !important;
+        }
+      `}</style>
 
-      {/* Header */}
-      <div style={t.head}>
-        <div />
-        <button
-          onClick={() => setShowBanner(true)}
-          style={{ background:'#454D9B', color:'#fff', border:'none', borderRadius:10, padding:'10px 0', cursor:'pointer', fontSize:13, fontWeight:700, minWidth:160, textAlign:'center', boxShadow:'0 3px 8px rgba(69,77,155,0.35)', fontFamily:"'Poppins',sans-serif" }}
-        >
-          Generate QR Token
-        </button>
-      </div>
+      {/* UPPER ZONE */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
 
-      {/* KPI strip */}
-      <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginBottom:20, alignItems:'stretch' }}>
-        {[
-          { label:'Total Tokens', value:tokens.length, color:'#3949ab', icon:'🔑' },
-          { label:'Active',       value:activeCount,   color:'#2e7d32', icon:'✅' },
-          { label:'Revoked',      value:revokedCount,  color:'#c62828', icon:'🚫' },
-        ].map(k => (
-          <div key={k.label} style={{ background:`linear-gradient(135deg,${k.color}cc 0%,${k.color} 100%)`, borderRadius:10, padding:'10px 16px', flexShrink:0, minWidth:130, boxShadow:`0 3px 10px ${k.color}44`, position:'relative', overflow:'hidden' }}>
-            <div style={{ position:'absolute', right:8, top:6, fontSize:18, opacity:0.25 }}>{k.icon}</div>
-            <div style={{ fontSize:9, color:'rgba(255,255,255,0.85)', fontWeight:700, textTransform:'uppercase', letterSpacing:0.8, fontFamily:"'Poppins',sans-serif" }}>{k.label}</div>
-            <div style={{ fontSize:24, fontWeight:900, color:'#fff', lineHeight:1.2, marginTop:2 }}>{k.value}</div>
+        {/* L1 bar */}
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:MAIN, fontFamily:PP }}>🔑 QR Code Manager</div>
+              <div style={{ fontSize:10, color:SUB, opacity:0.85, marginTop:1, fontFamily:PP }}>Administration · Employee field-access tokens</div>
+            </div>
+            <button onClick={() => setShowBanner(true)}
+              style={{ padding:'7px 16px', borderRadius:7, border:'none', background:L3, color:'#fff',
+                fontFamily:PP, fontSize:12, fontWeight:700, cursor:'pointer' }}>
+              + Generate Token
+            </button>
           </div>
-        ))}
-      </div>
+        </div>
 
-      {/* Filters */}
-      <div style={{ display:'flex', gap:10, marginBottom:16, flexWrap:'wrap' }}>
-        {['ALL','ACTIVE','REVOKED'].map(f => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            style={{
-              padding:'6px 16px', borderRadius:20, fontSize:12, fontWeight:700,
-              border:`2px solid ${filter === f ? '#454D9B' : '#e0e0e0'}`,
-              background: filter === f ? '#454D9B' : '#fff',
-              color: filter === f ? '#fff' : '#546e7a', cursor:'pointer',
-            }}
-          >
-            {f === 'ALL' ? `All (${tokens.length})` : f === 'ACTIVE' ? `Active (${activeCount})` : `Revoked (${revokedCount})`}
-          </button>
-        ))}
-        <input
-          style={{ ...t.input, maxWidth:240, marginLeft:'auto' }}
-          placeholder="🔍 Search employee or role…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-      </div>
+        {/* KPI cards */}
+        <div style={{ padding:'10px 28px 12px', display:'flex', flexWrap:'wrap', gap:8 }}>
+          {[
+            { label:'Total Tokens', value: tokens.length },
+            { label:'Active',       value: activeCount   },
+            { label:'Revoked',      value: revokedCount  },
+          ].map((k, i) => (
+            <div key={i}
+              style={{ ...kpiCardGradient(i, L1, L2, L3), width:160, height:62, borderRadius:10, padding:'0 14px',
+                flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.10)',
+                display:'flex', flexDirection:'column', justifyContent:'center' }}>
+              <div style={{ fontSize:18, fontWeight:800, lineHeight:1 }}>{k.value}</div>
+              <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, opacity:0.75, marginTop:4 }}>{k.label}</div>
+            </div>
+          ))}
+        </div>
 
-      {/* Token table */}
-      <div style={t.card}>
+        {/* Filter bar */}
+        <div style={{ padding:'0 28px 10px' }}>
+          <div style={{ background:'#fff', borderRadius:8, boxShadow:'0 1px 4px rgba(0,0,0,0.08)', padding:'10px 14px', display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+            {['ALL','ACTIVE','REVOKED'].map(f => (
+              <button key={f} onClick={() => setFilter(f)}
+                style={{ padding:'5px 14px', borderRadius:20, fontSize:11, fontWeight:700, cursor:'pointer', border:'none',
+                  background: filter === f ? L3 : '#f0f1fa',
+                  color: filter === f ? '#fff' : '#546e7a' }}>
+                {f === 'ALL' ? `All (${tokens.length})` : f === 'ACTIVE' ? `Active (${activeCount})` : `Revoked (${revokedCount})`}
+              </button>
+            ))}
+            <input
+              placeholder="🔍 Search employee or role…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{ padding:'7px 11px', border:'1.5px solid #dde3ec', borderRadius:8, fontSize:12,
+                fontFamily:PP, background:'#f8fafc', color:MAIN, outline:'none', minWidth:200, marginLeft:'auto' }}
+            />
+            <div style={{ background:L2, border:`1px solid ${L3}33`, borderRadius:20, padding:'4px 12px',
+              fontSize:11, fontWeight:700, color:L3 }}>
+              {visible.length} shown
+            </div>
+          </div>
+        </div>
+      </div>{/* end upper zone */}
+
+      {/* SCROLL ZONE */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
         {loading ? (
-          <div style={{ padding:40, textAlign:'center', color:'#78909c' }}>Loading tokens…</div>
+          <div style={{ padding:40, textAlign:'center', color:'#78909c', fontFamily:PP }}>Loading tokens…</div>
         ) : visible.length === 0 ? (
-          <div style={{ padding:40, textAlign:'center', color:'#aab2bd' }}>
-            {tokens.length === 0 ? 'No tokens generated yet. Click "Generate QR Token" to create one.' : 'No tokens match the current filter.'}
+          <div style={{ padding:40, textAlign:'center', color:'#aab2bd', fontFamily:PP }}>
+            {tokens.length === 0 ? 'No tokens generated yet. Click "+ Generate Token" to create one.' : 'No tokens match the current filter.'}
           </div>
         ) : (
-          <div style={{ overflowX:'auto' }}>
-          <table style={{ width:'100%', minWidth:780, borderCollapse:'collapse' }}>
-            <thead>
-              <tr>
-                {['Employee','Role','Status','Last Used','Generated','Expires','Actions'].map((h,i,arr) => (
-                  <th key={h} style={{
-                    ...t.th,
-                    ...(i === 0 ? { position:'sticky', left:0, zIndex:2, background:'#3d4a8a' } : {}),
-                    ...(i === arr.length-1 ? { position:'sticky', right:0, zIndex:2, background:'#3d4a8a' } : {}),
-                  }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map(tk => {
-                const expired  = tk.expires_at && new Date(tk.expires_at) < new Date()
-                const isActive = tk.is_active && !expired
-                const menuOpen = openMenu === tk.id
-                return (
-                  <tr
-                    key={tk.id}
-                    style={{ opacity: isActive ? 1 : 0.65 }}
-                    onClick={() => menuOpen && setOpenMenu(null)}
-                  >
-                    {/* Employee — sticky left */}
-                    <td style={{ ...t.td, whiteSpace:'nowrap', position:'sticky', left:0, zIndex:1, background: isActive ? '#fff' : '#f9f9f9' }}>
-                      <div style={{ fontWeight:700, fontSize:13 }}>{tk.employee_name || '—'}</div>
-                      {tk.designation && <div style={{ fontSize:10, color:'#78909c', marginTop:1 }}>{tk.designation}</div>}
-                    </td>
-
-                    {/* Role badge */}
-                    <td style={{ ...t.td, whiteSpace:'nowrap' }}>
-                      <span style={t.badge(ROLE_COLORS[tk.role] || '#546e7a')}>{tk.role}</span>
-                    </td>
-
-                    {/* Status badge */}
-                    <td style={{ ...t.td, whiteSpace:'nowrap' }}>
-                      {expired ? (
-                        <span style={t.badge('#f57f17')}>EXPIRED</span>
-                      ) : isActive ? (
-                        <span style={t.badge('#2e7d32')}>ACTIVE</span>
-                      ) : (
-                        <span style={t.badge('#b71c1c')}>REVOKED</span>
-                      )}
-                    </td>
-
-                    {/* Last used */}
-                    <td style={{ ...t.td, whiteSpace:'nowrap', fontSize:12 }}>
-                      {tk.last_used_at
-                        ? new Date(tk.last_used_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })
-                        : <span style={{ color:'#aab2bd' }}>Never</span>}
-                    </td>
-
-                    {/* Generated */}
-                    <td style={{ ...t.td, whiteSpace:'nowrap', fontSize:12 }}>
-                      {new Date(tk.generated_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })}
-                    </td>
-
-                    {/* Expires */}
-                    <td style={{ ...t.td, whiteSpace:'nowrap', fontSize:12 }}>
-                      {tk.expires_at
-                        ? <span style={{ color: expired ? '#b71c1c' : '#546e7a' }}>
-                            {new Date(tk.expires_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })}
-                          </span>
-                        : <span style={{ color:'#aab2bd' }}>—</span>}
-                    </td>
-
-                    {/* Actions — sticky right */}
-                    <td style={{ ...t.td, textAlign:'center', whiteSpace:'nowrap', position:'sticky', right:0, zIndex:1, background: isActive ? '#fff' : '#f9f9f9', boxShadow:'-2px 0 4px rgba(0,0,0,0.06)' }}>
-                      <div style={{ display:'flex', gap:4, justifyContent:'center', alignItems:'center' }}>
-                        <button onClick={() => setShowQR(tk)} title="Show QR Code"
-                          style={{ background:'#f0f1fa', border:'none', borderRadius:6, padding:'5px 7px', cursor:'pointer', fontSize:15 }}>📱</button>
-                        <button onClick={() => openPerms(tk)} title="Manage Permissions"
-                          style={{ background:'#f0f1fa', border:'none', borderRadius:6, padding:'5px 7px', cursor:'pointer', fontSize:15 }}>🛡️</button>
-                        <button onClick={() => shareWhatsApp(tk.token, tk.employee_name)} title="Share via WhatsApp"
-                          style={{ background:'#f0f1fa', border:'none', borderRadius:6, padding:'5px 7px', cursor:'pointer', fontSize:15 }}>💬</button>
-                        <button onClick={() => shareTelegram(tk.token, tk.employee_name)} title="Share via Telegram"
-                          style={{ background:'#f0f1fa', border:'none', borderRadius:6, padding:'5px 7px', cursor:'pointer', fontSize:15 }}>✈️</button>
-                        {isActive ? (
-                          <button onClick={() => { if (window.confirm(`Revoke token for ${tk.employee_name}?`)) handleRevoke(tk.id) }} title="Revoke Access"
-                            disabled={revoking === tk.id}
-                            style={{ background:'#fff0f0', border:'none', borderRadius:6, padding:'5px 7px', cursor:'pointer', fontSize:15 }}>🚫</button>
+          <div style={{ background:'#fff', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 8px rgba(0,0,0,0.08)', overflow:'hidden' }}>
+            <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed' }}>
+              <colgroup>
+                <col style={{ width: 320 }} />{/* Employee */}
+                <col style={{ width: 130 }} />{/* Role */}
+                <col style={{ width: 90 }} />{/* Status */}
+                <col style={{ width: 110 }} />{/* Last Used */}
+                <col style={{ width: 110 }} />{/* Generated */}
+                <col style={{ width: 110 }} />{/* Expires */}
+                <col style={{ width: 190 }} />{/* Actions */}
+              </colgroup>
+              <thead>
+                <tr style={{ position:'sticky', top:0, zIndex:20 }}>
+                  {['Employee','Role','Status','Last Used','Generated','Expires','Actions'].map((h, i) => (
+                    <th key={h} style={{ padding:'9px 13px', background:L3, color:'#fff', fontSize:10, fontWeight:700,
+                      textTransform:'uppercase', letterSpacing:0.7, textAlign: i === 6 ? 'center' : 'left',
+                      fontFamily:PP, whiteSpace:'nowrap', borderBottom:`2px solid ${L3}cc` }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {visible.map(tk => {
+                  const expired  = tk.expires_at && new Date(tk.expires_at) < new Date()
+                  const isActive = tk.is_active && !expired
+                  return (
+                    <tr key={tk.id} style={{ opacity: isActive ? 1 : 0.65 }}>
+                      <td style={TD}>
+                        <div style={{ fontWeight:700, fontSize:13 }}>{tk.employee_name || '—'}</div>
+                        {tk.designation && <div style={{ fontSize:10, color:'#78909c', marginTop:1 }}>{tk.designation}</div>}
+                      </td>
+                      <td style={TD}>
+                        <span style={t.badge(ROLE_COLORS[tk.role] || '#546e7a')}>{tk.role}</span>
+                      </td>
+                      <td style={TD}>
+                        {expired ? (
+                          <span style={t.badge('#f57f17')}>EXPIRED</span>
+                        ) : isActive ? (
+                          <span style={t.badge('#2e7d32')}>ACTIVE</span>
                         ) : (
-                          <button onClick={() => handleReactivate(tk.id)} title="Reactivate"
-                            disabled={revoking === tk.id}
-                            style={{ background:'#f0fff4', border:'none', borderRadius:6, padding:'5px 7px', cursor:'pointer', fontSize:15 }}>✅</button>
+                          <span style={t.badge('#b71c1c')}>REVOKED</span>
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                      </td>
+                      <td style={{ ...TD, fontSize:12, whiteSpace:'nowrap' }}>
+                        {tk.last_used_at
+                          ? new Date(tk.last_used_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })
+                          : <span style={{ color:'#aab2bd' }}>Never</span>}
+                      </td>
+                      <td style={{ ...TD, fontSize:12, whiteSpace:'nowrap' }}>
+                        {new Date(tk.generated_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })}
+                      </td>
+                      <td style={{ ...TD, fontSize:12, whiteSpace:'nowrap' }}>
+                        {tk.expires_at
+                          ? <span style={{ color: expired ? '#b71c1c' : '#546e7a' }}>
+                              {new Date(tk.expires_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })}
+                            </span>
+                          : <span style={{ color:'#aab2bd' }}>—</span>}
+                      </td>
+                      <td style={{ ...TD, textAlign:'center', whiteSpace:'nowrap' }}>
+                        <div style={{ display:'flex', gap:4, justifyContent:'center', alignItems:'center' }}>
+                          <button onClick={() => setShowQR(tk)} title="Show QR Code"
+                            style={{ background:'#f0f1fa', border:'none', borderRadius:6, padding:'5px 7px', cursor:'pointer', fontSize:15 }}>📱</button>
+                          <button onClick={() => openPerms(tk)} title="Manage Permissions"
+                            style={{ background:'#f0f1fa', border:'none', borderRadius:6, padding:'5px 7px', cursor:'pointer', fontSize:15 }}>🛡️</button>
+                          <button onClick={() => shareWhatsApp(tk.token, tk.employee_name)} title="Share via WhatsApp"
+                            style={{ background:'#f0f1fa', border:'none', borderRadius:6, padding:'5px 7px', cursor:'pointer', fontSize:15 }}>💬</button>
+                          <button onClick={() => shareTelegram(tk.token, tk.employee_name)} title="Share via Telegram"
+                            style={{ background:'#f0f1fa', border:'none', borderRadius:6, padding:'5px 7px', cursor:'pointer', fontSize:15 }}>✈️</button>
+                          {isActive ? (
+                            <button onClick={() => { if (window.confirm(`Revoke token for ${tk.employee_name}?`)) handleRevoke(tk.id) }} title="Revoke Access"
+                              disabled={revoking === tk.id}
+                              style={{ background:'#fff0f0', border:'none', borderRadius:6, padding:'5px 7px', cursor:'pointer', fontSize:15 }}>🚫</button>
+                          ) : (
+                            <button onClick={() => handleReactivate(tk.id)} title="Reactivate"
+                              disabled={revoking === tk.id}
+                              style={{ background:'#f0fff4', border:'none', borderRadius:6, padding:'5px 7px', cursor:'pointer', fontSize:15 }}>✅</button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         )}
-      </div>
+      </div>{/* end scroll zone */}
 
       {/* ── QR Banner ── */}
       <PageBanner
@@ -952,6 +967,6 @@ export default function QRManager({ entityId, entityCode, isAr }) {
         </div>
       )}
 
-    </div>
+  </div>
   )
 }

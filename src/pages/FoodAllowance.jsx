@@ -4,6 +4,7 @@ import { exportToExcel } from '../lib/exportExcel'
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
 import FormShell from '../components/FormShell'
+import BackdatedEntryModal from '../components/BackdatedEntryModal'
 import { CHAPTER_PALETTES, GROUP_COLORS } from '../styles/appStyles'
 
 // ── HR chapter palette ────────────────────────────────────────────────────
@@ -46,8 +47,9 @@ export default function FoodAllowance({ entityId }) {
   const [search,       setSearch]       = useState('')
 
   // ── Banner & wizard ──
-  const [showBanner,  setShowBanner]  = useState(false)
-  const [open,        setOpen]        = useState(false)
+  const [showBanner,      setShowBanner]      = useState(false)
+  const [open,            setOpen]            = useState(false)
+  const [showAdminEntry,  setShowAdminEntry]  = useState(false)
   const [wizardStep,  setWizardStep]  = useState(0)
   const [saving,      setSaving]      = useState(false)
 
@@ -305,7 +307,7 @@ export default function FoodAllowance({ entityId }) {
         kpis={kpis}
       >
         {/* ── Filter bar ── */}
-        <div style={{ display:'flex', gap:8, marginBottom:12, flexWrap:'wrap', alignItems:'center' }}>
+        <div style={{ background:'#fff', borderRadius:8, padding:'10px 14px', display:'flex', gap:8, marginBottom:12, flexWrap:'wrap', alignItems:'center', boxShadow:'0 1px 4px rgba(0,0,0,0.08)' }}>
           <input type="month" value={filterMon} onChange={e=>setFilterMon(e.target.value)} style={inp2} />
           <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} style={inp2}>
             <option value="ALL">All Status</option>
@@ -323,6 +325,8 @@ export default function FoodAllowance({ entityId }) {
             <button onClick={()=>{ setFilterMon(thisMonth); setFilterStatus('ALL'); setFilterDept(''); setSearch('') }}
               style={{ ...inp2, background:'#ffebee', color:'#c62828', border:'1px solid #ffcdd2', cursor:'pointer', fontWeight:700 }}>✕ Clear</button>
           )}
+          <button onClick={() => setShowAdminEntry(true)}
+            style={{ background:MC, color:'#fff', border:'none', borderRadius:8, padding:'8px 16px', cursor:'pointer', fontSize:12, fontWeight:700, whiteSpace:'nowrap' }}>📋 Admin Entry</button>
           <button onClick={doExport}
             style={{ background:'#2e7d32', color:'#fff', border:'none', borderRadius:8, padding:'8px 16px', cursor:'pointer', fontSize:12, fontWeight:700, whiteSpace:'nowrap' }}>📥 Export Excel</button>
           <span style={{ fontSize:12, color:'#6b7c93' }}>{filtered.length} record{filtered.length!==1?'s':''}</span>
@@ -619,6 +623,17 @@ export default function FoodAllowance({ entityId }) {
           </div>
         )}
       </FormShell>
+
+      {/* ── ADMIN BACKDATED ENTRY ── */}
+      {showAdminEntry && (
+        <BackdatedEntryModal
+          type="food"
+          entityId={entityId}
+          employees={employees.filter(e => e.fa_eligible)}
+          onClose={() => setShowAdminEntry(false)}
+          onSaved={() => { setShowAdminEntry(false); load() }}
+        />
+      )}
     </>
   )
 }

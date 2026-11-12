@@ -1,3 +1,7 @@
+const L1 = '#B4BA95'
+const L2 = '#F5F6EB'
+const L3 = '#606D2C'
+const PP = "'Poppins', sans-serif"
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -184,7 +188,7 @@ function NewJV({ entityId, coa, onPosted }) {
       <div style={{ ...S.card, padding:0, overflow:'visible' }}>
         <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
           <thead>
-            <tr style={{ background:'#1a2e3d', color:'#fff' }}>
+            <tr style={{ background:L3, color:'#fff' }}>
               <th style={{ padding:'9px 10px', textAlign:'left', width:32, fontSize:11 }}>#</th>
               <th style={{ padding:'9px 10px', textAlign:'left', width:200, fontSize:11 }}>Account</th>
               <th style={{ padding:'9px 10px', textAlign:'left', fontSize:11 }}>Description</th>
@@ -555,22 +559,29 @@ export default function JournalVoucher({ entityId }) {
   ]
 
   return (
-    <div>
-      <div style={{ fontSize:12, color:'#6b7c93', marginBottom:18 }}>
-        Manual double-entry journals — accruals, adjustments, reclassifications, opening balances
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:PP }}>
+      {/* UPPER ZONE */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0' }}>
+            <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>📓 Journal Voucher</div>
+            <div style={{ fontSize:10, color:'#fff', opacity:0.8 }}>Manual double-entry journals — accruals, adjustments, reclassifications, opening balances</div>
+          </div>
+        </div>
+        <div style={{ padding:'0 28px', borderBottom:'2px solid #e8edf2' }}>
+          {TABS.map(t=>(
+            <button key={t.key} onClick={()=>setTab(t.key)} style={{
+              padding:'10px 16px', border:'none', background:'none', cursor:'pointer',
+              fontFamily:PP, fontSize:13, fontWeight: tab===t.key ? 800 : 500,
+              color: tab===t.key ? L3 : '#6b7c93',
+              borderBottom: tab===t.key ? `2px solid ${L3}` : '2px solid transparent',
+              marginBottom:-2, transition:'all 0.15s',
+            }}>{t.label}</button>
+          ))}
+        </div>
       </div>
-
-      {/* Tabs */}
-      <div style={{ display:'flex', gap:4, marginBottom:14, borderBottom:'2px solid #f0f4f8' }}>
-        {TABS.map(t=>(
-          <button key={t.key} onClick={()=>setTab(t.key)}
-            style={{ padding:'8px 18px', fontSize:12, fontWeight:700, cursor:'pointer', border:'none',
-              background:'transparent', borderBottom:tab===t.key?'3px solid #1a2e3d':'3px solid transparent',
-              color:tab===t.key?'#1a2e3d':'#6b7c93', marginBottom:-2 }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* SCROLL ZONE */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
 
       {!entityId ? (
         <div style={{ textAlign:'center', padding:80, color:'#aab2bd' }}>Select an entity to continue.</div>
@@ -580,6 +591,7 @@ export default function JournalVoucher({ entityId }) {
           {tab === 'history' && <JVHistory entityId={entityId} coa={coa} key={refresh} />}
         </>
       )}
+      </div>{/* end scroll zone */}
     </div>
   )
 }

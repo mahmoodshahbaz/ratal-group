@@ -13,11 +13,13 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import { GROUP_COLORS, CHAPTER_PALETTES } from '../styles/appStyles'
+import { GROUP_COLORS, CHAPTER_PALETTES, kpiCardGradient } from '../styles/appStyles'
 
 const PRI = GROUP_COLORS.Masters           // '#8C601B'
 const L1  = CHAPTER_PALETTES.Masters.L1   // '#C8B48F'
 const L2  = CHAPTER_PALETTES.Masters.L2   // '#FAF5E9'
+const L3  = CHAPTER_PALETTES.Masters.L3   // '#8C601B'
+const PP  = "'Poppins',sans-serif"
 
 // ── Helpers ──────────────────────────────────────────────────────
 const TODAY = new Date().toISOString().split('T')[0]
@@ -58,7 +60,7 @@ const S = {
   inp: {
     width: '100%', padding: '7px 10px', borderRadius: 8,
     border: '1px solid #dde3ec', fontSize: 12, outline: 'none',
-    fontFamily: 'inherit', boxSizing: 'border-box', background: '#fff',
+    fontFamily: PP, boxSizing: 'border-box', background: '#fff',
   },
   label: { display: 'block', fontSize: 10, color: '#6b7c93', fontWeight: 700, marginBottom: 3, textTransform: 'uppercase', letterSpacing: 0.4 },
 }
@@ -301,8 +303,9 @@ export default function SiteAssignment({ entityId }) {
       : null
 
     // Filter raw records to selected dept (via employee dept_id — more reliably populated than site.dept_id)
+    // Subcontractor rows (no employee_id) are excluded when filtering by dept — they have no dept
     const filtered = selectedDept
-      ? (data || []).filter(a => a.employee_id ? deptEmpIds.has(a.employee_id) : true)
+      ? (data || []).filter(a => a.employee_id ? deptEmpIds.has(a.employee_id) : false)
       : (data || [])
 
     const rows = filtered.map(a => {
@@ -532,32 +535,59 @@ export default function SiteAssignment({ entityId }) {
     : ['', 'Sub-Contractor', 'PO Status', 'Project', 'Site', 'Type', '']
 
   return (
-    <div>
+    <div className="sa-root" style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:PP }}>
+      <style>{`
+        .sa-root button, .sa-root input, .sa-root select, .sa-root textarea {
+          font-family: 'Poppins', sans-serif !important;
+        }
+      `}</style>
 
-      {/* ── Masters chapter header strip ── */}
-      <div style={{
-        background: `linear-gradient(135deg, ${L1}, #d9c9a8)`,
-        borderLeft: `4px solid ${PRI}`,
-        padding: '12px 20px',
-        marginBottom: 4,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-      }}>
-        <span style={{ fontSize: 22 }}>📋</span>
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: PRI, textTransform: 'uppercase', letterSpacing: 1 }}>Masters · Ch02</div>
+      {/* ══ UPPER ZONE (always visible) ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+      {/* ── L1 bar ── */}
+      <div style={{ padding:'8px 28px 0' }}>
+      <div style={{ background:L1, padding:'8px 16px', display:'flex', alignItems:'center', gap:12, borderRadius:'8px 8px 0 0' }}>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:16, fontWeight:800, color:'#3a2a0a', letterSpacing:0.3, fontFamily:PP }}>Site Assignment</div>
+          <div style={{ fontSize:10, color:'#6b5c3e', marginTop:1, letterSpacing:0.3, fontFamily:PP }}>Masters · Staff &amp; Sub-Contractor Roster</div>
         </div>
-        <div style={{ marginLeft: 'auto', fontSize: 11, color: '#6b5c3e' }}>
-          Assign employees & sub-contractors to projects and sites
-        </div>
+        {saveMsg && <span style={{ fontSize:12, color:'#2e7d32', fontWeight:700, fontFamily:PP }}>{saveMsg}</span>}
+        {!deptRequired && (
+          <button onClick={saveAll} disabled={saving || checkedCount === 0}
+            style={{
+              background: (saving || checkedCount === 0) ? 'rgba(0,0,0,0.15)' : L3,
+              color: '#fff', border: 'none', borderRadius: 8,
+              padding: '7px 18px', cursor: (saving || checkedCount === 0) ? 'not-allowed' : 'pointer',
+              fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', fontFamily: PP,
+            }}>
+            {saving ? '⏳ Saving…' : `💾 Save ${checkedCount} Assignment${checkedCount !== 1 ? 's' : ''}`}
+          </button>
+        )}
+      </div>
+      </div>{/* end L1 bar padding wrapper */}
+
+      {/* ── KPI cards ── */}
+      <div style={{ display:'flex', gap:10, padding:'10px 28px 6px', flexWrap:'nowrap', overflowX:'auto', scrollbarWidth:'none' }}>
+        {[
+          { label:'Total Employees', value: filteredEmployees.length },
+          { label:'Emp Assigned',    value: empRows.filter(r => r.existingId).length },
+          { label:'Sub-Contractors', value: subcons.length },
+          { label:'SC Assigned',     value: subconRows.filter(r => r.existingId).length },
+        ].map((k, i) => (
+          <div key={i} style={{ ...kpiCardGradient(i, L1, L2, L3), minWidth:150, height:62, borderRadius:10, padding:'10px 16px', display:'flex', flexDirection:'column', justifyContent:'center', flexShrink:0 }}>
+            <div style={{ fontSize:22, fontWeight:800, lineHeight:1 }}>{k.value}</div>
+            <div style={{ fontSize:10, opacity:0.75, marginTop:3, textTransform:'uppercase', letterSpacing:0.5 }}>{k.label}</div>
+          </div>
+        ))}
       </div>
 
-      {/* ══ STICKY CONTEXT BAR ══════════════════════════════════ */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 20, background: '#f4f7fb', boxShadow: '0 2px 6px rgba(0,0,0,0.06)' }}>
+      {/* ══ CONTEXT BAR ══════════════════════════════════ */}
+      <div style={{ padding:'4px 28px 0' }}>
+      <div style={{ background:'#fff', borderRadius:8, boxShadow:'0 1px 4px rgba(0,0,0,0.07)', padding:'10px 14px 6px' }}>
 
         {/* Row 1: Controls */}
-        <div style={{ display: 'flex', gap: 10, padding: '10px 0 8px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 10, padding: '0 0 8px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
 
           {/* Department */}
           <div style={{ minWidth: 210 }}>
@@ -602,19 +632,6 @@ export default function SiteAssignment({ entityId }) {
             </div>
           )}
 
-          {/* Save button — only when dept is selected */}
-          <div style={{ marginLeft: 'auto', alignSelf: 'flex-end', display: 'flex', alignItems: 'center', gap: 10 }}>
-            {saveMsg && <span style={{ fontSize: 12, color: '#2e7d32', fontWeight: 700 }}>{saveMsg}</span>}
-            {!deptRequired && <button onClick={saveAll} disabled={saving || checkedCount === 0}
-              style={{
-                background: (saving || checkedCount === 0) ? '#ccc' : PRI,
-                color: '#fff', border: 'none', borderRadius: 10, padding: '9px 22px',
-                cursor: (saving || checkedCount === 0) ? 'not-allowed' : 'pointer',
-                fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap',
-              }}>
-              {saving ? '⏳ Saving…' : `💾 Save ${checkedCount} Assignment${checkedCount !== 1 ? 's' : ''}`}
-            </button>}
-          </div>
         </div>
 
         {/* Row 2: Tabs */}
@@ -627,7 +644,7 @@ export default function SiteAssignment({ entityId }) {
             <button key={v} onClick={() => setActiveTab(v)}
               style={{
                 padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700,
-                background: activeTab === v ? PRI : '#e8edf5',
+                background: activeTab === v ? L3 : '#e8edf5',
                 color:      activeTab === v ? '#fff' : '#6b7c93',
               }}>
               {l}
@@ -671,15 +688,23 @@ export default function SiteAssignment({ entityId }) {
           </div>
         )}
 
-        {/* Column headers — roster tabs only */}
-        {activeTab !== 'HISTORY' && <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 8, background: PRI, borderTop: '2px solid #e8edf2', borderBottom: '1px solid #e8edf2', padding: '8px 14px', alignItems: 'center' }}>
-          {HEADERS.map((h, i) => (
-            <div key={i} style={{ fontSize: 10, color: '#fff', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'left' }}>{h}</div>
-          ))}
-        </div>}
+      </div>{/* end white card */}
+      </div>{/* end context bar padding wrapper */}
 
-        {/* Category legend strip — employee tab only */}
-        {activeTab === 'EMPLOYEE' && (
+      {/* Column headers — roster tabs only */}
+      {activeTab !== 'HISTORY' && (
+        <div style={{ padding:'4px 28px 0' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 8, background: L3, borderRadius:'6px 6px 0 0', padding: '8px 14px', alignItems: 'center' }}>
+            {HEADERS.map((h, i) => (
+              <div key={i} style={{ fontSize: 10, color: '#fff', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'left' }}>{h}</div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Category legend strip — employee tab only */}
+      {activeTab === 'EMPLOYEE' && (
+        <div style={{ padding:'0 28px' }}>
           <div style={{ display: 'flex', gap: 10, padding: '5px 14px', background: '#f9f6f0', borderBottom: '1px solid #ede8dc', flexWrap: 'wrap', alignItems: 'center' }}>
             <span style={{ fontSize: 9, fontWeight: 800, color: '#9e8c6a', textTransform: 'uppercase', letterSpacing: 0.5 }}>Category:</span>
             {Object.entries(CAT_STYLE).map(([, st]) => (
@@ -690,48 +715,59 @@ export default function SiteAssignment({ entityId }) {
             ))}
             <span style={{ marginLeft: 8, fontSize: 9, color: '#b0a080' }}>· ⚠ 4-7d idle &nbsp;· 🚨 8-14d idle &nbsp;· 💀 15d+ — recommend release (OUT/CON only)</span>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* ── History date filter bar (pinned) ── */}
+      {activeTab === 'HISTORY' && (
+        <div style={{ padding:'8px 28px 6px' }}>
+          <div style={{ background:'#fff', borderRadius:10, boxShadow:'0 2px 10px rgba(0,0,0,0.07)', padding:'10px 14px' }}>
+            <div style={{ display:'flex', gap:10, alignItems:'flex-end', flexWrap:'wrap' }}>
+              <div>
+                <div style={S.label}>From</div>
+                <input type="date" style={{ ...S.inp, width:150 }} value={histFrom} onChange={e => setHistFrom(e.target.value)} />
+              </div>
+              <div>
+                <div style={S.label}>To</div>
+                <input type="date" style={{ ...S.inp, width:150 }} value={histTo} onChange={e => setHistTo(e.target.value)} />
+              </div>
+              <button onClick={loadHistory} disabled={historyLoading}
+                style={{ padding:'8px 18px', borderRadius:8, background:PRI, color:'#fff', border:'none', fontWeight:700, fontSize:13, cursor:'pointer' }}>
+                {historyLoading ? 'Loading…' : '🔍 Search'}
+              </button>
+              {historyRows.length > 0 && (
+                <button onClick={exportHistory}
+                  style={{ padding:'8px 18px', borderRadius:8, background:'#2e7d32', color:'#fff', border:'none', fontWeight:700, fontSize:13, cursor:'pointer' }}>
+                  ⬇ Export CSV
+                </button>
+              )}
+              {historyRows.length > 0 && (
+                <span style={{ fontSize:12, color:'#6b7c93', alignSelf:'center' }}>{historyRows.length} records</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      </div>{/* end upper zone */}
+
+      {/* ── SCROLL ZONE ── */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
 
       {/* ══ ROSTER ══════════════════════════════════════════════ */}
       {deptRequired ? (
-        <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 2px 8px rgba(0,0,0,0.07)', padding: '60px 20px', textAlign: 'center' }}>
+        <div style={{ background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.07)', padding: '60px 20px', textAlign: 'center' }}>
           <div style={{ fontSize: 36, marginBottom: 12 }}>🏢</div>
           <div style={{ fontSize: 16, fontWeight: 700, color: '#1a2540', marginBottom: 6 }}>Select a Department to continue</div>
           <div style={{ fontSize: 13, color: '#6b7c93' }}>Choose a department from the dropdown above to load the roster for that team.</div>
         </div>
       ) : (<>
-      <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 2px 8px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
+      <div style={{ background: '#fff', borderRadius: '0 0 8px 8px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
 
 
         {/* ── HISTORY TAB ──────────────────────────────────── */}
         {activeTab === 'HISTORY' && (
           <div style={{ padding: 16 }}>
-            {/* Date range + controls */}
-            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 16 }}>
-              <div>
-                <div style={S.label}>From</div>
-                <input type="date" style={{ ...S.inp, width: 150 }} value={histFrom} onChange={e => setHistFrom(e.target.value)} />
-              </div>
-              <div>
-                <div style={S.label}>To</div>
-                <input type="date" style={{ ...S.inp, width: 150 }} value={histTo} onChange={e => setHistTo(e.target.value)} />
-              </div>
-              <button onClick={loadHistory} disabled={historyLoading}
-                style={{ padding: '8px 18px', borderRadius: 8, background: PRI, color: '#fff', border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-                {historyLoading ? 'Loading…' : '🔍 Search'}
-              </button>
-              {historyRows.length > 0 && (
-                <button onClick={exportHistory}
-                  style={{ padding: '8px 18px', borderRadius: 8, background: '#2e7d32', color: '#fff', border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-                  ⬇ Export CSV
-                </button>
-              )}
-              {historyRows.length > 0 && (
-                <span style={{ fontSize: 12, color: '#6b7c93', alignSelf: 'center' }}>{historyRows.length} records</span>
-              )}
-            </div>
-
             {/* Results table */}
             {historyRows.length === 0 && !historyLoading && (
               <EmptyState msg="Select a date range and click Search to view assignment history." />
@@ -1028,6 +1064,8 @@ export default function SiteAssignment({ entityId }) {
         </div>
       )}
       </>)}{/* end deptRequired ternary */}
+
+      </div>{/* end scroll zone */}
 
     </div>
   )

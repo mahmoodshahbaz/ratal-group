@@ -1,7 +1,9 @@
-import ChapterPage from '../components/ChapterPage'
-import PageBanner from '../components/PageBanner'
-import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
-const MC = GROUP_COLORS.Accounting
+import { GROUP_COLORS, kpiCardGradient } from '../styles/appStyles'
+const MC = GROUP_COLORS.Reports
+const L1 = '#B8A5CF'
+const L2 = '#F5EFFA'
+const L3 = '#7444A3'
+const PP = "'Poppins', sans-serif"
 /**
  * PnL.jsx — Profit & Loss Statement
  * Derived entirely from posted journal entries (journal_entry_lines → chart_of_accounts)
@@ -13,7 +15,7 @@ import { supabase } from '../lib/supabase'
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const S = {
-  th:  { padding:'9px 14px', textAlign:'left', fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:0.5, background:MC, color:'#fff', whiteSpace:'nowrap' },
+  th:  { padding:'9px 14px', textAlign:'left', fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:0.5, background:L3, color:'#fff', whiteSpace:'nowrap' },
   td:  { padding:'9px 14px', fontSize:13, color:'#2d3a45', borderBottom:'1px solid #f0f4f8', verticalAlign:'middle' },
   inp: { padding:'8px 11px', borderRadius:7, border:'1px solid #dde3ec', fontSize:13, outline:'none', fontFamily:'inherit' },
 }
@@ -33,7 +35,7 @@ function fmtSigned(n) {
 // OpEx:    account_type = EXPENSE, account_subtype = OPERATING_EXPENSE
 // Other:   account_type = EXPENSE, account_subtype = OTHER_EXPENSE
 
-export default function PnL({ entityId }) {
+export default function PnL({ entityId, title = '📊 P&L Report' }) {
   const [loading, setLoading]     = useState(false)
   const [data, setData]           = useState(null)   // { revenue:[], cogs:[], opex:[], other:[] }
   const [periodType, setPeriodType] = useState('month')  // month | quarter | year | custom
@@ -286,22 +288,45 @@ export default function PnL({ entityId }) {
   const { from: currentFrom, to: currentTo } = getDateRange()
 
   return (
-    <div style={{ padding:24, maxWidth:900, margin:'0 auto' }}>
-      {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20 }}>
-        <div>
-          <div style={{ fontSize:13, color:'#6b7c93' }}>
-            Auto-generated from {data?.jeCount || 0} posted journal entries
-            {data?.from && ` · ${data.from} to ${data.to}`}
+    <div className="pnl-root" style={{ fontFamily:PP, display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2 }}>
+      <style>{`.pnl-root input,.pnl-root select,.pnl-root button,.pnl-root textarea{font-family:'Poppins',sans-serif!important}`}</style>
+
+      {/* ══ UPPER ZONE ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+        {/* L1 Heading Bar */}
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, borderRadius:'6px 6px 0 0', padding:'8px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <span style={{ fontSize:15, fontWeight:700, color:'#fff', letterSpacing:0.3 }}>{title}</span>
+              {data?.from && <span style={{ fontSize:10, color:'rgba(255,255,255,0.75)', marginLeft:10 }}>{data.from} → {data.to}</span>}
+            </div>
+            <button onClick={handlePrint} disabled={!data} style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'7px 16px', fontSize:12, fontWeight:700, cursor:'pointer' }}>🖨 Print</button>
           </div>
         </div>
-        <button onClick={handlePrint} disabled={!data} style={{ background:'#1a2e3d', color:'#fff', border:'none', borderRadius:9, padding:'9px 20px', cursor:'pointer', fontSize:13, fontWeight:700 }}>
-          🖨 Print
-        </button>
-      </div>
 
-      {/* Period selector */}
-      <div style={{ background:'#fff', borderRadius:12, border:'1.5px solid #e8edf5', padding:16, marginBottom:20, display:'flex', gap:12, flexWrap:'wrap', alignItems:'flex-end' }}>
+        {/* KPI Strip */}
+        <div style={{ padding:'10px 28px 12px', background:L2, display:'flex', flexWrap:'wrap', gap:8 }}>
+          {[
+            { label:'Total Revenue',    value: data ? `SAR ${fmt(totalRev)}`    : '—', sub: null },
+            { label:'Gross Profit',     value: data ? `SAR ${fmt(grossProfit)}` : '—', sub: data ? `GP ${gpPct.toFixed(1)}%` : null },
+            { label:'Operating Profit', value: data ? `SAR ${fmt(ebit)}`        : '—', sub: null },
+            { label:'Net Profit',       value: data ? `SAR ${fmt(netProfit)}`   : '—', sub: data ? `NP ${npPct.toFixed(1)}%` : null },
+          ].map((k, i) => {
+            const g = kpiCardGradient(i, L1, L2, L3)
+            return (
+              <div key={k.label} style={{ ...g, width:200, height:62, borderRadius:10, padding:'0 14px', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.10)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+                <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', opacity:0.75, marginBottom:2 }}>{k.label}</div>
+                <div style={{ fontSize:16, fontWeight:800, lineHeight:1 }}>{k.value}</div>
+                {k.sub && <div style={{ fontSize:9, opacity:0.7, marginTop:2 }}>{k.sub}</div>}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Filter Bar — period selector */}
+        <div style={{ padding:'6px 28px 8px' }}>
+          <div style={{ background:'#fff', padding:'10px 14px', borderRadius:8, boxShadow:'0 1px 4px rgba(0,0,0,0.08)', display:'flex', gap:10, flexWrap:'wrap', alignItems:'flex-end' }}>
         <div>
           <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>Period</div>
           <select style={S.inp} value={periodType} onChange={e=>setPeriodType(e.target.value)}>
@@ -354,27 +379,12 @@ export default function PnL({ entityId }) {
             <input style={S.inp} type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} />
           </div>
         </>)}
-      </div>
-
-      {/* KPI cards */}
-      {data && (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
-          {[
-            { label:'Total Revenue',    value: totalRev,    color:'#1a7f4b' },
-            { label:'Gross Profit',     value: grossProfit, color: grossProfit>=0?'#1a7f4b':'#c0392b', sub: `GP%: ${gpPct.toFixed(1)}%` },
-            { label:'Operating Profit', value: ebit,        color: ebit>=0?'#1565c0':'#c0392b' },
-            { label:'Net Profit',       value: netProfit,   color: netProfit>=0?'#1a7f4b':'#c0392b', sub: `NP%: ${npPct.toFixed(1)}%` },
-          ].map(c=>(
-            <div key={c.label} style={{ background:'#fff', borderRadius:10, border:'1.5px solid #e8edf5', padding:'14px 18px' }}>
-              <div style={{ fontSize:11, color:'#6b7c93', fontWeight:700, textTransform:'uppercase', letterSpacing:0.4, marginBottom:6 }}>{c.label}</div>
-              <div style={{ fontSize:16, fontWeight:800, color:c.color, fontFamily:'monospace' }}>
-                {c.value >= 0 ? '' : '('}SAR {fmt(c.value)}{c.value < 0 ? ')' : ''}
-              </div>
-              {c.sub && <div style={{ fontSize:11, color:'#6b7c93', marginTop:3 }}>{c.sub}</div>}
-            </div>
-          ))}
+          </div>
         </div>
-      )}
+      </div>{/* end upper zone */}
+
+      {/* ══ SCROLL ZONE ══ */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'10px 28px 22px' }}>
 
       {/* P&L Statement table */}
       <div style={{ background:'#fff', borderRadius:12, border:'1.5px solid #e8edf5', overflow:'hidden' }}>
@@ -443,6 +453,7 @@ export default function PnL({ entityId }) {
           ⚠️ No posted journal entries found for this period. Issue invoices, save payment receipts, or approve payments to auto-generate entries.
         </div>
       )}
+      </div>{/* end scroll zone */}
     </div>
   )
 }

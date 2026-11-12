@@ -1,8 +1,13 @@
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
 import FormShell from '../components/FormShell'
-import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
-const MC = GROUP_COLORS.Masters
+import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge, CHAPTER_PALETTES, kpiCardGradient } from '../styles/appStyles'
+const MC  = GROUP_COLORS.Masters
+const PAL = CHAPTER_PALETTES.Masters
+const L1  = PAL.L1   // '#C8B48F'
+const L2  = PAL.L2   // '#FAF5E9'
+const L3  = PAL.L3   // '#8C601B'
+const PP  = "'Poppins',sans-serif"
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { QRButton } from '../components/QRCard'
@@ -310,68 +315,88 @@ export default function Contractors({ entityId }) {
 
   // ── Render ───────────────────────────────────────────────────
   return (
-    <div>
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:PP }}>
 
-      {/* ══ STICKY: toolbar + stats + column headers ════════════ */}
-      <div style={{ position:'sticky', top:0, zIndex:20, background:'#f4f7fb', boxShadow:'0 2px 6px rgba(0,0,0,0.06)' }}>
+      {/* ══ UPPER ZONE ══════════════════════════════════════════ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
 
-        {/* Row 1: KPIs + Button */}
-        <div style={{ display:'flex', gap:8, flexWrap:'wrap', padding:'10px 0 6px', scrollbarWidth:'none', alignItems:'center' }}>
-          {[
-            { label:'All',         value:vendors.length,               color:'#1a2e3d', bg:'#f0f4f8', icon:'' },
-            { label:'Contractors', value:countByType('CONTRACTOR'),     color:'#5A32D4', bg:'#ede7f6', icon:'🏗️' },
-            { label:'Vendors',     value:countByType('VENDOR'),         color:'#00695c', bg:'#e0f2f1', icon:'🏢' },
-            { label:'Suppliers',   value:countByType('SUPPLIER'),       color:'#1565c0', bg:'#e3f2fd', icon:'📦' },
-            { label:'Sub-Con',     value:countByType('SUB_CONTRACTOR'), color:'#e65100', bg:'#fff3e0', icon:'🔧' },
-            { label:'Local',       value:countByType('LOCAL_SUPPLIER'), color:'#6d4c41', bg:'#efebe9', icon:'🛒' },
-            { label:'Rentals',     value:countByType('RENTAL'),         color:'#006064', bg:'#e0f7fa', icon:'🔑' },
-            { label:'Active',      value:vendors.filter(v=>v.status==='ACTIVE').length, color:'#2e7d32', bg:'#e8f5e9' },
-          ].map(s => (
-            <div key={s.label} style={{ background:s.grad||`linear-gradient(135deg,${s.color}cc 0%,${s.color} 100%)`, borderRadius:10, padding:'10px 16px', flexShrink:0, minWidth:90, boxShadow:`0 3px 10px ${s.color}44`, position:'relative', overflow:'hidden' }}>
-              <div style={{ position:'absolute', right:8, top:6, fontSize:16, opacity:0.25 }}>{s.icon}</div>
-              <div style={{ fontSize:9, color:'rgba(255,255,255,0.85)', fontWeight:700, whiteSpace:'nowrap', textTransform:'uppercase', letterSpacing:0.8 }}>{s.label}</div>
-              <div style={{ fontSize:20, fontWeight:900, color:'#fff', lineHeight:1.2, marginTop:2 }}>{s.value}</div>
+        {/* L1 heading bar */}
+        <div style={{ background:L2, padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', borderRadius:'6px 6px 0 0' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff', fontFamily:PP, lineHeight:1.2 }}>Party List</div>
+              <div style={{ fontSize:10, color:'rgba(255,255,255,0.8)', marginTop:2, fontFamily:PP }}>Masters · Contractors, vendors &amp; suppliers</div>
             </div>
-          ))}
-          <button onClick={openNew} style={{ marginLeft:'auto', background:'#8C601B', color:'#fff', border:'none', borderRadius:10, padding:'10px 0', cursor:'pointer', fontSize:13, fontWeight:700, whiteSpace:'nowrap', flexShrink:0, minWidth:160, textAlign:'center', boxShadow:'0 3px 8px rgba(140,96,27,0.35)' }}>
-            Add New Party
-          </button>
+            <button onClick={openNew} style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'7px 16px', cursor:'pointer', fontSize:12, fontWeight:700, fontFamily:PP, whiteSpace:'nowrap', boxShadow:'0 2px 6px rgba(0,0,0,0.2)' }}>
+              + Add New Party
+            </button>
+          </div>
         </div>
 
-        {/* Row 3: Filters */}
-        <div style={{ display:'flex', gap:10, paddingBottom:8, alignItems:'center', flexWrap:'wrap' }}>
-          <input placeholder="Search name, code, contact…"
-            style={{ flex:1, minWidth:160, padding:'8px 12px', borderRadius:8, border:'1px solid #dde3ec', fontSize:13, outline:'none' }}
-            value={search} onChange={e=>setSearch(e.target.value)} />
-          <select value={filterType} onChange={e=>setFilterType(e.target.value)}
-            style={{ ...S.inp, width:'auto', minWidth:150 }}>
-            <option value="ALL">All Types</option>
-            <option value="CONTRACTOR">🏗️ Contractors</option>
-            <option value="VENDOR">🏢 Vendors</option>
-            <option value="SUPPLIER">📦 Suppliers</option>
-            <option value="SUB_CONTRACTOR">🔧 Sub-Contractors</option>
-            <option value="LOCAL_SUPPLIER">🛒 Local Suppliers</option>
-            <option value="RENTAL">🔑 Rentals</option>
-          </select>
-          <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}
-            style={{ ...S.inp, width:'auto', minWidth:110 }}>
-            <option value="ALL">All Status</option>
-            <option value="ACTIVE">Active</option>
-            <option value="INACTIVE">Inactive</option>
-          </select>
-
+        {/* KPI cards */}
+        <div style={{ display:'flex', flexWrap:'wrap', gap:8, padding:'10px 28px 12px', background:L2 }}>
+          {[
+            { label:'Total',       value:String(vendors.length) },
+            { label:'Contractors', value:String(countByType('CONTRACTOR')) },
+            { label:'Sub-Con',     value:String(countByType('SUB_CONTRACTOR')) },
+            { label:'Suppliers',   value:String(countByType('SUPPLIER') + countByType('LOCAL_SUPPLIER')) },
+            { label:'Vendors',     value:String(countByType('VENDOR')) },
+            { label:'Active',      value:String(vendors.filter(v=>v.status==='ACTIVE').length) },
+          ].map(({ label, value }, i) => {
+            const gs = kpiCardGradient(i, L1, L2, L3)
+            return (
+              <div key={label} style={{ width:160, height:62, borderRadius:10, padding:'0 14px', display:'flex', flexDirection:'column', justifyContent:'center', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.10)', ...gs }}>
+                <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:0.8, opacity:0.75, fontFamily:PP }}>{label}</div>
+                <div style={{ fontSize:18, fontWeight:800, lineHeight:1.2, marginTop:2, fontFamily:PP }}>{value}</div>
+              </div>
+            )
+          })}
         </div>
 
-        {/* Column headers — solid white, sits flush above list rows */}
-        <div style={{ display:'grid', gridTemplateColumns:GRID, background:'#8C601B', borderBottom:'2px solid #7a5217', padding:'8px 14px' }}>
-          {['Code','Party Name','Type','VAT','Status',''].map(h => (
-            <div key={h} style={{ fontSize:10, color:'#fff', fontWeight:800, textTransform:'uppercase', letterSpacing:0.5, textAlign:'left' }}>{h}</div>
-          ))}
+        {/* Filter bar — pinned, same inset as L1 bar */}
+        <div style={{ padding:'6px 28px 8px', background:L2 }}>
+          <div style={{ display:'flex', gap:10, flexWrap:'wrap', alignItems:'center', background:'#fff', padding:'10px 14px', borderRadius:8, boxShadow:'0 1px 4px rgba(0,0,0,0.08)' }}>
+            <input placeholder="Search name, code, contact…"
+              style={{ flex:1, minWidth:160, padding:'8px 12px', borderRadius:8, border:'1px solid #dde3ec', fontSize:13, outline:'none', fontFamily:PP }}
+              value={search} onChange={e=>setSearch(e.target.value)} />
+            <select value={filterType} onChange={e=>setFilterType(e.target.value)}
+              style={{ ...S.inp, width:'auto', minWidth:150, fontFamily:PP }}>
+              <option value="ALL">All Types</option>
+              <option value="CONTRACTOR">🏗️ Contractors</option>
+              <option value="VENDOR">🏢 Vendors</option>
+              <option value="SUPPLIER">📦 Suppliers</option>
+              <option value="SUB_CONTRACTOR">🔧 Sub-Contractors</option>
+              <option value="LOCAL_SUPPLIER">🛒 Local Suppliers</option>
+              <option value="RENTAL">🔑 Rentals</option>
+            </select>
+            <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}
+              style={{ ...S.inp, width:'auto', minWidth:110, fontFamily:PP }}>
+              <option value="ALL">All Status</option>
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
+            </select>
+            <span style={{ fontSize:11, color:'#6b7c93', fontFamily:PP, whiteSpace:'nowrap' }}>
+              {filtered.length} part{filtered.length!==1?'ies':'y'}
+            </span>
+          </div>
         </div>
-      </div>
 
-      {/* ══ LIST — collapsible single-line rows ══════════════════ */}
-      <div style={{ background:'#fff', borderRadius:14, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', overflow:'hidden' }}>
+        {/* Column header row — same inset as L1 bar */}
+        <div style={{ padding:'0 28px' }}>
+          <div style={{ display:'grid', gridTemplateColumns:GRID, background:L3, padding:'8px 14px', borderRadius:'6px 6px 0 0' }}>
+            {['Code','Party Name','Type','VAT','Status',''].map(h => (
+              <div key={h} style={{ fontSize:10, color:'#fff', fontWeight:800, textTransform:'uppercase', letterSpacing:0.5, textAlign:'left' }}>{h}</div>
+            ))}
+          </div>
+        </div>
+
+      </div>{/* end upper zone */}
+
+      {/* ══ SCROLL ZONE ════════════════════════════════════════ */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
+
+        {/* Table card — same width as L1 bar */}
+      <div style={{ background:'#fff', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 8px rgba(0,0,0,0.08)' }}>
         {loading ? (
           <div style={{ textAlign:'center', padding:50, color:'#aab2bd' }}>Loading…</div>
         ) : filtered.length === 0 ? (
@@ -501,12 +526,13 @@ export default function Contractors({ entityId }) {
             </div>
           )
         })}
-      </div>{/* end list */}
+      </div>{/* end table card */}
 
       {/* ── Info note ── */}
       <div style={{ marginTop:14, background:'#ede7f6', borderRadius:10, padding:'12px 16px', fontSize:12, color:'#4a148c' }}>
         <strong>6-Type Party Structure:</strong> Contractors (main contract) → Sub-Contractors (field work) → Suppliers (materials/equipment) → Vendors (services) → Local Suppliers 🛒 (small cash) → Rentals 🔑 (car, equipment, tools). All payments consolidate under one party record regardless of which bank account receives them.
       </div>
+      </div>{/* end scroll zone */}
 
       {/* ── PageBanner ── */}
       <PageBanner

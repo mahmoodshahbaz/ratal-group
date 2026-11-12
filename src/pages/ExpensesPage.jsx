@@ -1,8 +1,32 @@
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
 import FormShell from '../components/FormShell'
-import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
+import BackdatedEntryModal from '../components/BackdatedEntryModal'
+import { GROUP_COLORS, kpiCardGradient, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
+import { printDocument, openPrintWindow } from '../lib/templatePrint'
+
+// Convert a URL (e.g. Supabase storage) to a base64 data URL for inline embedding in print windows
+async function fetchAsDataUrl(url) {
+  if (!url) return ''
+  if (url.startsWith('data:')) return url
+  try {
+    const res = await fetch(url, { cache: 'no-store' })
+    if (!res.ok) return url
+    const blob = await res.blob()
+    return await new Promise(resolve => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result || url)
+      reader.onerror  = () => resolve(url)
+      reader.readAsDataURL(blob)
+    })
+  } catch { return url }
+}
+
 const MC = GROUP_COLORS.Finance
+const L1   = '#C1A1A9'
+const L2   = '#FAF0F2'
+const L3   = '#8C354B'
+const PP   = "'Poppins', sans-serif"
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { exportToExcel } from '../lib/exportExcel'
@@ -117,8 +141,9 @@ export default function ExpensesPage({ entityId, entityName, isAr }) {
   const [employees, setEmployees] = useState([])
   const [depts,     setDepts]     = useState([])
   const [loading,   setLoading]   = useState(true)
-  const [open,       setOpen]       = useState(false)
-  const [showBanner, setShowBanner] = useState(false)
+  const [open,            setOpen]            = useState(false)
+  const [showBanner,      setShowBanner]      = useState(false)
+  const [showAdminEntry,  setShowAdminEntry]  = useState(false)
   const [wizardStep, setWizardStep] = useState(1)
   const [saving,     setSaving]     = useState(false)
 
@@ -130,6 +155,7 @@ export default function ExpensesPage({ entityId, entityName, isAr }) {
   const [filterStatus, setFilterStatus] = useState('ALL')
   const [search,    setSearch]    = useState('')
   const [filterCat, setFilterCat] = useState('')
+  const [filterDept,setFilterDept]= useState('')
   const [filterFrom,setFilterFrom]= useState('')
   const [filterTo,  setFilterTo]  = useState('')
   const [expanded,  setExpanded]  = useState({}) // row id → bool
@@ -173,7 +199,7 @@ export default function ExpensesPage({ entityId, entityName, isAr }) {
     ] = await Promise.all([
       supabase.from('expenses').select('*').eq('entity_id', entityId).order('expense_date', {ascending:false}),
       supabase.from('expense_records')
-        .select('id,expense_date,category,amount,vat_amount,vendor_name,vat_number,remarks,receipt_url,status,created_at,employee_id')
+        .select('id,expense_date,category,amount,vat_amount,vendor_name,vat_number,remarks,receipt_url,status,created_at,employee_id,entry_source,recorded_by_name,invoice_number,late_reason,project_no,project_name,site_no,site_name,job_no')
         .order('expense_date', {ascending:false}),
       supabase.from('employees').select('id,full_name_en,employee_number,phone,department_id').eq('entity_id', entityId).eq('is_active', true).order('full_name_en'),
       supabase.from('departments').select('id,dept_name,dept_code').eq('entity_id', entityId).eq('is_active', true).order('dept_name'),
@@ -193,13 +219,17 @@ export default function ExpensesPage({ entityId, entityName, isAr }) {
       const dept = deptMap[emp.department_id] || {}
       return {
         ...r,
-        _source:        'FIELD',
-        request_number: `FIELD-${r.id?.slice(0,8).toUpperCase()}`,
-        expense_type:   r.category,
+        _source:         'FIELD',
+        request_number:  `FIELD-${r.id?.slice(0,8).toUpperCase()}`,
+        expense_type:    r.category,
         department_name: dept.dept_code || dept.dept_name || '',  // abbreviation first
         requester_name:  emp.full_name_en || '',
-        total_amount:    r.amount||0,   // amount already includes VAT
+        emp_no:          emp.employee_number || '',
+        total_amount:    r.amount||0,
         document_url:    r.receipt_url,
+        // audit trail
+        entry_source:    r.entry_source || 'FIELD',
+        recorded_by_name: r.recorded_by_name || (emp.full_name_en ? `${emp.full_name_en} (self)` : ''),
       }
     })
     const all = [...(ex||[]).map(r=>({...r,_source:'ADMIN'})), ...normField]
@@ -379,84 +409,128 @@ export default function ExpensesPage({ entityId, entityName, isAr }) {
 
   const allCategories = [...new Set(items.map(i=>i.expense_type||i.category).filter(Boolean))].sort()
 
+  const allDepts = [...new Set(items.map(i=>i.department_name).filter(Boolean))].sort()
+
   const filtered = items.filter(i => {
     const q = search.toLowerCase()
     const name = (i.requester_name||i.employees?.full_name_en||'').toLowerCase()
     const matchS = !search || name.includes(q) || (i.expense_type||i.category||'').toLowerCase().includes(q) || (i.vendor_name||i.company_name||'').toLowerCase().includes(q) || (i.request_number||'').toLowerCase().includes(q)
     const matchStatus = filterStatus==='ALL' || i.status===filterStatus
-    const matchCat = !filterCat || (i.expense_type||i.category)===filterCat
+    const matchCat  = !filterCat  || (i.expense_type||i.category)===filterCat
+    const matchDept = !filterDept || (i.department_name||'')=== filterDept
     const matchFrom = !filterFrom || i.expense_date>=filterFrom
     const matchTo   = !filterTo   || i.expense_date<=filterTo
-    return matchS && matchStatus && matchCat && matchFrom && matchTo
+    return matchS && matchStatus && matchCat && matchDept && matchFrom && matchTo
   })
 
   const total = filtered.reduce((s,i)=>s+(i.total_amount||0),0)
   const SAR = v => `SAR ${(v||0).toLocaleString(undefined,{maximumFractionDigits:0})}`
 
   return (
-    <div>
-      {/* Toolbar */}
-      <div style={{ display:'flex', gap:10, marginBottom:10, alignItems:'center', flexWrap:'wrap' }}>
-        <button onClick={()=>{ resetForm(); setWizardStep(1); setShowBanner(true) }}
-          style={{ background:`linear-gradient(135deg,${MC},${MC}cc)`, color:'#fff', border:'none', borderRadius:10, padding:'10px 22px', cursor:'pointer', fontSize:14, fontWeight:700, whiteSpace:'nowrap', boxShadow:`0 4px 14px ${MC}44` }}>
-          🧾 + New Expense
-        </button>
+    <div className="exp-root" style={{ fontFamily:PP, display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2 }}>
+      <style>{`.exp-root input,.exp-root select,.exp-root button,.exp-root textarea{font-family:'Poppins',sans-serif!important}`}</style>
 
-        <button onClick={doExport}
-          style={{ background:'linear-gradient(135deg,#2e7d32,#43a047)', color:'#fff', border:'none', borderRadius:10, padding:'10px 18px', cursor:'pointer', fontSize:13, fontWeight:700, whiteSpace:'nowrap' }}>
-          📥 Export
-        </button>
-      </div>
-      {/* KPI Strip */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:14 }}>
-        {[
-          { label:'Total Expenses', value:SAR(filtered.reduce((s,i)=>s+(i.total_amount||0),0)),                                    icon:'🧾', g1:'#1e40af', g2:'#3b82f6' },
-          { label:'Pending',        value:SAR(filtered.filter(i=>i.status==='PENDING').reduce((s,i)=>s+(i.total_amount||0),0)),    icon:'⏳', g1:'#92400e', g2:'#f59e0b' },
-          { label:'Approved',       value:SAR(filtered.filter(i=>i.status==='APPROVED').reduce((s,i)=>s+(i.total_amount||0),0)),   icon:'✅', g1:'#065f46', g2:'#10b981' },
-          { label:'Paid',           value:SAR(filtered.filter(i=>i.status==='PAID').reduce((s,i)=>s+(i.total_amount||0),0)),       icon:'💳', g1:'#6d28d9', g2:'#a78bfa' },
-        ].map(({ label, value, icon, g1, g2 }) => (
-          <div key={label} style={{ background:`linear-gradient(135deg,${g1},${g2})`, borderRadius:12, padding:'12px 16px', boxShadow:`0 4px 16px ${g1}55` }}>
-            <div style={{ fontSize:10, color:'rgba(255,255,255,0.8)', fontWeight:700, textTransform:'uppercase', letterSpacing:0.8, marginBottom:4 }}>{icon} {label}</div>
-            <div style={{ fontSize:17, fontWeight:800, color:'#fff' }}>{value}</div>
+      {/* ══ UPPER ZONE ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+        {/* ── L1 Heading Bar ── */}
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, borderRadius:'6px 6px 0 0', padding:'7px 20px', display:'flex', alignItems:'center', gap:10 }}>
+            <span style={{ fontSize:15, fontWeight:800, color:'#fff', letterSpacing:0.3, flex:1 }}>🧾 Expenses</span>
+            {entityName && <span style={{ fontSize:11, color:'rgba(255,255,255,0.75)' }}>{entityName}</span>}
+            <button onClick={()=>{ resetForm(); setWizardStep(1); setShowBanner(true) }}
+              style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'5px 14px', cursor:'pointer', fontSize:12, fontWeight:700, whiteSpace:'nowrap' }}>
+              🧾 + New Expense
+            </button>
+            <button onClick={() => setShowAdminEntry(true)}
+              style={{ background:'rgba(255,255,255,0.18)', color:'#fff', border:'1px solid rgba(255,255,255,0.5)', borderRadius:7, padding:'5px 14px', cursor:'pointer', fontSize:12, fontWeight:700, whiteSpace:'nowrap' }}>
+              📋 Admin Entry
+            </button>
+            <button onClick={doExport}
+              style={{ background:'rgba(255,255,255,0.18)', color:'#fff', border:'1px solid rgba(255,255,255,0.3)', borderRadius:7, padding:'5px 14px', cursor:'pointer', fontSize:12, fontWeight:700, whiteSpace:'nowrap' }}>
+              📥 Export
+            </button>
           </div>
-        ))}
-      </div>
-
-      {/* Filter bar */}
-      <div style={{ display:'flex', gap:8, marginBottom:12, flexWrap:'wrap', alignItems:'center', background:'#fff', borderRadius:10, padding:'10px 14px', boxShadow:'0 1px 4px rgba(0,0,0,0.06)' }}>
-        <input placeholder="🔍 Search name, type, vendor…"
-          style={{ flex:2, minWidth:160, padding:'7px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:13, outline:'none' }}
-          value={search} onChange={e=>setSearch(e.target.value)} />
-        <select value={filterCat} onChange={e=>setFilterCat(e.target.value)} style={{ flex:1, minWidth:120, padding:'7px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:13, outline:'none' }}>
-          <option value="">All Categories</option>
-          {allCategories.map(c=><option key={c} value={c}>{c}</option>)}
-        </select>
-        <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} style={{ flex:1, minWidth:120, padding:'7px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:13, outline:'none' }}>
-          <option value="ALL">All Status</option>
-          <option value="PENDING">Pending</option>
-          <option value="APPROVED">Approved</option>
-          <option value="REJECTED">Rejected</option>
-          <option value="PAID">Paid</option>
-          <option value="RECORDED">Field Recorded</option>
-        </select>
-        <input type="date" title="From date" value={filterFrom} onChange={e=>setFilterFrom(e.target.value)}
-          style={{ padding:'7px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:13, outline:'none', color: filterFrom?'#222':'#aab2bd' }} />
-        <span style={{ color:'#aab2bd', fontSize:12 }}>–</span>
-        <input type="date" title="To date" value={filterTo} onChange={e=>setFilterTo(e.target.value)}
-          style={{ padding:'7px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:13, outline:'none', color: filterTo?'#222':'#aab2bd' }} />
-        {(search||filterCat||filterFrom||filterTo||filterStatus!=='ALL') &&
-          <button onClick={()=>{ setSearch(''); setFilterCat(''); setFilterFrom(''); setFilterTo(''); setFilterStatus('ALL') }}
-            style={{ background:'#f0f4f8', border:'none', borderRadius:7, padding:'7px 12px', cursor:'pointer', fontSize:12, color:'#888' }}>✕ Clear</button>}
-      </div>
-
-      {/* List */}
-      <div style={{ background:'#fff', borderRadius:14, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', overflow:'auto', maxHeight:'calc(100vh - 340px)' }}>
-        {/* List header */}
-        <div style={{ display:'grid', gridTemplateColumns:'90px 1fr 110px 130px 110px 30px', gap:0, background:MC, padding:'8px 14px', position:'sticky', top:0, zIndex:2 }}>
-          {['Date','Employee · Category','Department','Amount','Status',''].map(h=>(
-            <div key={h} style={{ fontSize:11, color:'#fff', fontWeight:700, textTransform:'uppercase', letterSpacing:0.5 }}>{h}</div>
-          ))}
         </div>
+
+        {/* ── KPI Cards ── */}
+        <div style={{ display:'flex', gap:8, padding:'10px 28px 12px', flexWrap:'wrap' }}>
+          {[
+            { label:'Total Expenses', val:SAR(filtered.reduce((s,i)=>s+(i.total_amount||0),0)) },
+            { label:'Pending',        val:SAR(filtered.filter(i=>i.status==='PENDING').reduce((s,i)=>s+(i.total_amount||0),0)) },
+            { label:'Approved',       val:SAR(filtered.filter(i=>i.status==='APPROVED').reduce((s,i)=>s+(i.total_amount||0),0)) },
+            { label:'Paid',           val:SAR(filtered.filter(i=>i.status==='PAID').reduce((s,i)=>s+(i.total_amount||0),0)) },
+          ].map(({ label, val }, i) => {
+            const kg = kpiCardGradient(i % 4, L1, L2, L3)
+            return (
+              <div key={label} style={{ ...kg, borderRadius:8, width:200, minWidth:200, height:62, padding:'8px 14px', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+                <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:0.8, marginBottom:3, opacity:0.85 }}>{label}</div>
+                <div style={{ fontSize:14, fontWeight:800 }}>{val}</div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* ── Filter Bar ── */}
+        <div style={{ padding:'6px 28px 8px' }}>
+          <div style={{ background:'#fff', padding:'10px 14px', borderRadius:8, boxShadow:'0 1px 4px rgba(0,0,0,0.07)', display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>
+            <input placeholder="🔍 Search name, type, vendor…"
+              style={{ flex:2, minWidth:160, padding:'7px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:12, outline:'none' }}
+              value={search} onChange={e=>setSearch(e.target.value)} />
+            <select value={filterDept} onChange={e=>setFilterDept(e.target.value)} style={{ flex:1, minWidth:130, padding:'7px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:12, outline:'none' }}>
+              <option value="">All Departments</option>
+              {allDepts.map(d=><option key={d} value={d}>{d}</option>)}
+            </select>
+            <select value={filterCat} onChange={e=>setFilterCat(e.target.value)} style={{ flex:1, minWidth:120, padding:'7px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:12, outline:'none' }}>
+              <option value="">All Categories</option>
+              {allCategories.map(c=><option key={c} value={c}>{c}</option>)}
+            </select>
+            <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} style={{ flex:1, minWidth:120, padding:'7px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:12, outline:'none' }}>
+              <option value="ALL">All Status</option>
+              <option value="PENDING">Pending</option>
+              <option value="APPROVED">Approved</option>
+              <option value="REJECTED">Rejected</option>
+              <option value="PAID">Paid</option>
+              <option value="RECORDED">Field Recorded</option>
+            </select>
+            <input type="date" title="From date" value={filterFrom} onChange={e=>setFilterFrom(e.target.value)}
+              style={{ padding:'7px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:12, outline:'none', color: filterFrom?'#222':'#aab2bd' }} />
+            <span style={{ color:'#aab2bd', fontSize:12 }}>–</span>
+            <input type="date" title="To date" value={filterTo} onChange={e=>setFilterTo(e.target.value)}
+              style={{ padding:'7px 10px', borderRadius:7, border:'1px solid #dde3ec', fontSize:12, outline:'none', color: filterTo?'#222':'#aab2bd' }} />
+            {(search||filterCat||filterDept||filterFrom||filterTo||filterStatus!=='ALL') &&
+              <button onClick={()=>{ setSearch(''); setFilterCat(''); setFilterDept(''); setFilterFrom(''); setFilterTo(''); setFilterStatus('ALL') }}
+                style={{ background:'#f0f4f8', border:'none', borderRadius:7, padding:'7px 12px', cursor:'pointer', fontSize:12, color:'#888' }}>✕ Clear</button>}
+          </div>
+        </div>
+
+        {/* ── Column Header ── */}
+        <div style={{ padding:'0 28px' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'100px 1fr 80px 120px 150px 105px 80px 110px 105px 30px', gap:0, background:L3, padding:'8px 14px', borderRadius:'6px 6px 0 0', alignItems:'center' }}>
+            {[
+              { label:'Date',       align:'left'  },
+              { label:'Employee',   align:'left'  },
+              { label:'Dept',       align:'left'  },
+              { label:'Category',   align:'left'  },
+              { label:'Vendor',     align:'left'  },
+              { label:'Excl. VAT',  align:'right' },
+              { label:'VAT',        align:'right' },
+              { label:'Total',      align:'right' },
+              { label:'Status',     align:'center'},
+              { label:'',           align:'center'},
+            ].map((h,i)=>(
+              <div key={i} style={{ fontSize:10, color:'#fff', fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, textAlign:h.align }}>{h.label}</div>
+            ))}
+          </div>
+        </div>
+
+      </div>{/* end upper zone */}
+
+      {/* ══ SCROLL ZONE ══ */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
+
+      {/* ── Table Card ── */}
+      <div style={{ background:'#fff', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 8px rgba(0,0,0,0.08)', overflow:'hidden' }}>
         {loading ? <div style={{ textAlign:'center', padding:60, color:'#aab2bd' }}>Loading…</div>
         : filtered.length===0 ? <div style={{ textAlign:'center', padding:40, color:'#aab2bd' }}>No expenses found</div>
         : filtered.map((i,idx)=>{
@@ -473,39 +547,62 @@ export default function ExpensesPage({ entityId, entityName, isAr }) {
               {/* Main row — single line, no scroll */}
               <div
                 onClick={()=>setExpanded(p=>({...p,[i.id||idx]:!p[i.id||idx]}))}
-                style={{ display:'grid', gridTemplateColumns:'90px 1fr 110px 130px 110px 30px', gap:0, padding:'10px 14px', borderTop: idx>0?'1px solid #f0f4f8':'none', cursor:'pointer', background: isOpen?'#fafcff':'#fff', alignItems:'center' }}
+                style={{ display:'grid', gridTemplateColumns:'100px 1fr 80px 120px 150px 105px 80px 110px 105px 30px', gap:0, padding:'9px 14px', borderTop: idx>0?'1px solid #f0f4f8':'none', cursor:'pointer', background: isOpen?'#fafcff':'#fff', alignItems:'center' }}
               >
                 {/* Date */}
-                <div style={{ fontSize:12, color:'#444' }}>{i.expense_date||'—'}</div>
-                {/* Name + category */}
+                <div style={{ fontSize:12, color:'#546e7a', fontWeight:600 }}>{i.expense_date||'—'}</div>
+
+                {/* Employee */}
                 <div style={{ minWidth:0 }}>
-                  <div style={{ fontSize:13, fontWeight:600, color:'#222', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:'#172D37', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
                     {name}
-                    {i._source==='FIELD' && <span style={{ marginLeft:6, background:'#e3f2fd', color:'#1565c0', borderRadius:4, padding:'1px 5px', fontSize:10, fontWeight:700 }}>FIELD</span>}
+                    {i._source==='FIELD' && <span style={{ marginLeft:6, background:'#e3f2fd', color:'#1565c0', borderRadius:3, padding:'1px 5px', fontSize:9, fontWeight:700 }}>FIELD</span>}
                   </div>
-                  <div style={{ fontSize:11, color:'#888', marginTop:1 }}>{cat}</div>
                 </div>
+
                 {/* Department */}
-                <div style={{ fontSize:11, color:'#555', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{i.department_name||'—'}</div>
-                {/* Amount */}
-                <div style={{ textAlign:'right' }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:'#1a237e', whiteSpace:'nowrap' }}>SAR {tot.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-                  {vat>0 && <div style={{ fontSize:10, color:'#888' }}>incl. VAT {vat.toFixed(2)}</div>}
+                <div style={{ fontSize:11, color:'#546e7a', fontWeight:600, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{i.department_name||i.dept_code||'—'}</div>
+
+                {/* Category */}
+                <div style={{ fontSize:11, color:'#444', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{cat}</div>
+
+                {/* Vendor */}
+                <div style={{ fontSize:11, color:'#607d8b', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{vendor||<span style={{color:'#c0c8d0'}}>—</span>}</div>
+
+                {/* Excl. VAT */}
+                <div style={{ textAlign:'right', fontSize:12, color:'#37474f', fontWeight:600, whiteSpace:'nowrap' }}>
+                  {amt>0 ? `SAR ${amt.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}` : '—'}
                 </div>
+
+                {/* VAT */}
+                <div style={{ textAlign:'right', fontSize:11, whiteSpace:'nowrap' }}>
+                  {vat>0
+                    ? <span style={{ color:'#e65100', fontWeight:600 }}>{vat.toFixed(2)}</span>
+                    : <span style={{ color:'#c0c8d0' }}>—</span>
+                  }
+                </div>
+
+                {/* Total */}
+                <div style={{ textAlign:'right' }}>
+                  <div style={{ fontSize:13, fontWeight:800, color:'#1a237e', whiteSpace:'nowrap' }}>SAR {tot.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+                </div>
+
                 {/* Status */}
-                <div>
-                  <span style={{ background:(STATUS_COLOR[i.status]||'#607d8b')+'22', color:STATUS_COLOR[i.status]||'#607d8b', borderRadius:6, padding:'3px 9px', fontSize:11, fontWeight:700, whiteSpace:'nowrap' }}>
+                <div style={{ textAlign:'center' }}>
+                  <span style={{ background:(STATUS_COLOR[i.status]||'#607d8b')+'22', color:STATUS_COLOR[i.status]||'#607d8b', borderRadius:5, padding:'3px 8px', fontSize:10, fontWeight:700, whiteSpace:'nowrap' }}>
                     {i.status||'PENDING'}
                   </span>
                 </div>
+
                 {/* Toggle */}
-                <div style={{ textAlign:'center', color:'#aab2bd', fontSize:14 }}>{isOpen?'▲':'▼'}</div>
+                <div style={{ textAlign:'center', color:'#aab2bd', fontSize:13 }}>{isOpen?'▲':'▼'}</div>
               </div>
 
               {/* Expanded detail panel */}
               {isOpen && (
                 <div style={{ background:'#f8faff', borderTop:'1px solid #e8eaf6', padding:'12px 20px', fontSize:12, color:'#444' }}>
-                  <div style={{ display:'flex', gap:24, flexWrap:'wrap' }}>
+                  {/* ── Detail fields ── */}
+                  <div style={{ display:'flex', gap:24, flexWrap:'wrap', marginBottom:10 }}>
                     <div><span style={{ color:'#888', fontWeight:600 }}>Ref # </span>{i.request_number||'—'}</div>
                     <div><span style={{ color:'#888', fontWeight:600 }}>Project </span>{i.project_name||i.project_number||'—'}</div>
                     <div><span style={{ color:'#888', fontWeight:600 }}>Vendor </span>{vendor||'—'}</div>
@@ -513,6 +610,82 @@ export default function ExpensesPage({ entityId, entityName, isAr }) {
                     <div><span style={{ color:'#888', fontWeight:600 }}>Amount </span>SAR {amt.toFixed(2)}{vat>0?` + VAT SAR ${vat.toFixed(2)}`:''}  = SAR {tot.toFixed(2)}</div>
                     {i.remarks && <div><span style={{ color:'#888', fontWeight:600 }}>Remarks </span>{i.remarks}</div>}
                     {receipt && <div><a href={receipt} target="_blank" rel="noreferrer" style={{ color:'#1565c0', fontWeight:600 }}>📎 View Receipt</a></div>}
+                  </div>
+
+                  {/* ── Flow Trail ── */}
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8, borderTop:'1px solid #e8eaf6', paddingTop:9 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+                      {/* Source badge */}
+                      {i._source === 'FIELD'
+                        ? <span style={{ display:'inline-flex', alignItems:'center', gap:5, background:'#e3f2fd', color:'#1565c0', borderRadius:6, padding:'3px 10px', fontSize:11, fontWeight:700 }}>
+                            📱 Submitted via Mobile (Field)
+                          </span>
+                        : <span style={{ display:'inline-flex', alignItems:'center', gap:5, background:'#fff3e0', color:'#e65100', borderRadius:6, padding:'3px 10px', fontSize:11, fontWeight:700 }}>
+                            🖥️ Entered by Office Admin
+                          </span>
+                      }
+                      {/* Recorded by */}
+                      {(i.recorded_by_name || i.requester_name) && (
+                        <span style={{ fontSize:11, color:'#607d8b' }}>
+                          by <strong style={{ color:'#37474f' }}>{i.recorded_by_name || i.requester_name}</strong>
+                        </span>
+                      )}
+                      {/* Timestamp */}
+                      {i.created_at && (
+                        <span style={{ fontSize:11, color:'#90a4ae' }}>
+                          on {new Date(i.created_at).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+                        </span>
+                      )}
+                      {/* Admin note if any */}
+                      {i.admin_note && (
+                        <span style={{ fontSize:11, color:'#8c354b', background:'#fce4ec', borderRadius:5, padding:'2px 8px' }}>
+                          📝 {i.admin_note}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Print Voucher button */}
+                    <button
+                      onClick={async e => {
+                        e.stopPropagation()
+                        // Must open popup synchronously BEFORE any await (browsers block window.open after async)
+                        const win = openPrintWindow()
+                        // Fetch receipt as base64 data URL so it embeds in the popup (bypasses CORS)
+                        const photoDataUrl = receipt ? await fetchAsDataUrl(receipt) : ''
+                        printDocument('expense_record_voucher', {
+                          record_number:  i.request_number || `EXP-${(i.id||'').slice(0,8).toUpperCase()}`,
+                          expense_id:     i.id,
+                          employee_name:  i.requester_name || name,
+                          emp_no:         i.emp_no || i.employee_number || '',
+                          department:     i.department_name || '',
+                          entity_name:    entityName || 'Ratal Advanced Technologies',
+                          date:           i.expense_date,
+                          expense_date:   i.expense_date,
+                          invoice_date:   i.invoice_date || '',
+                          submitted_at:   i.created_at || i.expense_date,
+                          category:       cat,
+                          vendor:         vendor,
+                          vendor_name:    vendor,
+                          vat_number:     i.vat_number || '',
+                          invoice_number: i.invoice_number || '',
+                          project_no:     i.project_no || i.project_number || '',
+                          project_name:   i.project_name || '',
+                          site_no:        i.site_no || '',
+                          job_no:         i.job_no || '',
+                          amount:         amt,
+                          vat:            vat,
+                          total:          tot,
+                          total_amount:   tot,
+                          remarks:        i.remarks || '',
+                          photo_url:      photoDataUrl || '',
+                          late_reason:    i.late_reason || '',
+                          entry_source:   i._source === 'FIELD' ? 'Submitted via Mobile (Field)' : (i.recorded_by_name ? `Admin: ${i.recorded_by_name}` : 'Entered by Office Admin'),
+                        }, { _preWin: win })
+                      }}
+                      style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'6px 16px', fontSize:11, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:6, whiteSpace:'nowrap' }}
+                    >
+                      🖨️ Print Voucher
+                    </button>
                   </div>
                 </div>
               )}
@@ -522,12 +695,25 @@ export default function ExpensesPage({ entityId, entityName, isAr }) {
         {/* Footer total */}
         {filtered.length>0 && (
           <div style={{ display:'flex', justifyContent:'flex-end', padding:'10px 20px', borderTop:'2px solid #e8eaf6', background:'#f8fafd' }}>
-            <span style={{ fontSize:13, fontWeight:800, color:'#e65100' }}>
+            <span style={{ fontSize:13, fontWeight:800, color:L3 }}>
               {filtered.length} record{filtered.length!==1?'s':''} · Total: SAR {total.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}
             </span>
           </div>
         )}
-      </div>
+      </div>{/* end table card */}
+
+      </div>{/* end scroll zone */}
+
+      {/* ── ADMIN BACKDATED ENTRY ── */}
+      {showAdminEntry && (
+        <BackdatedEntryModal
+          type="expense"
+          entityId={entityId}
+          employees={employees}
+          onClose={() => setShowAdminEntry(false)}
+          onSaved={() => { setShowAdminEntry(false); load() }}
+        />
+      )}
 
       {/* ── PAGE BANNER ── */}
       <PageBanner

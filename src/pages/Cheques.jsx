@@ -1,9 +1,13 @@
+const L1 = '#B4BA95'
+const L2 = '#F5F6EB'
+const L3 = '#606D2C'
+const PP = "'Poppins', sans-serif"
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import FormShell from '../components/FormShell'
 import PageBanner from '../components/PageBanner'
+import { kpiCardGradient } from '../styles/appStyles'
 
-const L3 = '#606D2C'
 
 // ═══════════════════════════════════════════════════════════════════
 // Cheque Register — Phase 12
@@ -376,23 +380,25 @@ function ChequeList({ cheque_type, entityId, coa }) {
   return (
     <>
       {/* KPI Strip */}
-      <div style={{ display:'flex', gap:10, marginBottom:12, overflowX:'auto', flexWrap:'nowrap', paddingBottom:2 }}>
+      <div style={{ display:'flex', gap:16, marginBottom:20, flexWrap:'wrap' }}>
         {[
-          { label:'Pending', val:totals.PENDING, color:'#f57f17' },
-          { label:'Cleared', val:totals.CLEARED, color:'#2e7d32' },
-          { label:'Bounced', val:totals.BOUNCED, color:'#c62828' },
-        ].map(k=>(
-          <div key={k.label} style={{ flex:1, minWidth:130, background:'#fff', borderRadius:12, padding:'12px 16px',
-            boxShadow:'0 1px 6px rgba(0,0,0,0.07)', borderLeft:`4px solid ${k.color}` }}>
-            <div style={{ fontSize:10, color:'#6b7c93' }}>{k.label}</div>
-            <div style={{ fontWeight:800, fontSize:18, color:k.color }}>{fmt(k.val)}</div>
-            <div style={{ fontSize:9, color:'#aab2bd' }}>SAR</div>
-          </div>
-        ))}
+          { label:'Pending', val:totals.PENDING },
+          { label:'Cleared', val:totals.CLEARED },
+          { label:'Bounced', val:totals.BOUNCED },
+        ].map((k,i)=>{
+          const g = kpiCardGradient(i,L1,L2,L3)
+          return (
+            <div key={k.label} style={{ ...g, width:180, height:72, borderRadius:10, padding:'0 18px', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.12)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+              <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', opacity:0.75, marginBottom:3 }}>{k.label}</div>
+              <div style={{ fontSize:18, fontWeight:800, lineHeight:1 }}>{fmt(k.val)}</div>
+              <div style={{ fontSize:10, opacity:0.7, marginTop:3 }}>SAR</div>
+            </div>
+          )
+        })}
       </div>
 
       {/* Toolbar */}
-      <div style={{ ...S.card, display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+      <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap', padding:'12px 0', borderTop:'1px solid #eef1f5', marginBottom:12 }}>
         <input style={{ ...S.inp, width:220 }} value={search} onChange={e=>setSearch(e.target.value)}
           placeholder="Search cheque #, name, reference…" />
         <select style={{ ...S.inp, width:130 }} value={statusF} onChange={e=>setStatusF(e.target.value)}>
@@ -406,10 +412,10 @@ function ChequeList({ cheque_type, entityId, coa }) {
       </div>
 
       {/* Table */}
-      <div style={{ ...S.card, padding:0, overflow:'hidden' }}>
+      <div style={{ overflow:'hidden', borderRadius:8, border:'1px solid #eef1f5', marginBottom:20 }}>
         <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
           <thead>
-            <tr style={{ background:'#1a2e3d', color:'#fff' }}>
+            <tr style={{ background:L3, color:'#fff' }}>
               <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11 }}>Cheque #</th>
               <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11 }}>
                 {isIssued ? 'Payee' : 'Drawer'}
@@ -483,7 +489,7 @@ function ChequeList({ cheque_type, entityId, coa }) {
           </tbody>
           {!loading && filtered.length > 0 && (
             <tfoot>
-              <tr style={{ background:'#1a2e3d', color:'#fff' }}>
+              <tr style={{ background:L3, color:'#fff' }}>
                 <td colSpan={5} style={{ padding:'10px 14px', fontWeight:800 }}>
                   {filtered.length} cheque{filtered.length!==1?'s':''} shown
                 </td>
@@ -657,32 +663,40 @@ export default function Cheques({ entityId }) {
   ]
 
   return (
-    <div>
-      <div style={{ fontSize:12, color:'#6b7c93', marginBottom:18 }}>
-        Track issued and received cheques — status workflow, maturity alerts, GL posting
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:PP }}>
+      {/* UPPER ZONE */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0' }}>
+            <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>🏦 Cheque Register</div>
+            <div style={{ fontSize:10, color:'#fff', opacity:0.8 }}>Track issued and received cheques — status workflow, maturity alerts, GL posting</div>
+          </div>
+        </div>
+        <div style={{ padding:'0 28px', borderBottom:'2px solid #e8edf2' }}>
+          {TABS.map(t=>(
+            <button key={t.key} onClick={()=>setTab(t.key)}
+              style={{ padding:'8px 18px', fontSize:12, fontWeight:700, cursor:'pointer', border:'none',
+                background:'transparent', borderBottom: tab===t.key?`2px solid ${L3}`:'2px solid transparent',
+                color: tab===t.key?L3:'#6b7c93', marginBottom:-2 }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
-
-      {/* Tabs */}
-      <div style={{ display:'flex', gap:4, marginBottom:14, borderBottom:'2px solid #f0f4f8', paddingBottom:0 }}>
-        {TABS.map(t=>(
-          <button key={t.key} onClick={()=>setTab(t.key)}
-            style={{ padding:'8px 18px', fontSize:12, fontWeight:700, cursor:'pointer', border:'none',
-              background:'transparent', borderBottom: tab===t.key?`3px solid ${L3}`:'3px solid transparent',
-              color: tab===t.key?L3:'#6b7c93', marginBottom:-2 }}>
-            {t.label}
-          </button>
-        ))}
+      {/* SCROLL ZONE */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
+        <div style={{ background:'#fff', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 8px rgba(0,0,0,0.08)', padding:'20px 20px 0' }}>
+          {!entityId ? (
+            <div style={{ textAlign:'center', padding:60, color:'#aab2bd' }}>Select an entity to view cheques.</div>
+          ) : (
+            <>
+              {tab === 'issued'   && <ChequeList cheque_type="ISSUED"   entityId={entityId} coa={coa} />}
+              {tab === 'received' && <ChequeList cheque_type="RECEIVED" entityId={entityId} coa={coa} />}
+              {tab === 'maturity' && <MaturityCalendar entityId={entityId} />}
+            </>
+          )}
+        </div>
       </div>
-
-      {!entityId ? (
-        <div style={{ ...S.card, textAlign:'center', padding:60, color:'#aab2bd' }}>Select an entity to view cheques.</div>
-      ) : (
-        <>
-          {tab === 'issued'   && <ChequeList cheque_type="ISSUED"   entityId={entityId} coa={coa} />}
-          {tab === 'received' && <ChequeList cheque_type="RECEIVED" entityId={entityId} coa={coa} />}
-          {tab === 'maturity' && <MaturityCalendar entityId={entityId} />}
-        </>
-      )}
     </div>
   )
 }

@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { GROUP_COLORS } from '../styles/appStyles'
+import { GROUP_COLORS, kpiCardGradient } from '../styles/appStyles'
 
 const MC = GROUP_COLORS.HR   // HR chapter palette
+const L1 = '#BCA99A'
+const L2 = '#F7F2ED'
+const L3 = '#795338'
 
 // ═══════════════════════════════════════════════════════════════════
 // Leave Balance Tracker
@@ -174,51 +177,75 @@ export default function LeaveBalance({ entityId }) {
 
   const INP = { padding:'7px 11px', borderRadius:7, border:'1.5px solid #dde3ec', fontSize:12, outline:'none', background:'#fff' }
 
+  const lbKpis = [
+    { label: 'Total Employees',    val: total },
+    { label: 'On Leave Today',     val: onLeaveNow },
+    { label: 'Avg Days Remaining', val: `${avgRem}d` },
+    { label: 'Low Balance ≤5d',    val: lowBal },
+    { label: 'Exhausted',          val: exhausted },
+  ]
+
   return (
-    <div>
-      {/* ── Sticky block: filter bar + KPI cards ─────────────── */}
-      <div style={{ position:'sticky', top:0, zIndex:20, background:'#f7f8fc', paddingBottom:10, borderBottom:'2px solid #e8edf4', marginBottom:14 }}>
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:'Poppins,sans-serif', fontSize:13 }}>
 
-      {/* Filter bar */}
-      <div style={{
-        padding:'10px 0 8px',
-        display:'flex', gap:10, alignItems:'flex-end', flexWrap:'wrap',
-      }}>
-        <div>
-          <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:3 }}>Year</div>
-          <select value={year} onChange={e => setYear(+e.target.value)} style={INP}>
-            {[2023,2024,2025,2026,2027].map(y => <option key={y}>{y}</option>)}
-          </select>
-        </div>
-        <div>
-          <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:3 }}>Department</div>
-          <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)} style={INP}>
-            <option value="">All Departments</option>
-            {departments.map(d => <option key={d.id} value={d.id}>{d.dept_name}</option>)}
-          </select>
-        </div>
-        <div>
-          <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:3 }}>Search</div>
-          <input placeholder="Employee name…" value={search} onChange={e => setSearch(e.target.value)} style={{ ...INP, width:190 }} />
-        </div>
-        <button onClick={exportCSV} style={{ padding:'8px 16px', borderRadius:8, border:`1.5px solid ${MC}`, background:'transparent', color:MC, fontWeight:700, fontSize:12, cursor:'pointer' }}>
-          ⬇ CSV
-        </button>
-        <button onClick={loadAll} disabled={loading} style={{ padding:'8px 16px', borderRadius:8, border:'none', background:MC, color:'#fff', fontWeight:700, fontSize:12, cursor:'pointer' }}>
-          ↻ Refresh
-        </button>
-      </div>{/* end filter row */}
+      {/* ══ UPPER ZONE ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
 
-      {/* ── KPI cards — single compact row ───────────────────── */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:8, marginBottom:0 }}>
-        <KpiCard label="Total Employees"    value={total}        icon="👥" bg="#312e81" fg="#fff" />
-        <KpiCard label="On Leave Today"     value={onLeaveNow}   icon="🌴" bg="#1565C0" fg="#fff" />
-        <KpiCard label="Avg Days Remaining" value={`${avgRem}d`} icon="📊" bg="#1b5e20" fg="#fff" />
-        <KpiCard label="Low Balance ≤5d"    value={lowBal}       icon="⚠️"  bg="#e65100" fg="#fff" />
-        <KpiCard label="Exhausted Balance"  value={exhausted}    icon="🔴" bg="#b71c1c" fg="#fff" />
-      </div>{/* end KPI grid */}
+        {/* L1 Heading Bar */}
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>🌴 Leave Balance</div>
+              <div style={{ fontSize:10, color:'#fff', opacity:0.85 }}>Annual leave entitlements, usage & remaining balance per employee</div>
+            </div>
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={exportCSV} style={{ background:'rgba(255,255,255,0.2)', color:'#fff', border:'none', borderRadius:7, padding:'6px 14px', fontSize:11, fontWeight:700, cursor:'pointer' }}>⬇ CSV</button>
+              <button onClick={loadAll} disabled={loading} style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'6px 14px', fontSize:11, fontWeight:700, cursor:'pointer' }}>{loading ? '…' : '↻ Refresh'}</button>
+            </div>
+          </div>
+        </div>
 
-      </div>{/* end sticky block */}
+        {/* KPI strip */}
+        <div style={{ display:'flex', gap:10, padding:'10px 28px 12px', background:L2, flexWrap:'wrap' }}>
+          {lbKpis.map((k, i) => {
+            const g = kpiCardGradient(i, L1, L2, L3)
+            return (
+              <div key={k.label} style={{ ...g, width:150, height:58, borderRadius:10, padding:'0 12px', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.12)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+                <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', opacity:0.75, marginBottom:2 }}>{k.label}</div>
+                <div style={{ fontSize:16, fontWeight:800, lineHeight:1 }}>{k.val}</div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Filter bar */}
+        <div style={{ padding:'6px 28px 10px', borderBottom:'2px solid #e8edf2' }}>
+          <div style={{ background:'#fff', padding:'10px 14px', borderRadius:8, boxShadow:'0 1px 4px rgba(0,0,0,0.07)', display:'flex', gap:10, alignItems:'flex-end', flexWrap:'wrap' }}>
+          <div>
+            <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:3 }}>Year</div>
+            <select value={year} onChange={e => setYear(+e.target.value)} style={INP}>
+              {[2023,2024,2025,2026,2027].map(y => <option key={y}>{y}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:3 }}>Department</div>
+            <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)} style={INP}>
+              <option value="">All Departments</option>
+              {departments.map(d => <option key={d.id} value={d.id}>{d.dept_name}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:3 }}>Search</div>
+            <input placeholder="Employee name…" value={search} onChange={e => setSearch(e.target.value)} style={{ ...INP, width:190 }} />
+          </div>
+          </div>
+        </div>{/* end filter bar */}
+
+      </div>{/* end upper zone */}
+
+      {/* ══ SCROLL ZONE ══ */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
+      <div style={{ background:'#fff', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 8px rgba(0,0,0,0.08)', padding:'16px 20px' }}>
 
       {/* ── On leave today ────────────────────────────────────── */}
       {onLeave.length > 0 && (
@@ -378,6 +405,8 @@ export default function LeaveBalance({ entityId }) {
         <span>Balance: <b style={{ color:'#2e7d32' }}>■ Healthy</b> <b style={{ color:'#f57c00' }}>■ &lt;50%</b> <b style={{ color:'#c62828' }}>■ Exceeded</b></span>
         <span style={{ marginLeft:'auto' }}>Default entitlement: <b>{defEntitle} days</b> (override per-employee in Employees page)</span>
       </div>
+      </div>{/* end white box */}
+      </div>{/* end scroll zone */}
     </div>
   )
 }

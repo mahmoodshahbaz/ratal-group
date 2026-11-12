@@ -1,5 +1,10 @@
+const L1 = '#B8A5CF'
+const L2 = '#FFF1F5'
+const PP = "'Poppins', sans-serif"
+
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { kpiCardGradient } from '../styles/appStyles'
 import FormShell from '../components/FormShell'
 import PageBanner from '../components/PageBanner'
 
@@ -241,8 +246,11 @@ function AssetRegister({ entityId, assets, reload }) {
 
   return (
     <>
-      {/* Toolbar */}
-      <div style={{ ...S.card, display:'flex', gap:8, alignItems:'flex-end', flexWrap:'wrap' }}>
+      {/* ══ UPPER ZONE (always visible) ══ */}
+      <div style={{ flexShrink:0 }}>
+
+      {/* Filters toolbar */}
+      <div style={{ background:'#fff', borderRadius:8, padding:'10px 14px', boxShadow:'0 1px 6px rgba(0,0,0,0.07)', display:'flex', gap:8, alignItems:'flex-end', flexWrap:'wrap', marginBottom:10 }}>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Search assets…" style={{ ...S.inp, width:200 }} />
         <select value={catF} onChange={e=>setCatF(e.target.value)} style={{ ...S.inp, width:'auto' }}>
           <option value="ALL">All Categories</option>
@@ -259,29 +267,16 @@ function AssetRegister({ entityId, assets, reload }) {
         <button onClick={openAdd} style={{ ...S.btn(L3), marginLeft:'auto' }}>+ Add Asset</button>
       </div>
 
-      {/* KPIs */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))', gap:10, marginBottom:12 }}>
-        {[
-          { label:'Assets',        val:visible.length, color:'#1a2e3d', plain:true },
-          { label:'Total Cost',    val:totalCost,      color:'#1565C0' },
-          { label:'Accumulated Depr', val:totalAccum,  color:'#c62828' },
-          { label:'Net Book Value',val:totalNBV,       color:'#2e7d32' },
-        ].map(k=>(
-          <div key={k.label} style={{ background:'#fff', borderRadius:4, padding:'12px 14px', boxShadow:'0 1px 6px rgba(0,0,0,0.07)', borderLeft:`4px solid ${k.color}` }}>
-            <div style={{ fontSize:10, color:'#6b7c93' }}>{k.label}</div>
-            <div style={{ fontWeight:800, fontSize:18, color:k.color }}>
-              {k.plain ? k.val : fmt(k.val)}
-            </div>
-            {!k.plain && <div style={{ fontSize:9, color:'#aab2bd' }}>SAR</div>}
-          </div>
-        ))}
-      </div>
+      </div>{/* end upper zone */}
+
+      {/* ══ SCROLL ZONE — only rows scroll ══ */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0 }}>
 
       {/* Asset table */}
       <div style={{ ...S.card, padding:0, overflow:'hidden' }}>
         <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
           <thead>
-            <tr style={{ background:'#1a2e3d', color:'#fff' }}>
+            <tr style={{ background:'#7444A3', color:'#fff' }}>
               {['Code','Asset','Category','Purchase Date','Cost (SAR)','NBV (SAR)','Method','Life','Status',''].map((h,i)=>(
                 <th key={i} style={{ padding:'9px 12px', textAlign:i>=4&&i<=6?'right':'left', fontSize:11, whiteSpace:'nowrap' }}>{h}</th>
               ))}
@@ -331,6 +326,8 @@ function AssetRegister({ entityId, assets, reload }) {
           </tbody>
         </table>
       </div>
+
+      </div>{/* end scroll zone */}
 
       {/* PageBanner — Add Asset */}
       <PageBanner
@@ -505,7 +502,7 @@ function DepreciationSchedule({ entityId, assets, reload }) {
     <div style={{ display:'grid', gridTemplateColumns:'260px 1fr', gap:12 }}>
       {/* Asset list panel */}
       <div style={{ ...S.card, padding:0, overflow:'hidden', alignSelf:'start' }}>
-        <div style={{ padding:'10px 14px', background:'#1a2e3d', color:'#fff', fontWeight:700, fontSize:12 }}>
+        <div style={{ padding:'10px 14px', background:'#7444A3', color:'#fff', fontWeight:700, fontSize:12 }}>
           Select Asset ({active.length} active)
         </div>
         {active.length === 0 ? (
@@ -575,18 +572,18 @@ function DepreciationSchedule({ entityId, assets, reload }) {
 
             {/* Schedule table */}
             <div style={{ ...S.card, padding:0, overflow:'hidden' }}>
-              <div style={{ padding:'10px 14px', background:'#1a2e3d', color:'#fff', fontWeight:700, fontSize:12 }}>
+              <div style={{ padding:'10px 14px', background:'#7444A3', color:'#fff', fontWeight:700, fontSize:12 }}>
                 Depreciation Schedule — {schedule.length} periods
               </div>
               <div style={{ maxHeight:400, overflowY:'auto' }}>
                 <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
                   <thead style={{ position:'sticky', top:0 }}>
                     <tr style={{ background:'#37474f', color:'#fff' }}>
-                      <th style={{ padding:'8px 14px', textAlign:'left' }}>#</th>
-                      <th style={{ padding:'8px 14px', textAlign:'left' }}>Period</th>
-                      <th style={{ padding:'8px 14px', textAlign:'right' }}>Monthly Depr</th>
-                      <th style={{ padding:'8px 14px', textAlign:'right' }}>Accumulated</th>
-                      <th style={{ padding:'8px 14px', textAlign:'right' }}>Net Book Value</th>
+                      <th style={{ padding:'8px 14px', textAlign:'left' , background:'#7444A3', color:'#fff' }}>#</th>
+                      <th style={{ padding:'8px 14px', textAlign:'left' , background:'#7444A3', color:'#fff' }}>Period</th>
+                      <th style={{ padding:'8px 14px', textAlign:'right' , background:'#7444A3', color:'#fff' }}>Monthly Depr</th>
+                      <th style={{ padding:'8px 14px', textAlign:'right' , background:'#7444A3', color:'#fff' }}>Accumulated</th>
+                      <th style={{ padding:'8px 14px', textAlign:'right' , background:'#7444A3', color:'#fff' }}>Net Book Value</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -634,7 +631,7 @@ function NBVSummary({ assets }) {
     <style>body{font-family:Arial,sans-serif;padding:32px;font-size:11px;max-width:700px;margin:0 auto}
     h2{font-size:16px;margin:0}p{color:#666;margin:2px 0 16px}
     table{width:100%;border-collapse:collapse}
-    th{background:#1a2e3d;color:#fff;padding:8px 12px;text-align:left;font-size:10px}
+    th{background:#7444A3;color:#fff;padding:8px 12px;text-align:left;font-size:10px}
     td{padding:7px 12px;border-bottom:1px solid #f5f5f5;font-size:11px}
     td:not(:first-child):not(:nth-child(2)){text-align:right;font-family:monospace}
     .tot{background:#f0f4f8;font-weight:800}.tot td{padding:9px 12px}
@@ -677,7 +674,7 @@ function NBVSummary({ assets }) {
       <div style={{ ...S.card, padding:0, overflow:'hidden' }}>
         <table style={{ width:'100%', borderCollapse:'collapse' }}>
           <thead>
-            <tr style={{ background:'#1a2e3d', color:'#fff' }}>
+            <tr style={{ background:'#7444A3', color:'#fff' }}>
               {['Category','Assets','Cost (SAR)','Accumulated Depr (SAR)','Net Book Value (SAR)'].map((h,i)=>(
                 <th key={i} style={{ padding:'9px 14px', textAlign:i>=2?'right':'left', fontSize:11 }}>{h}</th>
               ))}
@@ -741,27 +738,73 @@ export default function FixedAssets({ entityId }) {
     { key:'summary',     label:'📋 NBV Summary' },
   ]
 
-  return (
-    <div style={{ fontFamily:"'Poppins',sans-serif" }}>
-      {/* Tabs */}
-      <div style={{ display:'flex', gap:4, marginBottom:14 }}>
-        {TABS.map(t=>(
-          <button key={t.key} onClick={()=>setTab(t.key)}
-            style={tab===t.key ? S.btn(L3) : S.btnO('#546e7a')}>
-            {t.label}
-          </button>
-        ))}
-      </div>
+  const activeAssets = assets.filter(a => a.status !== 'DISPOSED')
+  const totalCost    = activeAssets.reduce((s,a) => s + (+a.purchase_cost||0), 0)
+  const totalNBV     = activeAssets.reduce((s,a) => s + calcNBV(a, null), 0)
+  const totalAccum   = totalCost - totalNBV
+  const activeCount  = assets.filter(a => a.status === 'ACTIVE').length
 
-      {loading ? (
-        <div style={{ textAlign:'center', padding:60, color:'#6b7c93' }}>Loading assets…</div>
-      ) : (
-        <>
-          {tab === 'register'    && <AssetRegister       entityId={entityId} assets={assets} reload={load} />}
-          {tab === 'depreciation'&& <DepreciationSchedule entityId={entityId} assets={assets} reload={load} />}
-          {tab === 'summary'     && <NBVSummary           assets={assets} />}
-        </>
-      )}
+  return (
+    <div className="fa-root" style={{ fontFamily:PP, display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2 }}>
+      <style>{`.fa-root input,.fa-root select,.fa-root button{font-family:'Poppins',sans-serif!important}`}</style>
+
+      {/* ── UPPER ZONE ── */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+        {/* L1 Heading Bar */}
+        <div style={{ background:L2, padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>🏗 Fixed Assets</div>
+              <div style={{ fontSize:10, color:'#fff', opacity:0.8 }}>Asset Register &amp; Depreciation</div>
+            </div>
+          </div>
+        </div>
+
+        {/* KPI Strip */}
+        <div style={{ padding:'10px 28px 12px', background:L2, display:'flex', flexWrap:'wrap', gap:8 }}>
+          {[
+            { label:'Active Assets',    value: loading ? '—' : String(activeCount) },
+            { label:'Total Cost',       value: loading ? '—' : fmt(totalCost) },
+            { label:'Accumulated Depr', value: loading ? '—' : fmt(totalAccum) },
+            { label:'Net Book Value',   value: loading ? '—' : fmt(totalNBV) },
+          ].map((k, i) => {
+            const g = kpiCardGradient(i, L1, L2, L3)
+            return (
+              <div key={k.label} style={{ ...g, width:160, height:62, borderRadius:10, padding:'0 14px', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.10)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+                <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', opacity:0.75, marginBottom:2 }}>{k.label}</div>
+                <div style={{ fontSize:16, fontWeight:800, lineHeight:1 }}>{k.value}</div>
+                <div style={{ fontSize:9, opacity:0.7, marginTop:2 }}>SAR</div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Tabs */}
+        <div style={{ padding:'0 28px 10px', background:L2 }}>
+          <div style={{ display:'flex', gap:4 }}>
+            {TABS.map(t=>(
+              <button key={t.key} onClick={()=>setTab(t.key)}
+                style={{ background:tab===t.key?L3:'transparent', color:tab===t.key?'#fff':L3,
+                  border:`1.5px solid ${L3}`, borderRadius:7, padding:'7px 15px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>{/* end upper zone */}
+
+      {/* ── SCROLL ZONE ── */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'10px 28px 22px' }}>
+        {loading ? (
+          <div style={{ textAlign:'center', padding:60, color:'#6b7c93' }}>Loading assets…</div>
+        ) : (
+          <div style={{ flex:1, minHeight:0, display:'flex', flexDirection:'column' }}>
+            {tab === 'register'    && <AssetRegister       entityId={entityId} assets={assets} reload={load} />}
+            {tab === 'depreciation'&& <DepreciationSchedule entityId={entityId} assets={assets} reload={load} />}
+            {tab === 'summary'     && <NBVSummary           assets={assets} />}
+          </div>
+        )}
+      </div>{/* end scroll zone */}
     </div>
   )
 }

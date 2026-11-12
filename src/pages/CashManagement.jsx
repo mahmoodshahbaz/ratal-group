@@ -1,5 +1,11 @@
+const L1 = '#B8A5CF'
+const L2 = '#FFF1F5'
+const L3 = '#AF3564'
+const PP = "'Poppins', sans-serif"
+
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { kpiCardGradient } from '../styles/appStyles'
 
 // ═══════════════════════════════════════════════════════════════════
 // Cash Management Dashboard — Phase 19
@@ -205,7 +211,7 @@ function AccountRegister({ account, txns, from, to }) {
           <thead>
             <tr style={{ background:'#f0f4f8' }}>
               {['Date','Voucher','Description','Debit (In)','Credit (Out)','Balance'].map(h=>(
-                <th key={h} style={{ padding:'10px 10px', textAlign:['Debit (In)','Credit (Out)','Balance'].includes(h)?'right':'left', fontSize:11, fontWeight:700, color:'#6b7c93', whiteSpace:'nowrap' }}>{h}</th>
+                <th key={h} style={{ padding:'10px 10px', textAlign:['Debit (In)','Credit (Out)','Balance'].includes(h)?'right':'left', fontSize:11, fontWeight:700, background:'#7444A3', color:'#fff', whiteSpace:'nowrap' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -312,34 +318,70 @@ export default function CashManagement({ entityId }) {
   const selectedAcct  = accounts.find(a=>a.account_code===selected)
 
   return (
-    <div>
-      <div style={{ fontSize:12, color:'#6b7c93', marginBottom:16 }}>
-        All bank & cash account balances · transaction register · inflow/outflow analysis
-      </div>
+    <div className="cash-mgmt-root" style={{ fontFamily:PP, display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2 }}>
+      <style>{`.cash-mgmt-root input,.cash-mgmt-root select,.cash-mgmt-root button{font-family:'Poppins',sans-serif!important}`}</style>
 
-      {/* Controls */}
-      <div style={{ ...S.card, display:'flex', gap:8, alignItems:'flex-end', flexWrap:'wrap' }}>
-        <div>
-          <label style={S.label}>From</label>
-          <input type="date" style={{ ...S.input, width:150 }} value={from} onChange={e=>setFrom(e.target.value)} />
-        </div>
-        <div>
-          <label style={S.label}>To</label>
-          <input type="date" style={{ ...S.input, width:150 }} value={to} onChange={e=>setTo(e.target.value)} />
-        </div>
-        <div style={{ display:'flex', gap:4, flexWrap:'wrap', alignSelf:'flex-end' }}>
-          {PRESETS.map(p=>(
-            <button key={p.label} onClick={()=>{ setFrom(p.from()); setTo(p.to()) }}
-              style={{ background:'transparent', color:'#546e7a', border:'1.5px solid #546e7a', borderRadius:8, padding:'6px 10px', fontSize:10, fontWeight:700, cursor:'pointer' }}>
-              {p.label}
+      {/* ── UPPER ZONE ── */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+        {/* L1 Heading Bar */}
+        <div style={{ background:L2, padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>🏦 Cash Management</div>
+              <div style={{ fontSize:10, color:'#fff', opacity:0.8 }}>Bank &amp; Cash Position</div>
+            </div>
+            <button onClick={load} style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'7px 16px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+              ↻ Refresh
             </button>
-          ))}
+          </div>
         </div>
-        <button onClick={load} style={{ background:'#1a2e3d', color:'#fff', border:'none', borderRadius:8, padding:'8px 14px', fontSize:12, fontWeight:700, cursor:'pointer', alignSelf:'flex-end' }}>
-          ↻ Refresh
-        </button>
-      </div>
 
+        {/* KPI Strip */}
+        <div style={{ padding:'10px 28px 12px', background:L2, display:'flex', flexWrap:'wrap', gap:8 }}>
+          {[
+            { label:'Total Cash & Bank', value: loading ? '—' : fmtN(totalCash) },
+            { label:'Inflow (Period)',   value: loading ? '—' : fmtN(totalInflow) },
+            { label:'Outflow (Period)',  value: loading ? '—' : fmtN(totalOutflow) },
+            { label:'Net Cash Flow',     value: loading ? '—' : fmtN(totalInflow - totalOutflow) },
+            { label:'Accounts',          value: loading ? '—' : String(accounts.length) },
+            { label:'Alerts',            value: loading ? '—' : String(negAccts + lowAccts) },
+          ].map((k, i) => {
+            const g = kpiCardGradient(i, L1, L2, L3)
+            return (
+              <div key={k.label} style={{ ...g, width:160, height:62, borderRadius:10, padding:'0 14px', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.10)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+                <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', opacity:0.75, marginBottom:2 }}>{k.label}</div>
+                <div style={{ fontSize:16, fontWeight:800, lineHeight:1 }}>{k.value}</div>
+                <div style={{ fontSize:9, opacity:0.7, marginTop:2 }}>SAR</div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Filter Bar */}
+        <div style={{ padding:'6px 28px 8px', background:L2 }}>
+          <div style={{ background:'#fff', padding:'10px 14px', borderRadius:8, boxShadow:'0 1px 4px rgba(0,0,0,0.07)', display:'flex', gap:10, alignItems:'flex-end', flexWrap:'wrap' }}>
+            <div>
+              <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:3 }}>From</label>
+              <input type="date" style={{ ...S.input, width:150 }} value={from} onChange={e=>setFrom(e.target.value)} />
+            </div>
+            <div>
+              <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:3 }}>To</label>
+              <input type="date" style={{ ...S.input, width:150 }} value={to} onChange={e=>setTo(e.target.value)} />
+            </div>
+            <div style={{ display:'flex', gap:4, flexWrap:'wrap', alignSelf:'flex-end' }}>
+              {PRESETS.map(p=>(
+                <button key={p.label} onClick={()=>{ setFrom(p.from()); setTo(p.to()) }}
+                  style={{ background:'transparent', color:'#546e7a', border:'1.5px solid #546e7a', borderRadius:7, padding:'6px 10px', fontSize:10, fontWeight:700, cursor:'pointer' }}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>{/* end upper zone */}
+
+      {/* ── SCROLL ZONE ── */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'10px 28px 22px' }}>
       {loading ? (
         <div style={{ textAlign:'center', padding:80, color:'#6b7c93' }}>
           <div style={{ fontSize:32, marginBottom:12 }}>🏦</div>
@@ -347,24 +389,6 @@ export default function CashManagement({ entityId }) {
         </div>
       ) : (
         <>
-          {/* Summary strip */}
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:8, marginBottom:14 }}>
-            {[
-              { label:'Total Cash & Bank', val:totalCash,   color:'#1a2e3d', icon:'💰', sar:true },
-              { label:'Inflow (period)',   val:totalInflow,  color:'#2e7d32', icon:'↑',  sar:true },
-              { label:'Outflow (period)',  val:totalOutflow, color:'#c62828', icon:'↓',  sar:true },
-              { label:'Net Cash Flow',     val:totalInflow-totalOutflow, color:(totalInflow-totalOutflow)>=0?'#2e7d32':'#c62828', icon:'⚡', sar:true },
-              { label:'Accounts',          val:accounts.length, color:'#1565C0', icon:'🏦', sar:false },
-              { label:'Alerts',            val:negAccts+lowAccts, color:negAccts>0?'#c62828':'#f57f17', icon:'⚠️', sar:false },
-            ].map(k=>(
-              <div key={k.label} style={{ background:'#fff', borderRadius:12, padding:'12px 14px',
-                boxShadow:'0 2px 8px rgba(0,0,0,0.07)', borderLeft:`4px solid ${k.color}` }}>
-                <div style={{ fontSize:18 }}>{k.icon}</div>
-                <div style={{ fontWeight:800, fontSize:17, color:k.color }}>{k.sar?fmtN(k.val):k.val}</div>
-                <div style={{ fontSize:10, color:'#6b7c93' }}>{k.label}{k.sar?' (SAR)':''}</div>
-              </div>
-            ))}
-          </div>
 
           {/* Alerts */}
           {(negAccts>0 || lowAccts>0) && (
@@ -441,6 +465,7 @@ export default function CashManagement({ entityId }) {
           </div>
         </>
       )}
+      </div>{/* end scroll zone */}
     </div>
   )
 }

@@ -1,9 +1,11 @@
+const L1 = '#B4BA95'
+const L2 = '#F5F6EB'
+const L3 = '#606D2C'
+const PP = "'Poppins', sans-serif"
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
 import FormShell from '../components/FormShell'
 import { GROUP_COLORS } from '../styles/appStyles'
-const MC = GROUP_COLORS.Accounting
-const L3 = '#606D2C'
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -15,7 +17,7 @@ const S = {
   row3:  { display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 },
   btn:   (bg, fg='#fff') => ({ background:bg, color:fg, border:'none', borderRadius:4, padding:'9px 20px', cursor:'pointer', fontSize:13, fontWeight:700, fontFamily:"'Poppins',sans-serif" }),
   addBtn:{ background:L3, color:'#fff', border:'none', borderRadius:4, padding:'10px 20px', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:"'Poppins',sans-serif" },
-  th:    { padding:'9px 10px', textAlign:'left', fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:0.4, background:MC, color:'#fff', borderBottom:'2px solid #e8edf2', whiteSpace:'nowrap' },
+  th:    { padding:'9px 10px', textAlign:'left', fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:0.4, background:L3, color:'#fff', borderBottom:'2px solid #e8edf2', whiteSpace:'nowrap' },
   td:    { padding:'9px 10px', fontSize:12, color:'#2d3a45', borderBottom:'1px solid #f0f4f8', verticalAlign:'middle' },
   err:   { background:'#ffebee', color:'#c62828', borderRadius:4, padding:'10px 13px', fontSize:13, marginBottom:12 },
 }
@@ -821,34 +823,37 @@ export default function Accounts({ entityId }) {
   const [tab, setTab] = useState('bank')
 
   return (
-    <div style={{ padding:24, maxWidth:1200, margin:'0 auto', fontFamily:"'Poppins',sans-serif" }}>
-      {/* Header */}
-      <div style={{ marginBottom:24 }}>
-        <div style={{ fontSize:12, color:'#64748b' }}>Manage your bank accounts, fixed assets, capital, and loans</div>
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:PP }}>
+      {/* UPPER ZONE */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0' }}>
+            <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>💼 Accounts</div>
+            <div style={{ fontSize:10, color:'#fff', opacity:0.8 }}>Manage bank accounts, fixed assets, capital, and loans</div>
+          </div>
+        </div>
+        <div style={{ padding:'0 28px', borderBottom:'2px solid #e8edf2' }}>
+          {TABS.map(t=>(
+            <button key={t.key} onClick={()=>setTab(t.key)} style={{
+              padding:'10px 16px', border:'none', background:'none', cursor:'pointer',
+              fontFamily:PP, fontSize:13, fontWeight: tab===t.key ? 800 : 500,
+              color: tab===t.key ? L3 : '#6b7c93',
+              borderBottom: tab===t.key ? `2px solid ${L3}` : '2px solid transparent',
+              marginBottom:-2, transition:'all 0.15s',
+            }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
-
-      {/* Tab bar */}
-      <div style={{ display:'flex', gap:4, borderBottom:'2px solid #e8edf5', marginBottom:24 }}>
-        {TABS.map(t=>(
-          <button key={t.key} onClick={()=>setTab(t.key)} style={{
-            padding:'10px 20px', border:'none', background:'none', cursor:'pointer',
-            fontFamily:"'Poppins',sans-serif",
-            fontSize:13, fontWeight: tab===t.key ? 800 : 500,
-            color: tab===t.key ? L3 : '#6b7c93',
-            borderBottom: tab===t.key ? `2px solid ${L3}` : '2px solid transparent',
-            marginBottom:-2, transition:'all 0.15s',
-          }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab content */}
-      <div style={{ background:'#fff', borderRadius:4, border:'1.5px solid #e8edf5', padding:24 }}>
-        {tab==='bank'    && <BankAccountsTab    entityId={entityId} />}
-        {tab==='assets'  && <FixedAssetsTab     entityId={entityId} />}
-        {tab==='capital' && <CapitalAccountsTab entityId={entityId} />}
-        {tab==='loans'   && <LoanAccountsTab    entityId={entityId} />}
+      {/* SCROLL ZONE */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
+        <div style={{ background:'#fff', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 8px rgba(0,0,0,0.08)' }}>
+          {tab==='bank'    && <BankAccountsTab    entityId={entityId} />}
+          {tab==='assets'  && <FixedAssetsTab     entityId={entityId} />}
+          {tab==='capital' && <CapitalAccountsTab entityId={entityId} />}
+          {tab==='loans'   && <LoanAccountsTab    entityId={entityId} />}
+        </div>
       </div>
     </div>
   )

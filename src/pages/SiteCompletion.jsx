@@ -9,11 +9,13 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { supabase }                      from '../lib/supabase'
-import ChapterPage                       from '../components/ChapterPage'
-import { CHAPTER_PALETTES, GROUP_COLORS } from '../styles/appStyles'
+import { CHAPTER_PALETTES, GROUP_COLORS, kpiCardGradient } from '../styles/appStyles'
 
-const MC = GROUP_COLORS.Operations
-const L2 = CHAPTER_PALETTES.Operations.L2
+const MC  = GROUP_COLORS.Operations
+const PAL = CHAPTER_PALETTES.Operations
+const L1  = PAL.L1
+const L2  = PAL.L2
+const L3  = PAL.L3
 const FF = 'Poppins, -apple-system, sans-serif'
 
 const STATUS_OPTIONS = ['PENDING','IN_PROGRESS','COMPLETED','BLOCKED']
@@ -163,192 +165,225 @@ export default function SiteCompletion({ entityId }) {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <ChapterPage
-      title="Site Completion"
-      chapter="Operations"
-      loading={loading}
-      MC={MC} L2={L2}
-    >
-      {/* KPI cards */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:10, marginBottom:20 }}>
-        {[
-          { label:'Total Sites',  value:kpis.total,       bg:'#1565c0' },
-          { label:'Complete',     value:kpis.complete,    bg:'#2e7d32' },
-          { label:'In Progress',  value:kpis.inProgress,  bg:'#e65100' },
-          { label:'Not Started',  value:kpis.notStarted,  bg:'#6a1b9a' },
-          { label:'Avg Progress', value:`${kpis.avgPct}%`, bg:'#00695c' },
-        ].map(k => (
-          <div key={k.label} style={{ background:k.bg, borderRadius:10, padding:'14px 16px', color:'#fff', fontFamily:FF }}>
-            <div style={{ fontSize:11, opacity:0.8, textTransform:'uppercase', letterSpacing:0.5 }}>{k.label}</div>
-            <div style={{ fontSize:26, fontWeight:700, marginTop:2 }}>{k.value}</div>
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:FF }}>
+
+      {/* ══ UPPER ZONE ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+        {/* L1 heading bar */}
+        <div style={{ background:L2, padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', borderRadius:'6px 6px 0 0' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff', fontFamily:FF, lineHeight:1.2 }}>Site Completion</div>
+              <div style={{ fontSize:10, color:'rgba(255,255,255,0.8)', marginTop:2, fontFamily:FF }}>Milestone tracking · All service units</div>
+            </div>
           </div>
-        ))}
-      </div>
+        </div>
 
-      {/* Filters */}
-      <div style={{ display:'flex', gap:10, marginBottom:16, flexWrap:'wrap' }}>
-        <input
-          placeholder="Search site# / name / job#…"
-          value={filterSearch}
-          onChange={e => setFilterSearch(e.target.value)}
-          style={{ flex:1, minWidth:200, padding:'7px 12px', borderRadius:8, border:'1.5px solid #dde3ec', fontSize:13, fontFamily:FF }}
-        />
-        <select value={filterUnit} onChange={e => setFilterUnit(e.target.value)}
-          style={{ padding:'7px 12px', borderRadius:8, border:'1.5px solid #dde3ec', fontSize:13, fontFamily:FF }}>
-          <option value="">All Units</option>
-          {['NISU','TISU','CISU','ITSU'].map(u => <option key={u} value={u}>{u}</option>)}
-        </select>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-          style={{ padding:'7px 12px', borderRadius:8, border:'1.5px solid #dde3ec', fontSize:13, fontFamily:FF }}>
-          <option value="">All Statuses</option>
-          <option value="NOT_STARTED">Not Started</option>
-          <option value="IN_PROGRESS">In Progress</option>
-          <option value="COMPLETE">Complete</option>
-        </select>
-        <span style={{ padding:'7px 12px', fontSize:13, color:'#78909c', fontFamily:FF }}>{filtered.length} sites</span>
-      </div>
-
-      {/* Site list */}
-      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-        {filtered.map(site => {
-          const ml      = localML[site.id] ?? site.milestones ?? []
-          const pct     = calcPct(ml)
-          const done    = ml.filter(m => m.status === 'COMPLETED').length
-          const isExp   = expanded === site.id
-          const isDirty = dirty[site.id]
-          const dept    = deptMap[site.dept_id] || {}
-          const unit    = site.service_unit || dept.dept_code || ''
-          const unitC   = DEPTCOLOR(unit)
-
-          return (
-            <div key={site.id} style={{ border:'1.5px solid #e0e7ef', borderRadius:10, overflow:'hidden', background:'#fff' }}>
-              {/* Site row */}
-              <div
-                onClick={() => handleExpand(site.id)}
-                style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px', cursor:'pointer',
-                  background: isExp ? '#f0f7ff' : '#fff', transition:'background 0.15s' }}
-              >
-                {/* Unit badge */}
-                <span style={{ background:unitC, color:'#fff', borderRadius:6, padding:'2px 8px', fontSize:11, fontWeight:700, fontFamily:FF, whiteSpace:'nowrap' }}>
-                  {unit || '—'}
-                </span>
-
-                {/* Site info */}
-                <div style={{ flex:1 }}>
-                  <div style={{ fontWeight:700, fontSize:13, fontFamily:FF, color:'#1a2e3d' }}>
-                    {site.sm_id}
-                    {site.site_name && <span style={{ fontWeight:400, color:'#546e7a', marginLeft:8 }}>{site.site_name}</span>}
-                  </div>
-                  <div style={{ fontSize:11, color:'#90a4ae', fontFamily:FF, marginTop:2 }}>
-                    {site.site_no && <>Site# {site.site_no}</>}
-                    {site.job_no  && <> · Job# {site.job_no}</>}
-                    {site.wf_code && <> · {site.wf_code}</>}
-                  </div>
-                </div>
-
-                {/* Progress */}
-                <div style={{ textAlign:'right', minWidth:100 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:pctColor(pct), fontFamily:FF }}>{pct}%</div>
-                  <div style={{ fontSize:11, color:'#90a4ae', fontFamily:FF }}>{done}/{ml.length} stages</div>
-                  <div style={{ marginTop:4, background:'#e0e7ef', borderRadius:4, height:4, width:80 }}>
-                    <div style={{ background:pctColor(pct), borderRadius:4, height:4, width:`${pct}%`, transition:'width 0.3s' }} />
-                  </div>
-                </div>
-
-                {/* Status badge */}
-                <span style={{
-                  ...STATUS_COLOR[siteStatus(pct) === 'COMPLETE' ? 'COMPLETED' : siteStatus(pct) === 'IN_PROGRESS' ? 'IN_PROGRESS' : 'PENDING'],
-                  padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, fontFamily:FF, whiteSpace:'nowrap'
-                }}>
-                  {siteStatus(pct).replace('_',' ')}
-                </span>
-
-                {/* Expand arrow */}
-                <span style={{ fontSize:16, color:'#90a4ae', transition:'transform 0.2s', transform:isExp?'rotate(180deg)':'none' }}>▼</span>
+        {/* KPI cards */}
+        <div style={{ display:'flex', flexWrap:'wrap', gap:8, padding:'10px 28px 12px', background:L2 }}>
+          {[
+            { label:'Total Sites',  value:kpis.total },
+            { label:'Complete',     value:kpis.complete },
+            { label:'In Progress',  value:kpis.inProgress },
+            { label:'Not Started',  value:kpis.notStarted },
+            { label:'Avg Progress', value:`${kpis.avgPct}%` },
+          ].map((k, i) => {
+            const cs = kpiCardGradient(i, L1, L2, L3)
+            return (
+              <div key={i} style={{ ...cs, width:160, height:62, borderRadius:8, padding:'0 14px', display:'flex', flexDirection:'column', justifyContent:'center', flexShrink:0, boxShadow:i<2?'0 3px 10px rgba(0,0,0,0.20)':'0 2px 6px rgba(0,0,0,0.08)', boxSizing:'border-box' }}>
+                <div style={{ fontSize:9, fontWeight:800, letterSpacing:0.9, textTransform:'uppercase', fontFamily:FF, opacity:i>=2?0.6:0.75, marginBottom:2 }}>{k.label}</div>
+                <div style={{ fontSize:19, fontWeight:900, lineHeight:1.1, fontFamily:FF }}>{k.value}</div>
               </div>
+            )
+          })}
+        </div>
 
-              {/* Milestone detail */}
-              {isExp && (
-                <div style={{ padding:'12px 16px', borderTop:'1px solid #e0e7ef', background:'#fafcff' }}>
-                  {ml.length === 0 ? (
-                    <div style={{ color:'#90a4ae', fontSize:13, fontFamily:FF, textAlign:'center', padding:'16px 0' }}>
-                      No milestones — assign a WF Code in Site Master to generate stages.
+        {/* Filter bar — pinned */}
+        <div style={{ padding:'6px 28px 6px' }}>
+          <div style={{ display:'flex', gap:10, flexWrap:'wrap', alignItems:'center', background:'#fff', padding:'10px 14px', borderRadius:10, boxShadow:'0 2px 10px rgba(0,0,0,0.07)' }}>
+            <input
+              placeholder="Search site# / name / job#…"
+              value={filterSearch}
+              onChange={e => setFilterSearch(e.target.value)}
+              style={{ flex:1, minWidth:200, padding:'7px 12px', borderRadius:8, border:'1.5px solid #dde3ec', fontSize:13, fontFamily:FF }}
+            />
+            <select value={filterUnit} onChange={e => setFilterUnit(e.target.value)}
+              style={{ padding:'7px 12px', borderRadius:8, border:'1.5px solid #dde3ec', fontSize:13, fontFamily:FF }}>
+              <option value="">All Units</option>
+              {['NISU','TISU','CISU','ITSU'].map(u => <option key={u} value={u}>{u}</option>)}
+            </select>
+            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+              style={{ padding:'7px 12px', borderRadius:8, border:'1.5px solid #dde3ec', fontSize:13, fontFamily:FF }}>
+              <option value="">All Statuses</option>
+              <option value="NOT_STARTED">Not Started</option>
+              <option value="IN_PROGRESS">In Progress</option>
+              <option value="COMPLETE">Complete</option>
+            </select>
+            <span style={{ fontSize:13, color:'#78909c', fontFamily:FF, whiteSpace:'nowrap' }}>{filtered.length} sites</span>
+          </div>
+        </div>
+
+      </div>{/* end upper zone */}
+
+      {/* ── SCROLL ZONE ── */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
+
+        {/* Table card — top margin for spacing */}
+        <div style={{ background:'#fff', borderRadius:12, boxShadow:'0 2px 10px rgba(0,0,0,0.07)', overflow:'hidden' }}>
+
+          {/* Column header */}
+          <div style={{ display:'flex', alignItems:'center', gap:12, padding:'8px 16px', background:L3, fontSize:11, color:'#fff', fontWeight:700, textTransform:'uppercase', fontFamily:FF }}>
+            <span style={{ width:52 }}>Unit</span>
+            <span style={{ flex:1 }}>Site</span>
+            <span style={{ minWidth:100, textAlign:'right' }}>Progress</span>
+            <span style={{ minWidth:100, textAlign:'center' }}>Status</span>
+            <span style={{ width:20 }}></span>
+          </div>
+
+          {/* Site rows */}
+          {loading ? (
+            <div style={{ textAlign:'center', color:'#90a4ae', padding:40, fontFamily:FF }}>Loading…</div>
+          ) : filtered.length === 0 ? (
+            <div style={{ textAlign:'center', padding:40, color:'#90a4ae', fontFamily:FF }}>No sites found.</div>
+          ) : (
+            filtered.map(site => {
+              const ml      = localML[site.id] ?? site.milestones ?? []
+              const pct     = calcPct(ml)
+              const done    = ml.filter(m => m.status === 'COMPLETED').length
+              const isExp   = expanded === site.id
+              const isDirty = dirty[site.id]
+              const dept    = deptMap[site.dept_id] || {}
+              const unit    = site.service_unit || dept.dept_code || ''
+              const unitC   = DEPTCOLOR(unit)
+
+              return (
+                <div key={site.id} style={{ borderBottom:'1px solid #f0f0f0' }}>
+                  {/* Site row */}
+                  <div
+                    onClick={() => handleExpand(site.id)}
+                    style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px', cursor:'pointer',
+                      background: isExp ? '#f0f7ff' : '#fff', transition:'background 0.15s' }}
+                  >
+                    {/* Unit badge */}
+                    <span style={{ background:unitC, color:'#fff', borderRadius:6, padding:'2px 8px', fontSize:11, fontWeight:700, fontFamily:FF, whiteSpace:'nowrap', width:52, textAlign:'center', boxSizing:'border-box' }}>
+                      {unit || '—'}
+                    </span>
+
+                    {/* Site info */}
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontWeight:700, fontSize:13, fontFamily:FF, color:'#1a2e3d' }}>
+                        {site.sm_id}
+                        {site.site_name && <span style={{ fontWeight:400, color:'#546e7a', marginLeft:8 }}>{site.site_name}</span>}
+                      </div>
+                      <div style={{ fontSize:11, color:'#90a4ae', fontFamily:FF, marginTop:2 }}>
+                        {site.site_no && <>Site# {site.site_no}</>}
+                        {site.job_no  && <> · Job# {site.job_no}</>}
+                        {site.wf_code && <> · {site.wf_code}</>}
+                      </div>
                     </div>
-                  ) : (
-                    <>
-                      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(240px, 1fr))', gap:8, marginBottom:12 }}>
-                        {ml.map((m, idx) => {
-                          const sc = STATUS_COLOR[m.status] || STATUS_COLOR.PENDING
-                          return (
-                            <div key={idx} style={{ border:'1.5px solid #e0e7ef', borderRadius:8, padding:'8px 12px', background:sc.bg }}>
-                              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
-                                <input
-                                  type="checkbox"
-                                  checked={m.status === 'COMPLETED'}
-                                  onChange={() => toggleMilestone(site.id, idx)}
-                                  style={{ cursor:'pointer', width:16, height:16, accentColor:'#2e7d32' }}
-                                />
-                                <span style={{ flex:1, fontSize:12, fontWeight:600, fontFamily:FF, color:'#1a2e3d' }}>
-                                  {idx + 1}. {m.name}
-                                </span>
-                              </div>
-                              <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                                <select
-                                  value={m.status || 'PENDING'}
-                                  onChange={e => setMilestoneStatus(site.id, idx, e.target.value)}
-                                  style={{ fontSize:11, padding:'2px 6px', borderRadius:6, border:'1px solid #dde3ec',
-                                    background:'#fff', fontFamily:FF, color:sc.color, fontWeight:600 }}
-                                >
-                                  {STATUS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                                </select>
-                                {m.date && <span style={{ fontSize:10, color:'#90a4ae', fontFamily:FF }}>{m.date}</span>}
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
 
-                      {/* Save button */}
-                      <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
-                        {isDirty && (
-                          <button
-                            onClick={() => {
-                              setLocalML(p => { const n = {...p}; delete n[site.id]; return n })
-                              setDirty(p => { const n = {...p}; delete n[site.id]; return n })
-                            }}
-                            style={{ padding:'6px 16px', borderRadius:8, border:'1.5px solid #dde3ec',
-                              background:'#fff', fontSize:12, cursor:'pointer', fontFamily:FF, color:'#546e7a' }}
-                          >
-                            Discard
-                          </button>
-                        )}
-                        <button
-                          disabled={!isDirty || saving === site.id}
-                          onClick={() => saveMilestones(site.id)}
-                          style={{ padding:'6px 18px', borderRadius:8, border:'none',
-                            background: isDirty ? MC : '#dde3ec',
-                            color: isDirty ? '#fff' : '#90a4ae',
-                            fontSize:12, fontWeight:600, cursor: isDirty ? 'pointer' : 'default',
-                            fontFamily:FF }}
-                        >
-                          {saving === site.id ? 'Saving…' : 'Save Progress'}
-                        </button>
+                    {/* Progress */}
+                    <div style={{ textAlign:'right', minWidth:100 }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:pctColor(pct), fontFamily:FF }}>{pct}%</div>
+                      <div style={{ fontSize:11, color:'#90a4ae', fontFamily:FF }}>{done}/{ml.length} stages</div>
+                      <div style={{ marginTop:4, background:'#e0e7ef', borderRadius:4, height:4, width:80, marginLeft:'auto' }}>
+                        <div style={{ background:pctColor(pct), borderRadius:4, height:4, width:`${pct}%`, transition:'width 0.3s' }} />
                       </div>
-                    </>
+                    </div>
+
+                    {/* Status badge */}
+                    <span style={{
+                      ...STATUS_COLOR[siteStatus(pct) === 'COMPLETE' ? 'COMPLETED' : siteStatus(pct) === 'IN_PROGRESS' ? 'IN_PROGRESS' : 'PENDING'],
+                      padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, fontFamily:FF, whiteSpace:'nowrap', minWidth:100, textAlign:'center', boxSizing:'border-box'
+                    }}>
+                      {siteStatus(pct).replace('_',' ')}
+                    </span>
+
+                    {/* Expand arrow */}
+                    <span style={{ fontSize:16, color:'#90a4ae', transition:'transform 0.2s', transform:isExp?'rotate(180deg)':'none', width:20, textAlign:'center' }}>▼</span>
+                  </div>
+
+                  {/* Milestone detail */}
+                  {isExp && (
+                    <div style={{ padding:'12px 16px', borderTop:'1px solid #e8edf2', background:'#fafcff' }}>
+                      {ml.length === 0 ? (
+                        <div style={{ color:'#90a4ae', fontSize:13, fontFamily:FF, textAlign:'center', padding:'16px 0' }}>
+                          No milestones — assign a WF Code in Site Master to generate stages.
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(240px, 1fr))', gap:8, marginBottom:12 }}>
+                            {ml.map((m, idx) => {
+                              const sc = STATUS_COLOR[m.status] || STATUS_COLOR.PENDING
+                              return (
+                                <div key={idx} style={{ border:'1.5px solid #e0e7ef', borderRadius:8, padding:'8px 12px', background:sc.bg }}>
+                                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={m.status === 'COMPLETED'}
+                                      onChange={() => toggleMilestone(site.id, idx)}
+                                      style={{ cursor:'pointer', width:16, height:16, accentColor:'#2e7d32' }}
+                                    />
+                                    <span style={{ flex:1, fontSize:12, fontWeight:600, fontFamily:FF, color:'#1a2e3d' }}>
+                                      {idx + 1}. {m.name}
+                                    </span>
+                                  </div>
+                                  <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                                    <select
+                                      value={m.status || 'PENDING'}
+                                      onChange={e => setMilestoneStatus(site.id, idx, e.target.value)}
+                                      style={{ fontSize:11, padding:'2px 6px', borderRadius:6, border:'1px solid #dde3ec',
+                                        background:'#fff', fontFamily:FF, color:sc.color, fontWeight:600 }}
+                                    >
+                                      {STATUS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                                    </select>
+                                    {m.date && <span style={{ fontSize:10, color:'#90a4ae', fontFamily:FF }}>{m.date}</span>}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+
+                          {/* Save button */}
+                          <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
+                            {isDirty && (
+                              <button
+                                onClick={() => {
+                                  setLocalML(p => { const n = {...p}; delete n[site.id]; return n })
+                                  setDirty(p => { const n = {...p}; delete n[site.id]; return n })
+                                }}
+                                style={{ padding:'6px 16px', borderRadius:8, border:'1.5px solid #dde3ec',
+                                  background:'#fff', fontSize:12, cursor:'pointer', fontFamily:FF, color:'#546e7a' }}
+                              >
+                                Discard
+                              </button>
+                            )}
+                            <button
+                              disabled={!isDirty || saving === site.id}
+                              onClick={() => saveMilestones(site.id)}
+                              style={{ padding:'6px 18px', borderRadius:8, border:'none',
+                                background: isDirty ? L3 : '#dde3ec',
+                                color: isDirty ? '#fff' : '#90a4ae',
+                                fontSize:12, fontWeight:600, cursor: isDirty ? 'pointer' : 'default',
+                                fontFamily:FF }}
+                            >
+                              {saving === site.id ? 'Saving…' : 'Save Progress'}
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
-          )
-        })}
+              )
+            })
+          )}
+        </div>
 
-        {!loading && filtered.length === 0 && (
-          <div style={{ textAlign:'center', padding:40, color:'#90a4ae', fontFamily:FF }}>
-            No sites found.
-          </div>
-        )}
-      </div>
-    </ChapterPage>
+      </div>{/* end scroll zone */}
+
+    </div>
   )
 }
 

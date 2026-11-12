@@ -1,10 +1,13 @@
+const L1 = '#B8A5CF'
+const L2 = '#FFF1F5'
+const L3 = '#AF3564'
+const PP = "'Poppins', sans-serif"
+
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth'
 import FormShell from '../components/FormShell'
 import PageBanner from '../components/PageBanner'
-
-const L3 = '#AF3564'  // Planning accent
 
 // ═══════════════════════════════════════════════════════════════════
 // Cost Center Allocation — Phase 23
@@ -403,30 +406,46 @@ export default function CostAllocation({ entityId }) {
   ]
 
   return (
-    <div>
-      <div style={{ fontSize:12, color:'#6b7c93', marginBottom:16 }}>
-        Define rules to distribute shared costs across departments and projects · post allocation journals to GL
-      </div>
+    <div className="costal-root" style={{ fontFamily:PP, display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2 }}>
+      <style>{`.costal-root input,.costal-root select,.costal-root button{font-family:'Poppins',sans-serif!important}`}</style>
 
-      {/* Tabs */}
-      <div style={{ display:'flex', gap:4, background:'#f0f4f8', borderRadius:12, padding:4, marginBottom:14 }}>
-        {TABS.map((t,i)=>(
-          <button key={i} onClick={()=>setTab(i)} style={{
-            padding:'8px 16px', borderRadius:8, fontWeight:700, fontSize:12, cursor:'pointer', border:'none',
-            background:tab===i?'#fff':'transparent', color:tab===i?'#1a2e3d':'#6b7c93',
-            boxShadow:tab===i?'0 1px 4px rgba(0,0,0,0.1)':'none',
-          }}>{t.label}</button>
-        ))}
-      </div>
+      {/* ── UPPER ZONE ── */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+        {/* L1 Heading Bar */}
+        <div style={{ background:L2, padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>⚙️ Cost Allocation</div>
+              <div style={{ fontSize:10, color:'#fff', opacity:0.8 }}>GL Cost Distribution</div>
+            </div>
+            <button onClick={()=>setShowBanner(true)} style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'7px 16px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+              + New Rule
+            </button>
+          </div>
+        </div>
 
+        {/* Tabs */}
+        <div style={{ padding:'6px 28px 10px', background:L2 }}>
+          <div style={{ display:'flex', gap:4 }}>
+            {TABS.map((t,i)=>(
+              <button key={i} onClick={()=>setTab(i)}
+                style={{ background:tab===i?L3:'transparent', color:tab===i?'#fff':L3,
+                  border:`1.5px solid ${L3}`, borderRadius:7, padding:'7px 15px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>{/* end upper zone */}
+
+      {/* ── SCROLL ZONE ── */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'10px 28px 22px' }}>
       {loading ? (
         <div style={{ textAlign:'center', padding:60, color:'#6b7c93' }}>Loading…</div>
       ) : tab===0 ? (
         /* ── Rules tab ───────────────────────────────────────────── */
         <div>
-          <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:10 }}>
-            <button onClick={()=>setShowBanner(true)} style={S.btn()}>+ New Rule</button>
-          </div>
+          <div style={{ display:'none' }}>{/* + New Rule button moved to heading bar */}</div>
           {rules.length===0 ? (
             <div style={{ ...S.card, textAlign:'center', padding:60, color:'#6b7c93' }}>
               <div style={{ fontSize:40, marginBottom:12 }}>⚙️</div>
@@ -470,7 +489,7 @@ export default function CostAllocation({ entityId }) {
                       <thead>
                         <tr style={{ background:'#f5f7fa' }}>
                           {['Type','Cost Center','Target Account','Share %'].map(h=>(
-                            <th key={h} style={{ padding:'6px 8px', textAlign:h==='Share %'?'right':'left', fontSize:11, fontWeight:700, color:'#6b7c93' }}>{h}</th>
+                            <th key={h} style={{ padding:'6px 8px', textAlign:h==='Share %'?'right':'left', fontSize:11, fontWeight:700, background:'#7444A3', color:'#fff' }}>{h}</th>
                           ))}
                         </tr>
                       </thead>
@@ -533,13 +552,13 @@ export default function CostAllocation({ entityId }) {
               <table style={{ width:'100%', borderCollapse:'collapse' }}>
                 <thead>
                   <tr style={{ background:'#f0f4f8' }}>
-                    <th style={{ padding:'10px 10px', width:40 }}>
+                    <th style={{ padding:"10px 10px", width:40, background:"#7444A3", color:"#fff" }}>
                       <input type="checkbox"
                         onChange={e=>{ if(e.target.checked) setSelected(new Set(activeRules.map(r=>r.id))); else setSelected(new Set()) }}
                         checked={selected.size===activeRules.length && activeRules.length>0} />
                     </th>
                     {['Rule','Source Account','Period Balance','Lines',''].map(h=>(
-                      <th key={h} style={{ padding:'10px 10px', textAlign:h==='Period Balance'?'right':'left', fontSize:11, fontWeight:700, color:'#6b7c93' }}>{h}</th>
+                      <th key={h} style={{ padding:'10px 10px', textAlign:h==='Period Balance'?'right':'left', fontSize:11, fontWeight:700, background:'#7444A3', color:'#fff' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -600,7 +619,7 @@ export default function CostAllocation({ entityId }) {
               <thead>
                 <tr style={{ background:'#f0f4f8' }}>
                   {['Run Date','Period','Rule','Source Balance','Voucher','Status'].map(h=>(
-                    <th key={h} style={{ padding:'10px 10px', textAlign:h==='Source Balance'?'right':'left', fontSize:11, fontWeight:700, color:'#6b7c93' }}>{h}</th>
+                    <th key={h} style={{ padding:'10px 10px', textAlign:h==='Source Balance'?'right':'left', fontSize:11, fontWeight:700, background:'#7444A3', color:'#fff' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -632,6 +651,7 @@ export default function CostAllocation({ entityId }) {
           </div>
         </div>
       )}
+      </div>{/* end scroll zone */}
 
       <PageBanner
         isOpen={showBanner}

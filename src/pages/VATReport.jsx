@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { GROUP_COLORS } from '../styles/appStyles'
+const MC = GROUP_COLORS.Reports
+const L1 = '#B8A5CF'
+const L2 = '#F5EFFA'
+const L3 = '#7444A3'
+const PP = "'Poppins', sans-serif"
 
 // ═══════════════════════════════════════════════════════════════════
 // VAT Report — Saudi Arabia (15% standard rate)
@@ -257,28 +263,48 @@ export default function VATReport({ entityId }) {
   const presets = quarterPresets()
 
   return (
-    <div>
-      <div style={{ fontSize:12, color:'#6b7c93', marginBottom:18 }}>VAT Return — Saudi Arabia (ZATCA) · Standard rate 15%</div>
+    <div className="vat-root" style={{ fontFamily:PP, display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2 }}>
+      <style>{`.vat-root input,.vat-root select,.vat-root button,.vat-root textarea{font-family:'Poppins',sans-serif!important}`}</style>
 
-      {/* Controls */}
-      <div style={{ ...S.card, display:'flex', gap:8, alignItems:'flex-end', flexWrap:'wrap' }}>
-        <div><label style={S.lbl}>From</label><input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={S.inp} /></div>
-        <div><label style={S.lbl}>To</label><input type="date" value={to} onChange={e=>setTo(e.target.value)} style={S.inp} /></div>
-        <div style={{ display:'flex', gap:4, flexWrap:'wrap', paddingBottom:2 }}>
-          {presets.slice(0,4).map(p=>(
-            <button key={p.label} onClick={()=>{setFrom(p.from);setTo(p.to)}}
-              style={{ ...S.btnO('#1565C0'), fontSize:10, padding:'6px 8px' }}>{p.label}</button>
-          ))}
-          <span style={{ color:'#dde3ec', fontSize:12, alignSelf:'center' }}>|</span>
-          {presets.slice(4).map(p=>(
-            <button key={p.label} onClick={()=>{setFrom(p.from);setTo(p.to)}}
-              style={{ ...S.btnO('#546e7a'), fontSize:10, padding:'6px 8px' }}>{p.label}</button>
-          ))}
+      {/* ══ UPPER ZONE ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+        {/* L1 Heading Bar */}
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, borderRadius:'6px 6px 0 0', padding:'8px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <span style={{ fontSize:15, fontWeight:700, color:'#fff', letterSpacing:0.3 }}>📊 VAT Analysis</span>
+            <div style={{ display:'flex', gap:8 }}>
+              {data && <>
+                <button style={{ background:'transparent', color:'#fff', border:'1px solid rgba(255,255,255,0.5)', borderRadius:7, padding:'5px 12px', fontSize:11, fontWeight:700, cursor:'pointer' }} onClick={exportCSV}>⬇ CSV</button>
+                <button style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'7px 16px', fontSize:12, fontWeight:700, cursor:'pointer' }} onClick={printReport}>🖨 Print</button>
+              </>}
+            </div>
+          </div>
         </div>
-        <button style={S.btnO()} onClick={exportCSV} disabled={!data}>⬇ CSV</button>
-        <button style={S.btnO('#2e7d32')} onClick={printReport} disabled={!data}>🖨 Print</button>
-        <button style={S.btn()} onClick={load} disabled={loading}>↻ Refresh</button>
-      </div>
+
+        {/* Filter Bar */}
+        <div style={{ padding:'6px 28px 8px' }}>
+          <div style={{ background:'#fff', padding:'10px 14px', borderRadius:8, boxShadow:'0 1px 4px rgba(0,0,0,0.08)', display:'flex', gap:8, alignItems:'flex-end', flexWrap:'wrap' }}>
+            <div><label style={S.lbl}>From</label><input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={S.inp} /></div>
+            <div><label style={S.lbl}>To</label><input type="date" value={to} onChange={e=>setTo(e.target.value)} style={S.inp} /></div>
+            <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
+              {presets.slice(0,4).map(p=>(
+                <button key={p.label} onClick={()=>{setFrom(p.from);setTo(p.to)}}
+                  style={{ ...S.btnO(L3), fontSize:10, padding:'6px 8px' }}>{p.label}</button>
+              ))}
+              <span style={{ color:'#dde3ec', fontSize:12, alignSelf:'center' }}>|</span>
+              {presets.slice(4).map(p=>(
+                <button key={p.label} onClick={()=>{setFrom(p.from);setTo(p.to)}}
+                  style={{ ...S.btnO('#546e7a'), fontSize:10, padding:'6px 8px' }}>{p.label}</button>
+              ))}
+            </div>
+            <button style={{ ...S.btn(L3), marginLeft:'auto' }} onClick={load} disabled={loading}>↻ Refresh</button>
+          </div>
+        </div>
+      </div>{/* end upper zone */}
+
+      {/* ══ SCROLL ZONE ══ */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'10px 28px 22px' }}>
 
       {errors.length > 0 && (
         <div style={{ ...S.card, background:'#fff8e1', border:'1px solid #ffcc80', fontSize:11, color:'#795548' }}>
@@ -556,6 +582,7 @@ export default function VATReport({ entityId }) {
           </>
         )
       })()}
+      </div>{/* end scroll zone */}
     </div>
   )
 }

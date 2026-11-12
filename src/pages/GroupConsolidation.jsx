@@ -1,3 +1,7 @@
+const L1 = '#B4BA95'
+const L2 = '#F5F6EB'
+const L3 = '#606D2C'
+const PP = "'Poppins', sans-serif"
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -179,7 +183,7 @@ function ConsolidatedTB({ entities, from, to }) {
       <div style={{ ...S.card, padding:0, overflow:'hidden' }}>
         <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
           <thead>
-            <tr style={{ background:'#1a2e3d', color:'#fff' }}>
+            <tr style={{ background:L3, color:'#fff' }}>
               <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11, width:70 }}>Code</th>
               <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11 }}>Account</th>
               <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11, width:90 }}>Type</th>
@@ -233,7 +237,7 @@ function ConsolidatedTB({ entities, from, to }) {
             ))}
           </tbody>
           <tfoot>
-            <tr style={{ background:'#1a2e3d', color:'#fff' }}>
+            <tr style={{ background:L3, color:'#fff' }}>
               <td colSpan={3} style={{ padding:'10px 14px', fontWeight:800, fontSize:13 }}>GROUP TOTAL</td>
               <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'monospace', fontWeight:800, fontSize:13 }}>{fmt(totalDr)}</td>
               <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'monospace', fontWeight:800, fontSize:13 }}>{fmt(totalCr)}</td>
@@ -393,7 +397,7 @@ function ConsolidatedPL({ entities, from, to }) {
       <div style={{ ...S.card, padding:0, overflow:'hidden' }}>
         <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
           <thead>
-            <tr style={{ background:'#1a2e3d', color:'#fff' }}>
+            <tr style={{ background:L3, color:'#fff' }}>
               <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11, width:70 }}>Code</th>
               <th style={{ padding:'9px 14px', textAlign:'left', fontSize:11 }}>Account</th>
               {entities.map(ent=>(
@@ -615,15 +619,21 @@ export default function GroupConsolidation() {
   ]
 
   return (
-    <div>
-      <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:2 }}>
-        <span style={{ padding:'2px 10px', borderRadius:10, background:'#5A32D4', color:'#fff', fontSize:10, fontWeight:800 }}>
-          SUPERADMIN
-        </span>
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:PP }}>
+      {/* UPPER ZONE */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', alignItems:'center', gap:10 }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>🏢 Group Consolidation</div>
+              <div style={{ fontSize:10, color:'#fff', opacity:0.8 }}>Consolidated financial reports across RAT · GWT · ACCSYS — with intercompany eliminations</div>
+            </div>
+            <span style={{ padding:'2px 10px', borderRadius:10, background:'rgba(255,255,255,0.2)', color:'#fff', fontSize:10, fontWeight:800 }}>SUPERADMIN</span>
+          </div>
+        </div>
       </div>
-      <div style={{ fontSize:12, color:'#6b7c93', marginBottom:18 }}>
-        Consolidated financial reports across RAT · GWT · ACCSYS — with intercompany eliminations
-      </div>
+      {/* SCROLL ZONE */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
 
       {/* Entity legend */}
       {!loading && (
@@ -669,6 +679,7 @@ export default function GroupConsolidation() {
           {tab === 'bs' && <ConsolidatedBS entities={entities} asOf={asOf} />}
         </>
       )}
+      </div>{/* end scroll zone */}
     </div>
   )
 }

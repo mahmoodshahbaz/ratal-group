@@ -5,9 +5,14 @@ import { useDriveUpload } from '../hooks/useDriveUpload'
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
 import FormShell from '../components/FormShell'
-import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, fieldRow, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
+import { GROUP_COLORS, CHAPTER_PALETTES, kpiCardGradient, btn, inputStyle, labelStyle, sectionLabel, fieldRow, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
 
-const MC = GROUP_COLORS.Operations   // Money Requests lives in Operations chapter
+const MC  = GROUP_COLORS.Operations
+const PAL = CHAPTER_PALETTES.Operations
+const L1  = PAL.L1
+const L2  = PAL.L2
+const L3  = PAL.L3
+const PP  = "'Poppins',sans-serif"
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const S = {
@@ -1051,175 +1056,168 @@ export default function MoneyRequests({ entityId, currentUser }) {
       steps={['Request Details', 'Attachments']}
     />
 
-    <ChapterPage
-      chapterName="Operations"
-      chapterIcon="🏗️"
-      chapterColor={MC}
-      chapterSubtitle="Money Requests, disbursements and field cash management"
-      sectionTitle=""
-    >{/* Custom table content — all sticky header handled inside children */}
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:PP }}>
 
-      {/* ── STICKY HEADER BLOCK: tabs + KPI + filters + column headers ── */}
-      <div style={{ position:'sticky', top:0, zIndex:20, background:'#fff',
-        boxShadow:'0 2px 10px rgba(0,0,0,0.07)', marginLeft:-1, marginRight:-1 }}>
+      {/* ── UPPER ZONE ── */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
 
-      {/* Main tabs + New Request button */}
-      <div style={{ display:'flex', alignItems:'center', borderBottom:'2px solid #e8edf5' }}>
-        <div style={{ display:'flex', gap:0, flex:1 }}>
+        {/* L1 heading bar */}
+        <div style={{ background:L2, padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff', fontFamily:PP, lineHeight:1.2 }}>Money Requests</div>
+              <div style={{ fontSize:10, color:'rgba(255,255,255,0.8)', marginTop:2, fontFamily:PP }}>Field cash · DH approval · Disbursement · All departments · ATM card distributions</div>
+            </div>
+            <button onClick={() => setShowBanner(true)}
+              style={{ background:L3, color:'#fff', border:'none', borderRadius:8, padding:'7px 16px', fontWeight:700, fontSize:12, cursor:'pointer', fontFamily:PP }}>
+              + New Request
+            </button>
+          </div>
+        </div>
+
+        {/* KPI cards — tab-conditional */}
+        {mainTab === 'pending' ? (
+          <div style={{ display:'flex', flexWrap:'wrap', gap:8, padding:'14px 28px 10px', background:L2, borderBottom:`1px solid ${L1}44` }}>
+            {[
+              { label:'Total Open (SAR)', value:`SAR ${openTotal.toLocaleString()}` },
+              { label:'Pending DH',       value:`${kpiPendDH} request${kpiPendDH!==1?'s':''}` },
+              { label:'Accts / Finance',  value:`${kpiAccts} request${kpiAccts!==1?'s':''}` },
+              { label:'Funds In Field',   value:`${kpiFunds} request${kpiFunds!==1?'s':''}` },
+            ].map((k,i) => {
+              const cs = kpiCardGradient(i, L1, L2, L3)
+              return (
+                <div key={i} style={{ ...cs, width:200, height:62, borderRadius:8, padding:'0 14px', display:'flex', flexDirection:'column', justifyContent:'center', flexShrink:0, boxShadow:i<2?'0 3px 10px rgba(0,0,0,0.20)':'0 2px 6px rgba(0,0,0,0.08)', boxSizing:'border-box' }}>
+                  <div style={{ fontSize:9, fontWeight:800, letterSpacing:0.9, textTransform:'uppercase', fontFamily:PP, opacity:i>=2?0.6:0.75, marginBottom:2 }}>{k.label}</div>
+                  <div style={{ fontSize:19, fontWeight:900, lineHeight:1.1, fontFamily:PP }}>{k.value}</div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div style={{ display:'flex', flexWrap:'wrap', gap:8, padding:'14px 28px 10px', background:L2, borderBottom:`1px solid ${L1}44` }}>
+            {[
+              { label:'In Range',            value:`${filteredHistory.length} request${filteredHistory.length!==1?'s':''}` },
+              { label:'Total SAR',           value:`SAR ${filteredHistory.reduce((s,r)=>s+(r.amount||0),0).toLocaleString()}` },
+              { label:'Closed',              value:`${kpiClosed}` },
+              { label:'Rejected/Cancelled',  value:`${filteredHistory.length - kpiClosed}` },
+            ].map((k,i) => {
+              const cs = kpiCardGradient(i, L1, L2, L3)
+              return (
+                <div key={i} style={{ ...cs, width:200, height:62, borderRadius:8, padding:'0 14px', display:'flex', flexDirection:'column', justifyContent:'center', flexShrink:0, boxShadow:i<2?'0 3px 10px rgba(0,0,0,0.20)':'0 2px 6px rgba(0,0,0,0.08)', boxSizing:'border-box' }}>
+                  <div style={{ fontSize:9, fontWeight:800, letterSpacing:0.9, textTransform:'uppercase', fontFamily:PP, opacity:i>=2?0.6:0.75, marginBottom:2 }}>{k.label}</div>
+                  <div style={{ fontSize:19, fontWeight:900, lineHeight:1.1, fontFamily:PP }}>{k.value}</div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div style={{ display:'flex', gap:4, borderBottom:'2px solid #e8edf2', padding:'0 28px' }}>
           {[
-            { key:'pending', label:`⏳ Pending`, count: pendingAll.length },
-            { key:'history', label:`📋 History`, count: null },
+            { key:'pending', label:`⏳ Pending (${pendingAll.length})` },
+            { key:'history', label:`📋 History` },
           ].map(t => (
             <button key={t.key} onClick={() => { setMainTab(t.key); setExpandedId(null) }}
-              style={{ border:'none', background:'none', padding:'10px 22px', cursor:'pointer', fontSize:13, fontWeight:700,
-                color: mainTab === t.key ? '#0D5C4E' : '#6b7c93',
-                borderBottom: mainTab === t.key ? '2px solid #0D5C4E' : '2px solid transparent',
-                marginBottom:-2 }}>
-              {t.label}{t.count !== null ? ` (${t.count})` : ''}
+              style={{ border:'none', background:'none', padding:'9px 18px', cursor:'pointer', fontSize:12, fontWeight:700,
+                color: mainTab===t.key ? L3 : '#6b7c93',
+                borderBottom: mainTab===t.key ? `2px solid ${L3}` : '2px solid transparent',
+                marginBottom:-2, fontFamily:PP }}>
+              {t.label}
             </button>
           ))}
         </div>
-        <button onClick={() => setShowBanner(true)}
-          style={{ marginRight:4, padding:'7px 16px', background:MC, color:'#fff', border:'none',
-            borderRadius:8, fontWeight:700, fontSize:12, cursor:'pointer', fontFamily:'inherit',
-            boxShadow:`0 2px 8px ${MC}55` }}>
-          + New Request
-        </button>
-      </div>
 
-      {/* KPI Strip — reactive to tab & filters */}
-      {mainTab === 'pending' ? (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, padding:'14px 16px',
-          background:'linear-gradient(135deg,#f8fafd,#eff4fb)', borderBottom:'1px solid #e8edf5' }}>
-          {[
-            { label:'Total Open (SAR)', val:`SAR ${openTotal.toLocaleString()}`,            grad:'linear-gradient(135deg,#0D5C4E,#0a4a3d)' },
-            { label:'Pending DH',       val:`${kpiPendDH} request${kpiPendDH!==1?'s':''}`, grad:'linear-gradient(135deg,#e65100,#bf360c)' },
-            { label:'Accts / Finance',  val:`${kpiAccts} request${kpiAccts!==1?'s':''}`,   grad:'linear-gradient(135deg,#6a1b9a,#4a148c)' },
-            { label:'Funds In Field',   val:`${kpiFunds} request${kpiFunds!==1?'s':''}`,   grad:'linear-gradient(135deg,#2e7d32,#1b5e20)' },
-          ].map(({ label, val, grad }) => (
-            <div key={label} style={{ background:grad, borderRadius:10, padding:'10px 14px', boxShadow:'0 2px 8px rgba(0,0,0,0.15)' }}>
-              <div style={{ fontSize:10, color:'rgba(255,255,255,0.75)', fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, marginBottom:4, fontFamily:"'Poppins',sans-serif" }}>{label}</div>
-              <div style={{ fontSize:14, fontWeight:800, color:'#fff', fontFamily:"'Poppins',sans-serif" }}>{val}</div>
+        {/* ── Pending Filter Bar (pinned) ── */}
+        {mainTab === 'pending' && (
+          <div style={{ padding:'8px 28px 6px', background:L2 }}>
+            <div style={{ background:'#fff', borderRadius:10, boxShadow:'0 2px 10px rgba(0,0,0,0.07)', padding:'10px 14px' }}>
+              <div style={{ display:'flex', gap:10, marginBottom:7, flexWrap:'wrap', alignItems:'center' }}>
+                <input placeholder="🔍 Search MR#, purpose, dept…" value={mrSearch} onChange={e => setMrSearch(e.target.value)}
+                  style={{ ...S.inp, maxWidth:260, padding:'7px 11px', fontSize:12 }} />
+                <select value={mrDeptFilter} onChange={e => setMrDeptFilter(e.target.value)}
+                  style={{ ...S.inp, maxWidth:200, cursor:'pointer', padding:'7px 11px', fontSize:12 }}>
+                  <option value="">All Departments</option>
+                  {depts.map(d => <option key={d.id} value={d.id}>{d.dept_code || d.dept_name}</option>)}
+                </select>
+                {(mrSearch || mrDeptFilter || filterStatus !== 'ALL') && (
+                  <button onClick={() => { setMrSearch(''); setMrDeptFilter(''); setFilter('ALL') }}
+                    style={{ padding:'6px 12px', borderRadius:8, border:'1px solid #e57373', background:'#fff', color:'#c62828', fontSize:11, fontWeight:700, cursor:'pointer' }}>
+                    ✕ Clear
+                  </button>
+                )}
+                <span style={{ marginLeft:'auto', fontSize:12, color:'#6b7c93' }}>{filteredPending.length} of {pendingAll.length}</span>
+              </div>
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                <button onClick={() => setFilter('ALL')}
+                  style={{ padding:'5px 14px', borderRadius:20, border:'none', fontWeight:700, fontSize:11, cursor:'pointer', fontFamily:PP, background:filterStatus==='ALL'?L3:'#f0f4f8', color:filterStatus==='ALL'?'#fff':'#6b7c93' }}>
+                  All
+                </button>
+                {ACTIVE_STAGES.map(s => (
+                  <button key={s.key} onClick={() => setFilter(s.key)}
+                    style={{ padding:'5px 14px', borderRadius:20, border:'none', fontWeight:700, fontSize:11, cursor:'pointer', fontFamily:PP, background:filterStatus===s.key?s.bg:'#f0f4f8', color:filterStatus===s.key?s.color:'#6b7c93', outline:filterStatus===s.key?`2px solid ${s.color}`:'none' }}>
+                    {s.label}
+                    {(() => { const n = pendingAll.filter(r => r.status === s.key).length; return n > 0 ? ` (${n})` : '' })()}
+                  </button>
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, padding:'14px 16px',
-          background:'linear-gradient(135deg,#f8fafd,#eff4fb)', borderBottom:'1px solid #e8edf5' }}>
-          {[
-            { label:'In Range',              val:`${filteredHistory.length} request${filteredHistory.length!==1?'s':''}`, grad:'linear-gradient(135deg,#0D5C4E,#0a4a3d)' },
-            { label:'Total SAR',             val:`SAR ${filteredHistory.reduce((s,r)=>s+(r.amount||0),0).toLocaleString()}`,     grad:'linear-gradient(135deg,#37474f,#263238)' },
-            { label:'Closed',                val:`${kpiClosed}`,                                                                 grad:'linear-gradient(135deg,#2e7d32,#1b5e20)' },
-            { label:'Rejected / Cancelled',  val:`${filteredHistory.length - kpiClosed}`,                                       grad:'linear-gradient(135deg,#c62828,#b71c1c)' },
-          ].map(({ label, val, grad }) => (
-            <div key={label} style={{ background:grad, borderRadius:10, padding:'10px 14px', boxShadow:'0 2px 8px rgba(0,0,0,0.15)' }}>
-              <div style={{ fontSize:10, color:'rgba(255,255,255,0.75)', fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, marginBottom:4, fontFamily:"'Poppins',sans-serif" }}>{label}</div>
-              <div style={{ fontSize:14, fontWeight:800, color:'#fff', fontFamily:"'Poppins',sans-serif" }}>{val}</div>
+          </div>
+        )}
+
+        {/* ── History Filter Bar (pinned) ── */}
+        {mainTab === 'history' && (
+          <div style={{ padding:'8px 28px 6px', background:L2 }}>
+            <div style={{ background:'#fff', borderRadius:10, boxShadow:'0 2px 10px rgba(0,0,0,0.07)', padding:'10px 14px' }}>
+              <div style={{ display:'flex', gap:10, flexWrap:'wrap', alignItems:'center' }}>
+                <input placeholder="🔍 Search MR#, purpose…" value={histSearch} onChange={e => setHistSearch(e.target.value)}
+                  style={{ ...S.inp, maxWidth:220, padding:'7px 11px', fontSize:12 }} />
+                <select value={histDeptFilter} onChange={e => setHistDeptFilter(e.target.value)}
+                  style={{ ...S.inp, maxWidth:180, cursor:'pointer', padding:'7px 11px', fontSize:12 }}>
+                  <option value="">All Departments</option>
+                  {depts.map(d => <option key={d.id} value={d.id}>{d.dept_code || d.dept_name}</option>)}
+                </select>
+                <label style={{ fontSize:11, fontWeight:700, color:'#6b7c93' }}>FROM</label>
+                <input type="date" value={histFrom} onChange={e => setHistFrom(e.target.value)} style={{ ...S.inp, width:150, padding:'6px 10px' }} />
+                <label style={{ fontSize:11, fontWeight:700, color:'#6b7c93' }}>TO</label>
+                <input type="date" value={histTo} onChange={e => setHistTo(e.target.value)} style={{ ...S.inp, width:150, padding:'6px 10px' }} />
+                {(histSearch || histDeptFilter) && (
+                  <button onClick={() => { setHistSearch(''); setHistDeptFilter('') }}
+                    style={{ padding:'6px 12px', borderRadius:8, border:'1px solid #e57373', background:'#fff', color:'#c62828', fontSize:11, fontWeight:700, cursor:'pointer' }}>
+                    ✕ Clear
+                  </button>
+                )}
+                <span style={{ fontSize:12, color:'#6b7c93' }}>{filteredHistory.length} record{filteredHistory.length !== 1 ? 's' : ''}</span>
+                <button onClick={exportHistoryExcel} disabled={!filteredHistory.length}
+                  style={{ padding:'6px 14px', borderRadius:8, border:'none', background:filteredHistory.length?'#2e7d32':'#ccc', color:'#fff', fontSize:11, fontWeight:700, cursor:'pointer', marginLeft:'auto' }}>
+                  ⬇ Export CSV
+                </button>
+              </div>
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── Pending Filter Bar ── */}
-      {mainTab === 'pending' && (
-        <div style={{ padding:'10px 16px', background:'#f8fafd', borderBottom:'1px solid #e8edf5' }}>
-          {/* Row 1: search + dept */}
-          <div style={{ display:'flex', gap:10, marginBottom:8, flexWrap:'wrap', alignItems:'center' }}>
-            <input
-              placeholder="🔍 Search MR#, purpose, dept…"
-              value={mrSearch}
-              onChange={e => setMrSearch(e.target.value)}
-              style={{ ...S.inp, maxWidth:260, padding:'7px 11px', fontSize:12 }}
-            />
-            <select value={mrDeptFilter} onChange={e => setMrDeptFilter(e.target.value)}
-              style={{ ...S.inp, maxWidth:200, cursor:'pointer', padding:'7px 11px', fontSize:12 }}>
-              <option value="">All Departments</option>
-              {depts.map(d => <option key={d.id} value={d.id}>{d.dept_code || d.dept_name}</option>)}
-            </select>
-            {(mrSearch || mrDeptFilter || filterStatus !== 'ALL') && (
-              <button onClick={() => { setMrSearch(''); setMrDeptFilter(''); setFilter('ALL') }}
-                style={{ ...S.btn('#f0f4f8','#c62828'), padding:'7px 14px', fontSize:12 }}>
-                ✕ Clear
-              </button>
-            )}
-            <span style={{ marginLeft:'auto', fontSize:12, color:'#6b7c93' }}>
-              {filteredPending.length} of {pendingAll.length}
-            </span>
           </div>
-          {/* Row 2: stage pills */}
-          <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-            <button onClick={() => setFilter('ALL')}
-              style={{ border:`2px solid ${filterStatus==='ALL'?'#0D5C4E':'#dde3ec'}`,
-                background: filterStatus==='ALL' ? '#0D5C4E' : '#fff',
-                color: filterStatus==='ALL' ? '#fff' : '#6b7c93',
-                borderRadius:20, padding:'4px 12px', fontSize:11, fontWeight:700, cursor:'pointer' }}>
-              All
-            </button>
-            {ACTIVE_STAGES.map(s => (
-              <button key={s.key} onClick={() => setFilter(s.key)}
-                style={{ border:`2px solid ${filterStatus===s.key ? s.color : '#dde3ec'}`,
-                  background: filterStatus===s.key ? s.bg : '#fff',
-                  color: filterStatus===s.key ? s.color : '#6b7c93',
-                  borderRadius:20, padding:'4px 12px', fontSize:11, fontWeight:700, cursor:'pointer' }}>
-                {s.label}
-                {(() => { const n = pendingAll.filter(r => r.status === s.key).length; return n > 0 ? ` (${n})` : '' })()}
-              </button>
-            ))}
+        )}
+
+        {/* ── Column header row (pinned) ── */}
+        <div style={{ padding:'0 28px' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'130px 90px 70px 1fr 110px 90px', gap:8,
+            padding:'8px 16px', background:L3, borderRadius:'6px 6px 0 0',
+            fontSize:10, fontWeight:800, color:'#fff', textTransform:'uppercase', letterSpacing:0.5, fontFamily:PP }}>
+            <span>MR #</span><span>Date</span><span>Dept</span><span>Purpose</span><span>Requested</span><span>Stage</span>
           </div>
         </div>
-      )}
 
-      {/* ── History Filter Bar ── */}
-      {mainTab === 'history' && (
-        <div style={{ padding:'10px 16px', background:'#f8fafd', borderBottom:'1px solid #e8edf5' }}>
-          <div style={{ display:'flex', gap:10, flexWrap:'wrap', alignItems:'center' }}>
-            <input
-              placeholder="🔍 Search MR#, purpose…"
-              value={histSearch}
-              onChange={e => setHistSearch(e.target.value)}
-              style={{ ...S.inp, maxWidth:220, padding:'7px 11px', fontSize:12 }}
-            />
-            <select value={histDeptFilter} onChange={e => setHistDeptFilter(e.target.value)}
-              style={{ ...S.inp, maxWidth:180, cursor:'pointer', padding:'7px 11px', fontSize:12 }}>
-              <option value="">All Departments</option>
-              {depts.map(d => <option key={d.id} value={d.id}>{d.dept_code || d.dept_name}</option>)}
-            </select>
-            <label style={{ fontSize:11, fontWeight:700, color:'#6b7c93' }}>FROM</label>
-            <input type="date" value={histFrom} onChange={e => setHistFrom(e.target.value)}
-              style={{ ...S.inp, width:150, padding:'6px 10px' }} />
-            <label style={{ fontSize:11, fontWeight:700, color:'#6b7c93' }}>TO</label>
-            <input type="date" value={histTo} onChange={e => setHistTo(e.target.value)}
-              style={{ ...S.inp, width:150, padding:'6px 10px' }} />
-            {(histSearch || histDeptFilter) && (
-              <button onClick={() => { setHistSearch(''); setHistDeptFilter('') }}
-                style={{ ...S.btn('#f0f4f8','#c62828'), padding:'7px 14px', fontSize:12 }}>
-                ✕ Clear
-              </button>
-            )}
-            <span style={{ fontSize:12, color:'#6b7c93' }}>
-              {filteredHistory.length} record{filteredHistory.length !== 1 ? 's' : ''}
-            </span>
-            <button onClick={exportHistoryExcel}
-              disabled={!filteredHistory.length}
-              style={{ ...S.btn(filteredHistory.length ? '#2e7d32' : '#ccc', '#fff'), marginLeft:'auto' }}>
-              ⬇ Export CSV
-            </button>
-          </div>
-        </div>
-      )}
+      </div>{/* end upper zone */}
 
-        {/* Column headers — inside sticky block */}
-        <div style={{ display:'grid', gridTemplateColumns:'130px 90px 70px 1fr 110px 90px', gap:8,
-          padding:'8px 16px', background:'#0D5C4E', borderBottom:'1px solid #0a4a3d',
-          fontSize:10, fontWeight:800, color:'#fff', textTransform:'uppercase', letterSpacing:0.5,
-          fontFamily:"'Poppins',sans-serif" }}>
-          <span>MR #</span><span>Date</span><span>Dept</span><span>Purpose</span><span>Requested</span><span>Stage</span>
-        </div>
+      {/* ── SCROLL ZONE ── */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
 
-      </div>{/* END sticky header block */}
+        {/* ── Table card ── */}
+        <div style={{ background:'#fff', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)' }}>
 
-      {/* List — accordion (rows only scroll) */}
-      <div style={S.card}>
+        {/* (Column headers moved to upper zone above) */}
+
+      {/* List rows */}
+      <div>
         {loading ? (
           <div style={{ textAlign:'center', padding:40, color:'#aab2bd' }}>Loading…</div>
         ) : visible.length === 0 ? (
@@ -1327,6 +1325,8 @@ export default function MoneyRequests({ entityId, currentUser }) {
           </div>
         )}
       </div>
+        </div>{/* end table card */}
+      </div>{/* end scroll zone */}
 
       {/* ── Party Outstanding Balance Warning Modal (non-blocking) ── */}
       {partyWarning && (
@@ -2581,7 +2581,7 @@ export default function MoneyRequests({ entityId, currentUser }) {
           </div>
         </div>
       )}
-    </ChapterPage>
+    </div>{/* end outer wrapper */}
     </>
   )
 }

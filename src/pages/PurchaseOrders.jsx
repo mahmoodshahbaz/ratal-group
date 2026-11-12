@@ -1,8 +1,12 @@
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
 import FormShell from '../components/FormShell'
-import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
-const MC = GROUP_COLORS.Operations
+import { GROUP_COLORS, CHAPTER_PALETTES, kpiCardGradient, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
+const MC  = GROUP_COLORS.Operations
+const PAL = CHAPTER_PALETTES.Operations
+const L1  = PAL.L1   // #70A5A6
+const L2  = PAL.L2   // #EAF3F2
+const L3  = PAL.L3   // #0079BC
 import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { DetailField } from '../components/ExpandableRow'
@@ -280,8 +284,17 @@ export default function PurchaseOrders({ entityId, entityCode, isAr }) {
   const [pdfSaveError,setPdfSaveError]=useState('')
   const [pdfProjects,setPdfProjects]=useState([])
   const driveUpload = useDriveUpload ? useDriveUpload() : null
+  const stickyRef = useRef(null)
+  const [stickyH, setStickyH] = useState(0)
 
   useEffect(()=>{ if(entityId) load() },[entityId])
+  useEffect(()=>{
+    const el = stickyRef.current
+    if(!el) return
+    const ro = new ResizeObserver(()=>setStickyH(el.offsetHeight))
+    ro.observe(el)
+    return ()=>ro.disconnect()
+  },[])
 
   async function load(){
     setLoading(true)
@@ -586,7 +599,7 @@ export default function PurchaseOrders({ entityId, entityCode, isAr }) {
   )
 
   return (
-    <div style={{ padding:'0 0 40px', fontFamily:PP }}>
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', fontFamily:PP, background: L2 }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap')`}</style>
 
       {/* ── Opening Banners — one per form type ── */}
@@ -619,69 +632,146 @@ export default function PurchaseOrders({ entityId, entityCode, isAr }) {
         steps={['Dept & Project', 'Supplier & Terms', 'Line Items & Notes']}
       />
 
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18 }}>
-        <div>
-          <div style={{ fontSize:12, color:'#6b7c93', marginTop:3 }}>Incoming (Receivable) · Outgoing (Payable)</div>
-        </div>
-        <div style={{ display:'flex', gap:8 }}>
-          <button onClick={poTab==='incoming'?openNewIpo:openNewOpo}
-            style={{ ...S.btn(poTab==='incoming'?INC_PRI:OUT_PRI), padding:'10px 22px', fontSize:13, borderRadius:10 }}>
-            {poTab==='incoming'?'+ New Incoming PO':'+ New Outgoing PO'}
-          </button>
-        </div>
-      </div>
+      {/* ── UPPER ZONE (stationary) ── */}
+      <div ref={stickyRef} style={{ flexShrink:0, background: L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
 
-      <div style={{ display:'flex', gap:4, marginBottom:16, borderBottom:'2px solid #e8edf2' }}>
-        {[['incoming','Incoming POs',INC_PRI],['outgoing','Outgoing POs',OUT_PRI]].map(([key,label,color])=>(
-          <button key={key} onClick={()=>setPoTab(key)}
-            style={{ padding:'10px 24px', borderRadius:'10px 10px 0 0', border:'none', fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:PP,
-              background:poTab===key?color:'transparent', color:poTab===key?'#fff':'#6b7c93',
-              borderBottom:poTab===key?`3px solid ${color}`:'3px solid transparent', transition:'all 0.15s' }}>
-            {label}
-          </button>
-        ))}
-      </div>
+        {/* L1 heading bar */}
+        <div style={{ background: L2, padding:'6px 28px 0' }}>
+          <div style={{ background: L1, padding:'8px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff', fontFamily:PP, lineHeight:1.2 }}>Purchase Orders</div>
+              <div style={{ fontSize:10, color:'rgba(255,255,255,0.8)', marginTop:2, fontFamily:PP }}>Incoming (Receivable) · Outgoing (Payable)</div>
+            </div>
+            <button onClick={poTab==='incoming'?openNewIpo:openNewOpo}
+              style={{ background: L3, color:'#fff', border:'none', borderRadius:9, padding:'9px 20px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:PP }}>
+              {poTab==='incoming'?'+ New Incoming PO':'+ New Outgoing PO'}
+            </button>
+          </div>
+        </div>
+
+        {/* KPI cards — 160×62px, kpiCardGradient */}
+        {poTab==='incoming' && (
+          <div style={{ display:'flex', flexWrap:'wrap', gap:8, padding:'14px 28px 10px', background: L2, borderBottom:`1px solid ${L1}44` }}>
+            {[
+              { label:'Total Value',        value:`SAR ${fmt(ipoTotal)}` },
+              { label:'POs in View',        value: ipoCount },
+              { label:'With Change Orders', value: ipoWithCO },
+              { label:'Avg PO Value',       value:`SAR ${fmt(ipoAvg)}` },
+            ].map((k,i)=>{ const gs=kpiCardGradient(i,L1,L2,L3); const il=i>=2; return (
+              <div key={k.label} style={{ ...gs, width:200, height:62, borderRadius:8, padding:'0 14px', display:'flex', flexDirection:'column', justifyContent:'center', flexShrink:0, boxShadow:i<2?'0 3px 10px rgba(0,0,0,0.20)':'0 2px 6px rgba(0,0,0,0.08)', boxSizing:'border-box' }}>
+                <div style={{ fontSize:9, fontWeight:800, letterSpacing:0.9, textTransform:'uppercase', fontFamily:PP, opacity:il?0.6:0.75, marginBottom:2 }}>{k.label}</div>
+                <div style={{ fontSize:19, fontWeight:900, lineHeight:1.1, fontFamily:PP }}>{k.value}</div>
+              </div>
+            )})}
+          </div>
+        )}
+        {poTab==='outgoing' && (
+          <div style={{ display:'flex', flexWrap:'wrap', gap:8, padding:'14px 28px 10px', background: L2, borderBottom:`1px solid ${L1}44` }}>
+            {[
+              { label:'Total Committed', value:`SAR ${fmt(opoTotal)}` },
+              { label:'Pending DH',      value: opoPending },
+              { label:'DH Approved',     value: opoApproved },
+              { label:'Issued',          value: opoIssued },
+            ].map((k,i)=>{ const gs=kpiCardGradient(i,L1,L2,L3); const il=i>=2; return (
+              <div key={k.label} style={{ ...gs, width:200, height:62, borderRadius:8, padding:'0 14px', display:'flex', flexDirection:'column', justifyContent:'center', flexShrink:0, boxShadow:i<2?'0 3px 10px rgba(0,0,0,0.20)':'0 2px 6px rgba(0,0,0,0.08)', boxSizing:'border-box' }}>
+                <div style={{ fontSize:9, fontWeight:800, letterSpacing:0.9, textTransform:'uppercase', fontFamily:PP, opacity:il?0.6:0.75, marginBottom:2 }}>{k.label}</div>
+                <div style={{ fontSize:19, fontWeight:900, lineHeight:1.1, fontFamily:PP }}>{k.value}</div>
+              </div>
+            )})}
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div style={{ display:'flex', gap:4, borderBottom:'2px solid #e8edf2', padding:'0 28px' }}>
+          {[['incoming','Incoming POs'],['outgoing','Outgoing POs']].map(([key,label])=>(
+            <button key={key} onClick={()=>setPoTab(key)}
+              style={{ padding:'10px 24px', borderRadius:'10px 10px 0 0', border:'none', fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:PP,
+                background:poTab===key?L3:'transparent', color:poTab===key?'#fff':'#6b7c93',
+                borderBottom:poTab===key?`3px solid ${L3}`:'3px solid transparent', transition:'all 0.15s' }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Incoming filter bar (pinned) ── */}
+        {poTab==='incoming' && (
+          <div style={{ padding:'8px 28px 6px', background:L2 }}>
+            <div style={{ background:'#fff', borderRadius:10, boxShadow:'0 2px 10px rgba(0,0,0,0.07)', padding:'10px 14px' }}>
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:8 }}>
+                {[['ALL','All'],['ACTIVE','Active'],['INVOICED','Invoiced'],['CLOSED','Closed'],['CANCELLED','Cancelled']].map(([v,l])=>(
+                  <button key={v} onClick={()=>setIpoFilter(v)}
+                    style={{ padding:'5px 14px', borderRadius:20, border:'none', fontWeight:700, fontSize:11, cursor:'pointer', fontFamily:PP,
+                      background:ipoFilter===v?L3:'#f0f4f8', color:ipoFilter===v?'#fff':'#6b7c93' }}>{l}</button>
+                ))}
+                <div style={{ marginLeft:'auto', fontSize:12, color:L3, fontWeight:700, alignSelf:'center' }}>
+                  {filteredIPO.length} records · SAR {fmt(filteredIPO.reduce((s,p)=>s+(p.total_value||0),0))}
+                </div>
+              </div>
+              <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+                <input style={{ ...S.inp, width:220, padding:'7px 10px', fontSize:12 }} placeholder="Search contractor, PO#…" value={ipoSearch} onChange={e=>setIpoSearch(e.target.value)} />
+                <select style={{ ...S.inp, width:180, padding:'7px 10px', fontSize:12 }} value={ipoDeptFilter} onChange={e=>setIpoDeptFilter(e.target.value)}>
+                  <option value="">All Departments</option>
+                  {departments.map(d=><option key={d.id} value={d.id}>{d.dept_code||d.dept_name}</option>)}
+                </select>
+                <span style={{ fontSize:11, color:'#6b7c93', fontWeight:700 }}>From</span>
+                <input type="date" style={{ ...S.inp, width:140, padding:'7px 8px', fontSize:12 }} value={ipoDateFrom} onChange={e=>setIpoDateFrom(e.target.value)} />
+                <span style={{ fontSize:11, color:'#6b7c93', fontWeight:700 }}>To</span>
+                <input type="date" style={{ ...S.inp, width:140, padding:'7px 8px', fontSize:12 }} value={ipoDateTo} onChange={e=>setIpoDateTo(e.target.value)} />
+                {(ipoSearch||ipoDeptFilter||ipoDateFrom||ipoDateTo||ipoFilter!=='ALL') && (
+                  <button onClick={()=>{setIpoSearch('');setIpoDeptFilter('');setIpoDateFrom('');setIpoDateTo('');setIpoFilter('ALL')}}
+                    style={{ padding:'6px 12px', borderRadius:8, border:'1px solid #e57373', background:'#fff', color:'#c62828', fontSize:11, fontWeight:700, cursor:'pointer' }}>
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Outgoing filter bar (pinned) ── */}
+        {poTab==='outgoing' && (
+          <div style={{ padding:'8px 28px 6px', background:L2 }}>
+            <div style={{ background:'#fff', borderRadius:10, boxShadow:'0 2px 10px rgba(0,0,0,0.07)', padding:'10px 14px' }}>
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:8 }}>
+                {[['ALL','All'],['PENDING_DH','Pending DH'],['DH_APPROVED','DH Approved'],['ISSUED','Issued'],['REJECTED','Rejected']].map(([v,l])=>(
+                  <button key={v} onClick={()=>setOpoFilter(v)}
+                    style={{ padding:'5px 14px', borderRadius:20, border:'none', fontWeight:700, fontSize:11, cursor:'pointer', fontFamily:PP,
+                      background:opoFilter===v?L3:'#f0f4f8', color:opoFilter===v?'#fff':'#6b7c93' }}>{l}</button>
+                ))}
+                <div style={{ marginLeft:'auto', fontSize:12, color:L3, fontWeight:700, alignSelf:'center' }}>
+                  {filteredOPO.length} records · SAR {fmt(opoTotal)}
+                </div>
+              </div>
+              <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+                <input style={{ ...S.inp, width:220, padding:'7px 10px', fontSize:12 }} placeholder="Search supplier, PO#…" value={opoSearch} onChange={e=>setOpoSearch(e.target.value)} />
+                <select style={{ ...S.inp, width:180, padding:'7px 10px', fontSize:12 }} value={opoDeptFilter} onChange={e=>setOpoDeptFilter(e.target.value)}>
+                  <option value="">All Departments</option>
+                  {departments.map(d=><option key={d.id} value={d.id}>{d.dept_code||d.dept_name}</option>)}
+                </select>
+                <span style={{ fontSize:11, color:'#6b7c93', fontWeight:700 }}>From</span>
+                <input type="date" style={{ ...S.inp, width:140, padding:'7px 8px', fontSize:12 }} value={opoDateFrom} onChange={e=>setOpoDateFrom(e.target.value)} />
+                <span style={{ fontSize:11, color:'#6b7c93', fontWeight:700 }}>To</span>
+                <input type="date" style={{ ...S.inp, width:140, padding:'7px 8px', fontSize:12 }} value={opoDateTo} onChange={e=>setOpoDateTo(e.target.value)} />
+                {(opoSearch||opoDeptFilter||opoDateFrom||opoDateTo||opoFilter!=='ALL')&&(
+                  <button onClick={()=>{setOpoSearch('');setOpoDeptFilter('');setOpoDateFrom('');setOpoDateTo('');setOpoFilter('ALL')}}
+                    style={{ padding:'6px 12px', borderRadius:8, border:'1px solid #e57373', background:'#fff', color:'#c62828', fontSize:11, fontWeight:700, cursor:'pointer' }}>
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+      </div>{/* end upper zone */}
+
+      {/* ── SCROLL ZONE ── */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
 
       {poTab==='incoming' && (
         <>
-          <div style={{ background:'#fff', border:`1.5px solid ${INC_BOX1}30`, borderRadius:12, padding:'12px 16px', marginBottom:14 }}>
-            <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:10 }}>
-              {[['ALL','All'],['ACTIVE','Active'],['INVOICED','Invoiced'],['CLOSED','Closed'],['CANCELLED','Cancelled']].map(([v,l])=>(
-                <button key={v} onClick={()=>setIpoFilter(v)}
-                  style={{ padding:'5px 14px', borderRadius:20, border:'none', fontWeight:700, fontSize:11, cursor:'pointer', fontFamily:PP,
-                    background:ipoFilter===v?INC_PRI:'#f0f4f8', color:ipoFilter===v?'#fff':'#6b7c93' }}>{l}</button>
-              ))}
-              <div style={{ marginLeft:'auto', fontSize:12, color:INC_PRI, fontWeight:700, alignSelf:'center' }}>
-                {filteredIPO.length} records · SAR {fmt(filteredIPO.reduce((s,p)=>s+(p.total_value||0),0))}
-              </div>
-            </div>
-            <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
-              <input style={{ ...S.inp, width:220, padding:'7px 10px', fontSize:12 }} placeholder="Search contractor, PO#…" value={ipoSearch} onChange={e=>setIpoSearch(e.target.value)} />
-              <select style={{ ...S.inp, width:180, padding:'7px 10px', fontSize:12 }} value={ipoDeptFilter} onChange={e=>setIpoDeptFilter(e.target.value)}>
-                <option value="">All Departments</option>
-                {departments.map(d=><option key={d.id} value={d.id}>{d.dept_code||d.dept_name}</option>)}
-              </select>
-              <span style={{ fontSize:11, color:'#6b7c93', fontWeight:700 }}>From</span>
-              <input type="date" style={{ ...S.inp, width:140, padding:'7px 8px', fontSize:12 }} value={ipoDateFrom} onChange={e=>setIpoDateFrom(e.target.value)} />
-              <span style={{ fontSize:11, color:'#6b7c93', fontWeight:700 }}>To</span>
-              <input type="date" style={{ ...S.inp, width:140, padding:'7px 8px', fontSize:12 }} value={ipoDateTo} onChange={e=>setIpoDateTo(e.target.value)} />
-              {(ipoSearch||ipoDeptFilter||ipoDateFrom||ipoDateTo||ipoFilter!=='ALL') && (
-                <button onClick={()=>{setIpoSearch('');setIpoDeptFilter('');setIpoDateFrom('');setIpoDateTo('');setIpoFilter('ALL')}}
-                  style={{ padding:'6px 12px', borderRadius:8, border:'1px solid #e57373', background:'#fff', color:'#c62828', fontSize:11, fontWeight:700, cursor:'pointer' }}>
-                  Clear
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:14 }}>
-            {kpiCard('135deg,#0079BC,#005a8e','💰',`SAR ${fmt(ipoTotal)}`,'Total Value')}
-            {kpiCard('135deg,#1D9E75,#0F6E56','📥',ipoCount,'POs in View')}
-            {kpiCard('135deg,#BA7517,#854F0B','🔄',ipoWithCO,'With Change Orders')}
-            {kpiCard('135deg,#185FA5,#0C447C','📊',`SAR ${fmt(ipoAvg)}`,'Avg PO Value')}
-          </div>
-
-          <div style={{ background:'#fff', borderRadius:12, border:'1px solid #e8edf2', overflow:'hidden' }}>
+        {/* Table card */}
+        <div style={{ background:'#fff', borderRadius:12, boxShadow:'0 2px 10px rgba(0,0,0,0.07)' }}>
             {filteredIPO.length===0 ? (
               <div style={{ textAlign:'center', padding:50, color:'#aab2bd' }}>
                 <div style={{ fontSize:36, marginBottom:12 }}>📥</div>
@@ -697,7 +787,7 @@ export default function PurchaseOrders({ entityId, entityCode, isAr }) {
                 </colgroup>
                 <thead><tr>
                   {['Date','Dept','Contractor','Contractor PO #','Project','Value (SAR)','Invoiced','Status',''].map((h,hi)=>(
-                    <th key={hi} style={{ ...thS(INC_PRI), textAlign:hi>=5&&hi<=6?'right':'left' }}>{h}</th>
+                    <th key={hi} style={{ ...thS(INC_PRI), textAlign:hi>=5&&hi<=6?'right':'left', position:'sticky', top:0, zIndex:2 }}>{h}</th>
                   ))}
                 </tr></thead>
                 <tbody>
@@ -803,50 +893,14 @@ export default function PurchaseOrders({ entityId, entityCode, isAr }) {
                 </tbody>
               </table>
             )}
-          </div>
+        </div>
         </>
       )}
 
       {poTab==='outgoing' && (
         <>
-          <div style={{ background:'#fff', border:`1.5px solid ${OUT_BOX1}30`, borderRadius:12, padding:'12px 16px', marginBottom:14 }}>
-            <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:10 }}>
-              {[['ALL','All'],['PENDING_DH','Pending DH'],['DH_APPROVED','DH Approved'],['ISSUED','Issued'],['REJECTED','Rejected']].map(([v,l])=>(
-                <button key={v} onClick={()=>setOpoFilter(v)}
-                  style={{ padding:'5px 14px', borderRadius:20, border:'none', fontWeight:700, fontSize:11, cursor:'pointer', fontFamily:PP,
-                    background:opoFilter===v?OUT_PRI:'#f0f4f8', color:opoFilter===v?'#fff':'#6b7c93' }}>{l}</button>
-              ))}
-              <div style={{ marginLeft:'auto', fontSize:12, color:OUT_PRI, fontWeight:700, alignSelf:'center' }}>
-                {filteredOPO.length} records · SAR {fmt(opoTotal)}
-              </div>
-            </div>
-            <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
-              <input style={{ ...S.inp, width:220, padding:'7px 10px', fontSize:12 }} placeholder="Search supplier, PO#…" value={opoSearch} onChange={e=>setOpoSearch(e.target.value)} />
-              <select style={{ ...S.inp, width:180, padding:'7px 10px', fontSize:12 }} value={opoDeptFilter} onChange={e=>setOpoDeptFilter(e.target.value)}>
-                <option value="">All Departments</option>
-                {departments.map(d=><option key={d.id} value={d.id}>{d.dept_code||d.dept_name}</option>)}
-              </select>
-              <span style={{ fontSize:11, color:'#6b7c93', fontWeight:700 }}>From</span>
-              <input type="date" style={{ ...S.inp, width:140, padding:'7px 8px', fontSize:12 }} value={opoDateFrom} onChange={e=>setOpoDateFrom(e.target.value)} />
-              <span style={{ fontSize:11, color:'#6b7c93', fontWeight:700 }}>To</span>
-              <input type="date" style={{ ...S.inp, width:140, padding:'7px 8px', fontSize:12 }} value={opoDateTo} onChange={e=>setOpoDateTo(e.target.value)} />
-              {(opoSearch||opoDeptFilter||opoDateFrom||opoDateTo||opoFilter!=='ALL')&&(
-                <button onClick={()=>{setOpoSearch('');setOpoDeptFilter('');setOpoDateFrom('');setOpoDateTo('');setOpoFilter('ALL')}}
-                  style={{ padding:'6px 12px', borderRadius:8, border:'1px solid #e57373', background:'#fff', color:'#c62828', fontSize:11, fontWeight:700, cursor:'pointer' }}>
-                  Clear
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:14 }}>
-            {kpiCard('135deg,#0079BC,#005a8e','💳',`SAR ${fmt(opoTotal)}`,'Total Committed')}
-            {kpiCard('135deg,#185FA5,#0C447C','⏳',opoPending,'Pending DH')}
-            {kpiCard('135deg,#993C1D,#712B13','✅',opoApproved,'DH Approved')}
-            {kpiCard('135deg,#3B6D11,#27500A','🟢',opoIssued,'Issued')}
-          </div>
-
-          <div style={{ background:'#fff', borderRadius:12, border:'1px solid #e8edf2', overflow:'hidden' }}>
+        {/* Table card */}
+        <div style={{ background:'#fff', borderRadius:12, boxShadow:'0 2px 10px rgba(0,0,0,0.07)' }}>
             {filteredOPO.length===0 ? (
               <div style={{ textAlign:'center', padding:50, color:'#aab2bd' }}>
                 <div style={{ fontSize:36, marginBottom:12 }}>📤</div>
@@ -861,7 +915,7 @@ export default function PurchaseOrders({ entityId, entityCode, isAr }) {
                 </colgroup>
                 <thead><tr>
                   {['PO Number','Date','Dept','Supplier','Category','Value (SAR)','Status',''].map((h,hi)=>(
-                    <th key={hi} style={{ ...thS(OUT_PRI), textAlign:hi===5?'right':'left' }}>{h}</th>
+                    <th key={hi} style={{ ...thS(OUT_PRI), textAlign:hi===5?'right':'left', position:'sticky', top:0, zIndex:2 }}>{h}</th>
                   ))}
                 </tr></thead>
                 <tbody>
@@ -936,9 +990,11 @@ export default function PurchaseOrders({ entityId, entityCode, isAr }) {
                 </tbody>
               </table>
             )}
-          </div>
+        </div>
         </>
       )}
+
+      </div>{/* end scroll zone */}
 
       {showIpoForm&&(()=>{
         const PRI=INC_PRI, BOX1=INC_BOX1, BOX2=INC_BOX2

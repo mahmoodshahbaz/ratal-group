@@ -175,7 +175,7 @@ export default function SubConClaims({ entityId, role }) {
         <div style={{
           display:'grid', gridTemplateColumns:'110px 1fr 100px 110px 130px 120px 100px 130px',
           background:MC, color:'#fff', fontSize:11, fontWeight:700,
-          padding:'10px 16px', letterSpacing:0.6, position:'sticky', top:0, zIndex:2,
+          padding:'10px 16px', letterSpacing:0.6, position:'sticky', top:'var(--ch-offset,0px)', zIndex:2,
         }}>
           <div>CLAIM #</div>
           <div>CONTRACTOR / SITE</div>

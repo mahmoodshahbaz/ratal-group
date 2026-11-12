@@ -1,7 +1,12 @@
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
-import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
-const MC = GROUP_COLORS.Operations
+import { GROUP_COLORS, CHAPTER_PALETTES, kpiCardGradient, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
+const MC  = GROUP_COLORS.Operations
+const PAL = CHAPTER_PALETTES.Operations
+const L1  = PAL.L1
+const L2  = PAL.L2
+const L3  = PAL.L3
+const PP  = "'Poppins',sans-serif"
 /**
  * FieldPayments.jsx — Field Payment Notifications (v2)
  *
@@ -59,44 +64,49 @@ export default function FieldPayments({ entityId, role, userDept }) {
   const [tab, setTab] = useState('sessions') // sessions | individual | card_balance
 
   return (
-    <div style={{ padding: '24px 28px', fontFamily: "'Poppins', sans-serif" }}>
-      {/* subtitle */}
-      <div style={{ marginBottom: 16 }}>
-        <p style={{ margin: 0, color: '#64748b', fontSize: 12 }}>
-          {admin ? 'All departments' : `${userDept} — dept view`} · ATM card distributions
-        </p>
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:PP }}>
+
+      {/* ══ UPPER ZONE ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+        {/* L1 heading bar */}
+        <div style={{ background:L2, padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', borderRadius:'6px 6px 0 0' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff', fontFamily:PP, lineHeight:1.2 }}>Field Payment Notifications</div>
+              <div style={{ fontSize:10, color:'rgba(255,255,255,0.8)', marginTop:2, fontFamily:PP }}>
+                {admin ? 'All departments' : `${userDept} — dept view`} · ATM card distributions
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display:'flex', gap:4, borderBottom:'2px solid #e8edf2', padding:'0 28px' }}>
+          {[
+            { key:'sessions',      label:'📋 Sessions' },
+            { key:'individual',    label:'👤 Individual Ledger' },
+            ...(admin ? [{ key:'card_balance', label:'🏦 Card Balance' }] : []),
+          ].map((t) => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              style={{ border:'none', background:'none', padding:'9px 18px', cursor:'pointer', fontSize:12, fontWeight:700,
+                color: tab===t.key ? L3 : '#6b7c93',
+                borderBottom: tab===t.key ? `2px solid ${L3}` : '2px solid transparent',
+                marginBottom:-2, fontFamily:PP }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+      </div>{/* end upper zone */}
+
+      {/* ── SCROLL ZONE ── */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'14px 28px 22px' }}>
+        {tab==='sessions'     && <SessionsTab admin={admin} userDept={userDept} />}
+        {tab==='individual'   && <IndividualLedgerTab admin={admin} userDept={userDept} />}
+        {tab==='card_balance' && admin && <CardBalanceTab />}
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 2, borderBottom: '2px solid #e0e0e0', marginBottom: 24 }}>
-        {[
-          { key: 'sessions',       label: '📋 Sessions' },
-          { key: 'individual',     label: '👤 Individual Ledger' },
-          ...(admin ? [{ key: 'card_balance', label: '🏦 Card Balance' }] : []),
-        ].map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            style={{
-              padding: '9px 18px',
-              border: 'none',
-              borderBottom: tab === t.key ? '3px solid #0D5C4E' : '3px solid transparent',
-              background: 'none',
-              fontWeight: tab === t.key ? 700 : 400,
-              color: tab === t.key ? '#0D5C4E' : '#666',
-              cursor: 'pointer',
-              fontSize: 14,
-              marginBottom: -2,
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {tab === 'sessions'       && <SessionsTab admin={admin} userDept={userDept} />}
-      {tab === 'individual'     && <IndividualLedgerTab admin={admin} userDept={userDept} />}
-      {tab === 'card_balance'   && admin && <CardBalanceTab />}
     </div>
   )
 }
@@ -201,24 +211,27 @@ function SessionsTab({ admin, userDept }) {
 
   return (
     <>
-      {/* Summary cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
+      {/* KPI cards */}
+      <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginBottom:16 }}>
         {[
-          { label: 'Sessions',         value: summary.total,                    grad:'linear-gradient(135deg,#0D5C4E,#0a4a3d)' },
-          { label: 'Pending Review',    value: summary.pending,                  grad:'linear-gradient(135deg,#e65100,#bf360c)' },
-          { label: 'Proxy Alerts',      value: summary.proxies,                  grad:'linear-gradient(135deg,#d32f2f,#b71c1c)' },
-          { label: 'Over-Dist',         value: summary.overDist,                 grad:'linear-gradient(135deg,#b45a00,#8d3f00)' },
-          { label: 'Total Distributed', value: `SAR ${fmt(summary.distributed)}`, grad:'linear-gradient(135deg,#1565C0,#0d47a1)', wide: true },
-        ].map((c) => (
-          <div key={c.label} style={{ background: c.grad, borderRadius: 10, padding: '12px 16px', gridColumn: c.wide ? 'span 2' : 'span 1', boxShadow:'0 2px 8px rgba(0,0,0,0.15)' }}>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4, fontFamily:"'Poppins',sans-serif", fontWeight:700 }}>{c.label}</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: '#fff', fontFamily:"'Poppins',sans-serif" }}>{c.value}</div>
-          </div>
-        ))}
+          { label:'Sessions',         value: summary.total },
+          { label:'Pending Review',   value: summary.pending },
+          { label:'Proxy Alerts',     value: summary.proxies },
+          { label:'Over-Dist',        value: summary.overDist },
+          { label:'Total Distributed',value:`SAR ${fmt(summary.distributed)}` },
+        ].map((k, i) => {
+          const cs = kpiCardGradient(i, L1, L2, L3)
+          return (
+            <div key={i} style={{ ...cs, width:160, height:62, borderRadius:8, padding:'0 14px', display:'flex', flexDirection:'column', justifyContent:'center', flexShrink:0, boxShadow:i<2?'0 3px 10px rgba(0,0,0,0.20)':'0 2px 6px rgba(0,0,0,0.08)', boxSizing:'border-box' }}>
+              <div style={{ fontSize:9, fontWeight:800, letterSpacing:0.9, textTransform:'uppercase', fontFamily:PP, opacity:i>=2?0.6:0.75, marginBottom:2 }}>{k.label}</div>
+              <div style={{ fontSize:19, fontWeight:900, lineHeight:1.1, fontFamily:PP }}>{k.value}</div>
+            </div>
+          )
+        })}
       </div>
 
-      {/* Filter bar */}
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16, background: '#f9f9f9', padding: 12, borderRadius: 10, border: '1px solid #eee' }}>
+      {/* Filter card — sticky at top of scroll zone */}
+      <div style={{ position:'sticky', top:0, zIndex:5, display:'flex', gap:10, flexWrap:'wrap', marginBottom:14, background:'#fff', padding:'12px 16px', borderRadius:10, boxShadow:'0 2px 10px rgba(0,0,0,0.07)' }}>
         <input type="month" value={fMonth} onChange={(e) => setFMonth(e.target.value)} style={F.inp} />
         <select value={fStatus} onChange={(e) => setFStatus(e.target.value)} style={F.inp}>
           <option value="">All Statuses</option>
@@ -247,63 +260,65 @@ function SessionsTab({ admin, userDept }) {
         />
       </div>
 
-      {/* Session list */}
-      {filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', color: '#aaa', padding: 40 }}>No sessions match the filters.</div>
-      ) : (
-        <>
-          {/* Header row */}
-          <div style={{ ...F.grid, background: '#f5f5f5', padding: '8px 12px', borderRadius: 8, marginBottom: 4, fontSize: 11, color: '#888', fontWeight: 700, textTransform: 'uppercase' }}>
-            <span>Date</span><span>Card</span><span>Dept / Submitter</span><span>Total</span><span>Status</span><span>Proxy</span><span>JE</span>
-          </div>
+      {/* Table card */}
+      <div style={{ background:'#fff', borderRadius:12, boxShadow:'0 2px 10px rgba(0,0,0,0.07)', overflow:'hidden' }}>
+        {filtered.length === 0 ? (
+          <div style={{ textAlign:'center', color:'#aaa', padding:40 }}>No sessions match the filters.</div>
+        ) : (
+          <>
+            {/* Header row */}
+            <div style={{ ...F.grid, background:L3, padding:'8px 12px', fontSize:11, color:'#fff', fontWeight:700, textTransform:'uppercase' }}>
+              <span>Date</span><span>Card</span><span>Dept / Submitter</span><span>Total</span><span>Status</span><span>Proxy</span><span>JE</span>
+            </div>
 
-          {filtered.map((s) => {
-            const sc = STATUS_COLORS[s.status] || STATUS_COLORS.SUBMITTED
-            const isOpen = expanded === s.id
-            const hasProxy = (s.proxy_count || 0) > 0
-            const hasOver = (s.over_distributed || 0) > 0
+            {filtered.map((s) => {
+              const sc = STATUS_COLORS[s.status] || STATUS_COLORS.SUBMITTED
+              const isOpen = expanded === s.id
+              const hasProxy = (s.proxy_count || 0) > 0
+              const hasOver = (s.over_distributed || 0) > 0
 
-            return (
-              <div key={s.id} style={{ border: `1.5px solid ${hasProxy || hasOver ? '#ffb300' : '#e0e0e0'}`, borderRadius: 10, marginBottom: 8, overflow: 'hidden', background: '#fff' }}>
-                <div
-                  onClick={() => setExpanded(isOpen ? null : s.id)}
-                  style={{ ...F.grid, padding: '11px 14px', cursor: 'pointer', alignItems: 'center' }}
-                >
-                  <span style={{ fontWeight: 600, fontSize: 13 }}>{s.session_date}</span>
-                  <span style={{ fontSize: 12 }}>{CARD_DISPLAY[s.card_used] || s.card_used || '—'}</span>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 13 }}>{s.department_name}</div>
-                    <div style={{ color: '#888', fontSize: 12 }}>{s.submitted_by_name}</div>
+              return (
+                <div key={s.id} style={{ borderBottom:`1px solid #f0f0f0`, background: hasProxy || hasOver ? '#fffde7' : '#fff' }}>
+                  <div
+                    onClick={() => setExpanded(isOpen ? null : s.id)}
+                    style={{ ...F.grid, padding:'11px 14px', cursor:'pointer', alignItems:'center' }}
+                  >
+                    <span style={{ fontWeight:600, fontSize:13 }}>{s.session_date}</span>
+                    <span style={{ fontSize:12 }}>{CARD_DISPLAY[s.card_used] || s.card_used || '—'}</span>
+                    <div>
+                      <div style={{ fontWeight:600, fontSize:13 }}>{s.department_name}</div>
+                      <div style={{ color:'#888', fontSize:12 }}>{s.submitted_by_name}</div>
+                    </div>
+                    <span style={{ fontWeight:700, color:'#1a6b3a', fontSize:14 }}>SAR {fmt(s.session_total)}</span>
+                    <span style={{ background:sc.bg, color:sc.color, border:`1px solid ${sc.border}`, borderRadius:20, padding:'3px 10px', fontSize:12, fontWeight:600, whiteSpace:'nowrap' }}>
+                      {s.status}
+                    </span>
+                    <span>
+                      {hasProxy ? <span style={{ background:'#fdecea', color:'#c62828', borderRadius:4, padding:'2px 7px', fontSize:11, fontWeight:700 }}>⚠ {s.proxy_count}</span> : '—'}
+                      {hasOver  ? <span style={{ background:'#fff8e1', color:'#e65100', borderRadius:4, padding:'2px 7px', fontSize:11, fontWeight:700, marginLeft:4 }}>OVER</span> : ''}
+                    </span>
+                    <span style={{ fontSize:12, color:s.je_posted ? '#2e7d32' : '#aaa' }}>
+                      {s.je_posted ? '✓ Posted' : '—'}
+                    </span>
                   </div>
-                  <span style={{ fontWeight: 700, color: '#1a6b3a', fontSize: 14 }}>SAR {fmt(s.session_total)}</span>
-                  <span style={{ background: sc.bg, color: sc.color, border: `1px solid ${sc.border}`, borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>
-                    {s.status}
-                  </span>
-                  <span>
-                    {hasProxy ? <span style={{ background: '#fdecea', color: '#c62828', borderRadius: 4, padding: '2px 7px', fontSize: 11, fontWeight: 700 }}>⚠ {s.proxy_count}</span> : '—'}
-                    {hasOver  ? <span style={{ background: '#fff8e1', color: '#e65100', borderRadius: 4, padding: '2px 7px', fontSize: 11, fontWeight: 700, marginLeft: 4 }}>OVER</span> : ''}
-                  </span>
-                  <span style={{ fontSize: 12, color: s.je_posted ? '#2e7d32' : '#aaa' }}>
-                    {s.je_posted ? '✓ Posted' : '—'}
-                  </span>
-                </div>
 
-                {/* Expanded detail */}
-                {isOpen && (
-                  <SessionDetail
-                    session={s}
-                    lines={linesMap[s.id] || []}
-                    allocs={allocMap[s.id] || []}
-                    admin={admin}
-                    acting={acting === s.id}
-                    onAdvance={() => advanceStatus(s)}
-                  />
-                )}
-              </div>
-            )
-          })}
-        </>
-      )}
+                  {/* Expanded detail */}
+                  {isOpen && (
+                    <SessionDetail
+                      session={s}
+                      lines={linesMap[s.id] || []}
+                      allocs={allocMap[s.id] || []}
+                      admin={admin}
+                      acting={acting === s.id}
+                      onAdvance={() => advanceStatus(s)}
+                    />
+                  )}
+                </div>
+              )
+            })}
+          </>
+        )}
+      </div>
     </>
   )
 }

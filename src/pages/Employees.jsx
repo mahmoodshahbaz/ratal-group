@@ -1,15 +1,20 @@
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
 import FormShell from '../components/FormShell'
-import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
+import { GROUP_COLORS, CHAPTER_PALETTES, kpiCardGradient, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth'
 import { QRButton } from '../components/QRCard'
 import EntityDocs from '../components/EntityDocs'
 const MC = GROUP_COLORS.Masters  // Masters chapter (Ch02)
+const PAL = CHAPTER_PALETTES.Masters
+const L1  = PAL.L1   // '#C8B48F'
+const L2  = PAL.L2   // '#FAF5E9'
+const L3  = PAL.L3   // '#8C601B'
+const PP  = "'Poppins',sans-serif"
 
-const POPPINS = "'Poppins','Inter',system-ui,sans-serif"
+const POPPINS = PP
 const S = {
   overlay: { position:'fixed', inset:0, background:'rgba(15,15,35,0.6)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 },
   modal:   { background:'#fff', borderRadius:20, width:780, maxWidth:'calc(100vw - 32px)', height:'min(88vh, 760px)', display:'flex', flexDirection:'column', boxShadow:'0 28px 64px rgba(0,0,0,0.30)', overflow:'hidden', fontFamily:POPPINS },
@@ -1229,7 +1234,7 @@ export default function Employees({ entityId, entityCode }) {
   const EGRID = '24px 130px 1fr 88px 150px 120px 76px'
 
   return (
-    <div>
+    <div style={{ display:'flex', flexDirection:'column', height:'100%', background:L2, fontFamily:PP }}>
 
       {/* ══ N2: Offboarding Modal ════════════════════════════════ */}
       {offboardEmp && (() => {
@@ -1305,84 +1310,102 @@ export default function Employees({ entityId, entityCode }) {
         )
       })()}
 
-      {/* ══ STICKY: toolbar + stats + column headers ════════════ */}
-      <div style={{ position:'sticky', top:0, zIndex:20, background:'#f4f7fb', boxShadow:'0 2px 6px rgba(0,0,0,0.06)' }}>
+      {/* ══ UPPER ZONE — flexShrink:0 ═══════════════════════════ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
 
-        {/* Row 1: KPIs + Button */}
-        <div style={{ display:'flex', gap:8, flexWrap:'wrap', padding:'10px 0 6px', scrollbarWidth:'none', alignItems:'center' }}>
-          {[
-            { label:'Total Employees', value:statsBase.length,                           color:'#1a2e3d', bg:'#f0f4f8' },
-            { label:'Active',          value:statsBase.filter(e=>e.is_active).length,   color:'#2e7d32', bg:'#e8f5e9' },
-            { label:'Inactive',        value:statsBase.filter(e=>!e.is_active).length,  color:'#c62828', bg:'#ffebee' },
-            { label:salaryView==='bank'?'WPS Bank Total':salaryView==='cash'?'Cash Total':'Payroll Total',
-              value:'SAR '+Math.round(totalSalary/1000)+'K',                            color:'#6a1b9a', bg:'#f3e5f5' },
-          ].map(s => (
-            <div key={s.label} style={{ background:`linear-gradient(135deg,${s.color}cc 0%,${s.color} 100%)`, borderRadius:10, padding:'10px 16px', flexShrink:0, minWidth:100, boxShadow:`0 3px 10px ${s.color}44`, position:'relative', overflow:'hidden' }}>
-              <div style={{ fontSize:9, color:'rgba(255,255,255,0.85)', fontWeight:700, whiteSpace:'nowrap', textTransform:'uppercase', letterSpacing:0.8 }}>{s.label}</div>
-              <div style={{ fontSize:20, fontWeight:900, color:'#fff', lineHeight:1.2, marginTop:2 }}>{s.value}</div>
+        {/* L1 bar */}
+        <div style={{ background:L2, padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', borderRadius:'6px 6px 0 0' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff', fontFamily:PP }}>Employees</div>
+              <div style={{ fontSize:10, color:'rgba(255,255,255,0.8)', marginTop:2 }}>Masters · Employee directory</div>
             </div>
-          ))}
-          <button onClick={openNew} style={{ marginLeft:'auto', background:'#8C601B', color:'#fff', border:'none', borderRadius:10, padding:'10px 0', cursor:'pointer', fontSize:13, fontWeight:700, whiteSpace:'nowrap', flexShrink:0, minWidth:160, textAlign:'center', boxShadow:'0 3px 8px rgba(140,96,27,0.35)' }}>
-            Add New Employee
-          </button>
+            <button onClick={openNew} style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'7px 16px', cursor:'pointer', fontSize:12, fontWeight:700, fontFamily:PP }}>
+              + Add New Employee
+            </button>
+          </div>
         </div>
 
-        {/* Row 3: Filters */}
-        <div style={{ display:'flex', gap:8, paddingBottom:8, alignItems:'center', flexWrap:'wrap' }}>
-          <input placeholder="Search name, ID, mobile…" style={{ ...S.inp, flex:1, minWidth:150 }} value={search} onChange={e=>setSearch(e.target.value)} />
-          <select value={filterDept} onChange={e=>setFilterDept(e.target.value)}
-            style={{ ...S.inp, width:'auto', minWidth:140 }}>
-            <option value="">All Departments</option>
-            {depts.map(d => (
-              <option key={d.id} value={d.id}>{d.dept_code || d.dept_name}</option>
-            ))}
-          </select>
-          <select value={filterType} onChange={e=>setFilterType(e.target.value)}
-            style={{ ...S.inp, width:'auto', minWidth:120 }}>
-            <option value="">All Types</option>
-            {empTypes(entityCode).map(t => (
-              <option key={t} value={t}>{t.replace(/-/g,' ')}</option>
-            ))}
-          </select>
-          {(filterDept || filterType) && (
-            <button onClick={() => { setFilterDept(''); setFilterType('') }}
-              style={{ background:'#f3e5f5', color:'#6a1b9a', border:'1px solid #ce93d8', borderRadius:8, padding:'6px 12px', cursor:'pointer', fontSize:12, fontWeight:700, whiteSpace:'nowrap' }}>
-              ✕ Clear
-            </button>
-          )}
-          <label style={{ ...S.toggle, fontSize:12, whiteSpace:'nowrap' }}>
-            <input type="checkbox" checked={showInactive} onChange={e=>setShowInactive(e.target.checked)} /> Inactive
-          </label>
-          <button onClick={() => setShowExportDialog(true)} disabled={exporting}
-            style={{ background:'#2e7d32', color:'#fff', border:'none', borderRadius:9, padding:'9px 16px', cursor:'pointer', fontSize:12, fontWeight:700, whiteSpace:'nowrap', opacity:exporting?0.7:1 }}>
-            {exporting ? '⏳…' : '📊 Export'}
-          </button>
-          <button onClick={exportInsuranceList}
-            style={{ background:'#0277bd', color:'#fff', border:'none', borderRadius:9, padding:'9px 16px', cursor:'pointer', fontSize:12, fontWeight:700, whiteSpace:'nowrap' }}>
-            🏥 Insurance List
-          </button>
-          {/* Salary view toggle */}
-          <div style={{ display:'flex', borderRadius:8, overflow:'hidden', border:'1px solid #ce93d8' }}>
-            {[['total','💼 Total'],['bank','🏦 Bank (WPS)'],['cash','💵 Cash']].map(([v,l])=>(
-              <button key={v} onClick={()=>setSalaryView(v)}
-                style={{ padding:'7px 14px', border:'none', cursor:'pointer', fontSize:12, fontWeight:700, whiteSpace:'nowrap', background:salaryView===v?'#8e24aa':'#fff', color:salaryView===v?'#fff':'#8e24aa' }}>
-                {l}
+        {/* KPI cards */}
+        <div style={{ display:'flex', flexWrap:'wrap', gap:8, padding:'10px 28px 12px', background:L2 }}>
+          {[
+            { label:'Total Employees', value:statsBase.length },
+            { label:'Active',          value:statsBase.filter(e=>e.is_active).length },
+            { label:'Inactive',        value:statsBase.filter(e=>!e.is_active).length },
+            { label:salaryView==='bank'?'WPS Bank Total':salaryView==='cash'?'Cash Total':'Payroll Total',
+              value:'SAR '+Math.round(totalSalary/1000)+'K' },
+          ].map((s, i) => {
+            const gs = kpiCardGradient(i, L1, L2, L3)
+            return (
+              <div key={s.label} style={{ width:160, height:62, borderRadius:10, padding:'0 14px', display:'flex', flexDirection:'column', justifyContent:'center', flexShrink:0, ...gs }}>
+                <div style={{ fontSize:9, fontWeight:700, whiteSpace:'nowrap', textTransform:'uppercase', letterSpacing:0.8, opacity:0.85 }}>{s.label}</div>
+                <div style={{ fontSize:20, fontWeight:900, lineHeight:1.2, marginTop:2 }}>{s.value}</div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Filter bar */}
+        <div style={{ padding:'6px 28px 8px', background:L2 }}>
+          <div style={{ display:'flex', gap:8, background:'#fff', padding:'10px 14px', borderRadius:8, boxShadow:'0 1px 4px rgba(0,0,0,0.08)', flexWrap:'wrap', alignItems:'center' }}>
+            <input placeholder="Search name, ID, mobile…" style={{ ...S.inp, flex:1, minWidth:150 }} value={search} onChange={e=>setSearch(e.target.value)} />
+            <select value={filterDept} onChange={e=>setFilterDept(e.target.value)}
+              style={{ ...S.inp, width:'auto', minWidth:140 }}>
+              <option value="">All Departments</option>
+              {depts.map(d => (
+                <option key={d.id} value={d.id}>{d.dept_code || d.dept_name}</option>
+              ))}
+            </select>
+            <select value={filterType} onChange={e=>setFilterType(e.target.value)}
+              style={{ ...S.inp, width:'auto', minWidth:120 }}>
+              <option value="">All Types</option>
+              {empTypes(entityCode).map(t => (
+                <option key={t} value={t}>{t.replace(/-/g,' ')}</option>
+              ))}
+            </select>
+            {(filterDept || filterType) && (
+              <button onClick={() => { setFilterDept(''); setFilterType('') }}
+                style={{ background:'#f3e5f5', color:'#6a1b9a', border:'1px solid #ce93d8', borderRadius:8, padding:'6px 12px', cursor:'pointer', fontSize:12, fontWeight:700, whiteSpace:'nowrap' }}>
+                ✕ Clear
               </button>
+            )}
+            <label style={{ ...S.toggle, fontSize:12, whiteSpace:'nowrap' }}>
+              <input type="checkbox" checked={showInactive} onChange={e=>setShowInactive(e.target.checked)} /> Inactive
+            </label>
+            <button onClick={() => setShowExportDialog(true)} disabled={exporting}
+              style={{ background:'#2e7d32', color:'#fff', border:'none', borderRadius:9, padding:'9px 16px', cursor:'pointer', fontSize:12, fontWeight:700, whiteSpace:'nowrap', opacity:exporting?0.7:1 }}>
+              {exporting ? '⏳…' : '📊 Export'}
+            </button>
+            <button onClick={exportInsuranceList}
+              style={{ background:'#0277bd', color:'#fff', border:'none', borderRadius:9, padding:'9px 16px', cursor:'pointer', fontSize:12, fontWeight:700, whiteSpace:'nowrap' }}>
+              🏥 Insurance List
+            </button>
+            {/* Salary view toggle */}
+            <div style={{ display:'flex', borderRadius:8, overflow:'hidden', border:'1px solid #ce93d8' }}>
+              {[['total','💼 Total'],['bank','🏦 Bank (WPS)'],['cash','💵 Cash']].map(([v,l])=>(
+                <button key={v} onClick={()=>setSalaryView(v)}
+                  style={{ padding:'7px 14px', border:'none', cursor:'pointer', fontSize:12, fontWeight:700, whiteSpace:'nowrap', background:salaryView===v?'#8e24aa':'#fff', color:salaryView===v?'#fff':'#8e24aa' }}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Column header */}
+        <div style={{ padding:'0 28px' }}>
+          <div style={{ display:'grid', gridTemplateColumns:EGRID, background:L3, padding:'8px 14px', borderRadius:'6px 6px 0 0', alignItems:'center' }}>
+            {['','EMP #','Employee Name','Dept','Designation','Salary','Status'].map(h => (
+              <div key={h} style={{ fontSize:10, color:'#fff', fontWeight:800, textTransform:'uppercase', letterSpacing:0.5, textAlign:'left' }}>{h}</div>
             ))}
           </div>
-
-        </div>
-
-        {/* Column headers — solid white, sits flush above list rows */}
-        <div style={{ display:'grid', gridTemplateColumns:EGRID, background:'#8C601B', borderBottom:'2px solid #7a5217', padding:'8px 14px', alignItems:'center' }}>
-          {['','EMP #','Employee Name','Dept','Designation','Salary','Status'].map(h => (
-            <div key={h} style={{ fontSize:10, color:'#fff', fontWeight:800, textTransform:'uppercase', letterSpacing:0.5, textAlign:'left' }}>{h}</div>
-          ))}
         </div>
       </div>
 
+      {/* ══ SCROLL ZONE ══════════════════════════════════════════ */}
+      <div style={{ flex:1, overflowY:'auto', padding:'0 28px 22px' }}>
       {/* ══ Employee List — collapsible rows ══════════════════════ */}
-      <div style={{ background:'#fff', borderRadius:14, boxShadow:'0 2px 10px rgba(0,0,0,0.08)', overflow:'hidden' }}>
+      <div style={{ background:'#fff', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 8px rgba(0,0,0,0.08)', overflow:'hidden' }}>
         {loading ? (
           <div style={{ textAlign:'center', padding:50, color:'#aab2bd' }}>Loading…</div>
         ) : filtered.length===0 ? (
@@ -1506,6 +1529,7 @@ export default function Employees({ entityId, entityCode }) {
           )
         })}
       </div>
+      </div>{/* end scroll zone */}
 
       {/* ══ VIEW MODAL ══════════════════════════════════════════ */}
       {viewEmp && (()=>{

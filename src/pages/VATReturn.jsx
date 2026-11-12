@@ -1,7 +1,9 @@
-import ChapterPage from '../components/ChapterPage'
-import PageBanner from '../components/PageBanner'
-import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
-const MC = GROUP_COLORS.Accounting
+import { GROUP_COLORS } from '../styles/appStyles'
+const MC = GROUP_COLORS.Reports
+const L1 = '#B8A5CF'
+const L2 = '#F5EFFA'
+const L3 = '#7444A3'
+const PP = "'Poppins', sans-serif"
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -259,52 +261,62 @@ export default function VATReturn({ entityId, entityCode }) {
   const QTRS   = [{v:1,l:'Q1 — Jan·Feb·Mar'},{v:2,l:'Q2 — Apr·May·Jun'},{v:3,l:'Q3 — Jul·Aug·Sep'},{v:4,l:'Q4 — Oct·Nov·Dec'}]
 
   return (
-    <div>
-      <div style={{ fontSize:12, color:'#6b7c93', marginBottom:18 }}>
-        ZATCA VAT Return — Output Tax (Sales) minus Input Tax (Purchases) = Net Payable
-      </div>
+    <div className="vr-root" style={{ fontFamily:PP, display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2 }}>
+      <style>{`.vr-root input,.vr-root select,.vr-root button,.vr-root textarea{font-family:'Poppins',sans-serif!important}`}</style>
 
-      {/* Period selector */}
-      <div style={{ ...S.card, display:'flex', gap:12, alignItems:'flex-end', flexWrap:'wrap' }}>
-        <div>
-          <label style={S.lbl}>Period Type</label>
-          <div style={{ display:'flex', gap:0, borderRadius:8, overflow:'hidden', border:'1.5px solid #dde3ec' }}>
-            {[['month','Monthly'],['quarter','Quarterly']].map(([v,l]) => (
-              <button key={v} onClick={() => { setType(v); setPeriod(v==='month' ? now.getMonth()+1 : Math.ceil((now.getMonth()+1)/3)) }} style={{
-                padding:'7px 18px', border:'none', cursor:'pointer', fontWeight:700, fontSize:12,
-                background: type===v ? '#1a2e3d' : '#fff', color: type===v ? '#fff' : '#6b7c93',
-              }}>{l}</button>
-            ))}
+      {/* ══ UPPER ZONE ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+        {/* L1 Heading Bar */}
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, borderRadius:'6px 6px 0 0', padding:'8px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <span style={{ fontSize:15, fontWeight:700, color:'#fff', letterSpacing:0.3 }}>🧮 VAT Return</span>
+            <div style={{ display:'flex', gap:8 }}>
+              {data && <>
+                <button style={{ background:'transparent', color:'#fff', border:'1px solid rgba(255,255,255,0.5)', borderRadius:7, padding:'5px 12px', fontSize:11, fontWeight:700, cursor:'pointer' }} onClick={exportCSV}>⬇ CSV</button>
+                <button style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'7px 16px', fontSize:12, fontWeight:700, cursor:'pointer' }} onClick={printReport}>🖨 Print / PDF</button>
+              </>}
+            </div>
           </div>
         </div>
 
-        <div>
-          <label style={S.lbl}>Year</label>
-          <select value={year} onChange={e => setYear(+e.target.value)} style={S.inp}>
-            {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
+        {/* Filter Bar — period selector */}
+        <div style={{ padding:'6px 28px 8px' }}>
+          <div style={{ background:'#fff', padding:'10px 14px', borderRadius:8, boxShadow:'0 1px 4px rgba(0,0,0,0.08)', display:'flex', gap:10, alignItems:'flex-end', flexWrap:'wrap' }}>
+            <div>
+              <label style={S.lbl}>Period Type</label>
+              <div style={{ display:'flex', gap:0, borderRadius:8, overflow:'hidden', border:'1.5px solid #dde3ec' }}>
+                {[['month','Monthly'],['quarter','Quarterly']].map(([v,l]) => (
+                  <button key={v} onClick={() => { setType(v); setPeriod(v==='month' ? now.getMonth()+1 : Math.ceil((now.getMonth()+1)/3)) }} style={{
+                    padding:'7px 18px', border:'none', cursor:'pointer', fontWeight:700, fontSize:12,
+                    background: type===v ? L3 : '#fff', color: type===v ? '#fff' : '#6b7c93',
+                  }}>{l}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label style={S.lbl}>Year</label>
+              <select value={year} onChange={e => setYear(+e.target.value)} style={S.inp}>
+                {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={S.lbl}>{type === 'month' ? 'Month' : 'Quarter'}</label>
+              <select value={period} onChange={e => setPeriod(+e.target.value)} style={S.inp}>
+                {(type === 'month' ? MONTHS : QTRS).map(p => (
+                  <option key={p.v} value={p.v}>{p.l}</option>
+                ))}
+              </select>
+            </div>
+            <button style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'7px 16px', fontSize:12, fontWeight:700, cursor:'pointer', marginLeft:'auto' }} onClick={load} disabled={loading}>
+              {loading ? 'Loading…' : '↻ Calculate'}
+            </button>
+          </div>
         </div>
+      </div>{/* end upper zone */}
 
-        <div>
-          <label style={S.lbl}>{type === 'month' ? 'Month' : 'Quarter'}</label>
-          <select value={period} onChange={e => setPeriod(+e.target.value)} style={S.inp}>
-            {(type === 'month' ? MONTHS : QTRS).map(p => (
-              <option key={p.v} value={p.v}>{p.l}</option>
-            ))}
-          </select>
-        </div>
-
-        <button style={S.btn()} onClick={load} disabled={loading}>
-          {loading ? 'Loading…' : '↻ Calculate'}
-        </button>
-
-        {data && (
-          <>
-            <button style={S.btnO()} onClick={exportCSV}>⬇ CSV</button>
-            <button style={S.btnO('#1565C0')} onClick={printReport}>🖨 Print / PDF</button>
-          </>
-        )}
-      </div>
+      {/* ══ SCROLL ZONE ══ */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'10px 28px 22px' }}>
 
       {!data && !loading && (
         <div style={{ ...S.card, textAlign:'center', padding:60, color:'#aab2bd' }}>
@@ -486,6 +498,7 @@ export default function VATReturn({ entityId, entityCode }) {
           </div>
         </>
       )}
+      </div>{/* end scroll zone */}
     </div>
   )
 }

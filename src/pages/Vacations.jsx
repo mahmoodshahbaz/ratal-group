@@ -101,7 +101,7 @@ const S = {
   label: { display:'block', fontSize:11, color:'#6b7c93', fontWeight:700, marginBottom:4, fontFamily:POPPINS, letterSpacing:0.3, textTransform:'uppercase' },
   row:   { display:'flex', gap:12, marginBottom:14 },
   col:   { flex:1 },
-  th:    { background:MC, color:'#fff', padding:'9px 10px', fontWeight:800, textAlign:'left', fontSize:10, letterSpacing:0.5, textTransform:'uppercase', fontFamily:POPPINS, position:'sticky', top:0, zIndex:2 },
+  th:    { background:MC, color:'#fff', padding:'9px 10px', fontWeight:800, textAlign:'left', fontSize:10, letterSpacing:0.5, textTransform:'uppercase', fontFamily:POPPINS, position:'sticky', top:'var(--ch-offset,0px)', zIndex:2 },
   td:    { padding:'8px 10px', borderBottom:'1px solid #f0f4f8', color:'#1a2e3d', verticalAlign:'middle', fontSize:12, fontFamily:POPPINS },
   chip:  (bg,cl) => ({ display:'inline-block', padding:'2px 10px', borderRadius:20, fontSize:10, fontWeight:800, background:bg, color:cl, fontFamily:POPPINS }),
   badge: (c) => ({ display:'inline-flex', alignItems:'center', gap:6, background:c+'18', border:`1px solid ${c}55`, borderRadius:8, padding:'8px 14px', fontSize:12, fontWeight:700, color:c, fontFamily:POPPINS }),

@@ -1,10 +1,12 @@
-import { GROUP_COLORS } from '../styles/appStyles'
+import { GROUP_COLORS, kpiCardGradient } from '../styles/appStyles'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth'
 import FormShell from '../components/FormShell'
 import PageBanner from '../components/PageBanner'
 
+const L1 = '#BCA99A'
+const L2 = '#F7F2ED'
 const L3 = '#795338'
 
 // ─── Staff Action Request page — DEPT_HEAD portal ────────────────
@@ -264,20 +266,75 @@ export default function StaffActions({ entityId }) {
   const expiring7  = employees.filter(e => { const d = daysUntil(e.contract_end_date); return d !== null && d >= 0 && d <= 7 })
   const expiring30 = employees.filter(e => { const d = daysUntil(e.contract_end_date); return d !== null && d > 7 && d <= 30 })
 
+  const pendingCount = sars.filter(s => s.status === 'PENDING').length
+  const expiringCount = expiring7.length + expiring30.length
+  const kpis = [
+    { label: 'Active Employees', val: employees.length, unit: 'people' },
+    { label: 'Monthly Dept Cost', val: `SAR ${(deptCost || 0).toLocaleString('en', { maximumFractionDigits: 0 })}`, unit: null },
+    { label: 'Expiring ≤30 Days', val: expiringCount, unit: 'contracts' },
+  ]
+
   return (
-    <div>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <div>
-          <div style={{ fontSize: 12, color: '#6b7c93' }}>
-            Dept Head Portal — Submit staff action requests and track their status
-            {myDept && <span style={{ marginLeft: 10, background: '#ede7f6', color: '#6a1b9a', borderRadius: 5, padding: '2px 9px', fontSize: 10, fontWeight: 800 }}>{myDept.dept_code || myDept.dept_name}</span>}
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:'Poppins,sans-serif', fontSize:13 }}>
+
+      {/* ══ UPPER ZONE ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+        {/* L1 Heading Bar */}
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>👥 Staff Actions</div>
+              <div style={{ fontSize:10, color:'#fff', opacity:0.85 }}>
+                Dept Head Portal — Submit staff action requests and track their status
+                {myDept && <span style={{ marginLeft:8, background:'rgba(255,255,255,0.25)', borderRadius:4, padding:'1px 7px' }}>{myDept.dept_code || myDept.dept_name}</span>}
+              </div>
+            </div>
+            <div style={{ fontSize:11, color:'rgba(255,255,255,0.8)' }}>{profile?.full_name || profile?.email}</div>
           </div>
         </div>
-        <div style={{ fontSize: 12, color: '#6b7c93' }}>
-          {profile?.full_name || profile?.email}
+
+        {/* KPI strip */}
+        <div style={{ display:'flex', gap:12, padding:'10px 28px 12px', background:L2, flexWrap:'wrap' }}>
+          {kpis.map((k, i) => {
+            const g = kpiCardGradient(i, L1, L2, L3)
+            return (
+              <div key={k.label} style={{ ...g, width:160, height:62, borderRadius:10, padding:'0 14px', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.12)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+                <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', opacity:0.75, marginBottom:2 }}>{k.label}</div>
+                <div style={{ fontSize:17, fontWeight:800, lineHeight:1 }}>{k.val}</div>
+                {k.unit && <div style={{ fontSize:9, opacity:0.7, marginTop:2 }}>{k.unit}</div>}
+              </div>
+            )
+          })}
         </div>
-      </div>
+
+        {/* Tab bar */}
+        <div style={{ padding:'0 28px', borderBottom:'2px solid #e8edf2' }}>
+          <div style={{ display:'flex', gap:0, background:'transparent', paddingTop:4 }}>
+            {[
+              { key:'team',    label:'👥 My Team' },
+              { key:'sar',     label:'📋 Submit Action' },
+              { key:'budget',  label:'📊 Budget View' },
+              { key:'history', label:'📁 My Submissions', badge: pendingCount },
+            ].map(t => (
+              <button key={t.key} onClick={() => setTab(t.key)} style={{
+                background:'transparent', color: tab === t.key ? L3 : '#6b7c93',
+                border:'none', borderBottom: tab === t.key ? `2px solid ${L3}` : '2px solid transparent',
+                padding:'7px 20px', fontSize:12, fontWeight:700, cursor:'pointer',
+                fontFamily:'Poppins,sans-serif', marginBottom:-2,
+              }}>
+                {t.label}
+                {t.badge > 0 && <span style={{ marginLeft:5, background:'#e65100', color:'#fff', borderRadius:10, padding:'1px 6px', fontSize:10 }}>{t.badge}</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+
+      </div>{/* end upper zone */}
+
+      {/* ══ SCROLL ZONE ══ */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
+      <div style={{ background:'#fff', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 8px rgba(0,0,0,0.08)', padding:'16px 20px' }}>
 
       {/* No dept assigned warning */}
       {!loading && !myDept && (
@@ -292,21 +349,6 @@ export default function StaffActions({ entityId }) {
           {msg.type === 'success' ? '✅ ' : '❌ '}{msg.text}
         </div>
       )}
-
-      {/* Tabs */}
-      <div style={{ marginBottom: 16 }}>
-        <button style={S.tab(tab === 'team')}    onClick={() => setTab('team')}>👥 My Team</button>
-        <button style={S.tab(tab === 'sar')}     onClick={() => setTab('sar')}>📋 Submit Action</button>
-        <button style={S.tab(tab === 'budget')}  onClick={() => setTab('budget')}>📊 Budget View</button>
-        <button style={S.tab(tab === 'history')} onClick={() => setTab('history')}>
-          📁 My Submissions
-          {sars.filter(s => s.status === 'PENDING').length > 0 && (
-            <span style={{ marginLeft: 6, background: '#e65100', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 10 }}>
-              {sars.filter(s => s.status === 'PENDING').length}
-            </span>
-          )}
-        </button>
-      </div>
 
       {loading && <div style={{ color: '#6b7c93', padding: 20 }}>Loading…</div>}
 
@@ -714,6 +756,8 @@ export default function StaffActions({ entityId }) {
           }
         </div>
       )}
+      </div>{/* end white box */}
+      </div>{/* end scroll zone */}
     </div>
   )
 }

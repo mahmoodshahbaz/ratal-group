@@ -3059,7 +3059,7 @@ function buildExpenseVoucher(d) {
          Photo on file (Drive) — open link to view<br>
          <small style="word-break:break-all;">${photoSrc}</small>
        </div>`
-    : `<div style="font-size:10px;color:#bbb;padding:30px;text-align:center;">📷 No receipt photo attached</div>`
+    : `<div style="font-size:11px;color:#546e7a;padding:30px;text-align:center;line-height:1.6;">📷 No receipt photo attached<br><span style="font-size:9px;color:#90a4ae;">If a photo was uploaded it could not be displayed.<br>Please verify the attachment in the system.</span></div>`
 
   const HOUSE_CSS = `
     *{box-sizing:border-box;margin:0;padding:0;}

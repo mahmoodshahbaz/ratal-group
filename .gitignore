@@ -1,5 +1,10 @@
 node_modules
 
+# Environment variables — never commit
+.env
+.env.local
+.env.*.local
+
 # Office temp files
 ~$*
 

@@ -27,6 +27,7 @@
 
 import React from 'react'
 import { CHAPTER_PALETTES, FORM } from '../styles/appStyles'
+import { getBannerIcon, getStepEmoji } from './BannerIcons'
 
 const PP   = "'Poppins', sans-serif"
 const MAIN = '#172D37'
@@ -75,32 +76,14 @@ export default function PageBanner({
   const titleLines = Array.isArray(formTitle) ? formTitle : [formTitle]
   const wfSteps    = (workflowSteps || steps).slice(0, 3)
 
-  // Bottom strip step icons
-  const icons = [
-    // Step 1 — clipboard with tick
-    <svg key="i1" width="28" height="28" viewBox="0 0 28 28" fill="none">
-      <rect x="4" y="3" width="16" height="20" rx="2" fill="white" opacity="0.9"/>
-      <rect x="7" y="8" width="10" height="2" rx="1" fill={L3}/>
-      <rect x="7" y="12" width="7" height="2" rx="1" fill={L3}/>
-      <rect x="7" y="16" width="8" height="2" rx="1" fill={L3}/>
-      <circle cx="20" cy="20" r="6" fill="rgba(255,255,255,0.35)"/>
-      <path d="M17 20l2.5 2.5 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>,
-    // Step 2 — checkmark circle
-    <svg key="i2" width="28" height="28" viewBox="0 0 28 28" fill="none">
-      <circle cx="14" cy="14" r="10" fill="white" opacity="0.9"/>
-      <path d="M9 14l3.5 3.5L19 10" stroke={L3} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>,
-    // Step 3 — document filed
-    <svg key="i3" width="28" height="28" viewBox="0 0 28 28" fill="none">
-      <rect x="5" y="4" width="18" height="22" rx="2" fill="white" opacity="0.9"/>
-      <rect x="9" y="9"  width="10" height="2" rx="1" fill={L3}/>
-      <rect x="9" y="13" width="7"  height="2" rx="1" fill={L3}/>
-      <rect x="9" y="17" width="8"  height="2" rx="1" fill={L3}/>
-    </svg>,
-  ]
+  // Resolve the main circle icon:
+  //   1. If `icon` prop is a string → render as large emoji
+  //   2. If `icon` prop is JSX → render directly
+  //   3. Otherwise → auto-lookup colorful SVG from BannerIcons
+  //   4. Fallback → defaultIcon SVG
+  const colorfulIcon = getBannerIcon(iconLabel, L3)
 
-  // Default icon (document + checkmark) if none provided
+  // Default icon (document + checkmark) if no match
   const defaultIcon = (
     <svg width="70" height="70" viewBox="0 0 64 64" fill="none">
       <rect x="10" y="6" width="36" height="44" rx="3" fill="white" opacity="0.9"/>
@@ -154,22 +137,32 @@ export default function PageBanner({
           {/* TOP BRANDING STRIP */}
           <div style={{
             background: L2,
-            padding: '10px 28px',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            display: 'flex', alignItems: 'stretch',
             borderBottom: `1px solid ${darken(L2, 0.08)}`,
             flexShrink: 0,
           }}>
             <div style={{
-              fontSize: 10, fontWeight: 800, color: MAIN,
-              letterSpacing: 1, whiteSpace: 'nowrap', fontFamily: PP,
+              flex: 1, padding: '14px 28px',
+              display: 'flex', alignItems: 'center',
             }}>
-              Ratal Advanced Technologies
+              <div style={{
+                fontSize: 15, fontWeight: 900, color: L3,
+                letterSpacing: 0.3, whiteSpace: 'nowrap', fontFamily: PP,
+              }}>
+                Ratal Advanced Technologies
+              </div>
             </div>
             <div style={{
-              fontSize: 9, fontWeight: 800, color: L3,
-              letterSpacing: 2.5, textTransform: 'uppercase', fontFamily: PP,
+              padding: '14px 28px',
+              display: 'flex', alignItems: 'center',
+              borderLeft: `1px solid ${darken(L2, 0.08)}`,
             }}>
-              {chapter}
+              <div style={{
+                fontSize: 13, fontWeight: 800, color: L3,
+                letterSpacing: 2.5, textTransform: 'uppercase', fontFamily: PP,
+              }}>
+                {chapter}
+              </div>
             </div>
           </div>
 
@@ -235,9 +228,13 @@ export default function PageBanner({
                 background: L3,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                {icon
-                  ? <div style={{ fontSize: 64, lineHeight: 1 }}>{icon}</div>
-                  : defaultIcon
+                {typeof icon === 'string'
+                  ? <span style={{ fontSize: 60, lineHeight: 1 }}>{icon}</span>
+                  : icon
+                    ? icon
+                    : colorfulIcon
+                      ? colorfulIcon
+                      : defaultIcon
                 }
               </div>
               <div style={{
@@ -261,7 +258,16 @@ export default function PageBanner({
                 borderRight: i < wfSteps.length - 1
                   ? '1px solid rgba(255,255,255,0.2)' : 'none',
               }}>
-                {icons[i] || icons[0]}
+                <div style={{
+                  width: 32, height: 32, borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.18)',
+                  border: '1.5px solid rgba(255,255,255,0.35)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                  fontSize: 16, lineHeight: 1,
+                }}>
+                  {getStepEmoji(step)}
+                </div>
                 <div>
                   <div style={{
                     fontSize: 8, fontWeight: 800,

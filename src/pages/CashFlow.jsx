@@ -1,7 +1,9 @@
-import ChapterPage from '../components/ChapterPage'
-import PageBanner from '../components/PageBanner'
-import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
-const MC = GROUP_COLORS.Accounting
+import { GROUP_COLORS, kpiCardGradient } from '../styles/appStyles'
+const MC = GROUP_COLORS.Reports
+const L1 = '#B8A5CF'
+const L2 = '#F5EFFA'
+const L3 = '#7444A3'
+const PP = "'Poppins', sans-serif"
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -245,25 +247,64 @@ export default function CashFlow({ entityId }) {
   const netPos = !data || data.netCash >= 0
 
   return (
-    <div>
-      <div style={{ fontSize:12, color:'#6b7c93', marginBottom:18 }}>Direct-method operating cash flow — inflows vs outflows for the period</div>
+    <div className="cf-root" style={{ fontFamily:PP, display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2 }}>
+      <style>{`.cf-root input,.cf-root select,.cf-root button,.cf-root textarea{font-family:'Poppins',sans-serif!important}`}</style>
 
-      {/* Controls */}
-      <div style={{ ...S.card, display:'flex', gap:8, alignItems:'flex-end', flexWrap:'wrap' }}>
-        <div><label style={S.lbl}>From</label><input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={S.inp} /></div>
-        <div><label style={S.lbl}>To</label><input type="date" value={to} onChange={e=>setTo(e.target.value)} style={S.inp} /></div>
-        <div style={{ display:'flex', gap:4, paddingBottom:2, flexWrap:'wrap' }}>
-          {[{l:'This Month',o:0},{l:'Last Month',o:-1},{l:'2 Months Ago',o:-2}].map(p=>(
-            <button key={p.l} onClick={()=>setMonth(p.o)} style={{ ...S.btnO('#546e7a'), fontSize:10, padding:'6px 8px' }}>{p.l}</button>
-          ))}
-          {['Q1','Q2','Q3','Q4'].map(q=>(
-            <button key={q} onClick={()=>setQuarter(q)} style={{ ...S.btnO('#1565C0'), fontSize:10, padding:'6px 8px' }}>{q}</button>
-          ))}
+      {/* ══ UPPER ZONE ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+        {/* L1 Heading Bar */}
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, borderRadius:'6px 6px 0 0', padding:'8px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <span style={{ fontSize:15, fontWeight:700, color:'#fff', letterSpacing:0.3 }}>💧 Cash Flow</span>
+            <div style={{ display:'flex', gap:8 }}>
+              <button style={{ background:'transparent', color:'#fff', border:'1px solid rgba(255,255,255,0.5)', borderRadius:7, padding:'5px 12px', fontSize:11, fontWeight:700, cursor:'pointer' }} onClick={exportCSV} disabled={!data}>⬇ CSV</button>
+              <button style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'7px 16px', fontSize:12, fontWeight:700, cursor:'pointer' }} onClick={printReport} disabled={!data}>🖨 Print</button>
+            </div>
+          </div>
         </div>
-        <button style={S.btnO()} onClick={exportCSV} disabled={!data}>⬇ CSV</button>
-        <button style={S.btnO('#2e7d32')} onClick={printReport} disabled={!data}>🖨 Print</button>
-        <button style={S.btn()} onClick={load} disabled={loading}>↻ Refresh</button>
-      </div>
+
+        {/* KPI Strip */}
+        <div style={{ padding:'10px 28px 12px', background:L2, display:'flex', flexWrap:'wrap', gap:8 }}>
+          {[
+            { label:'From Customers',      value: data ? fmt(data.cashFromCustomers) : '—' },
+            { label:'Other Receipts',      value: data ? fmt(data.cashReceipts)      : '—' },
+            { label:'Payroll Paid',        value: data ? fmt(data.payrollPaid)       : '—' },
+            { label:'Airlines/Suppliers',  value: data ? fmt(data.cashToAirlines)   : '—' },
+            { label:'Expenses+Food+OT',    value: data ? fmt(data.expensesPaid + data.foodPaid + data.overtimePaid) : '—' },
+            { label:'Cash Advances',       value: data ? fmt(data.moneyReqPaid)     : '—' },
+          ].map((k, i) => {
+            const g = kpiCardGradient(i, L1, L2, L3)
+            return (
+              <div key={k.label} style={{ ...g, width:160, height:62, borderRadius:10, padding:'0 14px', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.10)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+                <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', opacity:0.75, marginBottom:2 }}>{k.label}</div>
+                <div style={{ fontSize:16, fontWeight:800, lineHeight:1 }}>{k.value}</div>
+                <div style={{ fontSize:9, opacity:0.7, marginTop:2 }}>SAR</div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Filter Bar — date range + presets */}
+        <div style={{ padding:'6px 28px 8px' }}>
+          <div style={{ background:'#fff', padding:'10px 14px', borderRadius:8, boxShadow:'0 1px 4px rgba(0,0,0,0.08)', display:'flex', gap:8, alignItems:'flex-end', flexWrap:'wrap' }}>
+            <div><label style={{ display:'block', fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4 }}>From</label><input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={S.inp} /></div>
+            <div><label style={{ display:'block', fontSize:11, fontWeight:700, color:'#6b7c93', marginBottom:4 }}>To</label><input type="date" value={to} onChange={e=>setTo(e.target.value)} style={S.inp} /></div>
+            <div style={{ display:'flex', gap:4, paddingBottom:2, flexWrap:'wrap' }}>
+              {[{l:'This Month',o:0},{l:'Last Month',o:-1},{l:'2 Months Ago',o:-2}].map(p=>(
+                <button key={p.l} onClick={()=>setMonth(p.o)} style={{ ...S.btnO('#546e7a'), fontSize:10, padding:'6px 8px' }}>{p.l}</button>
+              ))}
+              {['Q1','Q2','Q3','Q4'].map(q=>(
+                <button key={q} onClick={()=>setQuarter(q)} style={{ ...S.btnO(L3), fontSize:10, padding:'6px 8px' }}>{q}</button>
+              ))}
+            </div>
+            <button style={{ ...S.btn(L3), marginLeft:'auto' }} onClick={load} disabled={loading}>↻ Refresh</button>
+          </div>
+        </div>
+      </div>{/* end upper zone */}
+
+      {/* ══ SCROLL ZONE ══ */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'10px 28px 22px' }}>
 
       {/* Schema errors (non-fatal) */}
       {errors.length > 0 && (
@@ -290,24 +331,6 @@ export default function CashFlow({ entityId }) {
                   Inflows: {fmt(d.totalInflows)} &nbsp;|&nbsp; Outflows: ({fmt(d.totalOutflows)})
                 </div>
               </div>
-            </div>
-
-            {/* KPIs */}
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(140px,1fr))', gap:10, marginBottom:14 }}>
-              {[
-                { label:'From Customers',     val:d.cashFromCustomers, color:'#2e7d32' },
-                { label:'Other Receipts',     val:d.cashReceipts,      color:'#1565C0' },
-                { label:'Payroll Paid',       val:d.payrollPaid,       color:'#c62828' },
-                { label:'Airlines/Suppliers', val:d.cashToAirlines,    color:'#e65100' },
-                { label:'Expenses + Food + OT',val:d.expensesPaid+d.foodPaid+d.overtimePaid, color:'#7b1fa2' },
-                { label:'Cash Advances',      val:d.moneyReqPaid,      color:'#546e7a' },
-              ].map(k=>(
-                <div key={k.label} style={{ background:'#fff', borderRadius:12, padding:'12px 14px', boxShadow:'0 1px 6px rgba(0,0,0,0.06)' }}>
-                  <div style={{ fontSize:10, color:'#6b7c93', marginBottom:3 }}>{k.label}</div>
-                  <div style={{ fontWeight:800, fontSize:15, color:k.color }}>{fmt(k.val)}</div>
-                  <div style={{ fontSize:9, color:'#aab2bd' }}>SAR</div>
-                </div>
-              ))}
             </div>
 
             {/* Statement table */}
@@ -398,6 +421,7 @@ export default function CashFlow({ entityId }) {
           </>
         )
       })()}
+      </div>{/* end scroll zone */}
     </div>
   )
 }

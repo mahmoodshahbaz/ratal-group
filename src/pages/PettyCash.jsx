@@ -1,3 +1,7 @@
+const L1 = '#B4BA95'
+const L2 = '#F5F6EB'
+const L3 = '#606D2C'
+const PP = "'Poppins', sans-serif"
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import FormShell from '../components/FormShell'
@@ -249,7 +253,7 @@ function CashBook({ entityId, accounts, reloadAccounts }) {
         ) : (
           <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
             <thead>
-              <tr style={{ background:'#1a2e3d', color:'#fff' }}>
+              <tr style={{ background:L3, color:'#fff' }}>
                 {['Date','Voucher','Type','Category','Description','Reference','Receipts','Payments','Balance','GL',''].map((h,i)=>(
                   <th key={i} style={{ padding:'8px 12px', textAlign:i>=6&&i<=8?'right':'left', fontSize:10, whiteSpace:'nowrap' }}>{h}</th>
                 ))}
@@ -594,27 +598,36 @@ export default function PettyCash({ entityId }) {
   ]
 
   return (
-    <div>
-      <div style={{ fontSize:12, color:'#6b7c93', marginBottom:18 }}>
-        Daily cash book per department · printable vouchers · GL posting · float tracking
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:PP }}>
+      {/* UPPER ZONE */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0' }}>
+            <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>💵 Petty Cash</div>
+            <div style={{ fontSize:10, color:'#fff', opacity:0.8 }}>Daily cash book per department · printable vouchers · GL posting · float tracking</div>
+          </div>
+        </div>
+        <div style={{ padding:'0 28px', borderBottom:'2px solid #e8edf2' }}>
+          {TABS.map(t=>(
+            <button key={t.key} onClick={()=>setTab(t.key)} style={{
+              padding:'10px 16px', border:'none', background:'none', cursor:'pointer',
+              fontFamily:PP, fontSize:13, fontWeight: tab===t.key ? 800 : 500,
+              color: tab===t.key ? L3 : '#6b7c93',
+              borderBottom: tab===t.key ? `2px solid ${L3}` : '2px solid transparent',
+              marginBottom:-2, transition:'all 0.15s',
+            }}>{t.label}</button>
+          ))}
+        </div>
       </div>
-
-      <div style={{ display:'flex', gap:4, marginBottom:14 }}>
-        {TABS.map(t=>(
-          <button key={t.key} onClick={()=>setTab(t.key)}
-            style={tab===t.key ? S.btn('#1a2e3d') : S.btnO('#546e7a')}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
+      {/* SCROLL ZONE */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
       {loading ? (
         <div style={{ textAlign:'center', padding:60, color:'#6b7c93' }}>Loading…</div>
       ) : tab === 'cashbook' ? (
         accounts.length === 0 ? (
-          <div style={{ ...S.card, textAlign:'center', padding:60, color:'#aab2bd' }}>
+          <div style={{ background:'#fff', borderRadius:'0 0 8px 8px', textAlign:'center', padding:60, color:'#aab2bd' }}>
             No cash boxes set up yet.<br/>
-            <button onClick={()=>setTab('accounts')} style={{ ...S.btn('#1565C0'), marginTop:12 }}>⚙️ Create a Cash Box</button>
+            <button onClick={()=>setTab('accounts')} style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'8px 16px', cursor:'pointer', marginTop:12, fontFamily:PP, fontWeight:700 }}>⚙️ Create a Cash Box</button>
           </div>
         ) : (
           <CashBook entityId={entityId} accounts={accounts} reloadAccounts={loadAccounts} />
@@ -622,6 +635,7 @@ export default function PettyCash({ entityId }) {
       ) : (
         <AccountsTab entityId={entityId} accounts={accounts} reload={loadAccounts} />
       )}
+      </div>
     </div>
   )
 }

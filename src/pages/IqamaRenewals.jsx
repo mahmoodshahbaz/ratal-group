@@ -1,10 +1,12 @@
-import { GROUP_COLORS } from '../styles/appStyles'
+import { GROUP_COLORS, kpiCardGradient } from '../styles/appStyles'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import PageBanner from '../components/PageBanner'
 import FormShell  from '../components/FormShell'
 
 const MC  = GROUP_COLORS.HR   // '#795338'
+const L1  = '#BCA99A'
+const L2  = '#F7F2ED'
 const fmt = d => d ? new Date(d).toLocaleDateString('en-GB') : '—'
 const TODAY = new Date().toISOString().slice(0, 10)
 
@@ -426,37 +428,44 @@ export default function IqamaRenewals({ entityId }) {
 
   // ──────────────────────────────────────────────────────────────────────────
   return (
-    <div style={{ fontFamily: 'Poppins,sans-serif', fontSize: 13 }}>
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:'Poppins,sans-serif', fontSize:13 }}>
 
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <div style={{ fontSize: 12, color: '#64748b' }}>
-          Iqama renewal batches — Sadad tracking, levy validation, automatic document updates
+      {/* ══ UPPER ZONE (always visible) ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+      {/* L1 Heading Bar */}
+      <div style={{ padding:'6px 28px 0' }}>
+        <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <div>
+            <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>🪪 Iqama Renewals</div>
+            <div style={{ fontSize:10, color:'#fff', opacity:0.85 }}>Sadad tracking · levy validation · automatic document updates</div>
+          </div>
+          <button style={{ background:MC, color:'#fff', border:'none', borderRadius:7, padding:'7px 16px', fontSize:12, fontWeight:700, cursor:'pointer' }} onClick={() => { setBatchForm(EMPTY_BATCH); setLines([{ ...EMPTY_LINE }]); setShowBanner(true) }}>
+            + New Renewal Batch
+          </button>
         </div>
-        <button style={btn()} onClick={() => { setBatchForm(EMPTY_BATCH); setLines([{ ...EMPTY_LINE }]); setShowBanner(true) }}>
-          + New Renewal Batch
-        </button>
       </div>
 
-      {/* ── Sticky zone ────────────────────────────────────────────────────── */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 50, background: '#f4f6fa', paddingBottom: 10, paddingTop: 4 }}>
+      {/* ── KPI / filter zone ────────────────────────────────────────────────────── */}
+      <div style={{ background:L2, padding:'10px 28px 12px' }}>
         {/* KPI strip */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginBottom: 10 }}>
-          {KPI_DEFS.map(k => {
+        <div style={{ display:'flex', gap:8, padding:'10px 0 12px', flexWrap:'wrap' }}>
+          {KPI_DEFS.map((k, i) => {
             const val    = k.key === 'total' ? counts.total : (counts[k.key] || 0)
             const active = statusFilter === k.key
+            const cardStyle = kpiCardGradient(i, L1, L2, MC)
             return (
               <div key={k.key}
                 onClick={() => k.click && setStatusFilter(active ? '' : k.key)}
                 style={{
-                  background: `linear-gradient(135deg, ${k.g[0]}, ${k.g[1]})`,
-                  borderRadius: 8, padding: '10px 14px', color: '#fff',
+                  ...cardStyle, width:160, height:62, borderRadius:10, padding:'0 14px',
+                  flexShrink:0, boxShadow: active ? `0 0 0 3px #fff, 0 0 0 5px ${MC}` : '0 2px 8px rgba(0,0,0,0.10)',
+                  display:'flex', flexDirection:'column', justifyContent:'center', boxSizing:'border-box',
                   cursor: k.click ? 'pointer' : 'default',
-                  boxShadow: active ? `0 0 0 3px #fff, 0 0 0 5px ${k.g[1]}` : '0 2px 8px rgba(0,0,0,0.18)',
                   transform: active ? 'scale(1.04)' : 'scale(1)', transition: 'all 0.15s',
                 }}>
-                <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1 }}>{val}</div>
-                <div style={{ fontSize: 10, opacity: 0.85, marginTop: 3 }}>{k.label}</div>
+                <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, opacity:0.75, marginBottom:2 }}>{k.label}</div>
+                <div style={{ fontSize:18, fontWeight:800, lineHeight:1.1 }}>{val}</div>
               </div>
             )
           })}
@@ -482,6 +491,11 @@ export default function IqamaRenewals({ entityId }) {
           <span style={{ fontSize: 11, color: '#6b7c93', whiteSpace: 'nowrap' }}>{filtered.length} batch{filtered.length !== 1 ? 'es' : ''}</span>
         </div>
       </div>
+
+      </div>{/* end upper zone */}
+
+      {/* ── SCROLL ZONE ── */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
 
       {/* ── Batch list ─────────────────────────────────────────────────────── */}
       {loading ? (
@@ -617,6 +631,8 @@ export default function IqamaRenewals({ entityId }) {
           )
         })
       )}
+
+      </div>{/* end scroll zone */}
 
       {/* ── PageBanner ────────────────────────────────────────────────────── */}
       <PageBanner

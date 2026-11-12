@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth'
 import FormShell from '../components/FormShell'
+import { kpiCardGradient } from '../styles/appStyles'
 
 // ═══════════════════════════════════════════════════════════════════
 // Document Vault — v2
@@ -16,7 +17,10 @@ import FormShell from '../components/FormShell'
 const PRI = '#454D9B'
 const L1  = '#AAAED0'
 const L2  = '#F0F1FA'
+const L3  = '#454D9B'
 const PP  = "'Poppins','Segoe UI',sans-serif"
+const MAIN = '#172D37'
+const SUB  = '#53666F'
 
 // ── Sidebar category config ───────────────────────────────────────────
 const SIDEBAR_CATS = [
@@ -791,87 +795,102 @@ export default function DocumentVault({ entityId }) {
 
   const TH = { padding:'10px 12px', textAlign:'left', fontSize:10, fontWeight:700, color:'#fff',
                textTransform:'uppercase', letterSpacing:.8, whiteSpace:'nowrap', fontFamily:PP,
-               background:'#454D9B', borderBottom:'2px solid #353d82' }
+               background:L3, borderBottom:`2px solid ${L3}cc` }
 
   return (
-    // ── Outer shell ─ fixed height, clips overflow so main can scroll ──
-    // chrome = 52px topbar + 1 border + 58px chapter header + 1 border = 112px
-    // App.jsx content wrapper bottom padding = 22px  →  total offset = 134px
-    <div style={{ fontFamily:PP, height:'calc(100vh - 134px)', overflow:'hidden' }}>
+    <div className="dv-vault-root" style={{ fontFamily:PP, display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2 }}>
+      <style>{`
+        .dv-vault-root button, .dv-vault-root input, .dv-vault-root select, .dv-vault-root textarea {
+          font-family: 'Poppins', sans-serif !important;
+        }
+      `}</style>
 
-      {/* ── MAIN (full-width, scroll owner) ── */}
-      <div style={{ height:'100%', overflowY:'auto', overflowX:'hidden', display:'flex', flexDirection:'column', background:'#f8f9fb' }}>
+      {/* ══ UPPER ZONE ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
 
-        {/* ── STICKY STRIP (KPI + filters) ── */}
-        <div style={{ position:'sticky', top:0, zIndex:30, background:'#f8f9fb',
-          borderBottom:`1px solid ${L1}88`, boxShadow:'0 2px 8px rgba(0,0,0,0.06)' }}>
-
-          {/* Row 1 — KPI cards + Add button */}
-          <div style={{ display:'flex', gap:8, alignItems:'center', padding:'10px 22px 8px' }}>
-            {[
-              { label:'Total',    val:docs.length, color:'#454D9B', st:'' },
-              { label:'Active',   val:active,      color:'#2e7d32', st:'ACTIVE' },
-              { label:'Expiring', val:expiring,    color:'#e65100', st:'EXPIRING_SOON' },
-              { label:'Expired',  val:expired,     color:'#c62828', st:'EXPIRED' },
-            ].map(k=>(
-              <div key={k.label} onClick={()=>setFilterSt(filterSt===k.st?'':k.st)}
-                style={{ background:`linear-gradient(135deg,${k.color}cc,${k.color})`,
-                  borderRadius:9, padding:'6px 16px', cursor:'pointer', minWidth:80,
-                  boxShadow:filterSt===k.st?`0 0 0 2px #fff,0 0 0 4px ${k.color}`:`0 2px 6px ${k.color}44` }}>
-                <div style={{ fontSize:9, color:'rgba(255,255,255,0.85)', fontWeight:700, textTransform:'uppercase', letterSpacing:.8 }}>{k.label}</div>
-                <div style={{ fontSize:22, fontWeight:900, color:'#fff', lineHeight:1.2 }}>{k.val}</div>
-              </div>
-            ))}
-            {expiring > 0 && !filterSt && (
-              <div style={{ fontSize:11, color:'#f57f17', background:'#fff8e1', border:'1px solid #ffe082',
-                borderRadius:8, padding:'5px 10px', whiteSpace:'nowrap', fontWeight:700 }}>
-                ⏳ {expiring} expiring soon
-              </div>
-            )}
-            <div style={{ flex:1 }} />
-            <button onClick={()=>openNewModal(filterLinked||'', filterCat||'')}
-              style={{ padding:'8px 20px', borderRadius:9, border:'none',
-                background:`linear-gradient(135deg,${PRI},#6a72c1)`, color:'#fff',
-                fontFamily:PP, fontSize:13, fontWeight:700, cursor:'pointer',
-                boxShadow:`0 2px 6px ${PRI}55`, whiteSpace:'nowrap' }}>
-              + Add Document
-            </button>
+        {/* L1 bar */}
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:MAIN, fontFamily:PP }}>🗄️ Document Vault</div>
+              <div style={{ fontSize:10, color:SUB, opacity:0.85, marginTop:1, fontFamily:PP }}>Administration · Central document repository — all entities</div>
+            </div>
+            <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+              {expired > 0 && (
+                <div style={{ background:'#c62828', color:'#fff', borderRadius:20, padding:'4px 12px', fontSize:12, fontWeight:700 }}>
+                  🚨 {expired} expired
+                </div>
+              )}
+              <button onClick={()=>openNewModal(filterLinked||'', filterCat||'')}
+                style={{ padding:'7px 16px', borderRadius:7, border:'none', background:L3, color:'#fff',
+                  fontFamily:PP, fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                + Add Document
+              </button>
+            </div>
           </div>
+        </div>
 
-          {/* Row 2 — Entity type · Doc type · Status · Search */}
-          <div style={{ display:'flex', gap:8, alignItems:'center', padding:'0 22px 10px', flexWrap:'wrap' }}>
+        {/* KPI cards */}
+        <div style={{ padding:'10px 28px 10px', display:'flex', gap:8, flexWrap:'nowrap', overflowX:'auto', scrollbarWidth:'none' }}>
+          {[
+            { label:'Total Docs', value: docs.length, st:''              },
+            { label:'Active',     value: active,      st:'ACTIVE'        },
+            { label:'Expiring',   value: expiring,    st:'EXPIRING_SOON' },
+            { label:'Expired',    value: expired,     st:'EXPIRED'       },
+          ].map((k, i) => {
+            const KPI_SOLID = [
+              { background:'#454D9B', color:'#fff'     },
+              { background:'#6568b8', color:'#fff'     },
+              { background:'#d4d7ee', color:'#2b2f6b'  },
+              { background:'#ecedf8', color:'#454D9B'  },
+            ]
+            const ks = KPI_SOLID[i] || KPI_SOLID[0]
+            return (
+            <div key={i} onClick={()=>setFilterSt(filterSt===k.st?'':k.st)}
+              style={{ background:ks.background, color:ks.color, width:160, height:62, borderRadius:10, padding:'0 14px',
+                flexShrink:0, boxShadow: filterSt===k.st ? `0 0 0 2px ${L3},0 2px 8px rgba(0,0,0,0.15)` : '0 2px 8px rgba(0,0,0,0.10)',
+                display:'flex', flexDirection:'column', justifyContent:'center', cursor:'pointer' }}>
+              <div style={{ fontSize:18, fontWeight:800, lineHeight:1 }}>{k.value}</div>
+              <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, opacity:0.75, marginTop:4 }}>{k.label}</div>
+            </div>
+          )})}
+        </div>
+
+        {/* Filter bar — white card */}
+        <div style={{ padding:'0 28px 10px' }}>
+          <div style={{ background:'#fff', borderRadius:8, boxShadow:'0 1px 4px rgba(0,0,0,0.07)', padding:'10px 14px', display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
 
             {/* Entity type filter */}
             <select value={filterLinked}
               onChange={e=>{ setFilterLinked(e.target.value); setFilterCat('') }}
-              style={{ padding:'7px 10px', borderRadius:8, border:`1.5px solid ${filterLinked?PRI:PRI+'33'}`,
+              style={{ padding:'7px 10px', borderRadius:8, border:`1.5px solid ${filterLinked?L3:L3+'33'}`,
                 fontSize:12, background: filterLinked?L2:'#fff', fontFamily:PP, cursor:'pointer', outline:'none',
-                color: filterLinked?PRI:'#546e7a', fontWeight: filterLinked?700:400 }}>
+                color: filterLinked?L3:'#546e7a', fontWeight: filterLinked?700:400 }}>
               <option value=''>All entity types</option>
               {SIDEBAR_CATS.map(c=><option key={c.key} value={c.key}>{c.icon} {c.label}</option>)}
             </select>
 
-            {/* Doc type filter — scoped to selected entity type */}
+            {/* Doc type filter */}
             <select value={filterCat} onChange={e=>setFilterCat(e.target.value)}
-              style={{ padding:'7px 10px', borderRadius:8, border:`1.5px solid ${filterCat?PRI:PRI+'33'}`,
+              style={{ padding:'7px 10px', borderRadius:8, border:`1.5px solid ${filterCat?L3:L3+'33'}`,
                 fontSize:12, background: filterCat?L2:'#fff', fontFamily:PP, cursor:'pointer', outline:'none',
-                color: filterCat?PRI:'#546e7a', fontWeight: filterCat?700:400 }}>
+                color: filterCat?L3:'#546e7a', fontWeight: filterCat?700:400 }}>
               <option value=''>All doc types</option>
               {availableCatKeys.map(k=><option key={k} value={k}>{CAT_ICONS[k]} {CAT_LABELS[k]||k}</option>)}
             </select>
 
             {/* Status filter */}
             <select value={filterSt} onChange={e=>setFilterSt(e.target.value)}
-              style={{ padding:'7px 10px', borderRadius:8, border:`1.5px solid ${filterSt?PRI:PRI+'33'}`,
+              style={{ padding:'7px 10px', borderRadius:8, border:`1.5px solid ${filterSt?L3:L3+'33'}`,
                 fontSize:12, background: filterSt?L2:'#fff', fontFamily:PP, cursor:'pointer', outline:'none',
-                color: filterSt?PRI:'#546e7a', fontWeight: filterSt?700:400 }}>
+                color: filterSt?L3:'#546e7a', fontWeight: filterSt?700:400 }}>
               <option value=''>All statuses</option>
               {STATUSES.map(s=><option key={s} value={s}>{s}</option>)}
             </select>
 
             {/* Search */}
             <input style={{ flex:'1 1 180px', minWidth:0, padding:'7px 12px', borderRadius:8,
-              border:`1.5px solid ${PRI}33`, fontSize:13, outline:'none', background:'#fff', fontFamily:PP }}
+              border:`1.5px solid ${L3}33`, fontSize:13, outline:'none', background:'#fff', fontFamily:PP }}
               value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search title, number, entity…" />
 
             {(filterLinked||filterCat||filterSt||search) && (
@@ -879,18 +898,20 @@ export default function DocumentVault({ entityId }) {
                 style={{ padding:'7px 12px', borderRadius:8, border:'1px solid #ddd', background:'#fff',
                   fontSize:12, cursor:'pointer', fontFamily:PP, flexShrink:0 }}>✕ Clear</button>
             )}
-            {/* Group by Entity toggle */}
             <button onClick={()=>{ setGroupByEntity(g=>!g); setCollapsedGroups({}) }}
-              style={{ padding:'7px 13px', borderRadius:8, border:`1.5px solid ${groupByEntity ? '#454D9B' : '#c5cae9'}`,
-                background: groupByEntity ? '#454D9B' : '#fff', color: groupByEntity ? '#fff' : '#454D9B',
+              style={{ padding:'7px 13px', borderRadius:8, border:`1.5px solid ${groupByEntity ? L3 : L3+'44'}`,
+                background: groupByEntity ? L3 : '#fff', color: groupByEntity ? '#fff' : L3,
                 fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:PP, whiteSpace:'nowrap', flexShrink:0 }}>
               {groupByEntity ? '⊞ Grouped' : '⊞ Group by Entity'}
             </button>
-          </div>
-        </div>
+          </div>{/* end white card */}
+        </div>{/* end filter bar padding wrapper */}
 
-        {/* ── TABLE ── */}
-        <div style={{ flex:1, padding:'0 22px 24px' }}>
+      </div>{/* end upper zone */}
+
+      {/* ══ SCROLL ZONE ══ */}
+      <div style={{ flex:1, overflowY:'auto', overflowX:'hidden' }}>
+        <div style={{ padding:'0 28px 24px' }}>
           {loading ? (
             <div style={{ textAlign:'center', padding:80, color:'#6b7c93' }}>
               <div style={{ fontSize:32, marginBottom:10 }}>🗄️</div>Loading…
@@ -1065,7 +1086,7 @@ export default function DocumentVault({ entityId }) {
 
             const thead = (
               <thead>
-                <tr style={{ position:'sticky', top:STRIP_H, zIndex:20, cursor:'pointer' }}
+                <tr style={{ position:'sticky', top:0, zIndex:20, cursor:'pointer' }}
                     onClick={()=>setTableOpen(o=>!o)}>
                   <th style={{ ...TH, textAlign:'center', fontSize:13, width:36 }}>{tableOpen ? '▾' : '▸'}</th>
                   <th style={TH}>Document Type &amp; Reference</th>
@@ -1167,8 +1188,8 @@ export default function DocumentVault({ entityId }) {
               </div>
             )
           })()}
-        </div>
-      </div>
+        </div>{/* end scroll zone inner padding */}
+      </div>{/* end scroll zone */}
 
       {/* Modal */}
       {modal && (

@@ -293,6 +293,10 @@ function AppShell() {
   const [entitySwitch,  setEntitySwitch] = useState(null)
   const [sideOpen,      setSideOpen]     = useState(true)
   const [openGroup,     setOpenGroup]    = useState('Main')
+  const [selectedGroup, setSelectedGroup] = useState(() => {
+    const nav = NAV.find(n => n.key === 'dashboard')
+    return nav?.group || 'Main'
+  })
   const [mobileSideOpen,setMobileSide]   = useState(false)
   const [lang,          setLang]         = useState('en')
   const [isMobile,      setIsMobile]     = useState(window.innerWidth < 768)
@@ -325,11 +329,14 @@ function AppShell() {
   // Auto-open the group of the currently active page
   useEffect(() => {
     const nav = NAV.find(n => n.key === page)
-    if (nav) setOpenGroup(nav.group)
+    if (nav) {
+      setOpenGroup(nav.group)
+      setSelectedGroup(nav.group)
+    }
   }, [page])
 
   if (loading) return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#1a2e3d', color:'#fff', fontSize:16 }}>
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#192F3E', color:'#fff', fontSize:16 }}>
       Loading Ratal Group…
     </div>
   )
@@ -363,72 +370,107 @@ function AppShell() {
 
   const sideWidth  = isMobile ? 0 : (sideOpen ? 232 : 56)
 
+  // ── Navy & Gold sidebar design tokens ─────────────────────────────
+  const SB = {
+    bg:          '#192F3E',   // dark navy background
+    text:        '#D5E1E9',   // default text
+    textMuted:   '#A3B6C5',   // inactive section text
+    divider:     '#334957',   // subtle dividers
+    gold:        '#F4C365',   // active group fill
+    goldText:    '#192F3E',   // text on gold
+    teal:        '#63E3C1',   // active subsection fill
+    tealText:    '#123B35',   // text on teal
+    hover:       'rgba(255,255,255,0.07)',
+    font:        "'Poppins', sans-serif",
+  }
+
   // ── Sidebar content (shared between desktop + mobile overlay)
-  const SidebarContent = ({ inOverlay }) => (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
-      {/* Logo */}
-      <div style={{ padding:'14px 12px 10px', borderBottom:'1px solid rgba(255,255,255,0.08)', flexShrink:0 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:8, justifyContent:(sideOpen||inOverlay)?'flex-start':'center' }}>
-          <div style={{ width:34, height:34, background:entity.color, borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0, boxShadow:`0 0 12px ${entity.color}88` }}>
+  const SidebarContent = ({ inOverlay }) => {
+    const expanded = sideOpen || inOverlay
+    return (
+    <div style={{ display:'flex', flexDirection:'column', height:'100%', fontFamily:SB.font, background:SB.bg }}>
+
+      {/* ── HEADER: Logo + brand ───────────────────────────────────── */}
+      <div style={{ padding: expanded ? '14px 14px 10px' : '12px 8px 10px', borderBottom:`1px solid ${SB.divider}`, flexShrink:0 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:9, justifyContent:expanded?'flex-start':'center' }}>
+          <div style={{ width:34, height:34, background:entity.color, borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0, boxShadow:`0 0 14px ${entity.color}99` }}>
             {entity.type==='TRAVEL' ? '✈' : '💼'}
           </div>
-          {(sideOpen||inOverlay) && <div>
-            <div style={{ color:'#fff', fontWeight:800, fontSize:13 }}>Ratal Group</div>
-            <div style={{ fontSize:9, color:'rgba(255,255,255,0.4)' }}>Travel & Corporate</div>
-          </div>}
+          {expanded && (
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ color:'#fff', fontWeight:700, fontSize:16, fontFamily:SB.font, letterSpacing:0.1 }}>Ratal Group</div>
+              <div style={{ fontSize:10, color:SB.textMuted, fontFamily:SB.font }}>Travel & Corporate</div>
+            </div>
+          )}
           {inOverlay && (
-            <button onClick={()=>setMobileSide(false)} style={{ marginLeft:'auto', background:'transparent', border:'none', color:'rgba(255,255,255,0.5)', fontSize:20, cursor:'pointer', padding:'0 4px' }}>✕</button>
+            <button aria-label="Close menu" onClick={()=>setMobileSide(false)}
+              style={{ marginLeft:'auto', background:'transparent', border:'none', color:SB.textMuted, fontSize:18, cursor:'pointer', padding:'0 2px', lineHeight:1 }}>✕</button>
           )}
         </div>
       </div>
 
-      {/* Entity switcher */}
-      <div style={{ padding:(sideOpen||inOverlay)?'8px 12px':'8px 6px', borderBottom:'1px solid rgba(255,255,255,0.08)', flexShrink:0 }}>
-        {(sideOpen||inOverlay) && <div style={{ fontSize:9, color:'rgba(255,255,255,0.35)', fontWeight:700, marginBottom:5, letterSpacing:1 }}>ENTITY</div>}
-        <div style={{ display:'flex', gap:4, flexDirection:(sideOpen||inOverlay)?'row':'column' }}>
-          {(isSuperAdmin ? ENTITIES : ENTITIES.filter(e=>e.code===activeCode)).map(e=>(
-            <button key={e.code} onClick={()=>{ isSuperAdmin && setEntitySwitch(e.code); setMobileSide(false); setPage('dashboard') }} style={{
-              flex:(sideOpen||inOverlay)?1:undefined,
-              background: activeCode===e.code ? '#ffffff' : '#1a56db',
-              color: activeCode===e.code ? '#1a2e4a' : '#ffffff',
-              border: activeCode===e.code ? '1px solid #fff' : '1px solid #1a56db',
-              borderRadius:6,
-              padding:(sideOpen||inOverlay)?'5px 0':'5px 3px',
-              cursor: isSuperAdmin?'pointer':'default',
-              fontSize:10, fontWeight:700,
-              transition:'all 0.15s',
-            }}>{e.code}</button>
-          ))}
+      {/* ── ENTITY SWITCHER ────────────────────────────────────────── */}
+      <div style={{ padding: expanded ? '8px 14px' : '8px 6px', borderBottom:`1px solid ${SB.divider}`, flexShrink:0 }}>
+        {expanded && (
+          <div style={{ fontSize:9, color:SB.textMuted, fontWeight:600, marginBottom:6, letterSpacing:1.2, textTransform:'uppercase', fontFamily:SB.font }}>Entity</div>
+        )}
+        <div style={{ display:'flex', gap:4, flexDirection:expanded?'row':'column' }}>
+          {(isSuperAdmin ? ENTITIES : ENTITIES.filter(e=>e.code===activeCode)).map(e => {
+            const sel = activeCode === e.code
+            return (
+              <button key={e.code}
+                onClick={()=>{ isSuperAdmin && setEntitySwitch(e.code); setMobileSide(false); setPage('dashboard') }}
+                style={{
+                  flex: expanded ? 1 : undefined,
+                  background: sel ? SB.gold : 'rgba(255,255,255,0.08)',
+                  color: sel ? SB.goldText : SB.textMuted,
+                  border: 'none',
+                  borderRadius:7,
+                  padding: expanded ? '5px 0' : '5px 3px',
+                  cursor: isSuperAdmin ? 'pointer' : 'default',
+                  fontSize:10, fontWeight:700, fontFamily:SB.font,
+                  transition:'all 0.15s',
+                }}>{e.code}</button>
+            )
+          })}
         </div>
-        {(sideOpen||inOverlay) && <div style={{ marginTop:4, fontSize:10, color:entity.color, fontWeight:700, textAlign:'center' }}>
-          {entity.type==='TRAVEL' ? '✈️ Travel' : '💼 Corporate'}
-        </div>}
+        {expanded && (
+          <div style={{ marginTop:5, fontSize:10, color:SB.gold, fontWeight:600, fontFamily:SB.font }}>
+            {entity.type==='TRAVEL' ? '✈️ Travel' : '💼 Corporate'}
+          </div>
+        )}
       </div>
 
-      {/* Nav items — accordion */}
-      <div style={{ flex:1, overflowY:'auto', padding:'6px 4px', scrollbarWidth:'none' }}>
+      {/* ── NAV ACCORDION ──────────────────────────────────────────── */}
+      <div style={{ flex:1, overflowY:'auto', padding:'6px 6px', scrollbarWidth:'none' }}>
         {groups.map(group => {
-          const gc        = GROUP_COLORS[group] || 'rgba(255,255,255,0.35)'
-          const gi        = GROUP_ICONS[group]  || '•'
-          const isOpen    = openGroup === group
-          const groupItems= visibleNav.filter(n => n.group === group)
-          const hasActive = groupItems.some(n => n.key === page)
+          const gi         = GROUP_ICONS[group] || '•'
+          const isOpen     = openGroup === group
+          const groupItems = visibleNav.filter(n => n.group === group)
+          const isSelected = selectedGroup === group
 
-          // Collapsed sidebar: show only icons, no accordion headers
-          if (!sideOpen && !inOverlay) {
+          /* ── COLLAPSED sidebar: icon-only strip ── */
+          if (!expanded) {
             return (
               <div key={group}>
                 {groupItems.map(n => {
                   const isActive = page === n.key
                   return (
                     <button key={n.key} title={n.label}
-                      onClick={() => { setPage(n.key); if(inOverlay) setMobileSide(false) }}
+                      onClick={() => { setPage(n.key) }}
                       style={{
                         width:'100%', display:'flex', alignItems:'center', justifyContent:'center',
-                        background: isActive ? `${gc}30` : 'transparent',
-                        border: isActive ? `1px solid ${gc}44` : '1px solid transparent',
-                        borderRadius:8, padding:'9px', cursor:'pointer', marginBottom:2,
-                      }}>
+                        background: isActive ? SB.teal : 'transparent',
+                        border:'none',
+                        borderRadius:8, padding:'9px 0', cursor:'pointer', marginBottom:2,
+                        outline:'none',
+                        transition:'background 0.1s',
+                      }}
+                      onMouseEnter={e=>{ if(!isActive) e.currentTarget.style.background=SB.hover }}
+                      onMouseLeave={e=>{ if(!isActive) e.currentTarget.style.background='transparent' }}
+                      onFocus={e=>{ e.currentTarget.style.outline=`2px solid ${SB.gold}`; e.currentTarget.style.outlineOffset='2px' }}
+                      onBlur={e=>{ e.currentTarget.style.outline='none' }}
+                    >
                       <span style={{ fontSize:16 }}>{n.icon}</span>
                     </button>
                   )
@@ -437,49 +479,103 @@ function AppShell() {
             )
           }
 
-          // Expanded sidebar: accordion
+          /* ── EXPANDED sidebar: accordion ── */
           return (
             <div key={group} style={{ marginBottom:2 }}>
-              {/* Group header — clickable */}
+              {/* Group header row */}
               <button
-                onClick={() => setOpenGroup(isOpen ? null : group)}
+                aria-expanded={isOpen}
+                onClick={() => {
+                  setSelectedGroup(group)
+                  setOpenGroup(isOpen ? null : group)
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setSelectedGroup(group)
+                    setOpenGroup(isOpen ? null : group)
+                  }
+                }}
                 style={{
                   width:'100%', display:'flex', alignItems:'center', gap:8,
-                  background: hasActive ? `${gc}18` : 'transparent',
-                  border:'none', borderRadius:8,
-                  padding:'8px 8px', cursor:'pointer',
+                  background: isSelected ? SB.gold : 'transparent',
+                  border:'none',
+                  borderRadius:8,
+                  padding:'8px 10px',
+                  cursor:'pointer',
                   marginBottom: isOpen ? 2 : 0,
-                  transition:'all 0.15s',
-                }}>
+                  transition:'background 0.15s',
+                  outline:'none',
+                  boxSizing:'border-box',
+                }}
+                onMouseEnter={e=>{ if(!isSelected) e.currentTarget.style.background=SB.hover }}
+                onMouseLeave={e=>{ if(!isSelected) e.currentTarget.style.background='transparent' }}
+                onFocus={e=>{ e.currentTarget.style.outline=`2px solid ${SB.gold}`; e.currentTarget.style.outlineOffset='1px' }}
+                onBlur={e=>{ e.currentTarget.style.outline='none' }}
+              >
                 <span style={{ fontSize:14, flexShrink:0 }}>{gi}</span>
-                <span style={{ fontSize:11, fontWeight:700, color: hasActive ? gc : 'rgba(255,255,255,0.55)', letterSpacing:0.5, flex:1, textAlign:'left', textTransform:'uppercase' }}>
+                <span style={{
+                  fontSize:12, fontWeight:600, fontFamily:SB.font, letterSpacing:0.4,
+                  color: isSelected ? SB.goldText : SB.textMuted,
+                  flex:1, textAlign:'left', textTransform:'uppercase',
+                  overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+                }}>
                   {group}
                 </span>
-                <span style={{ fontSize:10, color:'rgba(255,255,255,0.3)', transition:'transform 0.2s', display:'inline-block', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+                {/* chevron: down when open, right when closed */}
+                <span style={{
+                  fontSize:11,
+                  color: isSelected ? SB.goldText : SB.textMuted,
+                  flexShrink:0, lineHeight:1,
+                  transition:'transform 0.2s',
+                  display:'inline-block',
+                  transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
+                }}>▾</span>
               </button>
 
-              {/* Group items — shown only when open */}
+              {/* Sub-items */}
               {isOpen && (
-                <div style={{ paddingLeft:10, borderLeft:`2px solid ${gc}33`, marginLeft:8, marginBottom:4 }}>
+                <div style={{
+                  paddingLeft:10,
+                  borderLeft:`2px solid ${SB.divider}`,
+                  marginLeft:11,
+                  marginBottom:4,
+                }}>
                   {groupItems.map(n => {
                     const isActive = page === n.key
                     return (
                       <button key={n.key}
+                        aria-current={isActive ? 'page' : undefined}
                         onClick={() => { setPage(n.key); if(inOverlay) setMobileSide(false) }}
                         style={{
                           width:'100%', display:'flex', alignItems:'center', gap:8,
-                          background: isActive ? `${gc}28` : 'transparent',
-                          color: isActive ? '#fff' : 'rgba(255,255,255,0.6)',
-                          border: isActive ? `1px solid ${gc}44` : '1px solid transparent',
-                          borderRadius:7, padding:'7px 8px',
-                          cursor:'pointer', fontSize:12, fontWeight: isActive ? 700 : 400,
-                          marginBottom:1, transition:'all 0.1s', textAlign:'left',
-                        }}>
+                          background: isActive ? SB.teal : 'transparent',
+                          color: isActive ? SB.tealText : SB.text,
+                          border:'none',
+                          borderRadius:8,
+                          padding:'7px 8px 7px 6px',
+                          cursor:'pointer',
+                          fontSize:13,
+                          fontWeight: isActive ? 600 : 400,
+                          fontFamily: SB.font,
+                          marginBottom:1,
+                          transition:'background 0.1s',
+                          textAlign:'left',
+                          outline:'none',
+                          boxSizing:'border-box',
+                        }}
+                        onMouseEnter={e=>{ if(!isActive) e.currentTarget.style.background=SB.hover }}
+                        onMouseLeave={e=>{ if(!isActive) e.currentTarget.style.background='transparent' }}
+                        onFocus={e=>{ e.currentTarget.style.outline=`2px solid ${SB.teal}`; e.currentTarget.style.outlineOffset='1px' }}
+                        onBlur={e=>{ e.currentTarget.style.outline='none' }}
+                      >
                         <span style={{ fontSize:14, flexShrink:0 }}>{n.icon}</span>
-                        <span style={{ whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                        <span style={{ flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                           {isAr ? n.labelAr : n.label}
                         </span>
-                        {isActive && <div style={{ marginLeft:'auto', width:4, height:4, borderRadius:'50%', background:gc, flexShrink:0 }} />}
+                        {isActive && (
+                          <span style={{ fontSize:11, color:SB.tealText, flexShrink:0, marginLeft:2 }}>✓</span>
+                        )}
                       </button>
                     )
                   })}
@@ -490,56 +586,66 @@ function AppShell() {
         })}
       </div>
 
-      {/* Bottom bar */}
-      <div style={{ padding:'8px 6px', borderTop:'1px solid rgba(255,255,255,0.10)', flexShrink:0 }}>
+      {/* ── FOOTER ─────────────────────────────────────────────────── */}
+      <div style={{ padding:'8px 8px', borderTop:`1px solid ${SB.divider}`, flexShrink:0 }}>
         {/* Role badge */}
-        {(sideOpen||inOverlay) && (
+        {expanded && (
           <div style={{ textAlign:'center', marginBottom:6 }}>
-            <span style={{ background:'rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.5)', fontSize:9, fontWeight:700, borderRadius:5, padding:'2px 8px' }}>
+            <span style={{ background:'rgba(255,255,255,0.07)', color:SB.textMuted, fontSize:9, fontWeight:600, borderRadius:5, padding:'2px 8px', fontFamily:SB.font, letterSpacing:0.5 }}>
               {role?.replace(/_/g,' ')}
             </span>
           </div>
         )}
         {/* Lang toggle */}
-        <button onClick={()=>setLang(l=>l==='en'?'ar':'en')} style={{ width:'100%', background:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.4)', border:'none', borderRadius:7, padding:'6px', cursor:'pointer', fontSize:10, marginBottom:3 }}>
-          {(sideOpen||inOverlay) ? (isAr?'English':'العربية') : '🌐'}
+        <button onClick={()=>setLang(l=>l==='en'?'ar':'en')}
+          style={{ width:'100%', background:'rgba(255,255,255,0.05)', color:SB.textMuted, border:'none', borderRadius:7, padding:'6px', cursor:'pointer', fontSize:10, marginBottom:3, fontFamily:SB.font, transition:'background 0.1s' }}
+          onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.10)'}
+          onMouseLeave={e=>e.currentTarget.style.background='rgba(255,255,255,0.05)'}
+        >
+          {expanded ? (isAr ? 'English' : 'العربية') : '🌐'}
         </button>
         {/* Collapse toggle (desktop only) */}
         {!isMobile && (
-          <button onClick={()=>setSideOpen(v=>!v)} style={{ width:'100%', background:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.4)', border:'none', borderRadius:7, padding:'6px', cursor:'pointer', fontSize:10, marginBottom:6 }}>
+          <button onClick={()=>setSideOpen(v=>!v)}
+            style={{ width:'100%', background:'rgba(255,255,255,0.05)', color:SB.textMuted, border:'none', borderRadius:7, padding:'6px', cursor:'pointer', fontSize:10, marginBottom:6, fontFamily:SB.font, transition:'background 0.1s' }}
+            onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.10)'}
+            onMouseLeave={e=>e.currentTarget.style.background='rgba(255,255,255,0.05)'}
+          >
             {sideOpen ? '◀ Collapse' : '▶'}
           </button>
         )}
-        {/* Sign Out — prominent */}
-        <button onClick={signOut} style={{
-          width:'100%', background:'rgba(220,38,38,0.15)', color:'#fca5a5',
-          border:'1px solid rgba(220,38,38,0.3)', borderRadius:8,
-          padding: (sideOpen||inOverlay) ? '9px 10px' : '9px',
-          cursor:'pointer', fontSize:12, fontWeight:700,
-          display:'flex', alignItems:'center', justifyContent:(sideOpen||inOverlay)?'flex-start':'center',
-          gap:8, transition:'background 0.15s',
-        }}
-          onMouseEnter={e => e.currentTarget.style.background='rgba(220,38,38,0.28)'}
-          onMouseLeave={e => e.currentTarget.style.background='rgba(220,38,38,0.15)'}
+        {/* Sign Out */}
+        <button onClick={signOut}
+          style={{
+            width:'100%', background:'rgba(220,38,38,0.14)', color:'#fca5a5',
+            border:'1px solid rgba(220,38,38,0.28)', borderRadius:8,
+            padding: expanded ? '9px 10px' : '9px',
+            cursor:'pointer', fontSize:12, fontWeight:600, fontFamily:SB.font,
+            display:'flex', alignItems:'center', justifyContent:expanded?'flex-start':'center',
+            gap:8, transition:'background 0.15s',
+          }}
+          onMouseEnter={e=>e.currentTarget.style.background='rgba(220,38,38,0.26)'}
+          onMouseLeave={e=>e.currentTarget.style.background='rgba(220,38,38,0.14)'}
         >
           <span>🚪</span>
-          {(sideOpen||inOverlay) && <span>Sign Out</span>}
+          {expanded && <span>Sign Out</span>}
         </button>
       </div>
     </div>
-  )
+    )
+  }
 
   // ── Chapter nav: the NAV entry for the current page (null for dashboard)
   const chapterNav = visibleNav.find(n => n.key === page)
 
   return (
-    <div style={{ display:'flex', height:'100vh', fontFamily:"'Segoe UI',system-ui,sans-serif", background:'#f4f7fb', overflow:'hidden', direction:isAr?'rtl':'ltr', position:'relative', width:'100%', maxWidth:1126, margin:'0 auto', boxSizing:'border-box', borderInline:'1px solid #e5e4e7' }}>
+    <div style={{ display:'flex', height:'100vh', fontFamily:"'Segoe UI',system-ui,sans-serif", background:'#f4f7fb', overflow:'hidden', direction:isAr?'rtl':'ltr', position:'relative', width:'100%', boxSizing:'border-box' }}>
 
       {/* MOBILE OVERLAY SIDEBAR */}
       {isMobile && mobileSideOpen && (
         <>
           <div onClick={()=>setMobileSide(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:40 }} />
-          <div style={{ position:'fixed', top:0, left:0, width:260, height:'100vh', background:'#1a2e3d', zIndex:50, overflow:'hidden' }}>
+          <div style={{ position:'fixed', top:0, left:0, width:260, height:'100vh', background:'#192F3E', zIndex:50, overflow:'hidden' }}>
             <SidebarContent inOverlay />
           </div>
         </>
@@ -547,7 +653,7 @@ function AppShell() {
 
       {/* DESKTOP SIDEBAR */}
       {!isMobile && (
-        <div style={{ width:sideWidth, background:'#1a2e3d', transition:'width 0.2s', flexShrink:0, overflow:'hidden' }}>
+        <div style={{ width:sideWidth, background:'#192F3E', transition:'width 0.2s', flexShrink:0, overflow:'hidden' }}>
           <SidebarContent inOverlay={false} />
         </div>
       )}
@@ -574,40 +680,11 @@ function AppShell() {
           </div>
         </div>
 
-        {/* ── Global Chapter H1 — auto-applied to every page, zero per-page changes ── */}
-        {chapterNav && (
-          <div style={{
-            background: '#fff',
-            borderBottom: '1px solid #e8ecf4',
-            padding: '14px 22px 12px',
-            flexShrink: 0,
-            display: 'flex', alignItems: 'center', gap: 10,
-            fontFamily: "'Poppins', sans-serif",
-          }}>
-            {/* chapter color stripe */}
-            <div style={{
-              width: 4, height: 32, borderRadius: 2, flexShrink: 0,
-              background: GROUP_COLORS[chapterNav.group] || '#546e7a',
-            }} />
-            {/* group icon */}
-            <span style={{ fontSize: 20, lineHeight: 1 }}>
-              {GROUP_ICONS[chapterNav.group] || '•'}
-            </span>
-            {/* Page name as H2 — group name is already in the top bar as H1 */}
-            <div>
-              <h2 style={{
-                margin: 0, fontSize: 20, fontWeight: 700, color: '#1e293b',
-                lineHeight: 1, fontFamily: "'Poppins', sans-serif",
-              }}>
-                {isAr ? chapterNav.labelAr : chapterNav.label}
-              </h2>
-            </div>
-          </div>
-        )}
+        {/* Global Chapter H1 banner removed — page identity comes from the section heading bar in ChapterPage */}
 
         {/* Page content */}
-        <div style={{ flex:1, overflowY:'auto', padding: isMobile ? '0 12px 12px' : '0 22px 22px' }}>
-          <div style={{ maxWidth:1400, margin:'0 auto' }}>
+        <div style={{ flex:1, overflow:'hidden', minHeight:0, padding: isMobile ? '0 12px' : '0 22px' }}>
+          <div style={{ height:'100%', overflowY:'auto', display:'flex', flexDirection:'column' }}>
             {page==='dashboard'       && <Dashboard      entityId={activeEntityId} entityCode={activeCode} isAr={isAr} onNavigate={setPage} />}
             {page==='approvals'       && <Approvals      entityId={activeEntityId} role={role} isAr={isAr} />}
             {page==='new_ticket'      && <TicketsPage    entityId={activeEntityId} isAr={isAr} />}
@@ -631,7 +708,7 @@ function AppShell() {
             {page==='payments'        && <Payments       entityId={activeEntityId} entityName={entity.name} entityNameEn={entity.name} isAr={isAr} />}
             {page==='reports'         && <Reports        entityId={activeEntityId} entityCode={activeCode} isAr={isAr} />}
             {page==='pnl'             && <PnL            entityId={activeEntityId} entityCode={activeCode} isAr={isAr} />}
-            {page==='income_statement'&& <PnL            entityId={activeEntityId} entityCode={activeCode} isAr={isAr} />}
+            {page==='income_statement'&& <PnL            entityId={activeEntityId} entityCode={activeCode} isAr={isAr} title="📈 Income Statement" />}
             {page==='budget'          && <Budget          entityId={activeEntityId} />}
             {page==='fixed_assets'    && <FixedAssets     entityId={activeEntityId} />}
             {page==='chart_of_accounts' && <ChartOfAccounts entityId={activeEntityId} />}

@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { kpiCardGradient } from '../styles/appStyles'
+
+const L1 = '#BCA99A'
+const L2 = '#F7F2ED'
+const L3 = '#795338'
 
 // Payslip PDF Generator
 // Per employee, per month — all salary components, GOSI, deductions, net
@@ -290,20 +295,61 @@ export default function Payslip({ entityId, entityCode }) {
 
   const batchEmp = slip => employees.find(e=>e.id===slip.employee_id)
 
-  return (
-    <div>
-      {/* Header */}
-      <div style={{ fontSize:12, color:'#6b7c93', marginBottom:20 }}>Generate bilingual payslips · Print or PDF</div>
+  const psKpis = [
+    { label: 'Payroll Months', val: payrollRuns.length, unit: 'available' },
+    { label: 'Employees', val: employees.length, unit: 'on record' },
+    { label: 'Batch Loaded', val: batchSlips.length, unit: 'payslips' },
+  ]
 
-      {/* Mode tabs */}
-      <div style={{ display:'flex', gap:4, marginBottom:18 }}>
-        {[['single','Single Employee'],['batch','Batch (Full Month)']].map(([k,l])=>(
-          <button key={k} onClick={()=>setMode(k)} style={{
-            padding:'8px 20px', borderRadius:8, border:'none', cursor:'pointer', fontWeight:700, fontSize:13,
-            background:mode===k?'#1a2e3d':'#f0f4f8', color:mode===k?'#fff':'#6b7c93'
-          }}>{l}</button>
-        ))}
-      </div>
+  return (
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:'Poppins,sans-serif', fontSize:13 }}>
+
+      {/* ══ UPPER ZONE ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+        {/* L1 Heading Bar */}
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>🧾 Payslip</div>
+              <div style={{ fontSize:10, color:'#fff', opacity:0.85 }}>Generate bilingual payslips · Print or PDF</div>
+            </div>
+          </div>
+        </div>
+
+        {/* KPI strip */}
+        <div style={{ display:'flex', gap:12, padding:'10px 28px 12px', background:L2, flexWrap:'wrap' }}>
+          {psKpis.map((k, i) => {
+            const g = kpiCardGradient(i, L1, L2, L3)
+            return (
+              <div key={k.label} style={{ ...g, width:160, height:62, borderRadius:10, padding:'0 14px', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.12)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+                <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', opacity:0.75, marginBottom:2 }}>{k.label}</div>
+                <div style={{ fontSize:17, fontWeight:800, lineHeight:1 }}>{k.val}</div>
+                {k.unit && <div style={{ fontSize:9, opacity:0.7, marginTop:2 }}>{k.unit}</div>}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Mode tab bar */}
+        <div style={{ padding:'0 28px', borderBottom:'2px solid #e8edf2' }}>
+          <div style={{ display:'flex', gap:0, background:'transparent', paddingTop:4 }}>
+            {[['single','👤 Single Employee'],['batch','📦 Batch (Full Month)']].map(([k,l])=>(
+              <button key={k} onClick={() => setMode(k)} style={{
+                background:'transparent', color: mode === k ? L3 : '#6b7c93',
+                border:'none', borderBottom: mode === k ? `2px solid ${L3}` : '2px solid transparent',
+                padding:'7px 20px', fontSize:12, fontWeight:700, cursor:'pointer',
+                fontFamily:'Poppins,sans-serif', marginBottom:-2,
+              }}>{l}</button>
+            ))}
+          </div>
+        </div>
+
+      </div>{/* end upper zone */}
+
+      {/* ══ SCROLL ZONE ══ */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
+      <div style={{ background:'#fff', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 8px rgba(0,0,0,0.08)', padding:'16px 20px' }}>
 
       {mode==='single' && (
         <div style={{ ...S.card, display:'flex', gap:12, flexWrap:'wrap', alignItems:'flex-end' }}>
@@ -386,6 +432,8 @@ export default function Payslip({ entityId, entityCode }) {
           </div>
         )}
       </div>
+      </div>{/* end white box */}
+      </div>{/* end scroll zone */}
     </div>
   )
 }

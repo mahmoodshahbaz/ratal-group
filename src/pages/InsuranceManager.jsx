@@ -1,10 +1,12 @@
-import { GROUP_COLORS } from '../styles/appStyles'
+import { GROUP_COLORS, kpiCardGradient } from '../styles/appStyles'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import PageBanner from '../components/PageBanner'
 import FormShell  from '../components/FormShell'
 
 const MC  = GROUP_COLORS.HR   // '#795338'
+const L1  = '#BCA99A'
+const L2  = '#F7F2ED'
 const fmt = d => d ? new Date(d).toLocaleDateString('en-GB') : '—'
 const TODAY = new Date().toISOString().slice(0, 10)
 
@@ -519,10 +521,24 @@ export default function InsuranceManager({ entityId }) {
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div style={{ fontFamily:'Poppins,sans-serif', fontSize:13 }}>
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:'Poppins,sans-serif', fontSize:13 }}>
+
+      {/* ══ UPPER ZONE (always visible) ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+      {/* L1 Heading Bar */}
+      <div style={{ padding:'6px 28px 0' }}>
+        <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <div>
+            <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>🏥 Insurance Manager</div>
+            <div style={{ fontSize:10, color:'#fff', opacity:0.85 }}>Health · Vehicle · Shipment insurance policies and coverage management</div>
+          </div>
+        </div>
+      </div>
 
       {/* ── Tab bar ── */}
-      <div style={{ display:'flex', gap:0, marginBottom:14, background:'#f0f4f8', borderRadius:8, padding:3, width:'fit-content' }}>
+      <div style={{ padding:'0 28px', borderBottom:'2px solid #e8edf2' }}>
+      <div style={{ display:'flex', gap:0, background:'transparent', paddingTop:4 }}>
         {['HEALTH','VEHICLE','SHIPMENT'].map(t => (
           <button key={t} onClick={() => setTab(t)} style={{
             background: tab === t ? TAB_COLOR[t] : 'transparent',
@@ -534,9 +550,11 @@ export default function InsuranceManager({ entityId }) {
           </button>
         ))}
       </div>
+      </div>{/* end tab bar */}
 
-      {/* ── Header row ── */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+      {/* ── Filter / Header row ── */}
+      <div style={{ padding:'6px 28px 8px' }}>
+      <div style={{ background:'#fff', padding:'10px 14px', borderRadius:8, boxShadow:'0 1px 4px rgba(0,0,0,0.08)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
         <div style={{ fontSize:12, color:'#64748b' }}>
           {tab === 'HEALTH'   && 'Group health insurance — per-employee & dependent certificates, coverage classes, CSV import'}
           {tab === 'VEHICLE'  && 'Fleet insurance — per-vehicle certificates, declared values, Own Fleet only'}
@@ -546,23 +564,29 @@ export default function InsuranceManager({ entityId }) {
       </div>
 
       {/* ── KPI strip ── */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:14 }}>
-        {['HEALTH','VEHICLE','SHIPMENT'].map(t => {
+      <div style={{ display:'flex', gap:12, padding:'10px 0 12px', flexWrap:'wrap', background:L2 }}>
+        {['HEALTH','VEHICLE','SHIPMENT'].map((t, i) => {
           const k = kpiCounts[t] || { total:0, active:0, expired:0 }
+          const cardStyle = kpiCardGradient(i, L1, L2, MC)
           return (
             <div key={t} onClick={() => setTab(t)} style={{
-              background:`linear-gradient(135deg,${TAB_COLOR[t]}dd,${TAB_COLOR[t]})`,
-              borderRadius:8, padding:'10px 16px', color:'#fff', cursor:'pointer',
-              boxShadow: tab===t ? `0 0 0 3px #fff,0 0 0 5px ${TAB_COLOR[t]}` : '0 2px 8px rgba(0,0,0,0.15)',
-              transform: tab===t ? 'scale(1.03)' : 'scale(1)', transition:'all 0.15s',
+              ...cardStyle, width:160, height:62, borderRadius:10, padding:'0 14px',
+              flexShrink:0, boxShadow: tab===t ? `0 0 0 3px #fff,0 0 0 5px ${MC}` : '0 2px 8px rgba(0,0,0,0.10)',
+              display:'flex', flexDirection:'column', justifyContent:'center', boxSizing:'border-box',
+              cursor:'pointer', transform: tab===t ? 'scale(1.03)' : 'scale(1)', transition:'all 0.15s',
             }}>
-              <div style={{ fontSize:22, fontWeight:800, lineHeight:1 }}>{k.active}</div>
-              <div style={{ fontSize:10, opacity:0.85, marginTop:2 }}>Active {t} Policies</div>
-              {k.expired > 0 && <div style={{ fontSize:10, opacity:0.7 }}>{k.expired} expired</div>}
+              <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, opacity:0.75, marginBottom:2 }}>Active {t}</div>
+              <div style={{ fontSize:18, fontWeight:800, lineHeight:1.1 }}>{k.active}{k.expired > 0 ? <span style={{fontSize:10,opacity:0.7,fontWeight:600}}> · {k.expired} exp</span> : ''}</div>
             </div>
           )
         })}
       </div>
+
+      </div>{/* end header+kpi outer */}
+      </div>{/* end upper zone */}
+
+      {/* ── SCROLL ZONE ── */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
 
       {/* ── Policy list ── */}
       {loading ? (
@@ -762,6 +786,8 @@ export default function InsuranceManager({ entityId }) {
           </div>
         )
       })}
+
+      </div>{/* end scroll zone */}
 
       {/* ══════════════════════════════════════════════════════════════════════
           PAGE BANNER

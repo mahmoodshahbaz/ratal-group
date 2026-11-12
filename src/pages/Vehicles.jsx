@@ -1,8 +1,12 @@
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
 import FormShell from '../components/FormShell'
-import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
-const MC = GROUP_COLORS.Operations
+import { GROUP_COLORS, CHAPTER_PALETTES, kpiCardGradient, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
+const MC  = GROUP_COLORS.Operations
+const PAL = CHAPTER_PALETTES.Operations
+const L1  = PAL.L1   // #70A5A6
+const L2  = PAL.L2   // #EAF3F2
+const L3  = PAL.L3   // #0079BC
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useExpandable, ExpandableRow, DetailField, DetailRow, DetailSection, DetailActions } from '../components/ExpandableRow'
@@ -37,7 +41,7 @@ const S = {
   row:   { display:'flex', gap:12, marginBottom:14 },
   col:   { flex:1 },
   tbl:   { width:'100%', borderCollapse:'collapse', fontSize:12 },
-  th:    { background:MC, color:'#fff', padding:'9px 12px', fontWeight:700, textAlign:'left', fontSize:11, fontFamily:"'Poppins',sans-serif" },
+  th:    { background:MC, color:'#fff', padding:'9px 12px', fontWeight:700, textAlign:'left', fontSize:11, fontFamily:"'Poppins',sans-serif", position:'sticky', top:0, zIndex:2 },
   td:    { padding:'9px 12px', borderBottom:'1px solid #f0f4f8', color:'#1a2e3d', verticalAlign:'middle' },
   overlay:{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' },
   modal: { background:'#fff', borderRadius:16, padding:28, width:720, maxWidth:'97vw', maxHeight:'93vh', overflowY:'auto', boxShadow:'0 8px 40px rgba(0,0,0,0.18)' },
@@ -493,7 +497,7 @@ export default function Vehicles({ entityId }) {
       (v.driver_name||'').toLowerCase().includes(filter.search.toLowerCase()))
 
   return (
-    <div>
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background: L2 }}>
       {/* ── Step 0 Opening Banner ── */}
       <PageBanner
         isOpen={showVehBanner}
@@ -523,38 +527,50 @@ export default function Vehicles({ entityId }) {
         steps={['Vehicle Information', 'Employee Information']}
       />
 
-      {/* Header — chapter H1 provided by AppShell; only action button here */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
-        <div style={{ fontSize:12, color:'#64748b' }}>Fleet register · Document expiry · Maintenance log</div>
-        <button style={S.btn()} onClick={openNewVeh}>+ Add Vehicle</button>
+      {/* ── Upper zone: stationary (flexShrink:0) ── */}
+      <div style={{ flexShrink:0, background: L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+
+      {/* ── L1 Section heading bar ── */}
+      <div style={{ background: L2, padding:'6px 28px 0' }}>
+        <div style={{ background: L1, padding:'8px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <div>
+            <div style={{ fontSize:15, fontWeight:700, color:'#fff', fontFamily:"'Poppins',sans-serif", lineHeight:1.2 }}>Fleet Management</div>
+            <div style={{ fontSize:10, color:'rgba(255,255,255,0.8)', marginTop:2, fontFamily:"'Poppins',sans-serif" }}>Fleet register · Document expiry · Maintenance log</div>
+          </div>
+          <button style={S.btn(L3)} onClick={openNewVeh}>+ Add Vehicle</button>
+        </div>
       </div>
 
-      {/* KPI Cards — 6-column grid, never scrolls */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:10, marginBottom:18 }}>
+      {/* ── KPI bar — 160×62px fixed, chapter gradient ── */}
+      <div style={{ display:'flex', flexWrap:'wrap', gap:8, padding:'14px 28px 10px', background: L2, borderBottom:`1px solid ${L1}44` }}>
         {[
-          { label:'Total Fleet',   value:vehicles.length,                                      grad:'linear-gradient(135deg,#0079BC,#005a8e)', icon:'🚗' },
-          { label:'Own Fleet',     value:vehicles.filter(v=>v.ownership_type!=='RENT').length, grad:'linear-gradient(135deg,#70A5A6,#0079BC)', icon:'🏢' },
-          { label:'Rentals',       value:vehicles.filter(v=>v.ownership_type==='RENT').length, grad:'linear-gradient(135deg,#0079BCaa,#005a8e)', icon:'🔑' },
-          { label:'Active',        value:active.length,                                        grad:'linear-gradient(135deg,#0079BC,#005a8e)', icon:'✅' },
-          { label:'Expiring ≤30d', value:expiring.length,                                      grad:'linear-gradient(135deg,#e65100,#bf360c)', icon:'⚠️', click:()=>setFilter(f=>({...f,status:'ACTIVE'})) },
-          { label:'Expired Docs',  value:expired.length,                                       grad:'linear-gradient(135deg,#c62828,#b71c1c)', icon:'🚨' },
-        ].map(c=>(
-          <div key={c.label} onClick={c.click}
-            style={{ background:c.grad, borderRadius:12, padding:'12px 14px',
-              boxShadow:'0 3px 12px rgba(0,0,0,0.15)', cursor:c.click?'pointer':'default',
-              display:'flex', alignItems:'center', gap:10,
+          { label:'Total Fleet',   value: vehicles.length },
+          { label:'Own Fleet',     value: vehicles.filter(v=>v.ownership_type!=='RENT').length },
+          { label:'Rentals',       value: vehicles.filter(v=>v.ownership_type==='RENT').length },
+          { label:'Active',        value: active.length },
+          { label:'Expiring ≤30d', value: expiring.length, alertGrad:'linear-gradient(135deg,#e65100,#bf360c)', click:()=>setFilter(f=>({...f,status:'ACTIVE'})) },
+          { label:'Expired Docs',  value: expired.length,  alertGrad:'linear-gradient(135deg,#c62828,#b71c1c)' },
+        ].map((k, i) => {
+          const gs       = k.alertGrad ? { background: k.alertGrad, color:'#fff' } : kpiCardGradient(i, L1, L2, L3)
+          const isLight  = !k.alertGrad && i >= 2
+          return (
+            <div key={k.label} onClick={k.click} style={{
+              ...gs,
+              width:160, height:62, borderRadius:8, padding:'0 14px',
+              display:'flex', flexDirection:'column', justifyContent:'center',
+              flexShrink:0, cursor: k.click ? 'pointer' : 'default',
+              boxShadow: i < 2 ? '0 3px 10px rgba(0,0,0,0.20)' : '0 2px 6px rgba(0,0,0,0.08)',
+              boxSizing:'border-box',
             }}>
-            <span style={{ fontSize:20 }}>{c.icon}</span>
-            <div>
-              <div style={{ fontSize:18, fontWeight:800, color:'#fff', lineHeight:1, fontFamily:"'Poppins',sans-serif" }}>{c.value}</div>
-              <div style={{ fontSize:9, color:'rgba(255,255,255,0.8)', fontWeight:700, marginTop:2, whiteSpace:'nowrap', fontFamily:"'Poppins',sans-serif" }}>{c.label}</div>
+              <div style={{ fontSize:9, fontWeight:800, letterSpacing:0.9, textTransform:'uppercase', fontFamily:"'Poppins',sans-serif", opacity: isLight ? 0.6 : 0.75, marginBottom:2 }}>{k.label}</div>
+              <div style={{ fontSize:19, fontWeight:900, lineHeight:1.1, fontFamily:"'Poppins',sans-serif" }}>{k.value}</div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Tabs */}
-      <div style={{ display:'flex', gap:4, marginBottom:0, borderBottom:'2px solid #e8edf2', flexWrap:'wrap' }}>
+      <div style={{ display:'flex', gap:4, marginBottom:0, borderBottom:'2px solid #e8edf2', flexWrap:'wrap', padding:'0 28px' }}>
         {[
           ['register',    '📋 Registered Vehicles'],
           ['assign',      '🔑 Register Vehicle'],
@@ -567,24 +583,34 @@ export default function Vehicles({ entityId }) {
             {l}
           </button>
         ))}
-      </div>
+      </div>{/* end tabs */}
+
+        {/* Filter bar (register tab) — pinned */}
+        {tab==='register' && (
+          <div style={{ padding:'8px 28px 6px' }}>
+            <div style={{ background:'#fff', borderRadius:10, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', padding:'10px 14px', display:'flex', gap:12, flexWrap:'wrap', alignItems:'center' }}>
+              <input style={{ ...S.inp, maxWidth:240 }} placeholder="Search plate, make, model, driver…" value={filter.search} onChange={e=>setFilter(f=>({...f,search:e.target.value}))} />
+              <select style={{ ...S.inp, maxWidth:160 }} value={filter.status} onChange={e=>setFilter(f=>({...f,status:e.target.value}))}>
+                <option value="">All Statuses</option>
+                <option>ACTIVE</option><option>INACTIVE</option><option>SCRAPPED</option>
+              </select>
+              <select style={{ ...S.inp, maxWidth:180 }} value={filter.type} onChange={e=>setFilter(f=>({...f,type:e.target.value}))}>
+                <option value="">All Types</option>
+                {VEHICLE_TYPES.map(t=><option key={t}>{t}</option>)}
+              </select>
+              {(filter.status||filter.type||filter.search) && <button style={{ ...S.btn('#aab2bd'), padding:'7px 14px', fontSize:11 }} onClick={()=>setFilter({status:'',type:'',search:''})}>✕ Clear</button>}
+              <div style={{ fontSize:12, color:'#6b7c93', alignSelf:'center' }}>{filtered.length} vehicles</div>
+            </div>
+          </div>
+        )}
+
+      </div>{/* end upper zone */}
+
+      {/* ── Scroll zone: only data rows scroll ── */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
 
       {tab==='register' && (
         <>
-          {/* Filters */}
-          <div style={{ ...S.card, padding:'12px 16px', display:'flex', gap:12, flexWrap:'wrap', marginTop:14, marginBottom:14, borderRadius:'0 14px 14px 14px' }}>
-            <input style={{ ...S.inp, maxWidth:240 }} placeholder="Search plate, make, model, driver…" value={filter.search} onChange={e=>setFilter(f=>({...f,search:e.target.value}))} />
-            <select style={{ ...S.inp, maxWidth:160 }} value={filter.status} onChange={e=>setFilter(f=>({...f,status:e.target.value}))}>
-              <option value="">All Statuses</option>
-              <option>ACTIVE</option><option>INACTIVE</option><option>SCRAPPED</option>
-            </select>
-            <select style={{ ...S.inp, maxWidth:180 }} value={filter.type} onChange={e=>setFilter(f=>({...f,type:e.target.value}))}>
-              <option value="">All Types</option>
-              {VEHICLE_TYPES.map(t=><option key={t}>{t}</option>)}
-            </select>
-            {(filter.status||filter.type||filter.search) && <button style={{ ...S.btn('#aab2bd'), padding:'7px 14px', fontSize:11 }} onClick={()=>setFilter({status:'',type:'',search:''})}>✕ Clear</button>}
-            <div style={{ fontSize:12, color:'#6b7c93', alignSelf:'center' }}>{filtered.length} vehicles</div>
-          </div>
 
           <div style={S.card}>
             {loading ? <div style={{ textAlign:'center', padding:40, color:'#6b7c93' }}>Loading…</div> : (
@@ -790,6 +816,8 @@ export default function Vehicles({ entityId }) {
           <AllIncidents vehicles={vehicles} />
         </div>
       )}
+
+      </div>{/* end scroll zone */}
 
       {/* ── REGISTER VEHICLE (ASSIGNMENT) MODAL ─────────────────────── */}
       {(() => {

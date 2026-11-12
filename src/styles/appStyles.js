@@ -439,6 +439,55 @@ export const kpiCard = (accentColor, lightBg) => ({
   flex: 1,
 })
 
+// ─────────────────────────────────────────────
+// KPI CARD GRADIENT SYSTEM  (dark-to-light, chapter-aware)
+// Fixed size: 160 × 62px, flex-wrap layout, 8px gap
+// ─────────────────────────────────────────────
+function _hexToRgb(hex) {
+  const n = parseInt((hex || '#546e7a').replace('#', ''), 16)
+  return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff]
+}
+function _toHex(r, g, b) {
+  return '#' + [r, g, b]
+    .map(x => Math.max(0, Math.min(255, Math.round(x))).toString(16).padStart(2, '0'))
+    .join('')
+}
+function _darken(hex, amt = 0.25) {
+  const [r, g, b] = _hexToRgb(hex)
+  return _toHex(r * (1 - amt), g * (1 - amt), b * (1 - amt))
+}
+function _lighten(hex, amt = 0.35) {
+  const [r, g, b] = _hexToRgb(hex)
+  return _toHex(r + (255 - r) * amt, g + (255 - g) * amt, b + (255 - b) * amt)
+}
+
+/**
+ * Returns {background, color, border?} for KPI card at position `index`.
+ * Pattern (dark → light across 5 cards):
+ *   0 — deep dark (darkened L3 → L3)       white text
+ *   1 — L3 accent (L3 → lighter L3)         white text
+ *   2 — L1 muted  (L1 → lighter L1)         dark text
+ *   3 — soft tint (lighter L1 → L2)         dark text
+ *   4 — pure white (#fff, border)            dark text
+ *   5+ wraps around (mod 5)
+ */
+export function kpiCardGradient(index, L1, L2, L3) {
+  const idx    = index % 5
+  const dark3  = _darken(L3, 0.38)
+  const mid3   = _lighten(L3, 0.18)
+  const lt1    = _lighten(L1, 0.28)
+  const lt1b   = _lighten(L1, 0.52)
+  const DARK   = '#172D37'
+  switch (idx) {
+    case 0: return { background: `linear-gradient(135deg, ${dark3} 0%, ${L3} 100%)`, color: '#fff' }
+    case 1: return { background: `linear-gradient(135deg, ${L3} 0%, ${mid3} 100%)`,  color: '#fff' }
+    case 2: return { background: `linear-gradient(135deg, ${L1} 0%, ${lt1} 100%)`,   color: DARK }
+    case 3: return { background: `linear-gradient(135deg, ${lt1b} 0%, ${L2} 100%)`,  color: DARK }
+    case 4: return { background: '#fff', border: `1.5px solid ${L1}`,                color: DARK }
+    default: return { background: '#fff', color: DARK }
+  }
+}
+
 
 // ─────────────────────────────────────────────
 // FILTER CHIP  (above tables)

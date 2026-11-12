@@ -134,3 +134,40 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+/* ── ACCSYS global scrollbar styling ───────────────────────────────────────
+   Thin, navy-tinted scrollbars that blend with the app's color scheme.
+   WebKit (Chrome, Edge, Safari) — full control.
+   Firefox — uses scrollbar-width/color shorthand.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #8ca0bf #f0f4f8;
+}
+
+/* Chrome / Edge / Safari */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f0f4f8;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #8ca0bf;
+  border-radius: 3px;
+  border: 1px solid #f0f4f8;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #5a7aad;
+}
+
+::-webkit-scrollbar-corner {
+  background: #f0f4f8;
+}

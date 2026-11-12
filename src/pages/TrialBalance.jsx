@@ -1,7 +1,10 @@
+const L1 = '#B4BA95'
+const L2 = '#F5F6EB'
+const L3 = '#606D2C'
+const PP = "'Poppins', sans-serif"
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
 import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
-const MC = GROUP_COLORS.Accounting
 /**
  * TrialBalance.jsx
  * Aggregates all posted journal_entry_lines up to a chosen date,
@@ -13,7 +16,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
 const S = {
-  th: { padding:'9px 14px', textAlign:'left', fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:0.5, background:MC, color:'#fff', whiteSpace:'nowrap' },
+  th: { padding:'9px 14px', textAlign:'left', fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:0.5, background:L3, color:'#fff', whiteSpace:'nowrap' },
   td: { padding:'9px 14px', fontSize:13, color:'#2d3a45', borderBottom:'1px solid #f0f4f8', verticalAlign:'middle' },
 }
 
@@ -187,120 +190,127 @@ export default function TrialBalance({ entityId }) {
   }
 
   return (
-    <div style={{ padding:24, maxWidth:1100, margin:'0 auto' }}>
-      {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20 }}>
-        <div>
-          <div style={{ fontSize:13, color:'#6b7c93' }}>Cumulative balances of all posted journal entries</div>
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:PP }}>
+      {/* UPPER ZONE */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>⚖️ Trial Balance</div>
+              <div style={{ fontSize:10, color:'#fff', opacity:0.8 }}>Cumulative balances of all posted journal entries</div>
+            </div>
+            <button onClick={handlePrint} disabled={!rows.length} style={{ background:'rgba(255,255,255,0.18)', color:'#fff', border:'1.5px solid rgba(255,255,255,0.4)', borderRadius:8, padding:'7px 16px', cursor:'pointer', fontSize:12, fontWeight:700 }}>
+              🖨 Print
+            </button>
+          </div>
         </div>
-        <button onClick={handlePrint} disabled={!rows.length} style={{ background:'#1a2e3d', color:'#fff', border:'none', borderRadius:9, padding:'9px 20px', cursor:'pointer', fontSize:13, fontWeight:700 }}>
-          🖨 Print
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div style={{ background:'#fff', borderRadius:12, border:'1.5px solid #e8edf5', padding:16, marginBottom:16, display:'flex', gap:16, alignItems:'flex-end', flexWrap:'wrap' }}>
-        <div>
-          <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>As at Date</div>
-          <input type="date" value={asAt} onChange={e=>setAsAt(e.target.value)}
-            style={{ padding:'8px 12px', borderRadius:7, border:'1px solid #dde3ec', fontSize:13, outline:'none' }} />
+        {/* Filter Bar */}
+        <div style={{ padding:'6px 28px 8px', background:L2 }}>
+          <div style={{ background:'#fff', borderRadius:8, border:'1.5px solid #e8edf5', padding:'10px 14px', display:'flex', gap:16, alignItems:'flex-end', flexWrap:'wrap' }}>
+            <div>
+              <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>As at Date</div>
+              <input type="date" value={asAt} onChange={e=>setAsAt(e.target.value)}
+                style={{ padding:'8px 12px', borderRadius:7, border:'1px solid #dde3ec', fontSize:13, outline:'none' }} />
+            </div>
+            <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, color:'#4a5568', cursor:'pointer', paddingBottom:2 }}>
+              <input type="checkbox" checked={showZero} onChange={e=>setShowZero(e.target.checked)} style={{ width:15, height:15 }} />
+              Show zero-balance accounts
+            </label>
+            {/* Balance check inline */}
+            <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:8, padding:'6px 12px', borderRadius:8, border:`2px solid ${balanced?'#1a7f4b':'#c0392b'}`, background:balanced?'#f0fff4':'#fff5f5' }}>
+              <span style={{ fontSize:16 }}>{balanced?'✅':'❌'}</span>
+              <span style={{ fontWeight:700, color:balanced?'#1a7f4b':'#c0392b', fontSize:12 }}>
+                {balanced ? 'Balanced' : `Off by SAR ${fmt(Math.abs(totals.dr - totals.cr))}`}
+              </span>
+              <span style={{ fontFamily:'monospace', fontSize:11, color:'#6b7c93' }}>DR {fmt(totals.dr)} · CR {fmt(totals.cr)}</span>
+            </div>
+          </div>
         </div>
-        <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, color:'#4a5568', cursor:'pointer', paddingBottom:2 }}>
-          <input type="checkbox" checked={showZero} onChange={e=>setShowZero(e.target.checked)} style={{ width:15, height:15 }} />
-          Show zero-balance accounts
-        </label>
-      </div>
-
-      {/* Balance check banner */}
-      <div style={{ marginBottom:16, padding:'10px 16px', borderRadius:9, border:`2px solid ${balanced?'#1a7f4b':'#c0392b'}`, background:balanced?'#f0fff4':'#fff5f5', display:'flex', alignItems:'center', gap:10 }}>
-        <span style={{ fontSize:18 }}>{balanced?'✅':'❌'}</span>
-        <span style={{ fontWeight:700, color:balanced?'#1a7f4b':'#c0392b', fontSize:14 }}>
-          {balanced
-            ? 'Trial Balance is balanced — Total DR = Total CR'
-            : `NOT BALANCED — Difference: SAR ${fmt(Math.abs(totals.dr - totals.cr))}`}
-        </span>
-        <span style={{ marginLeft:'auto', fontFamily:'monospace', fontSize:13, color:'#6b7c93' }}>
-          DR {fmt(totals.dr)} · CR {fmt(totals.cr)}
-        </span>
-      </div>
-
-      {/* Table */}
-      <div style={{ background:'#fff', borderRadius:12, border:'1.5px solid #e8edf5', overflow:'hidden' }}>
-        {loading ? (
-          <div style={{ padding:60, textAlign:'center', color:'#aab2bd' }}>Loading trial balance…</div>
-        ) : (
+        {/* Column Header Row */}
+        <div style={{ padding:'0 28px' }}>
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
             <thead>
               <tr>
-                <th style={{ ...S.th, width:100 }}>Code</th>
-                <th style={S.th}>Account Name</th>
-                <th style={{ ...S.th, textAlign:'right', width:160 }}>Debit (DR)</th>
-                <th style={{ ...S.th, textAlign:'right', width:160 }}>Credit (CR)</th>
+                <th style={{ ...S.th, background:L3, width:100 }}>Code</th>
+                <th style={{ ...S.th, background:L3 }}>Account Name</th>
+                <th style={{ ...S.th, background:L3, textAlign:'right', width:160 }}>Debit (DR)</th>
+                <th style={{ ...S.th, background:L3, textAlign:'right', width:160 }}>Credit (CR)</th>
               </tr>
             </thead>
-            <tbody>
-              {rows.length === 0 && !loading && (
-                <tr><td colSpan={4} style={{ textAlign:'center', padding:40, color:'#aab2bd' }}>
-                  No posted journal entries found up to {asAt}
-                </td></tr>
-              )}
+          </table>
+        </div>
+      </div>
+      {/* SCROLL ZONE */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
+        <div style={{ background:'#fff', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 8px rgba(0,0,0,0.08)' }}>
+          {loading ? (
+            <div style={{ padding:60, textAlign:'center', color:'#aab2bd' }}>Loading trial balance…</div>
+          ) : (
+            <table style={{ width:'100%', borderCollapse:'collapse' }}>
+              <tbody>
+                {rows.length === 0 && !loading && (
+                  <tr><td colSpan={4} style={{ textAlign:'center', padding:40, color:'#aab2bd' }}>
+                    No posted journal entries found up to {asAt}
+                  </td></tr>
+                )}
 
-              {TYPE_ORDER.map(type => {
-                const grp = groups[type]
-                if (!grp || grp.length === 0) return null
-                const gDr = grp.reduce((s,r)=>s+r.dr_bal,0)
-                const gCr = grp.reduce((s,r)=>s+r.cr_bal,0)
-                return (
-                  <>
-                    {/* Type header */}
-                    <tr key={`hdr-${type}`}>
-                      <td colSpan={4} style={{ padding:'10px 14px', background:'#1a2e3d', color:'#cfd8e3', fontWeight:800, fontSize:11, textTransform:'uppercase', letterSpacing:0.6 }}>
-                        <span style={{ marginRight:8, opacity:0.6 }}>●</span>{type}
-                      </td>
-                    </tr>
-
-                    {/* Account rows */}
-                    {grp.map((r, i) => (
-                      <tr key={r.account_id} style={{ background: i%2===0?'#fff':'#fafbfc' }}>
-                        <td style={{ ...S.td, fontFamily:'monospace', fontSize:12, color:'#6b7c93' }}>{r.account_code}</td>
-                        <td style={{ ...S.td, fontWeight:500 }}>{r.account_name}</td>
-                        <td style={{ ...S.td, textAlign:'right', fontFamily:'monospace', color:'#1a7f4b', fontWeight:r.dr_bal>0?700:400 }}>
-                          {r.dr_bal > 0 ? fmt(r.dr_bal) : ''}
-                        </td>
-                        <td style={{ ...S.td, textAlign:'right', fontFamily:'monospace', color:'#c0392b', fontWeight:r.cr_bal>0?700:400 }}>
-                          {r.cr_bal > 0 ? fmt(r.cr_bal) : ''}
+                {TYPE_ORDER.map(type => {
+                  const grp = groups[type]
+                  if (!grp || grp.length === 0) return null
+                  const gDr = grp.reduce((s,r)=>s+r.dr_bal,0)
+                  const gCr = grp.reduce((s,r)=>s+r.cr_bal,0)
+                  return (
+                    <>
+                      {/* Type header */}
+                      <tr key={`hdr-${type}`}>
+                        <td colSpan={4} style={{ padding:'10px 14px', background:L3, color:'#cfd8e3', fontWeight:800, fontSize:11, textTransform:'uppercase', letterSpacing:0.6 }}>
+                          <span style={{ marginRight:8, opacity:0.6 }}>●</span>{type}
                         </td>
                       </tr>
-                    ))}
 
-                    {/* Type subtotal */}
-                    <tr key={`sub-${type}`} style={{ background:'#f0f4f8' }}>
-                      <td colSpan={2} style={{ padding:'8px 14px', textAlign:'right', fontWeight:700, fontSize:12, color:TYPE_COLOR[type] }}>
-                        {type} Subtotal
-                      </td>
-                      <td style={{ padding:'8px 14px', textAlign:'right', fontFamily:'monospace', fontWeight:800, color:'#1a7f4b' }}>
-                        {gDr > 0 ? fmt(gDr) : ''}
-                      </td>
-                      <td style={{ padding:'8px 14px', textAlign:'right', fontFamily:'monospace', fontWeight:800, color:'#c0392b' }}>
-                        {gCr > 0 ? fmt(gCr) : ''}
-                      </td>
-                    </tr>
-                  </>
-                )
-              })}
-            </tbody>
+                      {/* Account rows */}
+                      {grp.map((r, i) => (
+                        <tr key={r.account_id} style={{ background: i%2===0?'#fff':'#fafbfc' }}>
+                          <td style={{ ...S.td, fontFamily:'monospace', fontSize:12, color:'#6b7c93' }}>{r.account_code}</td>
+                          <td style={{ ...S.td, fontWeight:500 }}>{r.account_name}</td>
+                          <td style={{ ...S.td, textAlign:'right', fontFamily:'monospace', color:'#1a7f4b', fontWeight:r.dr_bal>0?700:400 }}>
+                            {r.dr_bal > 0 ? fmt(r.dr_bal) : ''}
+                          </td>
+                          <td style={{ ...S.td, textAlign:'right', fontFamily:'monospace', color:'#c0392b', fontWeight:r.cr_bal>0?700:400 }}>
+                            {r.cr_bal > 0 ? fmt(r.cr_bal) : ''}
+                          </td>
+                        </tr>
+                      ))}
 
-            {rows.length > 0 && (
-              <tfoot>
-                <tr style={{ background:'#1a2e3d' }}>
-                  <td colSpan={2} style={{ padding:'12px 14px', fontWeight:800, fontSize:13, color:'#fff' }}>GRAND TOTAL</td>
-                  <td style={{ padding:'12px 14px', textAlign:'right', fontFamily:'monospace', fontWeight:800, color:'#a8e6c3', fontSize:14 }}>{fmt(totals.dr)}</td>
-                  <td style={{ padding:'12px 14px', textAlign:'right', fontFamily:'monospace', fontWeight:800, color:'#f5a0a0', fontSize:14 }}>{fmt(totals.cr)}</td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        )}
+                      {/* Type subtotal */}
+                      <tr key={`sub-${type}`} style={{ background:'#f0f4f8' }}>
+                        <td colSpan={2} style={{ padding:'8px 14px', textAlign:'right', fontWeight:700, fontSize:12, color:TYPE_COLOR[type] }}>
+                          {type} Subtotal
+                        </td>
+                        <td style={{ padding:'8px 14px', textAlign:'right', fontFamily:'monospace', fontWeight:800, color:'#1a7f4b' }}>
+                          {gDr > 0 ? fmt(gDr) : ''}
+                        </td>
+                        <td style={{ padding:'8px 14px', textAlign:'right', fontFamily:'monospace', fontWeight:800, color:'#c0392b' }}>
+                          {gCr > 0 ? fmt(gCr) : ''}
+                        </td>
+                      </tr>
+                    </>
+                  )
+                })}
+              </tbody>
+
+              {rows.length > 0 && (
+                <tfoot>
+                  <tr style={{ background:L3 }}>
+                    <td colSpan={2} style={{ padding:'12px 14px', fontWeight:800, fontSize:13, color:'#fff' }}>GRAND TOTAL</td>
+                    <td style={{ padding:'12px 14px', textAlign:'right', fontFamily:'monospace', fontWeight:800, color:'#a8e6c3', fontSize:14 }}>{fmt(totals.dr)}</td>
+                    <td style={{ padding:'12px 14px', textAlign:'right', fontFamily:'monospace', fontWeight:800, color:'#f5a0a0', fontSize:14 }}>{fmt(totals.cr)}</td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          )}
+        </div>
       </div>
     </div>
   )

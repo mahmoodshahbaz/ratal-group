@@ -1,5 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { GROUP_COLORS, kpiCardGradient } from '../styles/appStyles'
+const MC = GROUP_COLORS.Reports
+const L1 = '#B8A5CF'
+const L2 = '#F5EFFA'
+const L3 = '#7444A3'
+const PP = "'Poppins', sans-serif"
 
 // ═══════════════════════════════════════════════════════════════════
 // Department P&L — Phase 14   (Cost Center Reporting)
@@ -116,7 +122,7 @@ function getDepartments(entries) {
 // ═══════════════════════════════════════════════════════════════════
 // Tab 1 — Single Department P&L
 // ═══════════════════════════════════════════════════════════════════
-function SingleDeptPL({ entityId }) {
+function SingleDeptPL({ entityId, onKpisChange }) {
   const [from,     setFrom]     = useState(thisYear())
   const [to,       setTo]       = useState(today())
   const [depts,    setDepts]    = useState([])
@@ -131,7 +137,9 @@ function SingleDeptPL({ entityId }) {
     const ds = getDepartments(entries)
     setDepts(ds)
     if (selDept !== 'ALL' && !ds.includes(selDept)) setSelDept('ALL')
-    setPL(buildPL(entries, coaMap, selDept))
+    const result = buildPL(entries, coaMap, selDept)
+    setPL(result)
+    onKpisChange?.(result)
     setLoading(false)
   }, [entityId, from, to, selDept])
 
@@ -222,22 +230,6 @@ function SingleDeptPL({ entityId }) {
         <div style={{ textAlign:'center', padding:60, color:'#6b7c93' }}>Loading…</div>
       ) : !pl ? null : (
         <>
-          {/* KPI strip */}
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:10, marginBottom:14 }}>
-            {[
-              { label:'Revenue',      val:pl.totalIncome,  color:'#1565C0', fmt:v=>`${fmt(v)} SAR` },
-              { label:'Expenses',     val:pl.totalExpense, color:'#c62828', fmt:v=>`${fmt(v)} SAR` },
-              { label:pl.netProfit>=0?'Net Profit':'Net Loss', val:Math.abs(pl.netProfit), color:pl.netProfit>=0?'#2e7d32':'#c62828', fmt:v=>`${fmt(v)} SAR` },
-              { label:'Profit Margin',val:Math.abs(margin), color:margin>=0?'#2e7d32':'#c62828', fmt:v=>`${v.toFixed(1)}%` },
-            ].map(k=>(
-              <div key={k.label} style={{ background:'#fff', borderRadius:12, padding:'14px 16px',
-                boxShadow:'0 1px 6px rgba(0,0,0,0.07)', borderLeft:`4px solid ${k.color}` }}>
-                <div style={{ fontSize:10, color:'#6b7c93' }}>{k.label}</div>
-                <div style={{ fontWeight:800, fontSize:20, color:k.color }}>{k.fmt(k.val)}</div>
-              </div>
-            ))}
-          </div>
-
           {/* P&L table */}
           <div style={{ ...S.card, padding:0, overflow:'hidden' }}>
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
@@ -639,7 +631,8 @@ function TopExpenses({ entityId }) {
 // Main export
 // ═══════════════════════════════════════════════════════════════════
 export default function DepartmentPL({ entityId }) {
-  const [tab, setTab] = useState('single')
+  const [tab,     setTab]     = useState('single')
+  const [kpiData, setKpiData] = useState(null)
 
   const TABS = [
     { key:'single',  label:'🏛 Department P&L' },
@@ -647,32 +640,78 @@ export default function DepartmentPL({ entityId }) {
     { key:'top',     label:'🔥 Top Expenses' },
   ]
 
+  const margin = kpiData && kpiData.totalIncome
+    ? (kpiData.netProfit / kpiData.totalIncome * 100) : 0
+
+  const KPI_CARDS = kpiData ? [
+    { label:'Revenue',      value:`${(kpiData.totalIncome/1000).toFixed(0)}K`,  sub:'SAR' },
+    { label:'Expenses',     value:`${(kpiData.totalExpense/1000).toFixed(0)}K`, sub:'SAR' },
+    { label:kpiData.netProfit>=0?'Net Profit':'Net Loss', value:`${(Math.abs(kpiData.netProfit)/1000).toFixed(0)}K`, sub:'SAR' },
+    { label:'Profit Margin', value:`${Math.abs(margin).toFixed(1)}%`, sub:margin>=0?'positive':'negative' },
+  ] : [
+    { label:'Revenue',      value:'—', sub:'SAR' },
+    { label:'Expenses',     value:'—', sub:'SAR' },
+    { label:'Net Profit',   value:'—', sub:'SAR' },
+    { label:'Profit Margin',value:'—', sub:'%'   },
+  ]
+
   return (
-    <div>
-      <div style={{ fontSize:12, color:'#6b7c93', marginBottom:18 }}>
-        Cost centre reporting — per-department income statements, side-by-side comparison, top expense ranking
-      </div>
+    <div className="dpl-root" style={{ fontFamily:PP, display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2 }}>
+      <style>{`.dpl-root input,.dpl-root select,.dpl-root button,.dpl-root textarea{font-family:'Poppins',sans-serif!important}`}</style>
 
-      <div style={{ display:'flex', gap:4, marginBottom:14, borderBottom:'2px solid #f0f4f8' }}>
-        {TABS.map(t=>(
-          <button key={t.key} onClick={()=>setTab(t.key)}
-            style={{ padding:'8px 18px', fontSize:12, fontWeight:700, cursor:'pointer', border:'none',
-              background:'transparent', borderBottom:tab===t.key?'3px solid #1a2e3d':'3px solid transparent',
-              color:tab===t.key?'#1a2e3d':'#6b7c93', marginBottom:-2 }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* ══ UPPER ZONE ══ */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
 
-      {!entityId ? (
-        <div style={{ textAlign:'center', padding:80, color:'#aab2bd' }}>Select an entity to continue.</div>
-      ) : (
-        <>
-          {tab === 'single' && <SingleDeptPL entityId={entityId} />}
-          {tab === 'matrix' && <AllDeptMatrix entityId={entityId} />}
-          {tab === 'top'    && <TopExpenses   entityId={entityId} />}
-        </>
-      )}
+        {/* L1 Heading Bar */}
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, borderRadius:'6px 6px 0 0', padding:'8px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <span style={{ fontSize:15, fontWeight:700, color:'#fff', letterSpacing:0.3 }}>🏛 Department P&L</span>
+          </div>
+        </div>
+
+        {/* 4 KPI Cards */}
+        <div style={{ padding:'8px 28px 0', display:'flex', gap:10 }}>
+          {KPI_CARDS.map((k, i) => {
+            const g = kpiCardGradient(i, L1, L2, L3)
+            return (
+              <div key={k.label} style={{ ...g, width:200, minHeight:62, borderRadius:10, padding:'10px 14px', display:'flex', flexDirection:'column', justifyContent:'center', flexShrink:0 }}>
+                <div style={{ fontSize:10, opacity:0.8, marginBottom:2 }}>{k.label}</div>
+                <div style={{ fontSize:20, fontWeight:800, lineHeight:1 }}>{k.value}</div>
+                <div style={{ fontSize:9, opacity:0.7, marginTop:2 }}>{k.sub}</div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Tab Bar */}
+        <div style={{ padding:'8px 28px 8px' }}>
+          <div style={{ background:'#fff', padding:'6px 10px', borderRadius:8, boxShadow:'0 1px 4px rgba(0,0,0,0.08)', display:'flex', gap:4 }}>
+            {TABS.map(t=>(
+              <button key={t.key} onClick={()=>setTab(t.key)}
+                style={{ padding:'7px 16px', fontSize:12, fontWeight:700, cursor:'pointer', border:'none',
+                  borderRadius:7,
+                  background:tab===t.key ? L3 : 'transparent',
+                  color:tab===t.key ? '#fff' : '#6b7c93',
+                  transition:'all 0.15s' }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>{/* end upper zone */}
+
+      {/* ══ SCROLL ZONE ══ */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'10px 28px 22px' }}>
+        {!entityId ? (
+          <div style={{ textAlign:'center', padding:80, color:'#aab2bd' }}>Select an entity to continue.</div>
+        ) : (
+          <>
+            {tab === 'single' && <SingleDeptPL entityId={entityId} onKpisChange={setKpiData} />}
+            {tab === 'matrix' && <AllDeptMatrix entityId={entityId} />}
+            {tab === 'top'    && <TopExpenses   entityId={entityId} />}
+          </>
+        )}
+      </div>{/* end scroll zone */}
     </div>
   )
 }

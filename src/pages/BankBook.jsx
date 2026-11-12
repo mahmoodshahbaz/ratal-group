@@ -1,13 +1,16 @@
+const L1 = '#B4BA95'
+const L2 = '#F5F6EB'
+const L3 = '#606D2C'
+const PP = "'Poppins', sans-serif"
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
 import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
-const MC = GROUP_COLORS.Accounting
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const S = {
-  th:  { padding:'9px 10px', textAlign:'left', fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:0.4, background:MC, color:'#fff', borderBottom:'2px solid #e8edf2', whiteSpace:'nowrap' },
+  th:  { padding:'9px 10px', textAlign:'left', fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:0.4, background:L3, color:'#fff', borderBottom:'2px solid #e8edf2', whiteSpace:'nowrap' },
   td:  { padding:'9px 10px', fontSize:12, color:'#2d3a45', borderBottom:'1px solid #f0f4f8', verticalAlign:'middle' },
   inp: { padding:'8px 11px', borderRadius:7, border:'1px solid #dde3ec', fontSize:13, outline:'none', fontFamily:'inherit' },
 }
@@ -221,19 +224,23 @@ export default function BankBook({ entityId }) {
   }
 
   return (
-    <div style={{ padding:24, maxWidth:1200, margin:'0 auto' }}>
-      {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20 }}>
-        <div>
-          <div style={{ fontSize:13, color:'#6b7c93' }}>Running ledger per bank / cash account</div>
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:PP }}>
+      {/* UPPER ZONE */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
+        <div style={{ padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', borderRadius:'6px 6px 0 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>💳 Bank Book</div>
+              <div style={{ fontSize:10, color:'#fff', opacity:0.8 }}>Running ledger per bank / cash account</div>
+            </div>
+            <button onClick={handlePrint} style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'7px 16px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:PP }}>
+              🖨 Print
+            </button>
+          </div>
         </div>
-        <button onClick={handlePrint} style={{ background:'#1a2e3d', color:'#fff', border:'none', borderRadius:9, padding:'9px 20px', cursor:'pointer', fontSize:13, fontWeight:700 }}>
-          🖨 Print
-        </button>
-      </div>
-
-      {/* Controls */}
-      <div style={{ background:'#fff', borderRadius:12, border:'1.5px solid #e8edf5', padding:16, marginBottom:20, display:'flex', gap:12, flexWrap:'wrap', alignItems:'flex-end' }}>
+        {/* Filter Bar */}
+        <div style={{ padding:'6px 28px 8px' }}>
+          <div style={{ background:'#fff', borderRadius:8, padding:'10px 14px', display:'flex', gap:12, flexWrap:'wrap', alignItems:'flex-end' }}>
         {/* Account selector */}
         <div>
           <div style={{ fontSize:11, fontWeight:700, color:'#6b7c93', textTransform:'uppercase', letterSpacing:0.4, marginBottom:4 }}>Account</div>
@@ -267,8 +274,12 @@ export default function BankBook({ entityId }) {
               cursor:'pointer', fontSize:12, fontWeight:700
             }}>{v.label}</button>
           ))}
+          </div>
         </div>
       </div>
+      </div>{/* end upper zone */}
+      {/* SCROLL ZONE */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
 
       {/* Summary cards */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
@@ -353,7 +364,7 @@ export default function BankBook({ entityId }) {
 
                 {rows.length > 0 && (
                   <tfoot>
-                    <tr style={{ background:'#1a2e3d', color:'#fff' }}>
+                    <tr style={{ background:L3, color:'#fff' }}>
                       <td colSpan={5} style={{ padding:'10px 10px', fontWeight:800, fontSize:12 }}>CLOSING BALANCE</td>
                       <td style={{ padding:'10px 10px', textAlign:'right', fontFamily:'monospace', fontWeight:800, color:'#a8e6c3' }}>{fmt(totalDr)}</td>
                       <td style={{ padding:'10px 10px', textAlign:'right', fontFamily:'monospace', fontWeight:800, color:'#f5a0a0' }}>{fmt(totalCr)}</td>
@@ -398,7 +409,7 @@ export default function BankBook({ entityId }) {
                 </tbody>
                 {monthly.length > 0 && (
                   <tfoot>
-                    <tr style={{ background:'#1a2e3d', color:'#fff' }}>
+                    <tr style={{ background:L3, color:'#fff' }}>
                       <td style={{ padding:'10px', fontWeight:800 }}>TOTAL</td>
                       <td style={{ padding:'10px' }}>{txns.length}</td>
                       <td style={{ padding:'10px', textAlign:'right', fontFamily:'monospace', fontWeight:800, color:'#a8e6c3' }}>{fmt(totalDr)}</td>
@@ -456,6 +467,7 @@ export default function BankBook({ entityId }) {
           ⚠️ This bank account is not yet linked to a Chart of Accounts entry. Transactions will appear once the accounting schema is connected.
         </div>
       )}
+      </div>{/* end scroll zone */}
     </div>
   )
 }

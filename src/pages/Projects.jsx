@@ -1,12 +1,17 @@
 import ChapterPage from '../components/ChapterPage'
 import PageBanner from '../components/PageBanner'
 import FormShell from '../components/FormShell'
-import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge } from '../styles/appStyles'
+import { GROUP_COLORS, btn, inputStyle, labelStyle, sectionLabel, thStyle, thStyleFor, tdStyle, statusBadge, CHAPTER_PALETTES, kpiCardGradient } from '../styles/appStyles'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useExpandable, ExpandableRow, DetailField, DetailRow, DetailSection, DetailActions } from '../components/ExpandableRow'
 import { printDocument, openPrintWindow } from '../lib/templatePrint'
-const MC = GROUP_COLORS.Masters       // Masters chapter (Ch02)
+const MC  = GROUP_COLORS.Masters       // Masters chapter (Ch02)
+const PAL = CHAPTER_PALETTES.Masters
+const L1  = PAL.L1   // '#C8B48F'
+const L2  = PAL.L2   // '#FAF5E9'
+const L3  = PAL.L3   // '#8C601B'
+const PP  = "'Poppins',sans-serif"
 
 // ─── Theme ──────────────────────────────────────────────────────
 const T = {
@@ -345,88 +350,115 @@ export default function Projects({ entityId, role }) {
   ).length
 
   return (
-    <div style={{ fontFamily:T.font }}>
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflow:'hidden', background:L2, fontFamily:PP }}>
 
-      {/* ── STICKY: Toolbar + Stats ───────────────────────── */}
-      <div style={{ position:'sticky', top:0, zIndex:20, background:'#f4f7fb', boxShadow:'0 2px 6px rgba(0,0,0,0.06)', paddingBottom:8, marginBottom:4 }}>
+      {/* ── UPPER ZONE ───────────────────────────────────────────── */}
+      <div style={{ flexShrink:0, background:L2, boxShadow:'0 2px 8px rgba(0,0,0,0.07)', zIndex:10 }}>
 
-      {/* ── Row 1: KPIs + Button ──────────────────────────── */}
-      <div style={{ display:'flex', gap:10, flexWrap:'wrap', padding:'10px 0 6px', scrollbarWidth:'none', alignItems:'stretch' }}>
-        {[
-          { label:'Active',    value:totalActive,                     color:'#1b5e20', grad:'linear-gradient(135deg,#43a047 0%,#2e7d32 100%)', icon:'📂' },
-          { label:'Carry-fwd', value:totalCF,                         color:'#bf360c', grad:'linear-gradient(135deg,#ff7043 0%,#e64a19 100%)', icon:'🔄' },
-          { label:'Portfolio', value:`SAR ${fmtSAR(totalValue)}`,     color:'#0d47a1', grad:'linear-gradient(135deg,#42a5f5 0%,#1565c0 100%)', icon:'💼' },
-          { label:'Remaining', value:`SAR ${fmtSAR(totalRemaining)}`, color:'#4a148c', grad:'linear-gradient(135deg,#ab47bc 0%,#7b1fa2 100%)', icon:'💰' },
-        ].map(({ label, value, color, grad, icon }) => (
-          <div key={label} style={{ background:grad, borderRadius:10, padding:'10px 16px', flexShrink:0, minWidth:110, boxShadow:'0 3px 10px rgba(0,0,0,0.15)', position:'relative', overflow:'hidden' }}>
-            <div style={{ position:'absolute', right:8, top:6, fontSize:18, opacity:0.25 }}>{icon}</div>
-            <div style={{ fontSize:9, color:'rgba(255,255,255,0.85)', fontWeight:700, whiteSpace:'nowrap', textTransform:'uppercase', letterSpacing:0.8 }}>{label}</div>
-            <div style={{ fontSize:20, fontWeight:900, color:'#fff', lineHeight:1.2, marginTop:2 }}>{value}</div>
+        {/* L1 heading bar */}
+        <div style={{ background:L2, padding:'6px 28px 0' }}>
+          <div style={{ background:L1, padding:'8px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', borderRadius:'6px 6px 0 0' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#fff', fontFamily:PP, lineHeight:1.2 }}>Projects</div>
+              <div style={{ fontSize:10, color:'rgba(255,255,255,0.8)', marginTop:2, fontFamily:PP }}>Masters · Project portfolio</div>
+            </div>
+            <button onClick={openNew} style={{ background:L3, color:'#fff', border:'none', borderRadius:7, padding:'7px 16px', cursor:'pointer', fontSize:12, fontWeight:700, fontFamily:PP, whiteSpace:'nowrap', boxShadow:'0 2px 6px rgba(0,0,0,0.2)' }}>
+              + Add New Project
+            </button>
           </div>
-        ))}
-        <button onClick={openNew} style={{ marginLeft:'auto', background:'#8C601B', color:'#fff', border:'none', borderRadius:10, padding:'10px 0', cursor:'pointer', fontSize:13, fontWeight:700, whiteSpace:'nowrap', flexShrink:0, minWidth:160, textAlign:'center', boxShadow:'0 3px 8px rgba(140,96,27,0.35)' }}>
-          Add New Project
-        </button>
-      </div>
-
-      {/* ── Row 3: Filters ───────────────────────────────────── */}
-      <div style={{ display:'flex', gap:8, paddingBottom:8, alignItems:'center', flexWrap:'wrap' }}>
-        {/* Status filter */}
-        <select value={filterSt} onChange={e=>setFilterSt(e.target.value)}
-          style={{ padding:'9px 13px', borderRadius:8, border:`1px solid ${T.hairline}`, fontSize:12, color:T.ink, fontFamily:T.font, outline:'none', background:T.canvas, cursor:'pointer' }}>
-          <option value="ALL">All Status</option>
-          {STATUS_OPTS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-
-        {/* New vs Carry-forward filter */}
-        <div style={{ display:'flex', border:`1px solid ${T.hairline}`, borderRadius:8, overflow:'hidden' }}>
-          {[['ALL','All Projects'],['NEW','🆕 New'],['CF','🔄 Carry-forward']].map(([v,l])=>(
-            <button key={v} onClick={()=>setFilterCF(v)} style={{
-              padding:'8px 14px', border:'none', cursor:'pointer', fontSize:12, fontWeight:700,
-              background: filterCF===v ? '#1a2e4a' : T.canvas,
-              color:      filterCF===v ? '#fff'    : T.muted,
-              fontFamily:T.font,
-            }}>{l}</button>
-          ))}
         </div>
 
-        {/* Department filter */}
-        <select value={filterDept} onChange={e=>setFilterDept(e.target.value)}
-          style={{ padding:'9px 13px', borderRadius:8, border:`1px solid ${T.hairline}`, fontSize:12, color:T.ink, fontFamily:T.font, outline:'none', background:T.canvas, cursor:'pointer' }}>
-          <option value="">All Departments</option>
-          {depts.map(d => <option key={d.id} value={d.id}>{d.dept_code || d.dept_name}</option>)}
-        </select>
-        {filterDept && (
-          <button onClick={()=>setFilterDept('')}
-            style={{ background:'#fff8e1', color:'#e65100', border:'1px solid #ffe082', borderRadius:8, padding:'7px 12px', cursor:'pointer', fontSize:12, fontWeight:700 }}>
-            ✕ Dept
-          </button>
-        )}
+        {/* KPI cards */}
+        <div style={{ display:'flex', flexWrap:'wrap', gap:8, padding:'10px 28px 12px', background:L2 }}>
+          {[
+            { label:'Active',    value:String(totalActive) },
+            { label:'Carry-fwd', value:String(totalCF) },
+            { label:'Portfolio', value:`SAR ${fmtSAR(totalValue)}` },
+            { label:'Remaining', value:`SAR ${fmtSAR(totalRemaining)}` },
+          ].map(({ label, value }, i) => {
+            const gs = kpiCardGradient(i, L1, L2, L3)
+            return (
+              <div key={label} style={{ width:160, height:62, borderRadius:10, padding:'0 14px', display:'flex', flexDirection:'column', justifyContent:'center', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.10)', ...gs }}>
+                <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:0.8, opacity:0.75, fontFamily:PP }}>{label}</div>
+                <div style={{ fontSize:18, fontWeight:800, lineHeight:1.2, marginTop:2, fontFamily:PP }}>{value}</div>
+              </div>
+            )
+          })}
+        </div>
 
-        {/* Rollover button — admin only */}
-        {isAdmin && (
-          <button onClick={()=>setShowRollover(true)}
-            style={{ marginLeft:'auto', background: rolloverEligible>0 ? '#e65100' : '#bbb', color:'#fff', border:'none', borderRadius:8, padding:'9px 16px', cursor:'pointer', fontSize:12, fontWeight:700, display:'flex', alignItems:'center', gap:6 }}>
-            🔄 Rollover {rolloverEligible>0 ? `(${rolloverEligible} eligible)` : ''}
-          </button>
-        )}
+        {/* Filter bar — same inset as L1 bar */}
+        <div style={{ padding:'6px 28px 8px', background:L2 }}>
+          <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center', background:'#fff', padding:'10px 14px', borderRadius:8, boxShadow:'0 1px 4px rgba(0,0,0,0.08)' }}>
+            {/* Status filter */}
+            <select value={filterSt} onChange={e=>setFilterSt(e.target.value)}
+              style={{ padding:'9px 13px', borderRadius:8, border:`1px solid ${T.hairline}`, fontSize:12, color:T.ink, fontFamily:PP, outline:'none', background:T.canvas, cursor:'pointer' }}>
+              <option value="ALL">All Status</option>
+              {STATUS_OPTS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
 
-      </div>
+            {/* New vs Carry-forward filter */}
+            <div style={{ display:'flex', border:`1px solid ${T.hairline}`, borderRadius:8, overflow:'hidden' }}>
+              {[['ALL','All Projects'],['NEW','🆕 New'],['CF','🔄 Carry-forward']].map(([v,l])=>(
+                <button key={v} onClick={()=>setFilterCF(v)} style={{
+                  padding:'8px 14px', border:'none', cursor:'pointer', fontSize:12, fontWeight:700,
+                  background: filterCF===v ? L3 : T.canvas,
+                  color:      filterCF===v ? '#fff' : T.muted,
+                  fontFamily:PP,
+                }}>{l}</button>
+              ))}
+            </div>
 
-            </div>{/* end sticky block */}
+            {/* Department filter */}
+            <select value={filterDept} onChange={e=>setFilterDept(e.target.value)}
+              style={{ padding:'9px 13px', borderRadius:8, border:`1px solid ${T.hairline}`, fontSize:12, color:T.ink, fontFamily:PP, outline:'none', background:T.canvas, cursor:'pointer' }}>
+              <option value="">All Departments</option>
+              {depts.map(d => <option key={d.id} value={d.id}>{d.dept_code || d.dept_name}</option>)}
+            </select>
+            {filterDept && (
+              <button onClick={()=>setFilterDept('')}
+                style={{ background:'#fff8e1', color:'#e65100', border:'1px solid #ffe082', borderRadius:8, padding:'7px 12px', cursor:'pointer', fontSize:12, fontWeight:700 }}>
+                ✕ Dept
+              </button>
+            )}
 
-      {/* ── Table ────────────────────────────────────────────────── */}
-      <div style={{ background:T.canvas, borderRadius:12, boxShadow:`0 1px 4px rgba(0,0,0,0.07)`, overflowY:'auto', maxHeight:'calc(100vh - 260px)' }}>
+            {/* Count badge */}
+            <span style={{ marginLeft:'auto', fontSize:11, color:T.muted, fontFamily:PP, whiteSpace:'nowrap' }}>
+              {eligible.length} project{eligible.length!==1?'s':''}
+            </span>
+
+            {/* Rollover button — admin only */}
+            {isAdmin && (
+              <button onClick={()=>setShowRollover(true)}
+                style={{ background: rolloverEligible>0 ? '#e65100' : '#bbb', color:'#fff', border:'none', borderRadius:8, padding:'9px 16px', cursor:'pointer', fontSize:12, fontWeight:700, display:'flex', alignItems:'center', gap:6, fontFamily:PP }}>
+                🔄 Rollover {rolloverEligible>0 ? `(${rolloverEligible} eligible)` : ''}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Column header row — same inset as L1 bar */}
+        <div style={{ padding:'0 28px' }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed' }}>
+            <thead>
+              <tr>
+                {[['Proj #','110px'],['Project Name',''],['Contractor','200px'],['Dept','80px'],['Status','100px'],['','40px']].map(([h,w])=>(
+                  <th key={h} style={{ padding:'9px 13px', textAlign:'left', fontSize:10, fontWeight:700, color:'#fff', letterSpacing:'0.05em', textTransform:'uppercase', whiteSpace:'nowrap', background:L3, ...(w?{width:w}:{}) }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+          </table>
+        </div>
+
+      </div>{/* end upper zone */}
+
+      {/* ── SCROLL ZONE ──────────────────────────────────────────── */}
+      <div style={{ flex:1, overflowY:'auto', minHeight:0, padding:'0 28px 22px' }}>
+
+        {/* Table card — same width as L1 bar */}
+      <div style={{ background:T.canvas, borderRadius:'0 0 8px 8px', boxShadow:'0 2px 8px rgba(0,0,0,0.08)' }}>
         {loading ? <div style={{ textAlign:'center', padding:48, color:T.muted }}>Loading…</div> : (
           <div>
             <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed' }}>
-              <thead style={{ position:'sticky', top:0, zIndex:10 }}>
-                <tr style={{ background:T.surface }}>
-                  {[['Proj #','110px'],['Project Name',''],['Contractor','200px'],['Dept','80px'],['Status','100px'],['','40px']].map(([h,w])=>(
-                    <th key={h} style={{ padding:'9px 13px', textAlign:'left', fontSize:10, fontWeight:700, color:'#fff', letterSpacing:'0.05em', textTransform:'uppercase', whiteSpace:'nowrap', background:'#8C601B', borderBottom:`2px solid ${T.hairline}`, ...(w?{width:w}:{}) }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
               <tbody>
                 {eligible.length === 0 ? (
                   <tr><td colSpan={6} style={{ textAlign:'center', padding:48, color:T.muted }}>No projects match the current filters</td></tr>
@@ -509,7 +541,8 @@ export default function Projects({ entityId, role }) {
             </table>
           </div>
         )}
-      </div>
+      </div>{/* end table card */}
+      </div>{/* end scroll zone */}
 
       {/* ── Rollover Dialog ──────────────────────────────────────── */}
       {showRollover && (
