@@ -403,7 +403,7 @@ export default function Employees({ entityId, entityCode }) {
       if (error) throw error
       setQrToken(data)
       // Refresh employee list row
-      setEmps(prev => prev.map(e => e.id === emp.id ? { ...e, qr_token: token } : e))
+      setEmployees(prev => prev.map(e => e.id === emp.id ? { ...e, qr_token: token } : e))
     } catch (e) {
       alert('Failed to generate QR: ' + (e.message || e))
     } finally {
