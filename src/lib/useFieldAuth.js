@@ -88,21 +88,21 @@ export const ROLE_COLORS = {
 
 export const ROLE_FORM_ACCESS = {
   // Field Technician — daily submissions only; no site completion, no PO/MR
-  STAFF_TECH:       ['expense_daily','expense_claim','food_allowance','overtime','payment_validation'],
+  STAFF_TECH:       ['expense_daily','expense_claim','food_allowance','overtime','payment_validation','payment_confirm'],
   // Supervisor — adds PO Request (sub-contractor POs); no money request, no site completion
-  STAFF_SUPERVISOR: ['expense_daily','expense_claim','food_allowance','overtime','po_request','payment_validation'],
+  STAFF_SUPERVISOR: ['expense_daily','expense_claim','food_allowance','overtime','po_request','payment_validation','payment_confirm'],
   // Project Manager — adds Money Request (requires DH approval); no field payment
-  STAFF_PM:         ['expense_daily','expense_claim','food_allowance','overtime','po_request','money_request','payment_validation'],
+  STAFF_PM:         ['expense_daily','expense_claim','food_allowance','overtime','po_request','money_request','payment_validation','payment_confirm'],
   // Department Head — full field access including site completion, field payment, sub-con claims
-  STAFF_DH:         ['expense_daily','expense_claim','food_allowance','overtime','site_completion','money_request','po_request','field_payment','subcon_claim','car_maintenance','payment_validation','dh_dashboard'],
+  STAFF_DH:         ['expense_daily','expense_claim','food_allowance','overtime','site_completion','money_request','po_request','field_payment','subcon_claim','car_maintenance','payment_validation','payment_confirm','dh_dashboard'],
   // Sub-Contractor — site completion and their own claims only
-  SUBCONTRACTOR:    ['site_completion','subcon_claim','payment_validation'],
+  SUBCONTRACTOR:    ['site_completion','subcon_claim','payment_validation','payment_confirm'],
   // Outsourced Staff — daily expense and claim only
-  OUTSOURCED:       ['expense_daily','expense_claim','payment_validation'],
+  OUTSOURCED:       ['expense_daily','expense_claim','payment_validation','payment_confirm'],
   // Driver — same base as TECH plus car maintenance
-  DRIVER:           ['expense_daily','expense_claim','food_allowance','overtime','car_maintenance','payment_validation'],
+  DRIVER:           ['expense_daily','expense_claim','food_allowance','overtime','car_maintenance','payment_validation','payment_confirm'],
   // Finance / Admin — full access, same as DH
-  FINANCE:          ['expense_daily','expense_claim','food_allowance','overtime','site_completion','money_request','po_request','field_payment','subcon_claim','car_maintenance','payment_validation','dh_dashboard'],
+  FINANCE:          ['expense_daily','expense_claim','food_allowance','overtime','site_completion','money_request','po_request','field_payment','subcon_claim','car_maintenance','payment_validation','payment_confirm','dh_dashboard'],
 }
 
 // ── Main hook ────────────────────────────────────────────────────────────────
@@ -272,8 +272,7 @@ export function useFieldAuth() {
         employee:       result.employee,
       }
 
-      // Load this employee's assignments for TODAY only (prevents stale records showing up)
-      const today = new Date().toISOString().split('T')[0]
+      // Load this employee's active assignments (consistent with FA/OT form queries)
       const { data: rawAssignments } = await supabase
         .from('site_assignments')
         .select(`
@@ -288,8 +287,7 @@ export function useFieldAuth() {
           project:project_id ( id, project_number, project_name )
         `)
         .eq('employee_id', qt.employee.id)
-        .eq('status', 'ACTIVE')
-        .eq('assignment_date', today)
+        .eq('is_active', true)
         .order('id', { ascending: false })
 
       // Fetch site master details for these assignments (get sm_id / site_name)
