@@ -182,6 +182,21 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
+    // ── SET PASSWORD DIRECTLY (no email) ───────────────────────────
+    if (action === 'set_password') {
+      if (!isSuperAdmin) {
+        return new Response(JSON.stringify({ error: 'Only SUPERADMIN can set passwords directly' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      const { user_id, password } = body
+      if (!user_id || !password) return new Response(JSON.stringify({ error: 'user_id and password required' }), { status: 400, headers: corsHeaders })
+      if (password.length < 8) return new Response(JSON.stringify({ error: 'Password must be at least 8 characters' }), { status: 400, headers: corsHeaders })
+      const { error } = await supabaseAdmin.auth.admin.updateUserById(user_id, { password })
+      if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: corsHeaders })
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
     // ── DELETE USER (SUPERADMIN only) ───────────────────────────────
     if (action === 'delete_user') {
       if (!isSuperAdmin) {

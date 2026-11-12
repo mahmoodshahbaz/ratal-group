@@ -82,6 +82,9 @@ export default function UserManagement({ entityId: propEntityId }) {
   const [showBanner,  setShowBanner] = useState(false)
   const [editUser,    setEditUser]   = useState(null)
   const [confirmDel,  setConfirmDel] = useState(null) // user to delete
+  const [setPwUser,   setSetPwUser]  = useState(null) // user to set password for
+  const [setPwVal,    setSetPwVal]   = useState('')   // new password value
+  const [setPwShow,   setSetPwShow]  = useState(false)
   const [form,        setForm]       = useState({ ...EMPTY_FORM, entity_code: myEntityCode || 'ACCSYS' })
   const [saving,      setSaving]     = useState(false)
   const [deleting,    setDeleting]   = useState(false)
@@ -296,6 +299,17 @@ export default function UserManagement({ entityId: propEntityId }) {
     const result = await callEdge('reset_password', { email: user.email })
     if (result.error) { flash('error', result.error); return }
     flash('success', `Password reset email sent to ${user.email}`)
+  }
+
+  async function doSetPassword() {
+    if (!setPwUser || !setPwVal) return
+    if (setPwVal.length < 8) { flash('error', 'Password must be at least 8 characters'); return }
+    setSaving(true)
+    const result = await callEdge('set_password', { user_id: setPwUser.id, password: setPwVal })
+    setSaving(false)
+    if (result.error) { flash('error', result.error); return }
+    flash('success', `Password set for ${setPwUser.full_name || setPwUser.email}`)
+    setSetPwUser(null); setSetPwVal('')
   }
 
   async function deleteUser() {
@@ -589,6 +603,9 @@ export default function UserManagement({ entityId: propEntityId }) {
                                 )}
                                 <button onClick={() => sendPasswordReset(u)} style={{ ...S.btn('#e65100'), padding:'5px 12px', fontSize:11 }}>🔑 Reset Password</button>
                                 {isSuperAdmin && (
+                                  <button onClick={() => { setSetPwUser(u); setSetPwVal(''); setSetPwShow(false) }} style={{ ...S.btn('#6a1b9a'), padding:'5px 12px', fontSize:11 }}>🔐 Set Password</button>
+                                )}
+                                {isSuperAdmin && (
                                   <button onClick={() => setConfirmDel(u)} style={{ ...S.btn('#b71c1c'), padding:'5px 12px', fontSize:11 }}>🗑 Delete</button>
                                 )}
                               </div>
@@ -833,6 +850,43 @@ export default function UserManagement({ entityId: propEntityId }) {
       )}
 
       {/* ── DELETE CONFIRM MODAL (SUPERADMIN only) ───────────────── */}
+      {/* ── SET PASSWORD MODAL ─────────────────────────────────────── */}
+      {setPwUser && (
+        <div style={S.overlay} onClick={e => e.target === e.currentTarget && setSetPwUser(null)}>
+          <div style={{ ...S.modal, width:420 }}>
+            <div style={{ fontWeight:800, fontSize:16, color:'#6a1b9a', marginBottom:4 }}>🔐 Set Password</div>
+            <div style={{ fontSize:12, color:'#aab2bd', marginBottom:16 }}>
+              {setPwUser.full_name || setPwUser.email} · {setPwUser.email} · {setPwUser.role}
+            </div>
+            <div style={{ marginBottom:16 }}>
+              <label style={{ display:'block', fontSize:11, color:'#aab2bd', marginBottom:4 }}>New Password (min 8 characters)</label>
+              <div style={{ position:'relative' }}>
+                <input
+                  type={setPwShow ? 'text' : 'password'}
+                  value={setPwVal}
+                  onChange={e => setSetPwVal(e.target.value)}
+                  placeholder="Enter password to set…"
+                  style={{ width:'100%', padding:'9px 36px 9px 10px', borderRadius:8, border:'1px solid #333', background:'#1e1e2e', color:'#e0e0e0', fontSize:13, boxSizing:'border-box' }}
+                />
+                <button
+                  onClick={() => setSetPwShow(v => !v)}
+                  style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', color:'#aab2bd', cursor:'pointer', fontSize:14 }}
+                >{setPwShow ? '🙈' : '👁'}</button>
+              </div>
+            </div>
+            <div style={{ background:'#1e1a2e', border:'1px solid #4a1a6a', borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:11, color:'#ce93d8' }}>
+              This sets the password directly — no email is sent. Share it with the user via WhatsApp or message.
+            </div>
+            <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
+              <button style={S.btn('#555')} onClick={() => { setSetPwUser(null); setSetPwVal('') }}>Cancel</button>
+              <button style={S.btn('#6a1b9a')} onClick={doSetPassword} disabled={saving || setPwVal.length < 8}>
+                {saving ? '⏳ Setting…' : '🔐 Set Password'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {confirmDel && (
         <div style={S.overlay} onClick={e => e.target === e.currentTarget && setConfirmDel(null)}>
           <div style={{ ...S.modal, width:460, textAlign:'center' }}>
